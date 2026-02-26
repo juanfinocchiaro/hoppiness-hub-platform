@@ -3,7 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { Package } from 'lucide-react';
@@ -70,7 +76,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
     }
   }, [producto, open]);
 
-  const set = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+  const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handlePresentacionChange = (v: string) => {
     const opt = PRESENTACION_OPTIONS.find((o) => o.value === v);
@@ -91,13 +97,19 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
   }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
 
   const costoConIva = useMemo(() => {
-    if (costoUnidadBase !== null && form.default_alicuota_iva != null && form.default_alicuota_iva > 0 && form.unidad_compra_precio > 0) {
+    if (
+      costoUnidadBase !== null &&
+      form.default_alicuota_iva != null &&
+      form.default_alicuota_iva > 0 &&
+      form.unidad_compra_precio > 0
+    ) {
       return form.unidad_compra_precio * (1 + form.default_alicuota_iva / 100);
     }
     return null;
   }, [costoUnidadBase, form.default_alicuota_iva, form.unidad_compra_precio]);
 
-  const unidadBaseLabel = UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
+  const unidadBaseLabel =
+    UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) return;
@@ -111,8 +123,10 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
       unidad_compra_precio: form.unidad_compra_precio,
       default_alicuota_iva: form.default_alicuota_iva ?? null,
       nivel_control: form.nivel_control,
-      proveedor_obligatorio_id: form.nivel_control === 'obligatorio' ? (form.proveedor_obligatorio_id || null) : null,
-      proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_sugerido_id || null) : null,
+      proveedor_obligatorio_id:
+        form.nivel_control === 'obligatorio' ? form.proveedor_obligatorio_id || null : null,
+      proveedor_sugerido_id:
+        form.nivel_control === 'semi_libre' ? form.proveedor_sugerido_id || null : null,
       rdo_category_code: form.rdo_category_code || null,
       descripcion: form.descripcion || null,
     };
@@ -148,10 +162,14 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
             <div className="grid grid-cols-3 gap-3">
               <FormRow label="Presentación" required>
                 <Select value={form.unidad_compra} onValueChange={handlePresentacionChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {PRESENTACION_OPTIONS.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -208,7 +226,9 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   {UNIDAD_BASE_OPTIONS.map((u) => (
-                    <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                    <SelectItem key={u.value} value={u.value}>
+                      {u.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -218,15 +238,31 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
               <div className="mt-3 rounded-md border border-border bg-muted/40 p-3 space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Costo neto por {unidadBaseLabel}:</span>
-                  <span className="font-semibold text-primary">${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                  <span className="font-semibold text-primary">
+                    $
+                    {costoUnidadBase.toLocaleString('es-AR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 4,
+                    })}
+                  </span>
                 </div>
                 {costoConIva !== null && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Precio con IVA ({form.default_alicuota_iva}%):</span>
-                    <span className="font-mono">${costoConIva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-muted-foreground">
+                      Precio con IVA ({form.default_alicuota_iva}%):
+                    </span>
+                    <span className="font-mono">
+                      $
+                      {costoConIva.toLocaleString('es-AR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">💡 Las recetas y el FC% se calculan siempre con precio neto</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 Las recetas y el FC% se calculan siempre con precio neto
+                </p>
               </div>
             )}
           </FormSection>
@@ -234,7 +270,11 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
           {/* Clasificación */}
           <div className="grid grid-cols-2 gap-3">
             <FormRow label="Categoría RDO">
-              <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType="producto" />
+              <RdoCategorySelector
+                value={form.rdo_category_code}
+                onChange={(code) => set('rdo_category_code', code)}
+                itemType="producto"
+              />
             </FormRow>
 
             <FormRow label="Nivel de control">
@@ -266,14 +306,16 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
           </div>
 
           <FormRow
-            label={form.nivel_control === 'obligatorio' ? 'Proveedor Obligatorio' : 'Proveedor Sugerido'}
+            label={
+              form.nivel_control === 'obligatorio' ? 'Proveedor Obligatorio' : 'Proveedor Sugerido'
+            }
             required={form.nivel_control === 'obligatorio'}
           >
             <Select
               value={
                 form.nivel_control === 'obligatorio'
-                  ? (form.proveedor_obligatorio_id || '')
-                  : (form.proveedor_sugerido_id || 'none')
+                  ? form.proveedor_obligatorio_id || ''
+                  : form.proveedor_sugerido_id || 'none'
               }
               onValueChange={(v) => {
                 if (form.nivel_control === 'obligatorio') {
@@ -287,9 +329,13 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
-                {form.nivel_control === 'semi_libre' && <SelectItem value="none">Ninguno</SelectItem>}
+                {form.nivel_control === 'semi_libre' && (
+                  <SelectItem value="none">Ninguno</SelectItem>
+                )}
                 {proveedores?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.razon_social}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -305,7 +351,9 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
           </FormRow>
 
           <StickyActions>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.nombre}>
               {isEdit ? 'Guardar' : 'Crear Producto'}
             </LoadingButton>

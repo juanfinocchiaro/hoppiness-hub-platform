@@ -56,12 +56,7 @@ export function TableEmpty({
     <TableBody>
       <TableRow>
         <TableCell colSpan={columns}>
-          <EmptyState
-            icon={icon}
-            title={title}
-            description={description}
-            action={action}
-          >
+          <EmptyState icon={icon} title={title} description={description} action={action}>
             {children}
           </EmptyState>
         </TableCell>
@@ -80,21 +75,12 @@ interface TableErrorProps {
 /**
  * Estado de error dentro de una tabla.
  */
-export function TableError({
-  columns,
-  title,
-  description,
-  onRetry,
-}: TableErrorProps) {
+export function TableError({ columns, title, description, onRetry }: TableErrorProps) {
   return (
     <TableBody>
       <TableRow>
         <TableCell colSpan={columns}>
-          <ErrorState
-            title={title}
-            description={description}
-            onRetry={onRetry}
-          />
+          <ErrorState title={title} description={description} onRetry={onRetry} />
         </TableCell>
       </TableRow>
     </TableBody>

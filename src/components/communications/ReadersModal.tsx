@@ -1,11 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,22 +49,22 @@ export default function ReadersModal({
       if (!reads?.length) return { readers: [], totalTargeted: 0 };
 
       // Get profiles (profiles.id = user_id after migration)
-      const userIds = reads.map(r => r.user_id);
+      const userIds = reads.map((r) => r.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-      const readers = reads.map(r => ({
+      const readers = reads.map((r) => ({
         ...r,
         profile: profileMap.get(r.user_id) || null,
       })) as Reader[];
 
       return {
-        readers: readers.sort((a, b) => 
-          new Date(b.read_at || 0).getTime() - new Date(a.read_at || 0).getTime()
+        readers: readers.sort(
+          (a, b) => new Date(b.read_at || 0).getTime() - new Date(a.read_at || 0).getTime(),
         ),
         totalTargeted: readers.length, // Could be enhanced to show total targeted
       };
@@ -78,21 +73,22 @@ export default function ReadersModal({
   });
 
   const readCount = data?.readers.length || 0;
-  const confirmedCount = data?.readers.filter(r => r.confirmed_at).length || 0;
+  const confirmedCount = data?.readers.filter((r) => r.confirmed_at).length || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="pr-8">
-            Lecturas: "{communicationTitle.substring(0, 40)}{communicationTitle.length > 40 ? '...' : ''}"
+            Lecturas: "{communicationTitle.substring(0, 40)}
+            {communicationTitle.length > 40 ? '...' : ''}"
           </DialogTitle>
         </DialogHeader>
 
         <div className="py-4">
           {isLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => (
+              {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-14" />
               ))}
             </div>
@@ -158,9 +154,7 @@ export default function ReadersModal({
         {/* Summary footer */}
         <div className="flex items-center justify-between pt-4 border-t text-sm text-muted-foreground">
           <span>{readCount} lecturas</span>
-          {requiresConfirmation && (
-            <span>{confirmedCount} confirmaciones</span>
-          )}
+          {requiresConfirmation && <span>{confirmedCount} confirmaciones</span>}
         </div>
       </DialogContent>
     </Dialog>

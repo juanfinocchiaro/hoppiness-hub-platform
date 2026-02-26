@@ -8,7 +8,7 @@ import { Outlet, useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
-import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
@@ -19,17 +19,17 @@ import { Eye } from 'lucide-react';
 import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 
 export default function CuentaLayout() {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const effectiveUser = useEffectiveUser();
-  const { loading: permLoading } = useRoleLandingV2();
+  const { loading: permLoading } = useRoleLanding();
   const { branchRoles, brandRole } = usePermissionsWithImpersonation();
   const { canImpersonate, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
   const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
   const isStaff = branchRoles.length > 0 || !!brandRole;
-  const isOperationalStaff = branchRoles.length > 0 &&
-    !branchRoles.every(r => r.local_role === 'franquiciado');
+  const isOperationalStaff =
+    branchRoles.length > 0 && !branchRoles.every((r) => r.local_role === 'franquiciado');
   const panelTitle = isOperationalStaff ? 'Mi Trabajo' : 'Mi Cuenta';
 
   const displayName = effectiveUser.full_name?.split(' ')[0] || panelTitle;

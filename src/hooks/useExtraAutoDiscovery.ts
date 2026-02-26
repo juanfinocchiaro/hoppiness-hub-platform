@@ -52,7 +52,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
     }[] = [];
 
     // Deep ingredients from recipes
-    for (const group of (deepGroups || [])) {
+    for (const group of deepGroups || []) {
       for (const ing of group.ingredientes) {
         discovered.push({
           tipo: 'insumo',
@@ -63,7 +63,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
           origen: group.receta_nombre,
         });
       }
-      for (const sp of (group.sub_preparaciones || [])) {
+      for (const sp of group.sub_preparaciones || []) {
         discovered.push({
           tipo: 'preparacion',
           ref_id: sp.preparacion_id,
@@ -76,7 +76,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
     }
 
     // Deduplicate by tipo:ref_id
-    const unique = new Map<string, typeof discovered[0]>();
+    const unique = new Map<string, (typeof discovered)[0]>();
     for (const d of discovered) {
       const key = `${d.tipo}:${d.ref_id}`;
       if (!unique.has(key)) unique.set(key, d);
@@ -86,10 +86,11 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
     const extras = (allItems || []).filter((e: any) => e.tipo === 'extra');
     const asigSet = new Set((asignaciones || []).map((a: any) => a.extra_id));
 
-    return Array.from(unique.values()).map(d => {
-      const existing = extras.find((e: any) =>
-        (d.tipo === 'preparacion' && e.composicion_ref_preparacion_id === d.ref_id) ||
-        (d.tipo === 'insumo' && e.composicion_ref_insumo_id === d.ref_id)
+    return Array.from(unique.values()).map((d) => {
+      const existing = extras.find(
+        (e: any) =>
+          (d.tipo === 'preparacion' && e.composicion_ref_preparacion_id === d.ref_id) ||
+          (d.tipo === 'insumo' && e.composicion_ref_insumo_id === d.ref_id),
       );
       return {
         ...d,

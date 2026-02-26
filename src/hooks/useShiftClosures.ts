@@ -26,7 +26,7 @@ function parseShiftClosure(row: any): ShiftClosure {
     hamburguesas: row.hamburguesas as HamburguesasData,
     ventas_local: row.ventas_local as VentasLocalData,
     ventas_apps: row.ventas_apps as VentasAppsData,
-    arqueo_caja: row.arqueo_caja as ArqueoCaja || { diferencia_caja: 0 },
+    arqueo_caja: (row.arqueo_caja as ArqueoCaja) || { diferencia_caja: 0 },
   };
 }
 
@@ -35,7 +35,7 @@ function parseShiftClosure(row: any): ShiftClosure {
  */
 export function useDateClosures(branchId: string, date: Date) {
   const dateStr = format(date, 'yyyy-MM-dd');
-  
+
   return useQuery({
     queryKey: ['shift-closures', branchId, dateStr],
     queryFn: async () => {
@@ -45,7 +45,7 @@ export function useDateClosures(branchId: string, date: Date) {
         .eq('branch_id', branchId)
         .eq('fecha', dateStr)
         .order('turno');
-      
+
       if (error) throw error;
       return (data || []).map(parseShiftClosure);
     },
@@ -67,7 +67,7 @@ export function useTodayClosures(branchId: string) {
 export function useClosuresByDateRange(branchId: string, from: Date, to: Date) {
   const fromStr = format(from, 'yyyy-MM-dd');
   const toStr = format(to, 'yyyy-MM-dd');
-  
+
   return useQuery({
     queryKey: ['shift-closures-range', branchId, fromStr, toStr],
     queryFn: async () => {
@@ -79,7 +79,7 @@ export function useClosuresByDateRange(branchId: string, from: Date, to: Date) {
         .lte('fecha', toStr)
         .order('fecha', { ascending: false })
         .order('turno');
-      
+
       if (error) throw error;
       return (data || []).map(parseShiftClosure);
     },
@@ -101,7 +101,7 @@ export function useShiftClosure(branchId: string, fecha: string, turno: ShiftTyp
         .eq('fecha', fecha)
         .eq('turno', turno)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data ? parseShiftClosure(data) : null;
     },
@@ -115,7 +115,7 @@ export function useShiftClosure(branchId: string, fecha: string, turno: ShiftTyp
 export function useBrandClosuresSummary(from: Date, to: Date) {
   const fromStr = format(from, 'yyyy-MM-dd');
   const toStr = format(to, 'yyyy-MM-dd');
-  
+
   return useQuery({
     queryKey: ['brand-closures-summary', fromStr, toStr],
     queryFn: async () => {
@@ -125,68 +125,86 @@ export function useBrandClosuresSummary(from: Date, to: Date) {
         .select('*')
         .gte('fecha', fromStr)
         .lte('fecha', toStr);
-      
+
       if (closuresError) throw closuresError;
-      
+
       // Get all branches
       const { data: branches, error: branchesError } = await supabase
         .from('branches')
         .select('id, name, slug')
         .order('name');
-      
+
       if (branchesError) throw branchesError;
-      
+
       // Get active shifts per branch
       const { data: branchShifts, error: shiftsError } = await supabase
         .from('branch_shifts')
         .select('branch_id, name')
         .eq('is_active', true);
-      
+
       if (shiftsError) throw shiftsError;
-      
+
       // Build summary per branch
-      const summary = (branches || []).map(branch => {
+      const summary = (branches || []).map((branch) => {
         const branchClosures = (closures || [])
-          .filter(c => c.branch_id === branch.id)
+          .filter((c) => c.branch_id === branch.id)
           .map(parseShiftClosure);
-        
+
         const activeShifts = (branchShifts || [])
-          .filter(s => s.branch_id === branch.id)
-          .map(s => s.name.toLowerCase());
-        
+          .filter((s) => s.branch_id === branch.id)
+          .map((s) => s.name.toLowerCase());
+
         // Aggregate totals
-        const totals = branchClosures.reduce((acc, c) => ({
-          vendido: acc.vendido + Number(c.total_vendido || 0),
-          efectivo: acc.efectivo + Number(c.total_efectivo || 0),
-          digital: acc.digital + Number(c.total_digital || 0),
-          hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
-          clasicas: acc.clasicas + (c.hamburguesas?.clasicas || 0),
-          originales: acc.originales + (c.hamburguesas?.originales || 0),
-          mas_sabor: acc.mas_sabor + (c.hamburguesas?.mas_sabor || 0),
-          veggies: acc.veggies + ((c.hamburguesas?.veggies?.not_american || 0) + (c.hamburguesas?.veggies?.not_claudio || 0)),
-          ultrasmash: acc.ultrasmash + ((c.hamburguesas?.ultrasmash?.ultra_cheese || 0) + (c.hamburguesas?.ultrasmash?.ultra_bacon || 0)),
-          extras: acc.extras + ((c.hamburguesas?.extras?.extra_carne || 0) + (c.hamburguesas?.extras?.extra_not_burger || 0) + (c.hamburguesas?.extras?.extra_not_chicken || 0)),
-          alertas: acc.alertas + (c.tiene_alerta_facturacion ? 1 : 0) + (c.tiene_alerta_posnet ? 1 : 0) + (c.tiene_alerta_apps ? 1 : 0) + (c.tiene_alerta_caja ? 1 : 0),
-        }), {
-          vendido: 0,
-          efectivo: 0,
-          digital: 0,
-          hamburguesas: 0,
-          clasicas: 0,
-          originales: 0,
-          mas_sabor: 0,
-          veggies: 0,
-          ultrasmash: 0,
-          extras: 0,
-          alertas: 0,
-        });
-        
+        const totals = branchClosures.reduce(
+          (acc, c) => ({
+            vendido: acc.vendido + Number(c.total_vendido || 0),
+            efectivo: acc.efectivo + Number(c.total_efectivo || 0),
+            digital: acc.digital + Number(c.total_digital || 0),
+            hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
+            clasicas: acc.clasicas + (c.hamburguesas?.clasicas || 0),
+            originales: acc.originales + (c.hamburguesas?.originales || 0),
+            mas_sabor: acc.mas_sabor + (c.hamburguesas?.mas_sabor || 0),
+            veggies:
+              acc.veggies +
+              ((c.hamburguesas?.veggies?.not_american || 0) +
+                (c.hamburguesas?.veggies?.not_claudio || 0)),
+            ultrasmash:
+              acc.ultrasmash +
+              ((c.hamburguesas?.ultrasmash?.ultra_cheese || 0) +
+                (c.hamburguesas?.ultrasmash?.ultra_bacon || 0)),
+            extras:
+              acc.extras +
+              ((c.hamburguesas?.extras?.extra_carne || 0) +
+                (c.hamburguesas?.extras?.extra_not_burger || 0) +
+                (c.hamburguesas?.extras?.extra_not_chicken || 0)),
+            alertas:
+              acc.alertas +
+              (c.tiene_alerta_facturacion ? 1 : 0) +
+              (c.tiene_alerta_posnet ? 1 : 0) +
+              (c.tiene_alerta_apps ? 1 : 0) +
+              (c.tiene_alerta_caja ? 1 : 0),
+          }),
+          {
+            vendido: 0,
+            efectivo: 0,
+            digital: 0,
+            hamburguesas: 0,
+            clasicas: 0,
+            originales: 0,
+            mas_sabor: 0,
+            veggies: 0,
+            ultrasmash: 0,
+            extras: 0,
+            alertas: 0,
+          },
+        );
+
         // Map closures by shift for status display
         const closuresByShift = new Map<string, ShiftClosure>();
-        branchClosures.forEach(c => {
+        branchClosures.forEach((c) => {
           closuresByShift.set(c.turno, c);
         });
-        
+
         return {
           branch,
           totals,
@@ -195,7 +213,7 @@ export function useBrandClosuresSummary(from: Date, to: Date) {
           activeShifts,
         };
       });
-      
+
       return summary;
     },
   });
@@ -207,45 +225,48 @@ export function useBrandClosuresSummary(from: Date, to: Date) {
 export function useSaveShiftClosure() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (input: ShiftClosureInput) => {
       if (!user?.id) throw new Error('Usuario no autenticado');
-      
+
       // Calculate all totals
       const totalHamburguesas = closureCalcs.calcularTotalesHamburguesas(input.hamburguesas);
       const totalesLocal = closureCalcs.calcularTotalesVentasLocal(input.ventas_local);
       const totalesApps = closureCalcs.calcularTotalesVentasApps(input.ventas_apps);
-      
+
       const totalVendido = totalesLocal.total + totalesApps.total;
       const totalEfectivo = totalesLocal.efectivo + totalesApps.efectivo;
       const totalDigital = totalesLocal.digital + totalesApps.digital;
-      
+
       // Invoicing calculations
       const facturacionEsperada = closureCalcs.calcularFacturacionEsperada(
         input.ventas_local,
         input.ventas_apps,
-        input.reglas_facturacion
+        input.reglas_facturacion,
       );
       const facturacionDiferencia = input.total_facturado - facturacionEsperada;
-      const tieneAlertaFacturacion = facturacionEsperada > 0 && 
-        Math.abs(facturacionDiferencia) > facturacionEsperada * 0.1;
-      
+      const tieneAlertaFacturacion =
+        facturacionEsperada > 0 && Math.abs(facturacionDiferencia) > facturacionEsperada * 0.1;
+
       // Posnet comparison (incl. cobrado_posnet from Más Delivery)
-      const posnetDiff = closureCalcs.calcularDiferenciaPosnet(input.ventas_local, input.ventas_apps);
-      
+      const posnetDiff = closureCalcs.calcularDiferenciaPosnet(
+        input.ventas_local,
+        input.ventas_apps,
+      );
+
       // Apps comparison
       const appsDiff = closureCalcs.calcularDiferenciasApps(input.ventas_apps);
-      
+
       // Cash count
       const tieneAlertaCaja = input.arqueo_caja.diferencia_caja !== 0;
-      
+
       // Cast JSONB data to Json for Supabase
       const hamburguesasJson = input.hamburguesas as unknown as Json;
       const ventasLocalJson = input.ventas_local as unknown as Json;
       const ventasAppsJson = input.ventas_apps as unknown as Json;
       const arqueoCajaJson = input.arqueo_caja as unknown as Json;
-      
+
       const closureData = {
         hamburguesas: hamburguesasJson,
         ventas_local: ventasLocalJson,
@@ -266,7 +287,7 @@ export function useSaveShiftClosure() {
         tiene_alerta_caja: tieneAlertaCaja,
         notas: input.notas || null,
       };
-      
+
       // Atomic upsert: avoids race condition where two users
       // could create duplicate closures for the same branch+date+shift.
       const { data, error } = await supabase
@@ -280,11 +301,11 @@ export function useSaveShiftClosure() {
             cerrado_por: user.id,
             updated_by: user.id,
           },
-          { onConflict: 'branch_id,fecha,turno' }
+          { onConflict: 'branch_id,fecha,turno' },
         )
         .select()
         .single();
-      
+
       if (error) throw error;
       return parseShiftClosure(data);
     },
@@ -302,10 +323,10 @@ export function useSaveShiftClosure() {
 
 // Shift label helpers
 export const SHIFT_LABELS: Record<ShiftType, string> = {
-  'mañana': 'Mañana',
-  'mediodía': 'Mediodía',
-  'noche': 'Noche',
-  'trasnoche': 'Trasnoche',
+  mañana: 'Mañana',
+  mediodía: 'Mediodía',
+  noche: 'Noche',
+  trasnoche: 'Trasnoche',
 };
 
 export function getShiftLabel(shift: string): string {
@@ -323,11 +344,11 @@ export function useEnabledShifts(branchId: string) {
         .eq('branch_id', branchId)
         .eq('is_active', true)
         .order('sort_order');
-      
+
       if (error) throw error;
-      
+
       // Map to shift types
-      return (data || []).map(s => ({
+      return (data || []).map((s) => ({
         id: s.id,
         value: s.name.toLowerCase() as ShiftType,
         label: s.name,

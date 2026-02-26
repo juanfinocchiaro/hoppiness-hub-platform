@@ -16,11 +16,13 @@ export function useFrequentItems(branchId: string | undefined, limit = 8) {
       // Get top item_carta_ids by quantity sold
       const { data, error } = await supabase
         .from('pedido_items')
-        .select(`
+        .select(
+          `
           item_carta_id,
           cantidad,
           pedidos!inner(branch_id, created_at)
-        `)
+        `,
+        )
         .eq('pedidos.branch_id', branchId!)
         .gte('pedidos.created_at', thirtyDaysAgo.toISOString());
 

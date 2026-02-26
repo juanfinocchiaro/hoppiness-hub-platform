@@ -60,9 +60,7 @@ export function DangerConfirmDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="text-destructive">{title}</AlertDialogTitle>
-          {description && (
-            <AlertDialogDescription>{description}</AlertDialogDescription>
-          )}
+          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
 
         {consequences.length > 0 && (
@@ -81,7 +79,8 @@ export function DangerConfirmDialog({
 
         <div className="space-y-2 pt-2">
           <Label htmlFor="danger-confirm-input" className="text-sm">
-            Para confirmar, escribí <span className="font-bold text-destructive">"{confirmWord}"</span>:
+            Para confirmar, escribí{' '}
+            <span className="font-bold text-destructive">"{confirmWord}"</span>:
           </Label>
           <Input
             id="danger-confirm-input"
@@ -97,11 +96,7 @@ export function DangerConfirmDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={!isMatch}
-          >
+          <Button variant="destructive" onClick={handleConfirm} disabled={!isMatch}>
             {confirmLabel}
           </Button>
         </AlertDialogFooter>

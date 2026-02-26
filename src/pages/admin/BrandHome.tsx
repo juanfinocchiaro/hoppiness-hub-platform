@@ -19,11 +19,11 @@ interface Stats {
 }
 
 export default function BrandHome() {
-  const [stats, setStats] = useState<Stats>({ 
-    globalRevenue: 0, 
-    globalHamburguesas: 0, 
-    globalHours: 0, 
-    globalProductivity: 0 
+  const [stats, setStats] = useState<Stats>({
+    globalRevenue: 0,
+    globalHamburguesas: 0,
+    globalHours: 0,
+    globalProductivity: 0,
   });
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,8 +31,12 @@ export default function BrandHome() {
   useEffect(() => {
     async function fetchData() {
       const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        .toISOString()
+        .split('T')[0];
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        .toISOString()
+        .split('T')[0];
 
       const [branchesRes, closuresRes, clockRes] = await Promise.all([
         supabase.from('branches').select('*').order('name'),
@@ -58,8 +62,8 @@ export default function BrandHome() {
       const closures = closuresRes.data || [];
       let globalRevenue = 0;
       let globalHamburguesas = 0;
-      
-      closures.forEach(closure => {
+
+      closures.forEach((closure) => {
         globalRevenue += Number(closure.total_facturado || 0);
         globalHamburguesas += Number(closure.total_hamburguesas || 0);
       });
@@ -68,11 +72,11 @@ export default function BrandHome() {
       const clockEntries = clockRes.data || [];
       const userSessions = new Map<string, Date | null>();
       let globalTotalMinutes = 0;
-      
-      clockEntries.forEach(entry => {
+
+      clockEntries.forEach((entry) => {
         const key = `${entry.user_id}-${entry.branch_id}`;
         const timestamp = new Date(entry.created_at);
-        
+
         if (entry.entry_type === 'entrada') {
           userSessions.set(key, timestamp);
         } else if (entry.entry_type === 'salida') {
@@ -87,9 +91,10 @@ export default function BrandHome() {
           }
         }
       });
-      
-      const globalHours = Math.round(globalTotalMinutes / 60 * 10) / 10;
-      const globalProductivity = globalHours > 0 ? Math.round(globalHamburguesas / globalHours * 10) / 10 : 0;
+
+      const globalHours = Math.round((globalTotalMinutes / 60) * 10) / 10;
+      const globalProductivity =
+        globalHours > 0 ? Math.round((globalHamburguesas / globalHours) * 10) / 10 : 0;
 
       setStats({
         globalRevenue,
@@ -103,12 +108,16 @@ export default function BrandHome() {
   }, []);
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
 
   return (
     <div className="space-y-6">
       <PageHelp pageId="brand-dashboard" />
-      
+
       <PageHeader title="Panel Mi Marca" subtitle="Gestión centralizada de todas las sucursales" />
 
       {/* Daily Sales Table */}
@@ -128,7 +137,11 @@ export default function BrandHome() {
                 Facturación Total
               </div>
               <div className="text-2xl font-bold text-primary">
-                {loading ? <Skeleton className="h-8 w-24 mx-auto" /> : formatCurrency(stats.globalRevenue)}
+                {loading ? (
+                  <Skeleton className="h-8 w-24 mx-auto" />
+                ) : (
+                  formatCurrency(stats.globalRevenue)
+                )}
               </div>
             </div>
             <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/10">
@@ -137,7 +150,11 @@ export default function BrandHome() {
                 Hamburguesas
               </div>
               <div className="text-2xl font-bold text-primary">
-                {loading ? <Skeleton className="h-8 w-16 mx-auto" /> : stats.globalHamburguesas.toLocaleString('es-AR')}
+                {loading ? (
+                  <Skeleton className="h-8 w-16 mx-auto" />
+                ) : (
+                  stats.globalHamburguesas.toLocaleString('es-AR')
+                )}
               </div>
             </div>
             <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/10">
@@ -170,24 +187,26 @@ export default function BrandHome() {
             <Store className="w-5 h-5" />
             Mis Sucursales
           </CardTitle>
-          <CardDescription>
-            Hacé clic en una sucursal para ver más detalles
-          </CardDescription>
+          <CardDescription>Hacé clic en una sucursal para ver más detalles</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {branches.map(branch => (
+              {branches.map((branch) => (
                 <Link key={branch.id} to={`/mimarca/locales/${branch.slug}`}>
                   <Card className="hover:border-primary/50 hover:shadow-card transition-all duration-200 cursor-pointer group">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-bold group-hover:text-primary transition-colors">{branch.name}</h3>
+                          <h3 className="font-bold group-hover:text-primary transition-colors">
+                            {branch.name}
+                          </h3>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                             <MapPin className="w-3 h-3" />
                             {branch.city}

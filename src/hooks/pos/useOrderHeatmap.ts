@@ -47,12 +47,12 @@ export function useOrderHeatmap(branchId: string | undefined, daysBack: number) 
   const { grid, maxCount, maxTotal } = useMemo(() => {
     // 7 days x 13 hours
     const g: HeatmapCell[][] = Array.from({ length: 7 }, () =>
-      Array.from({ length: 13 }, () => ({ count: 0, total: 0 }))
+      Array.from({ length: 13 }, () => ({ count: 0, total: 0 })),
     );
     let mc = 0;
     let mt = 0;
 
-    (rawData ?? []).forEach(row => {
+    (rawData ?? []).forEach((row) => {
       const d = new Date(row.created_at!);
       const di = dayIndex(getDay(d));
       const h = getHours(d);

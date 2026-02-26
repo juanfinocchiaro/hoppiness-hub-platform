@@ -38,10 +38,20 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
         telefono: socio.telefono || '',
         porcentaje_participacion: String(socio.porcentaje_participacion),
         fecha_ingreso: socio.fecha_ingreso,
-        limite_retiro_mensual: socio.limite_retiro_mensual ? String(socio.limite_retiro_mensual) : '',
+        limite_retiro_mensual: socio.limite_retiro_mensual
+          ? String(socio.limite_retiro_mensual)
+          : '',
       });
     } else {
-      setForm({ nombre: '', cuit: '', email: '', telefono: '', porcentaje_participacion: '', fecha_ingreso: new Date().toISOString().split('T')[0], limite_retiro_mensual: '' });
+      setForm({
+        nombre: '',
+        cuit: '',
+        email: '',
+        telefono: '',
+        porcentaje_participacion: '',
+        fecha_ingreso: new Date().toISOString().split('T')[0],
+        limite_retiro_mensual: '',
+      });
     }
   }, [socio, open]);
 
@@ -56,7 +66,9 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
       telefono: form.telefono || undefined,
       porcentaje_participacion: parseFloat(form.porcentaje_participacion),
       fecha_ingreso: form.fecha_ingreso,
-      limite_retiro_mensual: form.limite_retiro_mensual ? parseFloat(form.limite_retiro_mensual) : null,
+      limite_retiro_mensual: form.limite_retiro_mensual
+        ? parseFloat(form.limite_retiro_mensual)
+        : null,
     };
 
     if (isEdit) {
@@ -77,43 +89,82 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label>Nombre *</Label>
-            <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+            <Input
+              value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>CUIT</Label>
-              <Input value={form.cuit} onChange={(e) => setForm({ ...form, cuit: e.target.value })} />
+              <Input
+                value={form.cuit}
+                onChange={(e) => setForm({ ...form, cuit: e.target.value })}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Teléfono</Label>
-              <Input value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+              <Input
+                value={form.telefono}
+                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Participación % *</Label>
-              <Input type="number" min="0" max="100" step="0.01" value={form.porcentaje_participacion} onChange={(e) => setForm({ ...form, porcentaje_participacion: e.target.value })} />
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.porcentaje_participacion}
+                onChange={(e) => setForm({ ...form, porcentaje_participacion: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Fecha Ingreso</Label>
-              <Input type="date" value={form.fecha_ingreso} onChange={(e) => setForm({ ...form, fecha_ingreso: e.target.value })} />
+              <Input
+                type="date"
+                value={form.fecha_ingreso}
+                onChange={(e) => setForm({ ...form, fecha_ingreso: e.target.value })}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Límite Retiro Mensual</Label>
-              <Input type="number" min="0" value={form.limite_retiro_mensual} onChange={(e) => setForm({ ...form, limite_retiro_mensual: e.target.value })} />
+              <Input
+                type="number"
+                min="0"
+                value={form.limite_retiro_mensual}
+                onChange={(e) => setForm({ ...form, limite_retiro_mensual: e.target.value })}
+              />
             </div>
           </div>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!form.nombre || !form.porcentaje_participacion || createSocio.isPending || updateSocio.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              !form.nombre ||
+              !form.porcentaje_participacion ||
+              createSocio.isPending ||
+              updateSocio.isPending
+            }
+          >
             {isEdit ? 'Guardar' : 'Crear'}
           </Button>
         </div>

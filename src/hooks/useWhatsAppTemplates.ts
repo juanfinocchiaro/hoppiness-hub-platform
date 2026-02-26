@@ -43,11 +43,14 @@ export function useWhatsAppTemplates() {
   });
 
   const getTemplateText = (subjectType: string): string => {
-    const template = query.data?.find(t => t.subject_type === subjectType && t.is_active);
+    const template = query.data?.find((t) => t.subject_type === subjectType && t.is_active);
     return template?.template_text ?? '';
   };
 
-  const resolveTemplate = (subjectType: string, contact: { name: string; email: string; phone: string }): string => {
+  const resolveTemplate = (
+    subjectType: string,
+    contact: { name: string; email: string; phone: string },
+  ): string => {
     let text = getTemplateText(subjectType);
     if (!text) text = getTemplateText('otro');
     return text

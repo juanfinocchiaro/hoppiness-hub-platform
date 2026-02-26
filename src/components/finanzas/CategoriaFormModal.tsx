@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormLayout, FormRow } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { LoadingButton } from '@/components/ui/loading-button';
@@ -67,20 +73,30 @@ export function CategoriaFormModal({ open, onOpenChange, categoria }: Props) {
             </FormRow>
             <FormRow label="Tipo" required>
               <Select value={form.tipo} onValueChange={(v) => set('tipo', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {TIPO_CATEGORIA_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </FormRow>
             <FormRow label="Orden">
-              <Input type="number" value={form.orden ?? ''} onChange={(e) => set('orden', e.target.value ? Number(e.target.value) : undefined)} />
+              <Input
+                type="number"
+                value={form.orden ?? ''}
+                onChange={(e) => set('orden', e.target.value ? Number(e.target.value) : undefined)}
+              />
             </FormRow>
           </FormLayout>
           <StickyActions>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <LoadingButton loading={isPending} onClick={handleSubmit}>
               {isEdit ? 'Guardar' : 'Crear'}
             </LoadingButton>

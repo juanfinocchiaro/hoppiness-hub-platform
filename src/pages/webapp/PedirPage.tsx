@@ -35,7 +35,8 @@ export default function PedirPage() {
     const promoArticles: WebappMenuItem[] = promoItems
       .map((pi) => {
         const base = baseById.get(pi.item_carta_id);
-        if (!base || pi.precio_base == null || pi.precio_promo >= Number(base.precio_base)) return null;
+        if (!base || pi.precio_base == null || pi.precio_promo >= Number(base.precio_base))
+          return null;
         const extras = pi.preconfigExtras || [];
         const extrasTotal = extras.reduce((sum, ex) => sum + (ex.precio ?? 0) * ex.cantidad, 0);
         const precioSinPromo = Number(base.precio_base) + extrasTotal;
@@ -87,7 +88,9 @@ export default function PedirPage() {
     try {
       const stored = localStorage.getItem('hop_delivery_address');
       return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
   const [prevalidatedCalc, setPrevalidatedCalc] = useState<DeliveryCalcResult | null>(null);
 
@@ -96,7 +99,9 @@ export default function PedirPage() {
     setPrevalidatedCalc(calc);
     try {
       localStorage.setItem('hop_delivery_address', JSON.stringify(address));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   // Check for reorder items when menu loads
@@ -126,7 +131,7 @@ export default function PedirPage() {
   useEffect(() => {
     const itemId = searchParams.get('item');
     if (itemId && menuItems && menuItems.length > 0 && !customizeItem) {
-      const found = menuItems.find(i => i.id === itemId);
+      const found = menuItems.find((i) => i.id === itemId);
       if (found) {
         setCustomizeItem(found);
         setSearchParams({}, { replace: true });
@@ -139,7 +144,7 @@ export default function PedirPage() {
     const trackingParam = searchParams.get('tracking');
     if (trackingParam) {
       setExternalTrackingCode(trackingParam);
-      setTrackingTrigger(prev => prev + 1);
+      setTrackingTrigger((prev) => prev + 1);
       const next = new URLSearchParams(searchParams);
       next.delete('tracking');
       setSearchParams(next, { replace: true });
@@ -190,7 +195,11 @@ export default function PedirPage() {
           <p className="text-white/80">
             Este local todavía no tiene pedidos online directos. Podés pedir por MasDelivery.
           </p>
-          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://pedidos.masdelivery.com/hoppiness"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               Ir a MasDelivery
               <ExternalLink className="w-4 h-4 ml-2" />
@@ -225,12 +234,10 @@ export default function PedirPage() {
     setCartOpen(true);
   };
 
-
-
   // Handler for MisPedidosSheet tracking — feeds into same mechanism
   const handleMisPedidosTrack = (trackingCode: string) => {
     setExternalTrackingCode(trackingCode);
-    setTrackingTrigger(prev => prev + 1);
+    setTrackingTrigger((prev) => prev + 1);
   };
 
   // Side panel now handles checkout inline, no need for this handler
@@ -273,7 +280,7 @@ export default function PedirPage() {
               onServiceChange={(tipo) => cart.setTipoServicio(tipo)}
               onShowTracking={(code) => {
                 setExternalTrackingCode(code);
-                setTrackingTrigger(prev => prev + 1);
+                setTrackingTrigger((prev) => prev + 1);
               }}
               onOpenCart={handleOpenCartMobile}
               hasCartItems={cart.totalItems > 0}

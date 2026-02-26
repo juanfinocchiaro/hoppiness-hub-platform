@@ -1,5 +1,5 @@
 /**
- * CMV Drill-Down: Shows food cost breakdown by items_carta 
+ * CMV Drill-Down: Shows food cost breakdown by items_carta
  * when a CMV category is expanded in the RDO.
  */
 import { useMemo } from 'react';
@@ -52,11 +52,19 @@ export function CmvDrillDown({ rdoCategoryCode }: CmvDrillDownProps) {
         <div key={item.id} className="flex justify-between items-center py-0.5 text-xs">
           <span className="text-muted-foreground truncate max-w-[200px]">{item.nombre}</span>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-muted-foreground">{formatCurrency(item.costo_total)}</span>
+            <span className="font-mono text-muted-foreground">
+              {formatCurrency(item.costo_total)}
+            </span>
             <span className="font-mono">{formatCurrency(item.precio_base)}</span>
             {item.fc_actual != null && (
-              <Badge 
-                variant={item.fc_actual <= 32 ? 'default' : item.fc_actual <= 40 ? 'secondary' : 'destructive'} 
+              <Badge
+                variant={
+                  item.fc_actual <= 32
+                    ? 'default'
+                    : item.fc_actual <= 40
+                      ? 'secondary'
+                      : 'destructive'
+                }
                 className="text-[10px] px-1.5 py-0 h-4"
               >
                 {item.fc_actual.toFixed(1)}%

@@ -1,11 +1,11 @@
 /**
  * SchedulesPage - Simplified schedule editor
- * 
+ *
  * Solo contiene:
  * - Navegador de mes
  * - Grilla de horarios (InlineScheduleEditor)
  * - Banner de solo lectura para franquiciados
- * 
+ *
  * Feriados movidos a Mi Marca (/mimarca/configuracion/calendario)
  * Solicitudes movidas a /milocal/:branchId/tiempo/solicitudes
  */
@@ -21,17 +21,18 @@ import { Eye } from 'lucide-react';
 export default function SchedulesPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { isFranquiciado, local, loading } = usePermissionsWithImpersonation(branchId);
-  
-  if (loading) return (
-    <div className="space-y-6">
-      <div>
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-64 mt-2" />
+
+  if (loading)
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </div>
+        <Skeleton className="h-[400px] w-full" />
       </div>
-      <Skeleton className="h-[400px] w-full" />
-    </div>
-  );
-  
+    );
+
   const canManageSchedules = local.canEditSchedules;
   const isReadOnly = isFranquiciado || !canManageSchedules;
 
@@ -40,7 +41,7 @@ export default function SchedulesPage() {
   return (
     <div className="space-y-6">
       <PageHelp pageId="local-schedules" />
-      
+
       <PageHeader title="Horarios" subtitle="Planificación de turnos del equipo" />
 
       {/* Read-only banner for Franquiciado */}

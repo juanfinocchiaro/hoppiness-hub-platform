@@ -2,15 +2,37 @@ import { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Printer, Eye, ArrowLeft, Save, Camera, Upload, Clock, CheckCircle } from 'lucide-react';
+import {
+  CalendarIcon,
+  Printer,
+  Eye,
+  ArrowLeft,
+  Save,
+  Camera,
+  Upload,
+  Clock,
+  CheckCircle,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -37,7 +59,13 @@ const WARNING_TYPES = [
 
 type ModalStep = 'form' | 'preview' | 'upload-prompt' | 'uploading';
 
-export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }: WarningModalProps) {
+export function WarningModal({
+  userId,
+  branchId,
+  open,
+  onOpenChange,
+  onSuccess,
+}: WarningModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [type, setType] = useState<string>('verbal');
@@ -127,23 +155,25 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
         })
         .select('id')
         .single();
-      
+
       if (error) throw error;
-      
+
       // Trigger email notification (fire and forget)
-      supabase.functions.invoke('send-warning-notification', {
-        body: {
-          warning_id: data.id,
-          employee_id: userId,
-          branch_id: branchId,
-          warning_type: type,
-          description,
-          issued_by_name: issuerProfile?.full_name,
-        },
-      }).catch((err) => {
-        if (import.meta.env.DEV) console.error('Failed to send warning notification:', err);
-      });
-      
+      supabase.functions
+        .invoke('send-warning-notification', {
+          body: {
+            warning_id: data.id,
+            employee_id: userId,
+            branch_id: branchId,
+            warning_type: type,
+            description,
+            issued_by_name: issuerProfile?.full_name,
+          },
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) console.error('Failed to send warning notification:', err);
+        });
+
       return data.id;
     },
     onSuccess: (warningId) => {
@@ -157,7 +187,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
 
   const handleUploadSignature = async () => {
     if (!savedWarningId || !selectedFile || !user) return;
-    
+
     setUploading(true);
     try {
       // Upload file
@@ -248,7 +278,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
     }, 500);
   };
 
-  const warningTypeLabel = WARNING_TYPES.find(t => t.value === type)?.label || type;
+  const warningTypeLabel = WARNING_TYPES.find((t) => t.value === type)?.label || type;
   const roleLabel = LOCAL_ROLE_LABELS[employeeProfile?.role || ''] || 'Empleado';
 
   // Upload Prompt View - after saving, ask if they want to upload the signed document now
@@ -265,7 +295,8 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
 
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              El apercibimiento fue registrado correctamente. ¿Querés subir ahora la foto del documento firmado?
+              El apercibimiento fue registrado correctamente. ¿Querés subir ahora la foto del
+              documento firmado?
             </p>
 
             <div className="p-4 bg-muted rounded-lg text-sm">
@@ -330,10 +361,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver
             </Button>
-            <Button 
-              onClick={handleUploadSignature} 
-              disabled={!selectedFile || uploading}
-            >
+            <Button onClick={handleUploadSignature} disabled={!selectedFile || uploading}>
               {uploading ? (
                 <>
                   <Clock className="h-4 w-4 mr-2 animate-spin" />
@@ -365,7 +393,9 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
             <div className="space-y-2">
               <Label>Empleado</Label>
               <div className="p-2 bg-muted rounded text-sm">
-                {employeeProfile?.fullName || <span className="inline-block h-4 w-32 rounded bg-muted animate-pulse align-middle" />}
+                {employeeProfile?.fullName || (
+                  <span className="inline-block h-4 w-32 rounded bg-muted animate-pulse align-middle" />
+                )}
               </div>
             </div>
 
@@ -376,8 +406,10 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {WARNING_TYPES.map(t => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  {WARNING_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -390,12 +422,12 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
+                      'w-full justify-start text-left font-normal',
+                      !date && 'text-muted-foreground',
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP", { locale: es }) : "Seleccionar fecha"}
+                    {date ? format(date, 'PPP', { locale: es }) : 'Seleccionar fecha'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -414,7 +446,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
 
             <div className="space-y-2">
               <Label>Descripción</Label>
-              <Textarea 
+              <Textarea
                 placeholder="Detalle del apercibimiento..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -427,7 +459,7 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               variant="secondary"
               onClick={() => setStep('preview')}
               disabled={!description.trim()}
@@ -476,14 +508,15 @@ export function WarningModal({ userId, branchId, open, onOpenChange, onSuccess }
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a editar
           </Button>
-          <Button variant="secondary" onClick={handlePrint} title="Podés elegir 'Guardar como PDF' en el diálogo de impresión">
+          <Button
+            variant="secondary"
+            onClick={handlePrint}
+            title="Podés elegir 'Guardar como PDF' en el diálogo de impresión"
+          >
             <Printer className="h-4 w-4 mr-2" />
             Descargar / Imprimir
           </Button>
-          <Button 
-            onClick={() => createMutation.mutate()} 
-            disabled={createMutation.isPending}
-          >
+          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
             <Save className="h-4 w-4 mr-2" />
             {createMutation.isPending ? 'Guardando...' : 'Guardar apercibimiento'}
           </Button>

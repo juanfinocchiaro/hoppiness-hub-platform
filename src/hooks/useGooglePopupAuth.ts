@@ -55,7 +55,7 @@ export function useGooglePopupAuth(onSuccess?: () => void) {
     const popup = window.open(
       '/auth-popup',
       'google-auth-popup',
-      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`,
     );
 
     if (!popup || popup.closed) {

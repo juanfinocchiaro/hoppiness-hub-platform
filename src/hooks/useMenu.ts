@@ -29,7 +29,11 @@ export function useMenuCategoriaMutations() {
     mutationFn: async (data: { nombre: string; descripcion?: string; orden?: number }) => {
       const { data: cat, error } = await supabase
         .from('menu_categorias')
-        .insert({ nombre: data.nombre, descripcion: data.descripcion || null, orden: data.orden || 99 } as any)
+        .insert({
+          nombre: data.nombre,
+          descripcion: data.descripcion || null,
+          orden: data.orden || 99,
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -43,7 +47,13 @@ export function useMenuCategoriaMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { nombre?: string; descripcion?: string; orden?: number } }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { nombre?: string; descripcion?: string; orden?: number };
+    }) => {
       const { error } = await supabase
         .from('menu_categorias')
         .update({ ...data, updated_at: new Date().toISOString() } as any)
@@ -114,12 +124,14 @@ export function useMenuProductos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('menu_productos')
-        .select(`
+        .select(
+          `
           *,
           menu_categorias(id, nombre),
           menu_precios(precio_base, fc_objetivo),
           insumos(id, nombre, costo_por_unidad_base)
-        `)
+        `,
+        )
         .eq('activo', true)
         .order('orden');
       if (error) throw error;
@@ -136,10 +148,12 @@ export function useFichaTecnica(productoId: string | undefined) {
       if (!productoId) return null;
       const { data, error } = await supabase
         .from('menu_fichas_tecnicas')
-        .select(`
+        .select(
+          `
           *,
           insumos(id, nombre, unidad_base, costo_por_unidad_base)
-        `)
+        `,
+        )
         .eq('menu_producto_id', productoId)
         .order('orden');
       if (error) throw error;
@@ -230,21 +244,18 @@ export function useFichaTecnicaMutations() {
 
   const save = useMutation({
     mutationFn: async ({ menu_producto_id, items }: { menu_producto_id: string; items: any[] }) => {
-      await supabase
-        .from('menu_fichas_tecnicas')
-        .delete()
-        .eq('menu_producto_id', menu_producto_id);
+      await supabase.from('menu_fichas_tecnicas').delete().eq('menu_producto_id', menu_producto_id);
 
       if (items.length > 0) {
-        const { error } = await supabase
-          .from('menu_fichas_tecnicas')
-          .insert(items.map((item, index) => ({
+        const { error } = await supabase.from('menu_fichas_tecnicas').insert(
+          items.map((item, index) => ({
             menu_producto_id,
             insumo_id: item.insumo_id,
             cantidad: item.cantidad,
             unidad: item.unidad,
             orden: index,
-          })) as any);
+          })) as any,
+        );
 
         if (error) throw error;
       }
@@ -282,7 +293,13 @@ export function useCambiarPrecioMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ productoId, precioAnterior, precioNuevo, motivo, userId }: {
+    mutationFn: async ({
+      productoId,
+      precioAnterior,
+      precioNuevo,
+      motivo,
+      userId,
+    }: {
       productoId: string;
       precioAnterior: number;
       precioNuevo: number;
@@ -290,25 +307,24 @@ export function useCambiarPrecioMutation() {
       userId?: string;
     }) => {
       // Update price
-      const { error: errPrecio } = await supabase
-        .from('menu_precios')
-        .upsert({
+      const { error: errPrecio } = await supabase.from('menu_precios').upsert(
+        {
           menu_producto_id: productoId,
           precio_base: precioNuevo,
           updated_at: new Date().toISOString(),
-        } as any, { onConflict: 'menu_producto_id' });
+        } as any,
+        { onConflict: 'menu_producto_id' },
+      );
       if (errPrecio) throw errPrecio;
 
       // Record history
-      const { error: errHist } = await supabase
-        .from('menu_precios_historial')
-        .insert({
-          menu_producto_id: productoId,
-          precio_anterior: precioAnterior,
-          precio_nuevo: precioNuevo,
-          motivo: motivo || null,
-          usuario_id: userId || null,
-        } as any);
+      const { error: errHist } = await supabase.from('menu_precios_historial').insert({
+        menu_producto_id: productoId,
+        precio_anterior: precioAnterior,
+        precio_nuevo: precioNuevo,
+        motivo: motivo || null,
+        usuario_id: userId || null,
+      } as any);
       if (errHist) throw errHist;
     },
     onSuccess: () => {

@@ -26,9 +26,7 @@ export function FormSection({
         {Icon && <Icon className="w-5 h-5 text-muted-foreground" />}
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>
-          {description && (
-            <p className="text-xs text-muted-foreground">{description}</p>
-          )}
+          {description && <p className="text-xs text-muted-foreground">{description}</p>}
         </div>
       </div>
       <div className="pl-7">{children}</div>

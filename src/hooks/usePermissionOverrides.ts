@@ -1,14 +1,14 @@
 /**
  * usePermissionOverrides - Lee la configuración de permisos desde permission_config
- * 
+ *
  * Este hook:
  * 1. Lee la tabla permission_config
  * 2. Permite verificar si un rol tiene un permiso específico
- * 3. Se usa como override de los permisos hardcodeados en usePermissionsV2
+ * 3. Se usa como override de los permisos hardcodeados en usePermissions
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { BrandRole, LocalRole } from './usePermissionsV2';
+import type { BrandRole, LocalRole } from './usePermissions';
 
 interface PermissionConfig {
   id: string;
@@ -49,13 +49,13 @@ export function usePermissionOverrides() {
    */
   const hasConfiguredPermission = (
     permissionKey: string,
-    role: BrandRole | LocalRole
+    role: BrandRole | LocalRole,
   ): boolean | undefined => {
     if (!role) return false;
-    
-    const config = configs.find(c => c.permission_key === permissionKey);
+
+    const config = configs.find((c) => c.permission_key === permissionKey);
     if (!config) return undefined; // No hay config, usar fallback
-    
+
     return config.allowed_roles.includes(role);
   };
 
@@ -68,7 +68,7 @@ export function usePermissionOverrides() {
   const getPermission = (
     permissionKey: string,
     role: BrandRole | LocalRole,
-    fallback: boolean
+    fallback: boolean,
   ): boolean => {
     const configured = hasConfiguredPermission(permissionKey, role);
     return configured !== undefined ? configured : fallback;
@@ -78,7 +78,7 @@ export function usePermissionOverrides() {
    * Obtiene todos los permisos configurados para un scope
    */
   const getConfigsForScope = (scope: 'brand' | 'local') => {
-    return configs.filter(c => c.scope === scope);
+    return configs.filter((c) => c.scope === scope);
   };
 
   return {

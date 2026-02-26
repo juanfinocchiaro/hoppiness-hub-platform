@@ -2,19 +2,14 @@
  * MeetingWizard - Modal wizard de 3 pasos para crear reunión
  */
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { MeetingWizardStep1 } from './MeetingWizardStep1';
 import { MeetingWizardStep2 } from './MeetingWizardStep2';
 import { MeetingWizardStep3 } from './MeetingWizardStep3';
 import { useCreateMeeting, useBranchTeamMembers } from '@/hooks/useMeetings';
-import { type MeetingWizardData, type MeetingArea } from '@/types/meeting';
+import { type MeetingWizardData } from '@/types/meeting';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 
@@ -40,7 +35,7 @@ const initialData: MeetingWizardData = {
 export function MeetingWizard({ open, onOpenChange, branchId }: MeetingWizardProps) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<MeetingWizardData>(initialData);
-  
+
   const createMeeting = useCreateMeeting();
   const { data: teamMembers = [] } = useBranchTeamMembers(branchId);
 
@@ -51,12 +46,12 @@ export function MeetingWizard({ open, onOpenChange, branchId }: MeetingWizardPro
   };
 
   const updateData = (updates: Partial<MeetingWizardData>) => {
-    setData(prev => ({ ...prev, ...updates }));
+    setData((prev) => ({ ...prev, ...updates }));
   };
 
   const canProceedStep0 = data.title.trim() && data.participantIds.length > 0;
   const canProceedStep1 = data.notes.trim();
-  
+
   const handleNext = () => {
     if (step < 2) {
       setStep(step + 1);
@@ -106,25 +101,13 @@ export function MeetingWizard({ open, onOpenChange, branchId }: MeetingWizardPro
         {/* Steps */}
         <div className="py-4">
           {step === 0 && (
-            <MeetingWizardStep1
-              data={data}
-              teamMembers={teamMembers}
-              onChange={updateData}
-            />
+            <MeetingWizardStep1 data={data} teamMembers={teamMembers} onChange={updateData} />
           )}
           {step === 1 && (
-            <MeetingWizardStep2
-              data={data}
-              teamMembers={teamMembers}
-              onChange={updateData}
-            />
+            <MeetingWizardStep2 data={data} teamMembers={teamMembers} onChange={updateData} />
           )}
           {step === 2 && (
-            <MeetingWizardStep3
-              data={data}
-              teamMembers={teamMembers}
-              onChange={updateData}
-            />
+            <MeetingWizardStep3 data={data} teamMembers={teamMembers} onChange={updateData} />
           )}
         </div>
 
@@ -150,10 +133,7 @@ export function MeetingWizard({ open, onOpenChange, branchId }: MeetingWizardPro
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button
-              onClick={handleSubmit}
-              disabled={createMeeting.isPending}
-            >
+            <Button onClick={handleSubmit} disabled={createMeeting.isPending}>
               <CheckCircle className="w-4 h-4 mr-1" />
               {createMeeting.isPending ? 'Guardando...' : 'Cerrar y notificar'}
             </Button>

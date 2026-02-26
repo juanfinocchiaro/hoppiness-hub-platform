@@ -45,10 +45,12 @@ async function sendToPrinter(printer: BranchPrinter, dataBase64: string): Promis
   } catch (error: any) {
     const msg = error?.message || '';
     if (msg.includes('Print Bridge no disponible') || msg.includes('Failed to fetch')) {
-      throw new Error('Sistema de impresión no detectado. Andá a Configuración > Impresoras para instalarlo.');
+      throw new Error(
+        'Sistema de impresión no detectado. Andá a Configuración > Impresoras para instalarlo.',
+      );
     }
     throw new Error(
-      `No se pudo conectar a ${printer.ip_address}:${printer.port} — ${msg || 'verificá que la impresora esté encendida y en la misma red.'}`
+      `No se pudo conectar a ${printer.ip_address}:${printer.port} — ${msg || 'verificá que la impresora esté encendida y en la misma red.'}`,
     );
   }
 }
@@ -65,19 +67,25 @@ export function usePrinting(branchId: string) {
       .catch(() => {
         if (!cancelled) setBridgeStatus('not_available');
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const printMutation = useMutation({
     mutationFn: async ({ printer, jobType, pedidoId, dataBase64 }: PrintJobInput) => {
-      const { data: jobRecord, error: insertError } = await supabase.from('print_jobs').insert({
-        branch_id: branchId,
-        printer_id: printer.id,
-        job_type: jobType,
-        pedido_id: pedidoId || null,
-        payload: { data_base64: dataBase64 },
-        status: 'printing',
-      }).select('id').single();
+      const { data: jobRecord, error: insertError } = await supabase
+        .from('print_jobs')
+        .insert({
+          branch_id: branchId,
+          printer_id: printer.id,
+          job_type: jobType,
+          pedido_id: pedidoId || null,
+          payload: { data_base64: dataBase64 },
+          status: 'printing',
+        })
+        .select('id')
+        .single();
       if (insertError) console.error('Failed to log print job:', insertError.message);
 
       try {
@@ -89,7 +97,10 @@ export function usePrinting(branchId: string) {
       } catch (err) {
         if (jobRecord?.id) {
           const errMsg = err instanceof Error ? err.message : 'Unknown';
-          await supabase.from('print_jobs').update({ status: 'error', error_message: errMsg }).eq('id', jobRecord.id);
+          await supabase
+            .from('print_jobs')
+            .update({ status: 'error', error_message: errMsg })
+            .eq('id', jobRecord.id);
         }
         throw err;
       }
@@ -118,7 +129,11 @@ export function usePrinting(branchId: string) {
     },
   });
 
-  const printComandaCompleta = (order: PrintableOrder, branchName: string, printer: BranchPrinter) => {
+  const printComandaCompleta = (
+    order: PrintableOrder,
+    branchName: string,
+    printer: BranchPrinter,
+  ) => {
     const data = generateComandaCompleta(order, branchName, printer.paper_width);
     printMutation.mutate({
       branchId,
@@ -134,9 +149,15 @@ export function usePrinting(branchId: string) {
     stationName: string,
     stationItems: PrintableItem[],
     branchName: string,
-    printer: BranchPrinter
+    printer: BranchPrinter,
   ) => {
-    const data = generateComandaEstacion(order, stationName, stationItems, branchName, printer.paper_width);
+    const data = generateComandaEstacion(
+      order,
+      stationName,
+      stationItems,
+      branchName,
+      printer.paper_width,
+    );
     printMutation.mutate({
       branchId,
       printer,
@@ -145,16 +166,15 @@ export function usePrinting(branchId: string) {
     });
   };
 
-  const printTicket = async (
-    ticketData: TicketClienteData,
-    printer: BranchPrinter
-  ) => {
+  const printTicket = async (ticketData: TicketClienteData, printer: BranchPrinter) => {
     let finalData = ticketData;
     if (ticketData.factura && !ticketData.factura.qr_bitmap_b64) {
       try {
         const qr = await generateArcaQrBitmap(ticketData.factura);
         finalData = { ...ticketData, factura: { ...ticketData.factura, qr_bitmap_b64: qr } };
-      } catch { /* fallback sin QR */ }
+      } catch {
+        /* fallback sin QR */
+      }
     }
     const data = generateTicketCliente(finalData, printer.paper_width);
     printMutation.mutate({
@@ -168,7 +188,7 @@ export function usePrinting(branchId: string) {
   const printDelivery = (
     order: PrintableOrder & { cliente_telefono?: string | null; cliente_direccion?: string | null },
     branchName: string,
-    printer: BranchPrinter
+    printer: BranchPrinter,
   ) => {
     const data = generateComandaDelivery(order, branchName, printer.paper_width);
     printMutation.mutate({
@@ -190,10 +210,22 @@ export function usePrinting(branchId: string) {
   };
 
   const printOrder = async (
-    order: PrintableOrder & { items: (PrintableItem & { categoria_carta_id?: string | null; precio_unitario?: number; subtotal?: number })[]; total?: number; descuento?: number },
+    order: PrintableOrder & {
+      items: (PrintableItem & {
+        categoria_carta_id?: string | null;
+        precio_unitario?: number;
+        subtotal?: number;
+      })[];
+      total?: number;
+      descuento?: number;
+    },
     config: PrintConfig,
     allPrinters: BranchPrinter[],
-    categorias: { id: string; nombre: string; tipo_impresion: 'comanda' | 'vale' | 'no_imprimir' }[],
+    categorias: {
+      id: string;
+      nombre: string;
+      tipo_impresion: 'comanda' | 'vale' | 'no_imprimir';
+    }[],
     branchName: string,
     esSalon: boolean,
     payment?: PaymentPrintData,
@@ -202,7 +234,8 @@ export function usePrinting(branchId: string) {
   ) => {
     // Create delivery_tracking row for canal propio delivery orders
     let trackingToken: string | undefined;
-    const isCanalPropio = !order.canal_venta || order.canal_venta === 'mostrador' || order.canal_venta === 'webapp';
+    const isCanalPropio =
+      !order.canal_venta || order.canal_venta === 'mostrador' || order.canal_venta === 'webapp';
     if (pedidoId && order.tipo_servicio === 'delivery' && isCanalPropio) {
       try {
         const { data: pedido } = await supabase
@@ -252,7 +285,7 @@ export function usePrinting(branchId: string) {
     );
 
     for (const job of jobs) {
-      const printer = allPrinters.find(p => p.id === job.printerId);
+      const printer = allPrinters.find((p) => p.id === job.printerId);
       if (printer) {
         try {
           await sendToPrinter(printer, job.dataBase64);

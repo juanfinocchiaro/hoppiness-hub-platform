@@ -72,8 +72,8 @@ export function QuickExpenseModal({
       const roles = data?.flatMap((r) => [r.brand_role, r.local_role].filter(Boolean)) || [];
       setIsSupervisor(
         roles.some((r) =>
-          ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string)
-        )
+          ['encargado', 'franquiciado', 'admin', 'coordinador'].includes(r as string),
+        ),
       );
     }
     checkRole();
@@ -101,7 +101,7 @@ export function QuickExpenseModal({
     }
   };
 
-  const createExpense = async (authorizedBy?: string) => {
+  const createExpense = async (_authorizedBy?: string) => {
     if (!user || !shiftId) return;
     const amountNum = parseFloat(amount);
     const isCash = paymentMethod === 'cash';
@@ -117,7 +117,8 @@ export function QuickExpenseModal({
           categoriaGasto: categoriaGasto || undefined,
           rdoCategoryCode: rdoCategoryCode || undefined,
           observaciones: notes || undefined,
-          estadoAprobacion: (!isSupervisor && amountNum >= pinThreshold) ? 'pendiente_aprobacion' : 'aprobado',
+          estadoAprobacion:
+            !isSupervisor && amountNum >= pinThreshold ? 'pendiente_aprobacion' : 'aprobado',
         });
         toast.success('Gasto registrado correctamente');
         onOpenChange(false);
@@ -180,7 +181,9 @@ export function QuickExpenseModal({
             <div className="space-y-2">
               <Label htmlFor="amount">Monto</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
                 <Input
                   id="amount"
                   type="number"
@@ -201,7 +204,9 @@ export function QuickExpenseModal({
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIA_GASTO_OPTIONS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -210,10 +215,7 @@ export function QuickExpenseModal({
             <div className="space-y-2">
               <Label>Categoría RDO (opcional)</Label>
               <p className="text-xs text-muted-foreground">Para el Estado de Resultados</p>
-              <RdoCategorySelector
-                value={rdoCategoryCode}
-                onChange={setRdoCategoryCode}
-              />
+              <RdoCategorySelector value={rdoCategoryCode} onChange={setRdoCategoryCode} />
             </div>
 
             <div className="space-y-2">
@@ -265,7 +267,11 @@ export function QuickExpenseModal({
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={addExpense.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={addExpense.isPending}
+            >
               Cancelar
             </Button>
             <Button onClick={handleSubmit} disabled={!concept || !amount || addExpense.isPending}>

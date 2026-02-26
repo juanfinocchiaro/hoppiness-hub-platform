@@ -1,6 +1,6 @@
 /**
  * ManagerDashboard - Vista mobile-first para Encargados
- * 
+ *
  * Muestra:
  * - Ventas de hoy por turno (nuevo sistema de cierre)
  * - Equipo fichado ahora
@@ -15,11 +15,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  DollarSign, 
+import {
+  DollarSign,
   Plus,
   Users,
   Clock,
@@ -29,12 +35,15 @@ import {
   FileText,
   CalendarX,
   ChevronRight,
-  ClipboardList,
   Lock,
 } from 'lucide-react';
 import { format, differenceInMinutes } from 'date-fns';
 import { useTodayClosures, useEnabledShifts } from '@/hooks/useShiftClosures';
-import { getOperationalDateString, formatOperationalDate, isEarlyMorning } from '@/lib/operationalDate';
+import {
+  getOperationalDateString,
+  formatOperationalDate,
+  isEarlyMorning,
+} from '@/lib/operationalDate';
 import { ShiftClosureModal } from '@/components/local/closure/ShiftClosureModal';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { useGenerateZClosing } from '@/hooks/useFiscalReports';
@@ -59,7 +68,7 @@ function useCurrentlyWorking(branchId: string) {
     queryFn: async () => {
       // Usar fecha operativa para que el personal de cierre siga visible
       const today = getOperationalDateString();
-      
+
       // Obtener todas las entradas/salidas de la jornada operativa
       const { data: entries, error } = await supabase
         .from('clock_entries')
@@ -73,10 +82,10 @@ function useCurrentlyWorking(branchId: string) {
 
       // Calcular quién está fichado (última acción = entrada)
       const userStatus = new Map<string, { type: string; time: string }>();
-      entries.forEach(e => {
+      entries.forEach((e) => {
         userStatus.set(e.user_id, {
           type: e.entry_type,
-          time: e.created_at
+          time: e.created_at,
         });
       });
 
@@ -90,11 +99,14 @@ function useCurrentlyWorking(branchId: string) {
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
-        .in('id', workingUserIds.map(u => u.user_id));
+        .in(
+          'id',
+          workingUserIds.map((u) => u.user_id),
+        );
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-      return workingUserIds.map(w => ({
+      return workingUserIds.map((w) => ({
         id: w.user_id,
         user_id: w.user_id,
         check_in: w.clock_in,
@@ -123,8 +135,8 @@ function usePendingItems(branchId: string) {
         .not('local_role', 'is', null);
 
       const userIds = (roles || [])
-        .filter(r => Array.isArray(r.branch_ids) && r.branch_ids.includes(branchId))
-        .map(r => r.user_id);
+        .filter((r) => Array.isArray(r.branch_ids) && r.branch_ids.includes(branchId))
+        .map((r) => r.user_id);
 
       const { data: latestReg } = await supabase
         .from('regulations')
@@ -141,8 +153,8 @@ function usePendingItems(branchId: string) {
           .eq('regulation_id', latestReg.id)
           .in('user_id', userIds);
 
-        const signedUserIds = new Set(signatures?.map(s => s.user_id) || []);
-        pendingSignatures = userIds.filter(id => !signedUserIds.has(id)).length;
+        const signedUserIds = new Set(signatures?.map((s) => s.user_id) || []);
+        pendingSignatures = userIds.filter((id) => !signedUserIds.has(id)).length;
       }
 
       // Calculate unread communications for branch employees
@@ -154,20 +166,23 @@ function usePendingItems(branchId: string) {
           .select('id, target_branch_ids')
           .eq('is_published', true);
 
-        const branchComms = (comms || []).filter(c => 
-          !c.target_branch_ids || c.target_branch_ids.length === 0 || c.target_branch_ids.includes(branchId)
+        const branchComms = (comms || []).filter(
+          (c) =>
+            !c.target_branch_ids ||
+            c.target_branch_ids.length === 0 ||
+            c.target_branch_ids.includes(branchId),
         );
 
         if (branchComms.length > 0) {
-          const commIds = branchComms.map(c => c.id);
+          const commIds = branchComms.map((c) => c.id);
           const { data: reads } = await supabase
             .from('communication_reads')
             .select('communication_id, user_id')
             .in('communication_id', commIds)
             .in('user_id', userIds);
 
-          const readSet = new Set((reads || []).map(r => `${r.communication_id}_${r.user_id}`));
-          
+          const readSet = new Set((reads || []).map((r) => `${r.communication_id}_${r.user_id}`));
+
           // Count total unread: each comm × each employee that hasn't read it
           for (const comm of branchComms) {
             for (const userId of userIds) {
@@ -195,7 +210,7 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
   const [showZConfirm, setShowZConfirm] = useState(false);
 
   // Permisos - verificar rol para vista limitada (con soporte de impersonación)
-  const { isCajero, isEncargado, isSuperadmin, local } = usePermissionsWithImpersonation(branch.id);
+  const { isEncargado, isSuperadmin, local } = usePermissionsWithImpersonation(branch.id);
 
   // Z closing generator
   const generateZ = useGenerateZClosing(branch.id);
@@ -212,11 +227,15 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
   // Pending items (solo para no-cajeros)
   const { data: pending, isLoading: loadingPending } = usePendingItems(branch.id);
 
-  const loadedShifts = todayClosures?.map(c => c.turno) || [];
+  const loadedShifts = todayClosures?.map((c) => c.turno) || [];
   const todayTotal = todayClosures?.reduce((sum, c) => sum + Number(c.total_vendido || 0), 0) || 0;
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
 
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -258,17 +277,18 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
     refetchInterval: 60000,
   });
 
-  const isLoading = posEnabled ? loadingPosSales : (loadingShifts || loadingClosures);
+  const isLoading = posEnabled ? loadingPosSales : loadingShifts || loadingClosures;
 
   // Default shifts if none configured
-  const shifts = enabledShifts?.length ? enabledShifts : [
-    { value: 'mediodía', label: 'Mediodía' },
-    { value: 'noche', label: 'Noche' },
-  ];
+  const shifts = enabledShifts?.length
+    ? enabledShifts
+    : [
+        { value: 'mediodía', label: 'Mediodía' },
+        { value: 'noche', label: 'Noche' },
+      ];
 
   return (
     <div className="space-y-6">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -300,7 +320,9 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
         <CardContent className="space-y-3">
           {isLoading ? (
             <div className="grid grid-cols-2 gap-3">
-              {[1, 2].map(i => <Skeleton key={i} className="h-16" />)}
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-16" />
+              ))}
             </div>
           ) : posEnabled ? (
             /* ── Vista POS: ventas en tiempo real desde pedidos ── */
@@ -335,8 +357,8 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
             /* ── Vista manual: cierres de turno ── */
             <>
               <div className="grid grid-cols-2 gap-3">
-                {shifts.map(shiftDef => {
-                  const closure = todayClosures?.find(c => c.turno === shiftDef.value);
+                {shifts.map((shiftDef) => {
+                  const closure = todayClosures?.find((c) => c.turno === shiftDef.value);
                   const isLoaded = !!closure;
 
                   return (
@@ -359,7 +381,9 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
                           <Plus className="w-3 h-3 text-muted-foreground" />
                         )}
                       </div>
-                      <div className={`text-lg font-bold ${isLoaded ? 'text-success' : 'text-muted-foreground'}`}>
+                      <div
+                        className={`text-lg font-bold ${isLoaded ? 'text-success' : 'text-muted-foreground'}`}
+                      >
                         {isLoaded ? formatCurrency(Number(closure.total_vendido || 0)) : '-'}
                       </div>
                       {isLoaded && closure.total_hamburguesas > 0 && (
@@ -374,9 +398,7 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
 
               <div className="flex items-center justify-between pt-3 border-t">
                 <span className="font-medium">Total del día</span>
-                <span className="text-xl font-bold text-primary">
-                  {formatCurrency(todayTotal)}
-                </span>
+                <span className="text-xl font-bold text-primary">{formatCurrency(todayTotal)}</span>
               </div>
 
               <Link to={`/milocal/${branch.id}/ventas/historial`}>
@@ -398,73 +420,83 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
       </Card>
 
       {/* BANNER CIERRE Z - cuando todos los turnos están cargados */}
-      {!posEnabled && shifts.length > 0 && loadedShifts.length >= shifts.length && (isEncargado || isSuperadmin) && (
-        <Card className="border-l-4 border-l-accent bg-accent/5">
-          <CardContent className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-accent" />
-              <div>
-                <p className="font-medium text-sm">Todos los turnos cerrados</p>
-                <p className="text-xs text-muted-foreground">Generá el Cierre Z del día fiscal</p>
+      {!posEnabled &&
+        shifts.length > 0 &&
+        loadedShifts.length >= shifts.length &&
+        (isEncargado || isSuperadmin) && (
+          <Card className="border-l-4 border-l-accent bg-accent/5">
+            <CardContent className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <Lock className="w-5 h-5 text-accent" />
+                <div>
+                  <p className="font-medium text-sm">Todos los turnos cerrados</p>
+                  <p className="text-xs text-muted-foreground">Generá el Cierre Z del día fiscal</p>
+                </div>
               </div>
-            </div>
-            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setShowZConfirm(true)} disabled={generateZ.isPending}>
-              {generateZ.isPending ? 'Generando...' : 'Generar Cierre Z'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+              <Button
+                size="sm"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                onClick={() => setShowZConfirm(true)}
+                disabled={generateZ.isPending}
+              >
+                {generateZ.isPending ? 'Generando...' : 'Generar Cierre Z'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
       {/* EQUIPO AHORA - Visible para todos (cajeros incluidos) */}
       <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between text-base">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Equipo Ahora
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                {workingTeam?.length || 0} fichados
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingTeam ? (
-              <div className="space-y-2">
-                {[1, 2].map(i => <Skeleton key={i} className="h-10" />)}
-              </div>
-            ) : workingTeam && workingTeam.length > 0 ? (
-              <div className="space-y-2">
-                {workingTeam.map(member => (
-                  <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {member.profile?.full_name || 'Sin nombre'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Desde {format(new Date(member.check_in), 'HH:mm')}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {formatDuration(member.minutesWorking)}
-                    </Badge>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-base">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Equipo Ahora
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {workingTeam?.length || 0} fichados
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingTeam ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-10" />
+              ))}
+            </div>
+          ) : workingTeam && workingTeam.length > 0 ? (
+            <div className="space-y-2">
+              {workingTeam.map((member) => (
+                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {member.profile?.full_name || 'Sin nombre'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Desde {format(new Date(member.check_in), 'HH:mm')}
+                    </p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-3">
-                Nadie fichado en este momento
-              </p>
-            )}
+                  <Badge variant="outline" className="text-xs">
+                    {formatDuration(member.minutesWorking)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-3">
+              Nadie fichado en este momento
+            </p>
+          )}
 
-            <Link to={`/milocal/${branch.id}/equipo/fichajes`}>
-              <Button variant="ghost" size="sm" className="w-full mt-2 text-xs">
-                Ver todos los fichajes
-                <ChevronRight className="w-3 h-3 ml-1" />
-              </Button>
-            </Link>
-          </CardContent>
+          <Link to={`/milocal/${branch.id}/equipo/fichajes`}>
+            <Button variant="ghost" size="sm" className="w-full mt-2 text-xs">
+              Ver todos los fichajes
+              <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </CardContent>
       </Card>
 
       {/* PENDIENTES - Solo para encargados y superadmins (no franquiciados) */}
@@ -486,7 +518,9 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
           <CardContent>
             {loadingPending ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-10" />
+                ))}
               </div>
             ) : (
               <div className="space-y-3">
@@ -524,79 +558,77 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
                       {pending?.pendingSignatures || 0}
                     </Badge>
                   </div>
-            </Link>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-   )}
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-   {/* REUNIONES - Solo para encargados y superiores */}
-   {(isEncargado || isSuperadmin) && (
-     <MeetingPendingCard branchId={branch.id} />
-   )}
+      {/* REUNIONES - Solo para encargados y superiores */}
+      {(isEncargado || isSuperadmin) && <MeetingPendingCard branchId={branch.id} />}
 
-   {/* STOCK ALERTS */}
-   <StockAlertCard branchId={branch.id} />
+      {/* STOCK ALERTS */}
+      <StockAlertCard branchId={branch.id} />
 
-   {/* DELIVERY RADIUS CONTROL */}
-   {local.canOperateDelivery && (
-     <DeliveryRadiusControl branchId={branch.id} />
-   )}
+      {/* DELIVERY RADIUS CONTROL */}
+      {local.canOperateDelivery && <DeliveryRadiusControl branchId={branch.id} />}
 
-   {/* COACHING DEL MES - Solo para quienes pueden hacer coaching */}
-   {local.canDoCoaching && (
-     <CoachingPendingCard 
-       branchId={branch.id}
-       onStartCoaching={() => window.location.href = `/milocal/${branch.id}/equipo/coaching`}
-     />
-   )}
+      {/* COACHING DEL MES - Solo para quienes pueden hacer coaching */}
+      {local.canDoCoaching && (
+        <CoachingPendingCard
+          branchId={branch.id}
+          onStartCoaching={() => (window.location.href = `/milocal/${branch.id}/equipo/coaching`)}
+        />
+      )}
 
+      {/* Shift Closure Modal */}
+      <ShiftClosureModal
+        open={showEntryModal}
+        onOpenChange={setShowEntryModal}
+        branchId={branch.id}
+        branchName={branch.name}
+        defaultShift={selectedShift}
+      />
 
-  {/* Shift Closure Modal */}
-  <ShiftClosureModal
-    open={showEntryModal}
-    onOpenChange={setShowEntryModal}
-    branchId={branch.id}
-    branchName={branch.name}
-    defaultShift={selectedShift}
-  />
-
-  {/* Z Closure Confirm Dialog */}
-  <AlertDialog open={showZConfirm} onOpenChange={setShowZConfirm}>
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Confirmar Cierre Z</AlertDialogTitle>
-        <AlertDialogDescription>
-          Todos los turnos del día están cargados. ¿Generar el Cierre Z fiscal?
-          <br /><br />
-          <strong>Este cierre es definitivo y no puede modificarse.</strong>
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-        <AlertDialogAction
-          className="bg-destructive hover:bg-destructive/90"
-          onClick={async () => {
-            setShowZConfirm(false);
-            try {
-              const data = await generateZ.mutateAsync(undefined);
-              toast.success(`Cierre Z N° ${String((data as any).z_number).padStart(4, '0')} generado`);
-            } catch (e: any) {
-              if (e.message?.includes('Ya existe')) {
-                toast.info('El Cierre Z del día ya fue generado');
-              } else {
-                toast.error(e.message || 'Error al generar Cierre Z');
-              }
-            }
-          }}
-        >
-          Confirmar Cierre Z
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
-</div>
+      {/* Z Closure Confirm Dialog */}
+      <AlertDialog open={showZConfirm} onOpenChange={setShowZConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Cierre Z</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todos los turnos del día están cargados. ¿Generar el Cierre Z fiscal?
+              <br />
+              <br />
+              <strong>Este cierre es definitivo y no puede modificarse.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                setShowZConfirm(false);
+                try {
+                  const data = await generateZ.mutateAsync(undefined);
+                  toast.success(
+                    `Cierre Z N° ${String((data as any).z_number).padStart(4, '0')} generado`,
+                  );
+                } catch (e: any) {
+                  if (e.message?.includes('Ya existe')) {
+                    toast.info('El Cierre Z del día ya fue generado');
+                  } else {
+                    toast.error(e.message || 'Error al generar Cierre Z');
+                  }
+                }
+              }}
+            >
+              Confirmar Cierre Z
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 

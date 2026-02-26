@@ -1,6 +1,6 @@
 /**
  * useWorkPositions - Hook para gestionar posiciones de trabajo configurables
- * 
+ *
  * Las posiciones (cajero, sandwichero, cafetero, etc.) se cargan dinámicamente
  * desde la tabla work_positions en lugar de estar hardcodeadas.
  */
@@ -30,7 +30,7 @@ export function useWorkPositions() {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      
+
       if (error) throw error;
       return data as WorkPosition[];
     },
@@ -45,11 +45,8 @@ export function useAllWorkPositions() {
   return useQuery({
     queryKey: ['work-positions', 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('work_positions')
-        .select('*')
-        .order('sort_order');
-      
+      const { data, error } = await supabase.from('work_positions').select('*').order('sort_order');
+
       if (error) throw error;
       return data as WorkPosition[];
     },
@@ -61,10 +58,10 @@ export function useAllWorkPositions() {
  */
 export function useWorkPositionLabel(key: string | null | undefined): string {
   const { data: positions } = useWorkPositions();
-  
+
   if (!key || !positions) return '';
-  
-  const position = positions.find(p => p.key === key);
+
+  const position = positions.find((p) => p.key === key);
   return position?.label || key;
 }
 
@@ -73,7 +70,7 @@ export function useWorkPositionLabel(key: string | null | undefined): string {
  */
 export function useCreateWorkPosition() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: { key: string; label: string; sort_order?: number }) => {
       const { data: result, error } = await supabase
@@ -85,7 +82,7 @@ export function useCreateWorkPosition() {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return result as WorkPosition;
     },
@@ -102,7 +99,7 @@ export function useCreateWorkPosition() {
  */
 export function useUpdateWorkPosition() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<WorkPosition> & { id: string }) => {
       const { data: result, error } = await supabase
@@ -111,7 +108,7 @@ export function useUpdateWorkPosition() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return result as WorkPosition;
     },
@@ -128,14 +125,14 @@ export function useUpdateWorkPosition() {
  */
 export function useDeleteWorkPosition() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('work_positions')
         .update({ is_active: false })
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {

@@ -2,8 +2,21 @@ import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Plus, Trash2, Save, Package } from 'lucide-react';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { useFichaTecnica, useFichaTecnicaMutations } from '@/hooks/useMenu';
@@ -26,11 +39,15 @@ const UNIDADES = [
 ];
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 2,
+  }).format(value);
 
 function calcSubtotal(cantidad: number, costoUnit: number, unidad: string) {
   if (!cantidad || !costoUnit) return 0;
-  const mult = (unidad === 'kg' || unidad === 'l') ? 1000 : 1;
+  const mult = unidad === 'kg' || unidad === 'l' ? 1000 : 1;
   return cantidad * costoUnit * mult;
 }
 
@@ -40,7 +57,9 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
   const { data: insumos } = useInsumos();
 
   const ingredientesDisponibles = useMemo(() => {
-    return insumos?.filter((i: any) => i.tipo_item === 'ingrediente' || i.tipo_item === 'insumo') || [];
+    return (
+      insumos?.filter((i: any) => i.tipo_item === 'ingrediente' || i.tipo_item === 'insumo') || []
+    );
   }, [insumos]);
 
   const [items, setItems] = useState<any[]>([]);
@@ -48,13 +67,15 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
 
   useEffect(() => {
     if (fichaActual) {
-      setItems(fichaActual.map((item: any) => ({
-        id: item.id,
-        insumo_id: item.insumo_id,
-        cantidad: item.cantidad,
-        unidad: item.unidad,
-        insumo: item.insumos,
-      })));
+      setItems(
+        fichaActual.map((item: any) => ({
+          id: item.id,
+          insumo_id: item.insumo_id,
+          cantidad: item.cantidad,
+          unidad: item.unidad,
+          insumo: item.insumos,
+        })),
+      );
       setHasChanges(false);
     }
   }, [fichaActual, open]);
@@ -90,11 +111,13 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
     if (!producto?.id) return;
     await save.mutateAsync({
       menu_producto_id: producto.id,
-      items: items.filter(i => i.insumo_id && i.cantidad > 0).map(item => ({
-        insumo_id: item.insumo_id,
-        cantidad: item.cantidad,
-        unidad: item.unidad,
-      })),
+      items: items
+        .filter((i) => i.insumo_id && i.cantidad > 0)
+        .map((item) => ({
+          insumo_id: item.insumo_id,
+          cantidad: item.cantidad,
+          unidad: item.unidad,
+        })),
     });
     setHasChanges(false);
   };
@@ -125,53 +148,89 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-32">
-                      <EmptyState icon={Package} title="Sin ingredientes" description="Agregá ingredientes a la ficha técnica" />
+                      <EmptyState
+                        icon={Package}
+                        title="Sin ingredientes"
+                        description="Agregá ingredientes a la ficha técnica"
+                      />
                     </TableCell>
                   </TableRow>
-                ) : items.map((item, index) => {
-                  const costoUnit = item.insumo?.costo_por_unidad_base || 0;
-                  const subtotal = calcSubtotal(item.cantidad, costoUnit, item.unidad);
-                  const usedIds = items.filter((_, idx) => idx !== index).map(i => i.insumo_id).filter(Boolean);
-                  const filteredInsumos = ingredientesDisponibles.filter((i: any) => !usedIds.includes(i.id));
+                ) : (
+                  items.map((item, index) => {
+                    const costoUnit = item.insumo?.costo_por_unidad_base || 0;
+                    const subtotal = calcSubtotal(item.cantidad, costoUnit, item.unidad);
+                    const usedIds = items
+                      .filter((_, idx) => idx !== index)
+                      .map((i) => i.insumo_id)
+                      .filter(Boolean);
+                    const filteredInsumos = ingredientesDisponibles.filter(
+                      (i: any) => !usedIds.includes(i.id),
+                    );
 
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Select value={item.insumo_id || 'none'} onValueChange={(v) => updateItem(index, 'insumo_id', v === 'none' ? '' : v)}>
-                          <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleccionar...</SelectItem>
-                            {filteredInsumos.map((ing: any) => (
-                              <SelectItem key={ing.id} value={ing.id}>
-                                {ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Input type="number" step="0.01" value={item.cantidad || ''} onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))} className="w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Select value={item.unidad} onValueChange={(v) => updateItem(index, 'unidad', v)}>
-                          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {UNIDADES.map((u) => (
-                              <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">{costoUnit > 0 ? formatCurrency(costoUnit) : '—'}</TableCell>
-                      <TableCell className="text-right font-mono">{subtotal > 0 ? formatCurrency(subtotal) : '—'}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Select
+                            value={item.insumo_id || 'none'}
+                            onValueChange={(v) =>
+                              updateItem(index, 'insumo_id', v === 'none' ? '' : v)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Seleccionar...</SelectItem>
+                              {filteredInsumos.map((ing: any) => (
+                                <SelectItem key={ing.id} value={ing.id}>
+                                  {ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/
+                                  {ing.unidad_base})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={item.cantidad || ''}
+                            onChange={(e) => updateItem(index, 'cantidad', Number(e.target.value))}
+                            className="w-24"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={item.unidad}
+                            onValueChange={(v) => updateItem(index, 'unidad', v)}
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {UNIDADES.map((u) => (
+                                <SelectItem key={u.value} value={u.value}>
+                                  {u.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {costoUnit > 0 ? formatCurrency(costoUnit) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {subtotal > 0 ? formatCurrency(subtotal) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
@@ -185,16 +244,24 @@ export function FichaTecnicaModal({ open, onOpenChange, producto }: Props) {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">Costo Total de la Receta</p>
-                <p className="text-2xl font-bold font-mono text-primary">{formatCurrency(costoTotal)}</p>
+                <p className="text-2xl font-bold font-mono text-primary">
+                  {formatCurrency(costoTotal)}
+                </p>
               </div>
               {producto.menu_precios?.precio_base > 0 && (
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Food Cost</p>
-                  <Badge variant={
-                    (costoTotal / producto.menu_precios.precio_base * 100) <= 32 ? 'default' :
-                    (costoTotal / producto.menu_precios.precio_base * 100) <= 40 ? 'secondary' : 'destructive'
-                  } className="text-lg px-3 py-1">
-                    {(costoTotal / producto.menu_precios.precio_base * 100).toFixed(1)}%
+                  <Badge
+                    variant={
+                      (costoTotal / producto.menu_precios.precio_base) * 100 <= 32
+                        ? 'default'
+                        : (costoTotal / producto.menu_precios.precio_base) * 100 <= 40
+                          ? 'secondary'
+                          : 'destructive'
+                    }
+                    className="text-lg px-3 py-1"
+                  >
+                    {((costoTotal / producto.menu_precios.precio_base) * 100).toFixed(1)}%
                   </Badge>
                 </div>
               )}

@@ -1,107 +1,59 @@
-# Welcome to your Lovable project
+# Hoppiness Hub
 
-## Project info
+Sistema integral de gestión para franquicias gastronómicas. Incluye POS, KDS, gestión de marca, locales, empleados, stock, finanzas y webapp de pedidos para clientes.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- **Frontend:** React 18 + TypeScript + Vite + Tailwind
+- **Backend:** Supabase (PostgreSQL + Auth + Realtime + Edge Functions)
+- **Facturación:** AFIP (Factura electrónica)
 
-There are several ways of editing your application.
+## Instalación
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+git clone [repo]
+cd hoppiness-hub
+npm install
+cp .env.example .env.local
+# Completar variables en .env.local
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Variables de entorno
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Ver `.env.example` para la lista completa de variables necesarias.
 
-**Use GitHub Codespaces**
+## Scripts
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## App version badge (global)
-
-The app includes a global badge (bottom-right) rendered from `src/App.tsx` that shows:
-
-- `Version: <value>` from `import.meta.env.VITE_APP_VERSION`
-- Fallback to `package.json` version when `VITE_APP_VERSION` is not defined
-- Optional date from `import.meta.env.VITE_APP_BUILD_DATE`
-
-### Deploy configuration
-
-Set these environment variables in your deploy/build pipeline:
-
-- `VITE_APP_VERSION` (recommended: git short hash)
-- `VITE_APP_BUILD_DATE` (optional)
-
-Example in CI/CD (Linux runner):
-
-```sh
-export VITE_APP_VERSION="$(git rev-parse --short HEAD)"
-export VITE_APP_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-npm ci
-npm run build
+```bash
+npm run dev          # Desarrollo local
+npm run build        # Build de producción
+npm run preview      # Preview del build
+npm run release      # Generar nueva versión + changelog
+npm run docs:db      # Regenerar documentación de DB
 ```
 
-Example in GitHub Actions:
+## Estructura
 
-```yaml
-- name: Build
-  run: npm run build
-  env:
-    VITE_APP_VERSION: ${{ github.sha }}
-    VITE_APP_BUILD_DATE: ${{ github.run_started_at }}
+```
+src/
+├── components/      # Componentes reutilizables
+├── pages/           # Páginas de la aplicación
+├── hooks/           # Custom hooks
+├── lib/             # Utilidades y configuración
+├── types/           # TypeScript types
+└── integrations/    # Supabase client y tipos
+
+supabase/
+├── migrations/      # Schema de base de datos
+└── functions/       # Edge Functions
 ```
 
-## Can I connect a custom domain to my Lovable project?
+## Documentación
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `BUSINESS_RULES.md` - Reglas de negocio
+- `PERSONAS.md` - Usuarios y roles del sistema
+- `CHANGELOG.md` - Historial de cambios
+- `docs/DATABASE.md` - Schema de base de datos (auto-generado)
+- `docs/API.md` - Edge Functions y endpoints
+- `docs/DEPLOYMENT.md` - Guía de deployment

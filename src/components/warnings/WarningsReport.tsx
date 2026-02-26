@@ -3,7 +3,6 @@
  */
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -31,28 +30,37 @@ export function WarningsReport({ warnings }: WarningsReportProps) {
   // Filtrar por mes seleccionado
   const monthWarnings = useMemo(() => {
     if (!warnings) return [];
-    return warnings.filter(w => w.warning_date.startsWith(selectedMonth));
+    return warnings.filter((w) => w.warning_date.startsWith(selectedMonth));
   }, [warnings, selectedMonth]);
 
   // Calcular estadísticas
-  const stats = useMemo(() => ({
-    total: monthWarnings.length,
-    byType: monthWarnings.reduce((acc, w) => {
-      acc[w.warning_type] = (acc[w.warning_type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    uniqueEmployees: new Set(monthWarnings.map(w => w.user_id)).size,
-    pendingSignature: monthWarnings.filter(w => !w.signed_document_url).length,
-    pendingAck: monthWarnings.filter(w => !w.acknowledged_at).length,
-  }), [monthWarnings]);
+  const stats = useMemo(
+    () => ({
+      total: monthWarnings.length,
+      byType: monthWarnings.reduce(
+        (acc, w) => {
+          acc[w.warning_type] = (acc[w.warning_type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
+      uniqueEmployees: new Set(monthWarnings.map((w) => w.user_id)).size,
+      pendingSignature: monthWarnings.filter((w) => !w.signed_document_url).length,
+      pendingAck: monthWarnings.filter((w) => !w.acknowledged_at).length,
+    }),
+    [monthWarnings],
+  );
 
   // Empleados con más incidencias
   const topEmployees = useMemo(() => {
-    const byEmployee = monthWarnings.reduce((acc, w) => {
-      acc[w.user_id] = acc[w.user_id] || { count: 0, name: w.employee_name || 'Sin nombre' };
-      acc[w.user_id].count++;
-      return acc;
-    }, {} as Record<string, { count: number; name: string }>);
+    const byEmployee = monthWarnings.reduce(
+      (acc, w) => {
+        acc[w.user_id] = acc[w.user_id] || { count: 0, name: w.employee_name || 'Sin nombre' };
+        acc[w.user_id].count++;
+        return acc;
+      },
+      {} as Record<string, { count: number; name: string }>,
+    );
 
     return Object.entries(byEmployee)
       .sort(([, a], [, b]) => b.count - a.count)
@@ -63,8 +71,8 @@ export function WarningsReport({ warnings }: WarningsReportProps) {
     <div className="space-y-6">
       {/* Selector de mes */}
       <div className="flex items-center gap-4">
-        <Input 
-          type="month" 
+        <Input
+          type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
           className="w-auto"
@@ -138,7 +146,9 @@ export function WarningsReport({ warnings }: WarningsReportProps) {
             <div className="space-y-2">
               {topEmployees.map(([userId, data], index) => (
                 <div key={userId} className="flex items-center justify-between">
-                  <span>{index + 1}. {data.name}</span>
+                  <span>
+                    {index + 1}. {data.name}
+                  </span>
                   <Badge variant="outline">{data.count}</Badge>
                 </div>
               ))}

@@ -20,7 +20,18 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { handleError } from '@/lib/errorHandler';
-import { Loader2, Mail, UserPlus, CheckCircle, Search, ArrowLeft, AlertCircle, User, RefreshCw, UserCheck } from 'lucide-react';
+import {
+  Loader2,
+  Mail,
+  UserPlus,
+  CheckCircle,
+  Search,
+  ArrowLeft,
+  AlertCircle,
+  User,
+  RefreshCw,
+  UserCheck,
+} from 'lucide-react';
 
 type LocalRole = 'encargado' | 'cajero' | 'empleado';
 type SearchStatus = 'idle' | 'searching' | 'found' | 'not_found';
@@ -103,7 +114,10 @@ export function InviteStaffDialog({
         .maybeSingle();
 
       if (error) {
-        handleError(error, { userMessage: 'Error al buscar el usuario', context: 'InviteStaffDialog.handleSearch' });
+        handleError(error, {
+          userMessage: 'Error al buscar el usuario',
+          context: 'InviteStaffDialog.handleSearch',
+        });
         setSearchStatus('idle');
         return;
       }
@@ -127,14 +141,14 @@ export function InviteStaffDialog({
 
       if (existingRole) {
         if (existingRole.is_active) {
-          setBranchRoleInfo({ 
-            status: 'already_active', 
-            currentRole: existingRole.local_role 
+          setBranchRoleInfo({
+            status: 'already_active',
+            currentRole: existingRole.local_role,
           });
         } else {
-          setBranchRoleInfo({ 
-            status: 'inactive', 
-            currentRole: existingRole.local_role 
+          setBranchRoleInfo({
+            status: 'inactive',
+            currentRole: existingRole.local_role,
           });
           setRole(existingRole.local_role as LocalRole);
         }
@@ -144,7 +158,10 @@ export function InviteStaffDialog({
 
       setSearchStatus('found');
     } catch (error) {
-      handleError(error, { userMessage: 'Error al buscar el usuario', context: 'InviteStaffDialog.handleSearch' });
+      handleError(error, {
+        userMessage: 'Error al buscar el usuario',
+        context: 'InviteStaffDialog.handleSearch',
+      });
       setSearchStatus('idle');
     }
   };
@@ -159,7 +176,7 @@ export function InviteStaffDialog({
 
   const handleReactivate = async () => {
     if (!foundUser) return;
-    
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -174,7 +191,10 @@ export function InviteStaffDialog({
       handleClose(false);
       onSuccess?.();
     } catch (error) {
-      handleError(error, { userMessage: 'Error al reactivar colaborador', context: 'InviteStaffDialog.handleReactivate' });
+      handleError(error, {
+        userMessage: 'Error al reactivar colaborador',
+        context: 'InviteStaffDialog.handleReactivate',
+      });
     } finally {
       setLoading(false);
     }
@@ -182,11 +202,16 @@ export function InviteStaffDialog({
 
   const getRoleName = (r: string) => {
     switch (r) {
-      case 'encargado': return 'Encargado';
-      case 'cajero': return 'Cajero';
-      case 'empleado': return 'Colaborador';
-      case 'franquiciado': return 'Franquiciado';
-      default: return r;
+      case 'encargado':
+        return 'Encargado';
+      case 'cajero':
+        return 'Cajero';
+      case 'empleado':
+        return 'Colaborador';
+      case 'franquiciado':
+        return 'Franquiciado';
+      default:
+        return r;
     }
   };
 
@@ -194,8 +219,10 @@ export function InviteStaffDialog({
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         throw new Error('No hay sesión activa');
       }
@@ -227,9 +254,11 @@ export function InviteStaffDialog({
 
       handleClose(false);
       onSuccess?.();
-
     } catch (error) {
-      handleError(error, { userMessage: 'Error al procesar la solicitud', context: 'InviteStaffDialog.handleSubmit' });
+      handleError(error, {
+        userMessage: 'Error al procesar la solicitud',
+        context: 'InviteStaffDialog.handleSubmit',
+      });
     } finally {
       setLoading(false);
     }
@@ -258,13 +287,12 @@ export function InviteStaffDialog({
             {searchStatus === 'idle' || searchStatus === 'searching'
               ? `Buscá el email del colaborador para agregarlo al equipo de ${branchName}.`
               : searchStatus === 'found' && branchRoleInfo?.status === 'already_active'
-              ? `Este colaborador ya está activo en el equipo.`
-              : searchStatus === 'found' && branchRoleInfo?.status === 'inactive'
-              ? `Podés reactivar a este ex-colaborador.`
-              : searchStatus === 'found'
-              ? `Confirmá el rol para agregar a ${foundUser?.full_name} al equipo.`
-              : `El email no está registrado. Podés enviar una invitación.`
-            }
+                ? `Este colaborador ya está activo en el equipo.`
+                : searchStatus === 'found' && branchRoleInfo?.status === 'inactive'
+                  ? `Podés reactivar a este ex-colaborador.`
+                  : searchStatus === 'found'
+                    ? `Confirmá el rol para agregar a ${foundUser?.full_name} al equipo.`
+                    : `El email no está registrado. Podés enviar una invitación.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -296,8 +324,8 @@ export function InviteStaffDialog({
               <Button type="button" variant="outline" onClick={() => handleClose(false)}>
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleSearch} 
+              <Button
+                onClick={handleSearch}
                 disabled={searchStatus === 'searching' || !email.trim()}
               >
                 {searchStatus === 'searching' ? (
@@ -377,7 +405,8 @@ export function InviteStaffDialog({
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Este colaborador estuvo en el equipo y fue dado de baja. Podés reactivarlo con un nuevo rol.
+              Este colaborador estuvo en el equipo y fue dado de baja. Podés reactivarlo con un
+              nuevo rol.
             </p>
 
             <div className="space-y-2">
@@ -394,9 +423,7 @@ export function InviteStaffDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {getRoleDescription(role)}
-              </p>
+              <p className="text-xs text-muted-foreground">{getRoleDescription(role)}</p>
             </div>
 
             <DialogFooter>
@@ -454,9 +481,7 @@ export function InviteStaffDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {getRoleDescription(role)}
-              </p>
+              <p className="text-xs text-muted-foreground">{getRoleDescription(role)}</p>
             </div>
 
             <DialogFooter>
@@ -490,8 +515,8 @@ export function InviteStaffDialog({
                 <span className="font-medium text-sm">Usuario no encontrado</span>
               </div>
               <p className="text-sm text-amber-600 dark:text-amber-400">
-                El email <strong>{email}</strong> no está registrado en el sistema. 
-                Se enviará una invitación para que pueda registrarse.
+                El email <strong>{email}</strong> no está registrado en el sistema. Se enviará una
+                invitación para que pueda registrarse.
               </p>
             </div>
 
@@ -509,9 +534,7 @@ export function InviteStaffDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {getRoleDescription(role)}
-              </p>
+              <p className="text-xs text-muted-foreground">{getRoleDescription(role)}</p>
             </div>
 
             <DialogFooter>

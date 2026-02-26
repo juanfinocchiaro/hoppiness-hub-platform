@@ -7,19 +7,44 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { DollarSign, CheckCircle, XCircle, Loader2, Unplug, Eye, EyeOff, ExternalLink, Smartphone, Link2, Unlink, Wifi, WifiOff } from 'lucide-react';
+import {
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Unplug,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Smartphone,
+  Link2,
+  Unlink,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
-import { useMercadoPagoConfig, useMercadoPagoConfigMutations, usePointDevices } from '@/hooks/useMercadoPagoConfig';
+import {
+  useMercadoPagoConfig,
+  useMercadoPagoConfigMutations,
+  usePointDevices,
+} from '@/hooks/useMercadoPagoConfig';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MercadoPagoConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useMercadoPagoConfig(branchId);
-  const { upsert, testConnection, disconnect, saveDevice, removeDevice, changeDeviceMode } = useMercadoPagoConfigMutations(branchId);
+  const { upsert, testConnection, disconnect, saveDevice, removeDevice, changeDeviceMode } =
+    useMercadoPagoConfigMutations(branchId);
 
   const [accessToken, setAccessToken] = useState('');
   const [publicKey, setPublicKey] = useState('');
@@ -130,7 +155,9 @@ export default function MercadoPagoConfigPage() {
                     {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Se usa en el servidor para crear preferencias de pago. Nunca se expone al cliente.</p>
+                <p className="text-xs text-muted-foreground">
+                  Se usa en el servidor para crear preferencias de pago. Nunca se expone al cliente.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -140,7 +167,9 @@ export default function MercadoPagoConfigPage() {
                   value={publicKey}
                   onChange={(e) => setPublicKey(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Se usa en el frontend para inicializar el SDK de MercadoPago.</p>
+                <p className="text-xs text-muted-foreground">
+                  Se usa en el frontend para inicializar el SDK de MercadoPago.
+                </p>
               </div>
 
               <Separator />
@@ -177,7 +206,8 @@ export default function MercadoPagoConfigPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>¿Desconectar MercadoPago?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Se eliminarán las credenciales y se deshabilitará el cobro online. Podés volver a conectarte en cualquier momento.
+                          Se eliminarán las credenciales y se deshabilitará el cobro online. Podés
+                          volver a conectarte en cualquier momento.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -198,7 +228,13 @@ export default function MercadoPagoConfigPage() {
 
           {/* Point Smart Device */}
           {isConnected && (
-            <PointSmartSection branchId={branchId!} config={config!} saveDevice={saveDevice} removeDevice={removeDevice} changeDeviceMode={changeDeviceMode} />
+            <PointSmartSection
+              branchId={branchId!}
+              config={config!}
+              saveDevice={saveDevice}
+              removeDevice={removeDevice}
+              changeDeviceMode={changeDeviceMode}
+            />
           )}
 
           {/* Usage Info */}
@@ -209,15 +245,24 @@ export default function MercadoPagoConfigPage() {
             <CardContent className="text-sm text-muted-foreground space-y-3">
               <div>
                 <p className="font-medium text-foreground">Tienda Online (WebApp)</p>
-                <p>Los clientes podrán pagar sus pedidos online con MercadoPago Checkout Pro. El pedido no llega a cocina hasta que el pago se confirme.</p>
+                <p>
+                  Los clientes podrán pagar sus pedidos online con MercadoPago Checkout Pro. El
+                  pedido no llega a cocina hasta que el pago se confirme.
+                </p>
               </div>
               <div>
                 <p className="font-medium text-foreground">Point Smart (POS)</p>
-                <p>Enviá el cobro desde el POS al Point Smart. El cliente paga con tarjeta, QR o contactless. El pago se concilia automáticamente.</p>
+                <p>
+                  Enviá el cobro desde el POS al Point Smart. El cliente paga con tarjeta, QR o
+                  contactless. El pago se concilia automáticamente.
+                </p>
               </div>
               <div>
                 <p className="font-medium text-foreground">Conciliación automática</p>
-                <p>Los pagos se confirman vía webhook. El pedido solo llega a cocina cuando MercadoPago confirma el cobro.</p>
+                <p>
+                  Los pagos se confirman vía webhook. El pedido solo llega a cocina cuando
+                  MercadoPago confirma el cobro.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -237,8 +282,15 @@ function PointSmartSection({
   changeDeviceMode,
 }: {
   branchId: string;
-  config: { device_id: string | null; device_name: string | null; device_operating_mode?: string | null };
-  saveDevice: { mutate: (v: { device_id: string; device_name: string }) => void; isPending: boolean };
+  config: {
+    device_id: string | null;
+    device_name: string | null;
+    device_operating_mode?: string | null;
+  };
+  saveDevice: {
+    mutate: (v: { device_id: string; device_name: string }) => void;
+    isPending: boolean;
+  };
   removeDevice: { mutate: () => void; isPending: boolean };
   changeDeviceMode: { mutate: (mode: 'PDV' | 'STANDALONE') => void; isPending: boolean };
 }) {
@@ -292,8 +344,16 @@ function PointSmartSection({
                 <div>
                   <p className="text-sm font-medium">
                     Modo de operación:{' '}
-                    <span className={config.device_operating_mode === 'PDV' ? 'text-emerald-700' : 'text-amber-600'}>
-                      {config.device_operating_mode === 'PDV' ? 'PDV (integrado)' : 'Standalone (independiente)'}
+                    <span
+                      className={
+                        config.device_operating_mode === 'PDV'
+                          ? 'text-emerald-700'
+                          : 'text-amber-600'
+                      }
+                    >
+                      {config.device_operating_mode === 'PDV'
+                        ? 'PDV (integrado)'
+                        : 'Standalone (independiente)'}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -306,18 +366,21 @@ function PointSmartSection({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => changeDeviceMode.mutate(
-                  config.device_operating_mode === 'PDV' ? 'STANDALONE' : 'PDV'
-                )}
+                onClick={() =>
+                  changeDeviceMode.mutate(
+                    config.device_operating_mode === 'PDV' ? 'STANDALONE' : 'PDV',
+                  )
+                }
                 disabled={changeDeviceMode.isPending}
                 className="shrink-0"
               >
-                {changeDeviceMode.isPending
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                  : config.device_operating_mode === 'PDV'
-                    ? <WifiOff className="h-3.5 w-3.5 mr-1" />
-                    : <Wifi className="h-3.5 w-3.5 mr-1" />
-                }
+                {changeDeviceMode.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                ) : config.device_operating_mode === 'PDV' ? (
+                  <WifiOff className="h-3.5 w-3.5 mr-1" />
+                ) : (
+                  <Wifi className="h-3.5 w-3.5 mr-1" />
+                )}
                 {config.device_operating_mode === 'PDV' ? 'Pasar a Standalone' : 'Activar modo PDV'}
               </Button>
             </div>
@@ -325,21 +388,19 @@ function PointSmartSection({
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              No hay dispositivo vinculado. Buscá los dispositivos disponibles en tu cuenta de MercadoPago.
+              No hay dispositivo vinculado. Buscá los dispositivos disponibles en tu cuenta de
+              MercadoPago.
             </p>
 
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
+            <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
               {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Buscar dispositivos
             </Button>
 
             {devices && devices.length === 0 && (
               <p className="text-sm text-amber-600">
-                No se encontraron dispositivos. Asegurate de que el Point Smart esté encendido y vinculado a tu cuenta de MercadoPago.
+                No se encontraron dispositivos. Asegurate de que el Point Smart esté encendido y
+                vinculado a tu cuenta de MercadoPago.
               </p>
             )}
 

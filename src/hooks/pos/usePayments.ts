@@ -8,10 +8,7 @@ export function usePayments(pedidoId: string | undefined) {
   return useQuery({
     queryKey: ['pos-payments', pedidoId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('pedido_pagos')
-        .select('*')
-        .eq('pedido_id', pedidoId!);
+      const { data } = await supabase.from('pedido_pagos').select('*').eq('pedido_id', pedidoId!);
       return data ?? [];
     },
     enabled: !!pedidoId,

@@ -6,12 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { 
-  Phone, MapPin, CreditCard, Calendar, AlertTriangle, 
-  ClipboardList, Clock, DollarSign, Plus, Pencil, UserX, Copy, KeyRound
+import {
+  Phone,
+  MapPin,
+  CreditCard,
+  Calendar,
+  AlertTriangle,
+  ClipboardList,
+  Clock,
+  DollarSign,
+  Plus,
+  Pencil,
+  UserX,
+  Copy,
+  KeyRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEmployeeDetails } from './useTeamData';
@@ -31,11 +49,16 @@ interface EmployeeExpandedRowProps {
   onMemberUpdated: () => void;
 }
 
-export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated }: EmployeeExpandedRowProps) {
+export function EmployeeExpandedRow({
+  member,
+  branchId,
+  onClose,
+  onMemberUpdated,
+}: EmployeeExpandedRowProps) {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const { employeeData, warnings } = useEmployeeDetails(member.user_id, branchId);
-  
+
   const [newNote, setNewNote] = useState('');
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -66,10 +89,10 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
         note,
         by: currentUser?.id || '',
       };
-      
+
       const currentNotes = (employeeData?.internal_notes || []) as NoteEntry[];
       const updatedNotes = [...currentNotes, newNoteEntry];
-      
+
       if (employeeData?.id) {
         const { error } = await supabase
           .from('employee_data')
@@ -77,13 +100,11 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           .eq('id', employeeData.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('employee_data')
-          .insert({
-            user_id: member.user_id,
-            branch_id: branchId,
-            internal_notes: updatedNotes,
-          });
+        const { error } = await supabase.from('employee_data').insert({
+          user_id: member.user_id,
+          branch_id: branchId,
+          internal_notes: updatedNotes,
+        });
         if (error) throw error;
       }
     },
@@ -129,16 +150,22 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
       {/* Column 1: Personal Data */}
       <div className="space-y-4">
         <h4 className="font-semibold text-sm uppercase text-muted-foreground">Datos personales</h4>
-        
+
         {/* Clock PIN Status */}
         <div className="flex items-center gap-2">
           <KeyRound className="h-4 w-4" />
           {hasClockPin ? (
-            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <Badge
+              variant="secondary"
+              className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+            >
               PIN configurado
             </Badge>
           ) : (
-            <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+            <Badge
+              variant="secondary"
+              className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+            >
               Sin PIN de fichaje
             </Badge>
           )}
@@ -151,26 +178,26 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
               <span>{member.phone}</span>
             </div>
           )}
-          
+
           {employeeData?.dni && (
             <div className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-muted-foreground" />
               <span>DNI: {employeeData.dni}</span>
             </div>
           )}
-          
+
           {employeeData?.personal_address && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
               <span>{employeeData.personal_address}</span>
             </div>
           )}
-          
+
           {employeeData?.birth_date && (
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span>
-                {format(parseISO(employeeData.birth_date), "dd/MM/yyyy", { locale: es })}
+                {format(parseISO(employeeData.birth_date), 'dd/MM/yyyy', { locale: es })}
                 {age && <span className="text-muted-foreground"> ({age} años)</span>}
               </span>
             </div>
@@ -185,9 +212,10 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
               Apercibimientos ({warnings.length})
             </h5>
             <div className="space-y-1 text-sm">
-              {warnings.slice(0, 3).map(w => (
+              {warnings.slice(0, 3).map((w) => (
                 <div key={w.id} className="text-muted-foreground">
-                  ⚠️ {format(new Date(w.warning_date), 'dd/MM', { locale: es })} - {WARNING_TYPE_LABELS[w.warning_type]}
+                  ⚠️ {format(new Date(w.warning_date), 'dd/MM', { locale: es })} -{' '}
+                  {WARNING_TYPE_LABELS[w.warning_type]}
                 </div>
               ))}
             </div>
@@ -198,18 +226,16 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
       {/* Column 2: Banking + Notes */}
       <div className="space-y-4">
         <h4 className="font-semibold text-sm uppercase text-muted-foreground">Datos bancarios</h4>
-        
+
         <div className="space-y-2 text-sm">
-          {employeeData?.bank_name && (
-            <div>🏦 {employeeData.bank_name}</div>
-          )}
-          
+          {employeeData?.bank_name && <div>🏦 {employeeData.bank_name}</div>}
+
           {employeeData?.cbu && (
             <div className="flex items-center gap-2">
               <span className="truncate">CBU: {employeeData.cbu.slice(0, 10)}...</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-5 w-5"
                 onClick={() => copyToClipboard(employeeData.cbu!)}
               >
@@ -217,13 +243,13 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
               </Button>
             </div>
           )}
-          
+
           {employeeData?.alias && (
             <div className="flex items-center gap-2">
               <span>Alias: {employeeData.alias}</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-5 w-5"
                 onClick={() => copyToClipboard(employeeData.alias!)}
               >
@@ -231,33 +257,34 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
               </Button>
             </div>
           )}
-          
-          {employeeData?.cuil && (
-            <div>CUIL: {employeeData.cuil}</div>
-          )}
+
+          {employeeData?.cuil && <div>CUIL: {employeeData.cuil}</div>}
         </div>
 
         {/* Internal Notes */}
         <div className="pt-2 border-t">
           <h5 className="font-medium text-sm mb-2">Notas internas</h5>
           <div className="space-y-1 text-sm mb-2">
-            {(employeeData?.internal_notes as NoteEntry[] || []).slice(-3).map((note, i) => (
-              <p key={i} className="text-muted-foreground italic">"{note.note}"</p>
+            {((employeeData?.internal_notes as NoteEntry[]) || []).slice(-3).map((note, i) => (
+              <p key={i} className="text-muted-foreground italic">
+                "{note.note}"
+              </p>
             ))}
-            {(!employeeData?.internal_notes || (employeeData.internal_notes as NoteEntry[]).length === 0) && (
+            {(!employeeData?.internal_notes ||
+              (employeeData.internal_notes as NoteEntry[]).length === 0) && (
               <p className="text-muted-foreground text-xs">Sin notas</p>
             )}
           </div>
           <div className="flex gap-2">
-            <Input 
-              placeholder="Agregar nota..." 
+            <Input
+              placeholder="Agregar nota..."
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               className="h-8 text-sm"
               onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
             />
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               onClick={handleAddNote}
               disabled={!newNote.trim() || addNoteMutation.isPending}
@@ -271,41 +298,41 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
       {/* Column 3: Actions */}
       <div className="space-y-4">
         <h4 className="font-semibold text-sm uppercase text-muted-foreground">Acciones</h4>
-        
+
         <div className="space-y-2">
           {/* HR actions - hidden for franchisees (they are owners, not employees) */}
           {member.local_role !== 'franquiciado' && (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full justify-start"
                 onClick={() => setShowClockInsModal(true)}
               >
                 <ClipboardList className="h-4 w-4 mr-2" />
                 Ver fichajes
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full justify-start"
                 onClick={() => setShowScheduleModal(true)}
               >
                 <Clock className="h-4 w-4 mr-2" />
                 Ver horarios
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full justify-start"
                 onClick={() => toast.info('Funcionalidad de liquidación próximamente')}
               >
                 <DollarSign className="h-4 w-4 mr-2" />
                 Ver liquidación
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full justify-start text-amber-600"
                 onClick={() => setShowWarningModal(true)}
               >
@@ -314,11 +341,11 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
               </Button>
             </>
           )}
-          
+
           {/* These actions are always visible */}
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="w-full justify-start"
             onClick={() => setShowEditModal(true)}
           >
@@ -327,11 +354,7 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start text-destructive"
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start text-destructive">
                 <UserX className="h-4 w-4 mr-2" />
                 Desactivar empleado
               </Button>
@@ -361,7 +384,9 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           open={showWarningModal}
           onOpenChange={setShowWarningModal}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['employee-warnings', member.user_id, branchId] });
+            queryClient.invalidateQueries({
+              queryKey: ['employee-warnings', member.user_id, branchId],
+            });
             queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
           }}
         />
@@ -378,7 +403,9 @@ export function EmployeeExpandedRow({ member, branchId, onClose, onMemberUpdated
           open={showEditModal}
           onOpenChange={setShowEditModal}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['employee-data', member.user_id, branchId] });
+            queryClient.invalidateQueries({
+              queryKey: ['employee-data', member.user_id, branchId],
+            });
             onMemberUpdated();
           }}
         />

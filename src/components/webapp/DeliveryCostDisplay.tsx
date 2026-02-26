@@ -9,7 +9,7 @@ interface DeliveryCostDisplayProps {
 
 export function DeliveryCostDisplay({
   cost,
-  distanceKm,
+  distanceKm: _distanceKm,
   estimatedDeliveryMin,
   disclaimer,
 }: DeliveryCostDisplayProps) {
@@ -23,8 +23,7 @@ export function DeliveryCostDisplay({
           Envío: ${cost.toLocaleString()}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          ~{timeRange} min
+          <Clock className="h-3.5 w-3.5" />~{timeRange} min
         </div>
       </div>
       {disclaimer && (

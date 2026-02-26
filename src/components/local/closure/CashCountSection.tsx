@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { ChevronDown, Banknote, HelpCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ArqueoCaja } from '@/types/shiftClosure';
@@ -17,10 +23,14 @@ interface CashCountSectionProps {
 
 export function CashCountSection({ data, onChange }: CashCountSectionProps) {
   const tieneAlerta = data.diferencia_caja !== 0;
-  
+
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
-  
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Allow negative values for cash difference
     const val = parseFloat(e.target.value) || 0;
@@ -38,10 +48,12 @@ export function CashCountSection({ data, onChange }: CashCountSectionProps) {
                 Arqueo de Caja
               </div>
               <div className="flex items-center gap-2">
-                <span className={cn(
-                  "text-sm font-medium flex items-center gap-1",
-                  tieneAlerta ? "text-destructive" : "text-green-600"
-                )}>
+                <span
+                  className={cn(
+                    'text-sm font-medium flex items-center gap-1',
+                    tieneAlerta ? 'text-destructive' : 'text-green-600',
+                  )}
+                >
                   {tieneAlerta ? (
                     <>
                       <AlertTriangle className="w-4 h-4" />
@@ -76,7 +88,9 @@ export function CashCountSection({ data, onChange }: CashCountSectionProps) {
                 <div className="space-y-4 text-sm">
                   <p>Para obtener la diferencia de caja:</p>
                   <ol className="list-decimal list-inside space-y-2">
-                    <li>En Núcleo, hacé el <strong>cierre de caja</strong> del turno</li>
+                    <li>
+                      En Núcleo, hacé el <strong>cierre de caja</strong> del turno
+                    </li>
                     <li>Contá el efectivo físico en la caja</li>
                     <li>Núcleo te mostrará si hay diferencia entre lo esperado y lo contado</li>
                     <li>Ingresá esa diferencia acá</li>
@@ -84,15 +98,23 @@ export function CashCountSection({ data, onChange }: CashCountSectionProps) {
                   <div className="bg-muted p-3 rounded-lg space-y-2">
                     <p className="font-medium">¿Cómo cargar la diferencia?</p>
                     <ul className="text-muted-foreground space-y-1">
-                      <li>• Si la caja cerró <strong>exacta</strong>: dejá $0</li>
-                      <li>• Si <strong>falta</strong> dinero: poné el monto en <strong>negativo</strong> (ej: -500)</li>
-                      <li>• Si <strong>sobra</strong> dinero: poné el monto en <strong>positivo</strong> (ej: +200)</li>
+                      <li>
+                        • Si la caja cerró <strong>exacta</strong>: dejá $0
+                      </li>
+                      <li>
+                        • Si <strong>falta</strong> dinero: poné el monto en{' '}
+                        <strong>negativo</strong> (ej: -500)
+                      </li>
+                      <li>
+                        • Si <strong>sobra</strong> dinero: poné el monto en{' '}
+                        <strong>positivo</strong> (ej: +200)
+                      </li>
                     </ul>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
-            
+
             {/* Input field */}
             <div className="flex flex-col items-center gap-4">
               <div className="text-center">
@@ -111,32 +133,29 @@ export function CashCountSection({ data, onChange }: CashCountSectionProps) {
                   />
                 </div>
               </div>
-              
+
               {/* Quick buttons */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onChange({ diferencia_caja: 0 })}
-                  className={cn(
-                    data.diferencia_caja === 0 && "ring-2 ring-green-500"
-                  )}
+                  className={cn(data.diferencia_caja === 0 && 'ring-2 ring-green-500')}
                 >
                   Caja exacta ($0)
                 </Button>
               </div>
             </div>
-            
+
             {/* Status indicator */}
             {tieneAlerta && (
               <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">
-                    {data.diferencia_caja < 0 
+                    {data.diferencia_caja < 0
                       ? `Faltan ${formatCurrency(Math.abs(data.diferencia_caja))} en la caja`
-                      : `Sobran ${formatCurrency(data.diferencia_caja)} en la caja`
-                    }
+                      : `Sobran ${formatCurrency(data.diferencia_caja)} en la caja`}
                   </p>
                   <p className="text-destructive/80 mt-1">
                     Esta diferencia se registrará y se asociará a quien cierra el turno.
@@ -144,7 +163,7 @@ export function CashCountSection({ data, onChange }: CashCountSectionProps) {
                 </div>
               </div>
             )}
-            
+
             {!tieneAlerta && (
               <div className="bg-green-50 text-green-700 rounded-lg p-3 text-sm flex items-center gap-2 justify-center">
                 <CheckCircle2 className="w-4 h-4" />

@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -9,12 +8,9 @@ import {
 } from '@/components/ui/accordion';
 import {
   Rocket,
-  DollarSign,
-  Package,
   GraduationCap,
   Smartphone,
   Handshake,
-  Beef,
   Check,
   ArrowRight,
   Quote,
@@ -23,7 +19,7 @@ import {
   TrendingUp,
   Clock,
   Trophy,
-  Factory
+  Factory,
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { MobileOrderFAB } from '@/components/ui/MobileOrderFAB';
@@ -46,33 +42,36 @@ export default function Franquicias() {
     {
       icon: Factory,
       title: 'Recetas y Fábricas Propias',
-      description: 'Todas las recetas son nuestras. Trabajamos con fábricas propias para panes, salsas y medallones estandarizados.'
+      description:
+        'Todas las recetas son nuestras. Trabajamos con fábricas propias para panes, salsas y medallones estandarizados.',
     },
     {
       icon: TrendingUp,
       title: 'Recupero en 18-24 Meses',
-      description: 'Modelo de negocio probado con retorno de inversión demostrado.'
+      description: 'Modelo de negocio probado con retorno de inversión demostrado.',
     },
     {
       icon: GraduationCap,
       title: 'Capacitación Completa',
-      description: 'Entrenamiento intensivo para vos y tu equipo. Te acompañamos en todo el proceso.'
+      description:
+        'Entrenamiento intensivo para vos y tu equipo. Te acompañamos en todo el proceso.',
     },
     {
       icon: Smartphone,
       title: 'Sistema de Gestión',
-      description: 'Software propio para control de stock, equipo y reportes. Desarrollando POS propio.'
+      description:
+        'Software propio para control de stock, equipo y reportes. Desarrollando POS propio.',
     },
     {
       icon: Handshake,
       title: 'Alianzas Estratégicas',
-      description: 'Trabajamos con Pepsi, McCain, Tonadita, Tabasco y NotCo.'
+      description: 'Trabajamos con Pepsi, McCain, Tonadita, Tabasco y NotCo.',
     },
     {
       icon: Trophy,
       title: 'Marca Premiada',
-      description: '4 veces campeones. 50K seguidores. Reconocimiento en medios nacionales.'
-    }
+      description: '4 veces campeones. 50K seguidores. Reconocimiento en medios nacionales.',
+    },
   ];
 
   const investmentIncludes = [
@@ -83,37 +82,42 @@ export default function Franquicias() {
     'Campaña de marketing de lanzamiento',
     'Diseño y brandeo del local',
     'Sistema de gestión (stock, equipo, reportes)',
-    'Manuales operativos completos'
+    'Manuales operativos completos',
   ];
 
   const steps = [
     { number: '1', title: 'Contacto', description: 'Completás el formulario y te contactamos' },
     { number: '2', title: 'Reunión', description: 'Nos juntamos a conocernos y evaluamos la zona' },
     { number: '3', title: 'Aprobación', description: 'Firmamos contrato y arrancamos obras' },
-    { number: '4', title: '¡Apertura!', description: 'Tu local abre en aproximadamente 90 días' }
+    { number: '4', title: '¡Apertura!', description: 'Tu local abre en aproximadamente 90 días' },
   ];
 
   const faqs = [
     {
       question: '¿Necesito experiencia en gastronomía?',
-      answer: 'No. Te capacitamos completamente durante 4 semanas. Lo que buscamos es gente con ganas, actitud comercial y capacidad de gestión.'
+      answer:
+        'No. Te capacitamos completamente durante 4 semanas. Lo que buscamos es gente con ganas, actitud comercial y capacidad de gestión.',
     },
     {
       question: '¿Puedo tener el local en cualquier ciudad?',
-      answer: 'Estamos evaluando expansión a todo el país. Actualmente operamos en Córdoba capital y alrededores. Contactanos para consultar disponibilidad en tu zona.'
+      answer:
+        'Estamos evaluando expansión a todo el país. Actualmente operamos en Córdoba capital y alrededores. Contactanos para consultar disponibilidad en tu zona.',
     },
     {
       question: '¿Cuánto tiempo tarda la apertura?',
-      answer: 'Aproximadamente 90 días desde la firma del contrato, dependiendo de las obras necesarias en el local.'
+      answer:
+        'Aproximadamente 90 días desde la firma del contrato, dependiendo de las obras necesarias en el local.',
     },
     {
       question: '¿Puedo tener más de un local?',
-      answer: '¡Sí! Muchos de nuestros franquiciados tienen 2 o más locales. Es más, premiamos el crecimiento con mejores condiciones.'
+      answer:
+        '¡Sí! Muchos de nuestros franquiciados tienen 2 o más locales. Es más, premiamos el crecimiento con mejores condiciones.',
     },
     {
       question: '¿Qué pasa si no funciona?',
-      answer: 'Tenemos un track record del 100% de locales exitosos. Nuestro modelo está probado y te acompañamos en cada paso para asegurar tu éxito.'
-    }
+      answer:
+        'Tenemos un track record del 100% de locales exitosos. Nuestro modelo está probado y te acompañamos en cada paso para asegurar tu éxito.',
+    },
   ];
 
   return (
@@ -127,12 +131,12 @@ export default function Franquicias() {
 
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroWall})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/90 to-primary/80" />
-        
+
         <div className="relative container mx-auto px-4 py-20 text-center">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-center gap-2 mb-6">
@@ -140,7 +144,8 @@ export default function Franquicias() {
               <span className="text-accent font-bold text-lg">4 VECES CAMPEONES</span>
             </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 font-brand leading-tight">
-              Llevá la mejor hamburguesa<br />
+              Llevá la mejor hamburguesa
+              <br />
               <span className="text-accent">a tu ciudad</span>
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-4">
@@ -150,7 +155,10 @@ export default function Franquicias() {
               De 40 hamburguesas/día en 2020 a más de 1000/día. Y seguimos creciendo.
             </p>
             <a href="#formulario-franquicia">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 h-auto">
+              <Button
+                size="lg"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 h-auto"
+              >
                 <Rocket className="w-5 h-5 mr-2" />
                 Quiero mi Franquicia
               </Button>
@@ -185,7 +193,10 @@ export default function Franquicias() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {benefits.map((benefit, i) => (
-              <Card key={i} className="shadow-card hover:shadow-elevated transition-all hover:-translate-y-1">
+              <Card
+                key={i}
+                className="shadow-card hover:shadow-elevated transition-all hover:-translate-y-1"
+              >
                 <CardContent className="pt-6">
                   <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                     <benefit.icon className="w-7 h-7 text-primary" />
@@ -204,11 +215,10 @@ export default function Franquicias() {
         <div className="container mx-auto max-w-4xl text-center">
           <Quote className="w-12 h-12 mx-auto mb-6 opacity-50" />
           <blockquote className="text-2xl md:text-3xl font-medium mb-6 italic">
-            "Nuestra franquicia le va a dar al franquiciado la posibilidad de entrar al rubro gastronómico vendiendo un producto de extrema calidad."
+            "Nuestra franquicia le va a dar al franquiciado la posibilidad de entrar al rubro
+            gastronómico vendiendo un producto de extrema calidad."
           </blockquote>
-          <p className="text-primary-foreground/70">
-            — Ismael Sánchez, Socio
-          </p>
+          <p className="text-primary-foreground/70">— Ismael Sánchez, Socio</p>
         </div>
       </section>
 
@@ -264,7 +274,8 @@ export default function Franquicias() {
               </div>
 
               <p className="text-sm text-muted-foreground text-center">
-                * Contactanos para una propuesta personalizada según tu zona y disponibilidad de inversión.
+                * Contactanos para una propuesta personalizada según tu zona y disponibilidad de
+                inversión.
               </p>
             </CardContent>
           </Card>
@@ -289,7 +300,7 @@ export default function Franquicias() {
                 </div>
                 <h4 className="font-bold text-lg mb-2">{step.title}</h4>
                 <p className="text-muted-foreground text-sm">{step.description}</p>
-                
+
                 {i < steps.length - 1 && (
                   <ArrowRight className="hidden md:block absolute top-8 -right-3 w-6 h-6 text-muted-foreground/30" />
                 )}
@@ -308,11 +319,7 @@ export default function Franquicias() {
 
       {/* Image break */}
       <section className="relative h-64 md:h-80">
-        <img 
-          src={local1} 
-          alt="Interior Hoppiness" 
-          className="w-full h-full object-cover"
-        />
+        <img src={local1} alt="Interior Hoppiness" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
       </section>
 
@@ -328,8 +335,8 @@ export default function Franquicias() {
 
           <Accordion type="single" collapsible className="space-y-4">
             {faqs.map((faq, i) => (
-              <AccordionItem 
-                key={i} 
+              <AccordionItem
+                key={i}
                 value={`faq-${i}`}
                 className="border rounded-xl px-6 shadow-sm"
               >
@@ -351,20 +358,20 @@ export default function Franquicias() {
       {/* CTA Final */}
       <section className="py-20 px-4 bg-gradient-to-br from-primary via-primary to-accent/80">
         <div className="container mx-auto max-w-3xl text-center">
-          <img 
-            src={logoHoppiness} 
-            alt="Hoppiness Club" 
-            className="w-20 h-20 mx-auto mb-6"
-          />
+          <img src={logoHoppiness} alt="Hoppiness Club" className="w-20 h-20 mx-auto mb-6" />
           <h2 className="text-4xl md:text-5xl font-black text-white mb-4 font-brand">
-            ¿LISTO PARA SER PARTE DEL<br />
+            ¿LISTO PARA SER PARTE DEL
+            <br />
             <span className="text-accent">CULTO AL SABOR</span>?
           </h2>
           <p className="text-xl text-white/90 mb-8">
             COMPLETÁ EL FORMULARIO Y UN ASESOR SE CONTACTARÁ EN MENOS DE 24 HORAS.
           </p>
           <a href="#formulario-franquicia">
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90 text-xl px-10 py-7 h-auto shadow-lg">
+            <Button
+              size="lg"
+              className="bg-white text-primary hover:bg-white/90 text-xl px-10 py-7 h-auto shadow-lg"
+            >
               <Rocket className="w-6 h-6 mr-2" />
               ¡QUIERO MI FRANQUICIA!
             </Button>

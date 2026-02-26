@@ -1,6 +1,6 @@
 /**
  * ScheduleCellPopover - Schedule editing dialog (CONTROLLED VERSION)
- * 
+ *
  * V3 (Feb 2026) - Changed to Dialog for better UX with dynamic cells:
  * - Works with double-click on any cell
  * - Automatic break for shifts over 6 hours
@@ -12,10 +12,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
-import { Coffee, X, Check, Calendar, Clock, Trash2, Plus } from 'lucide-react';
+import { Coffee, Check, Calendar, Clock, Trash2, Plus } from 'lucide-react';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -52,47 +67,50 @@ interface ScheduleCellPopoverProps {
 // Helper to calculate shift duration in hours
 function calculateShiftHours(start: string, end: string): number {
   if (!start || !end) return 0;
-  
-  const isUnconfigured = (start === '00:00' || start === '00:00:00') && 
-                         (end === '00:00' || end === '00:00:00');
+
+  const isUnconfigured =
+    (start === '00:00' || start === '00:00:00') && (end === '00:00' || end === '00:00:00');
   if (isUnconfigured) return 0;
-  
+
   const [startH, startM] = start.split(':').map(Number);
   const [endH, endM] = end.split(':').map(Number);
-  
+
   let startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
-  
+
   if (endMinutes <= startMinutes) {
     endMinutes += 24 * 60;
   }
-  
+
   return (endMinutes - startMinutes) / 60;
 }
 
 // Calculate default break time (30 min, starting halfway through the shift)
-function calculateDefaultBreak(start: string, end: string): { breakStart: string; breakEnd: string } {
+function calculateDefaultBreak(
+  start: string,
+  end: string,
+): { breakStart: string; breakEnd: string } {
   const [startH, startM] = start.split(':').map(Number);
   const [endH, endM] = end.split(':').map(Number);
-  
+
   let startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
-  
+
   if (endMinutes <= startMinutes) {
     endMinutes += 24 * 60;
   }
-  
+
   const midpoint = startMinutes + (endMinutes - startMinutes) / 2;
   const breakStartMinutes = Math.floor(midpoint / 30) * 30;
   const breakEndMinutes = breakStartMinutes + 30;
-  
+
   const formatTime = (minutes: number) => {
     const normalizedMinutes = minutes % (24 * 60);
     const h = Math.floor(normalizedMinutes / 60);
     const m = normalizedMinutes % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
-  
+
   return {
     breakStart: formatTime(breakStartMinutes),
     breakEnd: formatTime(breakEndMinutes),
@@ -116,21 +134,27 @@ export function ScheduleCellPopover({
   const [position, setPosition] = useState<string>(value.position || defaultPosition || '');
   const [breakStart, setBreakStart] = useState(value.breakStart || '');
   const [breakEnd, setBreakEnd] = useState(value.breakEnd || '');
-  
+
   // Split shift (second time range)
   const [hasSplitShift, setHasSplitShift] = useState(!!value.startTime2 && !!value.endTime2);
   const [customStart2, setCustomStart2] = useState(value.startTime2 || '20:00');
   const [customEnd2, setCustomEnd2] = useState(value.endTime2 || '01:00');
-  
+
   const { data: workPositions = [] } = useWorkPositions();
 
-  const shiftHours = useMemo(() => calculateShiftHours(customStart, customEnd), [customStart, customEnd]);
-  const shiftHours2 = useMemo(() => hasSplitShift ? calculateShiftHours(customStart2, customEnd2) : 0, [customStart2, customEnd2, hasSplitShift]);
+  const shiftHours = useMemo(
+    () => calculateShiftHours(customStart, customEnd),
+    [customStart, customEnd],
+  );
+  const shiftHours2 = useMemo(
+    () => (hasSplitShift ? calculateShiftHours(customStart2, customEnd2) : 0),
+    [customStart2, customEnd2, hasSplitShift],
+  );
   const totalHours = shiftHours + shiftHours2;
-  
+
   // Break only applies to continuous shifts (not split shifts)
   const requiresBreak = !hasSplitShift && shiftHours > 6;
-  
+
   const hasExistingShift = value.startTime || value.endTime || value.isDayOff;
 
   useEffect(() => {
@@ -150,10 +174,13 @@ export function ScheduleCellPopover({
       setPosition(value.position || defaultPosition || '');
       setBreakStart(value.breakStart || '');
       setBreakEnd(value.breakEnd || '');
-      
+
       // Initialize split shift state
-      const hasSecondShift = !!value.startTime2 && !!value.endTime2 && 
-        value.startTime2 !== '00:00' && value.endTime2 !== '00:00';
+      const hasSecondShift =
+        !!value.startTime2 &&
+        !!value.endTime2 &&
+        value.startTime2 !== '00:00' &&
+        value.endTime2 !== '00:00';
       setHasSplitShift(hasSecondShift);
       setCustomStart2(value.startTime2 || '20:00');
       setCustomEnd2(value.endTime2 || '01:00');
@@ -244,12 +271,7 @@ export function ScheduleCellPopover({
           <div className="p-4 space-y-4">
             {/* Quick actions: Day off, Vacation, and Birthday */}
             <div className="space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-9"
-                onClick={handleDayOff}
-              >
+              <Button variant="outline" size="sm" className="w-full h-9" onClick={handleDayOff}>
                 Franco (día libre)
               </Button>
 
@@ -264,9 +286,9 @@ export function ScheduleCellPopover({
               </Button>
 
               {hasBirthdayThisMonth && !birthdayUsedThisMonth && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-full h-9 text-pink-600 border-pink-200 hover:bg-pink-50 dark:text-pink-400 dark:border-pink-800 dark:hover:bg-pink-950/50"
                   onClick={handleBirthdayOff}
                 >
@@ -282,7 +304,9 @@ export function ScheduleCellPopover({
                 <div className="w-full border-t" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-popover px-2 text-xs text-muted-foreground">o definir horario</span>
+                <span className="bg-popover px-2 text-xs text-muted-foreground">
+                  o definir horario
+                </span>
               </div>
             </div>
 
@@ -320,10 +344,7 @@ export function ScheduleCellPopover({
                 <Plus className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-medium">Turno cortado (doble jornada)</span>
               </div>
-              <Switch
-                checked={hasSplitShift}
-                onCheckedChange={setHasSplitShift}
-              />
+              <Switch checked={hasSplitShift} onCheckedChange={setHasSplitShift} />
             </div>
 
             {/* Second shift time inputs (only when split shift is enabled) */}
@@ -362,11 +383,12 @@ export function ScheduleCellPopover({
                 <Clock className="w-3 h-3" />
                 {totalHours.toFixed(1)} horas
                 {hasSplitShift && (
-                  <span className="text-muted-foreground"> ({shiftHours.toFixed(1)} + {shiftHours2.toFixed(1)})</span>
+                  <span className="text-muted-foreground">
+                    {' '}
+                    ({shiftHours.toFixed(1)} + {shiftHours2.toFixed(1)})
+                  </span>
                 )}
-                {requiresBreak && (
-                  <span className="text-primary"> · incluye break</span>
-                )}
+                {requiresBreak && <span className="text-primary"> · incluye break</span>}
               </span>
             </div>
 
@@ -403,8 +425,8 @@ export function ScheduleCellPopover({
             {/* Position selector */}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Posición</Label>
-              <Select 
-                value={position || 'none'} 
+              <Select
+                value={position || 'none'}
                 onValueChange={(v) => setPosition(v === 'none' ? '' : v)}
               >
                 <SelectTrigger className="h-9">
@@ -456,13 +478,13 @@ export function ScheduleCellPopover({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar turno de {employeeName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará el turno asignado para el {dateLabel}. 
-              El cambio quedará pendiente hasta que guardes los horarios.
+              Esta acción eliminará el turno asignado para el {dateLabel}. El cambio quedará
+              pendiente hasta que guardes los horarios.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteShift}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

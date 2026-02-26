@@ -7,12 +7,39 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { POSAlertDialogContent } from './POSDialog';
 import { usePOSPortal } from './POSPortalContext';
-import { Minus, Plus, Trash2, ShoppingBag, MessageSquare, X, Banknote, CreditCard, QrCode, ArrowRightLeft, ChefHat, PlusCircle, Pencil, ChevronRight, Store, Bike, Loader2, Check, CircleDot, Tag } from 'lucide-react';
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  MessageSquare,
+  X,
+  Banknote,
+  CreditCard,
+  QrCode,
+  ArrowRightLeft,
+  ChefHat,
+  PlusCircle,
+  Pencil,
+  ChevronRight,
+  Store,
+  Bike,
+  Loader2,
+  Check,
+  CircleDot,
+  Tag,
+} from 'lucide-react';
 import { DotsLoader } from '@/components/ui/loaders';
 import type { CartItem } from './ProductGrid';
 import type { LocalPayment, MetodoPago, OrderConfig } from '@/types/pos';
@@ -98,9 +125,7 @@ function ConfigHeader({ config, onEdit }: { config: OrderConfig; onEdit?: () => 
     else if (config.canalApp === 'mp_delivery') parts.push('MP Delivery');
   }
 
-  const detail = config.numeroLlamador
-    ? `#${config.numeroLlamador}`
-    : config.clienteNombre || '';
+  const detail = config.numeroLlamador ? `#${config.numeroLlamador}` : config.clienteNombre || '';
 
   const Icon = config.canalVenta === 'mostrador' ? Store : Bike;
 
@@ -116,9 +141,7 @@ function ConfigHeader({ config, onEdit }: { config: OrderConfig; onEdit?: () => 
             </span>
           ))}
         </span>
-        {detail && (
-          <span className="text-xs text-muted-foreground truncate ml-1">· {detail}</span>
-        )}
+        {detail && <span className="text-xs text-muted-foreground truncate ml-1">· {detail}</span>}
       </div>
       {onEdit && (
         <Button variant="ghost" size="sm" className="shrink-0 h-7 text-xs gap-1" onClick={onEdit}>
@@ -153,18 +176,21 @@ export function AccountPanel({
   const promoDescTotal = items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
   const isApps = orderConfig?.canalVenta === 'apps';
   const isDelivery = orderConfig?.tipoServicio === 'delivery';
-  const costoEnvio = (isApps || isDelivery) ? (orderConfig?.costoDelivery ?? 0) : 0;
+  const costoEnvio = isApps || isDelivery ? (orderConfig?.costoDelivery ?? 0) : 0;
   const descPlataforma = orderConfig?.descuentoPlataforma ?? 0;
   const descRestauranteRaw = orderConfig?.descuentoRestaurante ?? 0;
-  const descRestaurante = orderConfig?.descuentoModo === 'porcentaje'
-    ? Math.round(subtotalItems * descRestauranteRaw / 100)
-    : descRestauranteRaw;
+  const descRestaurante =
+    orderConfig?.descuentoModo === 'porcentaje'
+      ? Math.round((subtotalItems * descRestauranteRaw) / 100)
+      : descRestauranteRaw;
   const voucherDesc = orderConfig?.voucherDescuento ?? 0;
   const totalDescuentos = descPlataforma + descRestaurante + voucherDesc + promoDescTotal;
   const totalItems = subtotalItems + costoEnvio - totalDescuentos;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const saldo = isApps ? 0 : totalItems - totalPaid;
-  const canSend = isApps ? items.length > 0 : (Math.abs(totalItems - totalPaid) < 0.01 && items.length > 0);
+  const canSend = isApps
+    ? items.length > 0
+    : Math.abs(totalItems - totalPaid) < 0.01 && items.length > 0;
 
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
   const [voucherInput, setVoucherInput] = useState('');
@@ -242,7 +268,11 @@ export function AccountPanel({
         {onCancelOrder && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 text-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive h-7 text-xs"
+              >
                 <X className="h-3.5 w-3.5 mr-1" />
                 {items.length > 0 || payments.length > 0 ? 'Cancelar' : 'Nueva venta'}
               </Button>
@@ -262,8 +292,13 @@ export function AccountPanel({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Volver</AlertDialogCancel>
-                <AlertDialogAction onClick={onCancelOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {items.length > 0 || payments.length > 0 ? 'Sí, cancelar pedido' : 'Sí, reiniciar'}
+                <AlertDialogAction
+                  onClick={onCancelOrder}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {items.length > 0 || payments.length > 0
+                    ? 'Sí, cancelar pedido'
+                    : 'Sí, reiniciar'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </POSAlertDialogContent>
@@ -276,12 +311,16 @@ export function AccountPanel({
         {timeline.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
             <ShoppingBag className="h-12 w-12 text-muted-foreground/60 mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">Agregá productos para empezar</p>
-            <p className="text-xs text-muted-foreground mt-1">Elegí items del menú y sumalos al pedido</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Agregá productos para empezar
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Elegí items del menú y sumalos al pedido
+            </p>
           </div>
         ) : (
           <div className="p-3 space-y-1.5">
-            {timeline.map((entry, i) => {
+            {timeline.map((entry) => {
               if (entry.type === 'item') {
                 return (
                   <ItemRow
@@ -314,8 +353,14 @@ export function AccountPanel({
           <>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{(costoEnvio > 0 || totalDescuentos > 0 || isApps || onUpdateOrderConfig) ? 'Subtotal' : 'Total pedido'}</span>
-                <span className="font-medium tabular-nums">$ {subtotalItems.toLocaleString('es-AR')}</span>
+                <span className="text-muted-foreground">
+                  {costoEnvio > 0 || totalDescuentos > 0 || isApps || onUpdateOrderConfig
+                    ? 'Subtotal'
+                    : 'Total pedido'}
+                </span>
+                <span className="font-medium tabular-nums">
+                  $ {subtotalItems.toLocaleString('es-AR')}
+                </span>
               </div>
 
               {promoDescTotal > 0 && (
@@ -324,7 +369,9 @@ export function AccountPanel({
                     <Tag className="w-3 h-3" />
                     Desc. promoción
                   </span>
-                  <span className="text-success font-medium tabular-nums text-xs">- $ {promoDescTotal.toLocaleString('es-AR')}</span>
+                  <span className="text-success font-medium tabular-nums text-xs">
+                    - $ {promoDescTotal.toLocaleString('es-AR')}
+                  </span>
                 </div>
               )}
 
@@ -338,7 +385,11 @@ export function AccountPanel({
                       min={0}
                       step={100}
                       value={orderConfig?.costoDelivery ?? 0}
-                      onChange={(e) => onUpdateOrderConfig({ costoDelivery: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) =>
+                        onUpdateOrderConfig({
+                          costoDelivery: Math.max(0, Number(e.target.value) || 0),
+                        })
+                      }
                       className="h-7 w-28 text-xs text-right tabular-nums"
                     />
                   </div>
@@ -349,7 +400,11 @@ export function AccountPanel({
                       min={0}
                       step={100}
                       value={orderConfig?.descuentoPlataforma ?? 0}
-                      onChange={(e) => onUpdateOrderConfig({ descuentoPlataforma: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) =>
+                        onUpdateOrderConfig({
+                          descuentoPlataforma: Math.max(0, Number(e.target.value) || 0),
+                        })
+                      }
                       className="h-7 w-28 text-xs text-right tabular-nums"
                     />
                   </div>
@@ -360,7 +415,11 @@ export function AccountPanel({
                       min={0}
                       step={100}
                       value={orderConfig?.descuentoRestaurante ?? 0}
-                      onChange={(e) => onUpdateOrderConfig({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
+                      onChange={(e) =>
+                        onUpdateOrderConfig({
+                          descuentoRestaurante: Math.max(0, Number(e.target.value) || 0),
+                        })
+                      }
                       className="h-7 w-28 text-xs text-right tabular-nums"
                     />
                   </div>
@@ -371,7 +430,9 @@ export function AccountPanel({
               {!isApps && costoEnvio > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Envío</span>
-                  <span className="font-medium tabular-nums">$ {costoEnvio.toLocaleString('es-AR')}</span>
+                  <span className="font-medium tabular-nums">
+                    $ {costoEnvio.toLocaleString('es-AR')}
+                  </span>
                 </div>
               )}
               {/* Editable discount for non-apps with $ / % toggle */}
@@ -390,7 +451,9 @@ export function AccountPanel({
                               : 'bg-transparent text-muted-foreground hover:bg-muted',
                           )}
                           onClick={() => onUpdateOrderConfig({ descuentoModo: 'pesos' })}
-                        >$</button>
+                        >
+                          $
+                        </button>
                         <button
                           type="button"
                           className={cn(
@@ -400,7 +463,9 @@ export function AccountPanel({
                               : 'bg-transparent text-muted-foreground hover:bg-muted',
                           )}
                           onClick={() => onUpdateOrderConfig({ descuentoModo: 'porcentaje' })}
-                        >%</button>
+                        >
+                          %
+                        </button>
                       </div>
                       <Input
                         type="number"
@@ -408,22 +473,29 @@ export function AccountPanel({
                         max={orderConfig?.descuentoModo === 'porcentaje' ? 100 : undefined}
                         step={orderConfig?.descuentoModo === 'porcentaje' ? 5 : 100}
                         value={orderConfig?.descuentoRestaurante ?? 0}
-                        onChange={(e) => onUpdateOrderConfig({ descuentoRestaurante: Math.max(0, Number(e.target.value) || 0) })}
+                        onChange={(e) =>
+                          onUpdateOrderConfig({
+                            descuentoRestaurante: Math.max(0, Number(e.target.value) || 0),
+                          })
+                        }
                         className="h-7 w-20 text-xs text-right tabular-nums"
                       />
                     </div>
                   </div>
                   {orderConfig?.descuentoModo === 'porcentaje' && descRestaurante > 0 && (
                     <div className="flex justify-end">
-                      <span className="text-orange-600 text-xs tabular-nums">- $ {descRestaurante.toLocaleString('es-AR')}</span>
+                      <span className="text-orange-600 text-xs tabular-nums">
+                        - $ {descRestaurante.toLocaleString('es-AR')}
+                      </span>
                     </div>
                   )}
                 </div>
               )}
 
               {/* Voucher input */}
-              {!isApps && onUpdateOrderConfig && (
-                orderConfig?.voucherCodigo ? (
+              {!isApps &&
+                onUpdateOrderConfig &&
+                (orderConfig?.voucherCodigo ? (
                   <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-2.5 py-1.5">
                     <Tag className="w-3.5 h-3.5 text-green-600 shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -435,7 +507,13 @@ export function AccountPanel({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-green-600 hover:text-red-600"
-                      onClick={() => onUpdateOrderConfig({ voucherCodigoId: undefined, voucherCodigo: undefined, voucherDescuento: undefined })}
+                      onClick={() =>
+                        onUpdateOrderConfig({
+                          voucherCodigoId: undefined,
+                          voucherCodigo: undefined,
+                          voucherDescuento: undefined,
+                        })
+                      }
                     >
                       <X className="w-3.5 h-3.5" />
                     </Button>
@@ -445,10 +523,10 @@ export function AccountPanel({
                     <div className="flex gap-1.5">
                       <Input
                         value={voucherInput}
-                        onChange={e => setVoucherInput(e.target.value.toUpperCase())}
+                        onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
                         placeholder="Voucher"
                         className="h-7 text-xs font-mono flex-1"
-                        onKeyDown={e => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter' && voucherInput.trim()) {
                             validateCode.mutate(
                               { codigo: voucherInput.trim(), subtotal: subtotalItems },
@@ -461,7 +539,7 @@ export function AccountPanel({
                                   });
                                   setVoucherInput('');
                                 },
-                              }
+                              },
                             );
                           }
                         }}
@@ -483,7 +561,7 @@ export function AccountPanel({
                                 });
                                 setVoucherInput('');
                               },
-                            }
+                            },
                           );
                         }}
                       >
@@ -491,16 +569,19 @@ export function AccountPanel({
                       </Button>
                     </div>
                     {validateCode.isError && (
-                      <p className="text-[11px] text-destructive">{(validateCode.error as Error).message}</p>
+                      <p className="text-[11px] text-destructive">
+                        {(validateCode.error as Error).message}
+                      </p>
                     )}
                   </div>
-                )
-              )}
+                ))}
 
               {(costoEnvio > 0 || totalDescuentos > 0 || isApps || onUpdateOrderConfig) && (
                 <div className="flex justify-between pt-0.5 border-t">
                   <span className="text-muted-foreground font-medium">Total pedido</span>
-                  <span className="font-semibold tabular-nums">$ {totalItems.toLocaleString('es-AR')}</span>
+                  <span className="font-semibold tabular-nums">
+                    $ {totalItems.toLocaleString('es-AR')}
+                  </span>
                 </div>
               )}
 
@@ -516,17 +597,21 @@ export function AccountPanel({
               {!isApps && payments.length > 0 && (
                 <div className="flex justify-between text-success">
                   <span>Pagado</span>
-                  <span className="font-medium tabular-nums">- $ {totalPaid.toLocaleString('es-AR')}</span>
+                  <span className="font-medium tabular-nums">
+                    - $ {totalPaid.toLocaleString('es-AR')}
+                  </span>
                 </div>
               )}
             </div>
             {!isApps && payments.length > 0 && (
-              <div className={cn(
-                'rounded-lg px-3 py-2 flex justify-between items-center text-sm font-bold',
-                saldo > 0
-                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              )}>
+              <div
+                className={cn(
+                  'rounded-lg px-3 py-2 flex justify-between items-center text-sm font-bold',
+                  saldo > 0
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+                )}
+              >
                 <span>{saldo > 0 ? 'Falta cobrar' : 'Cobrado'}</span>
                 <span className="tabular-nums">$ {saldo.toLocaleString('es-AR')}</span>
               </div>
@@ -535,7 +620,12 @@ export function AccountPanel({
         )}
 
         {!isApps && items.length > 0 && saldo > 0 && (
-          <Button variant="outline" className="w-full" onClick={onRegisterPayment} disabled={disabled}>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onRegisterPayment}
+            disabled={disabled}
+          >
             <PlusCircle className="h-4 w-4 mr-2" />
             Registrar pago
           </Button>
@@ -546,16 +636,17 @@ export function AccountPanel({
           onOpenChange={(open) => {
             if (!open && sendPhase === 'progress') return;
             setSendDialogOpen(open);
-            if (!open) { setSendPhase('confirm'); setCurrentStage(null); }
+            if (!open) {
+              setSendPhase('confirm');
+              setCurrentStage(null);
+            }
           }}
         >
           <DialogPrimitive.Trigger asChild>
             <Button
               className={cn(
                 'w-full hidden lg:flex h-14 text-base',
-                canSend
-                  ? 'bg-success hover:bg-success/90 text-white'
-                  : ''
+                canSend ? 'bg-success hover:bg-success/90 text-white' : '',
               )}
               size="lg"
               disabled={sendDisabled || disabled}
@@ -564,7 +655,9 @@ export function AccountPanel({
               <div className="flex flex-col items-start leading-tight">
                 <span>{sendLabel}</span>
                 {canSend && (
-                  <span className="text-xs font-normal opacity-80">{totalQty} items · $ {totalItems.toLocaleString('es-AR')}</span>
+                  <span className="text-xs font-normal opacity-80">
+                    {totalQty} items · $ {totalItems.toLocaleString('es-AR')}
+                  </span>
                 )}
               </div>
             </Button>
@@ -612,30 +705,43 @@ function SendDialogContent({
 
   const stages: { key: SendingStage; label: string; doneLabel: string }[] = [
     { key: 'creating', label: 'Registrando pedido...', doneLabel: 'Pedido registrado' },
-    ...(willInvoice ? [{ key: 'invoicing' as const, label: 'Facturando...', doneLabel: 'Facturado' }] : []),
-    ...(willPrint ? [{ key: 'printing' as const, label: 'Imprimiendo...', doneLabel: 'Impreso' }] : []),
+    ...(willInvoice
+      ? [{ key: 'invoicing' as const, label: 'Facturando...', doneLabel: 'Facturado' }]
+      : []),
+    ...(willPrint
+      ? [{ key: 'printing' as const, label: 'Imprimiendo...', doneLabel: 'Impreso' }]
+      : []),
   ];
 
   const stageOrder = stages.map((s) => s.key);
-  const currentIdx = currentStage === 'done'
-    ? stageOrder.length
-    : currentStage
-      ? stageOrder.indexOf(currentStage)
-      : -1;
+  const currentIdx =
+    currentStage === 'done'
+      ? stageOrder.length
+      : currentStage
+        ? stageOrder.indexOf(currentStage)
+        : -1;
 
   return (
     <DialogPrimitive.Portal container={containerRef?.current ?? undefined}>
       <DialogPrimitive.Overlay className="absolute inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
         className="absolute left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-elevated duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
-        onPointerDownOutside={(e) => { if (phase === 'progress') e.preventDefault(); }}
-        onEscapeKeyDown={(e) => { if (phase === 'progress') e.preventDefault(); }}
-        onInteractOutside={(e) => { if (phase === 'progress') e.preventDefault(); }}
+        onPointerDownOutside={(e) => {
+          if (phase === 'progress') e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (phase === 'progress') e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (phase === 'progress') e.preventDefault();
+        }}
       >
         {phase === 'confirm' ? (
           <>
             <div className="space-y-2">
-              <DialogPrimitive.Title className="text-lg font-semibold">¿Enviar pedido a cocina?</DialogPrimitive.Title>
+              <DialogPrimitive.Title className="text-lg font-semibold">
+                ¿Enviar pedido a cocina?
+              </DialogPrimitive.Title>
               <DialogPrimitive.Description className="text-sm text-muted-foreground">
                 {totalQty} items · $ {totalItems.toLocaleString('es-AR')}
                 <br />
@@ -643,7 +749,9 @@ function SendDialogContent({
               </DialogPrimitive.Description>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={onCancel}>Volver</Button>
+              <Button variant="outline" onClick={onCancel}>
+                Volver
+              </Button>
               <Button onClick={onConfirm} className="bg-success hover:bg-success/90 text-white">
                 Sí, enviar a cocina
               </Button>
@@ -659,12 +767,14 @@ function SendDialogContent({
                   <div key={stage.key} className="flex items-start gap-3">
                     {/* Vertical line + icon column */}
                     <div className="flex flex-col items-center">
-                      <div className={cn(
-                        'h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300',
-                        isDone && 'bg-emerald-100 text-emerald-600',
-                        isActive && 'bg-blue-100 text-blue-600',
-                        !isDone && !isActive && 'bg-muted text-muted-foreground',
-                      )}>
+                      <div
+                        className={cn(
+                          'h-7 w-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-300',
+                          isDone && 'bg-emerald-100 text-emerald-600',
+                          isActive && 'bg-blue-100 text-blue-600',
+                          !isDone && !isActive && 'bg-muted text-muted-foreground',
+                        )}
+                      >
                         {isDone ? (
                           <Check className="h-4 w-4" />
                         ) : isActive ? (
@@ -674,18 +784,22 @@ function SendDialogContent({
                         )}
                       </div>
                       {i < stages.length - 1 && (
-                        <div className={cn(
-                          'w-0.5 h-5 transition-colors duration-300',
-                          isDone ? 'bg-emerald-300' : 'bg-muted',
-                        )} />
+                        <div
+                          className={cn(
+                            'w-0.5 h-5 transition-colors duration-300',
+                            isDone ? 'bg-emerald-300' : 'bg-muted',
+                          )}
+                        />
                       )}
                     </div>
-                    <span className={cn(
-                      'text-sm pt-1 transition-colors duration-300',
-                      isDone && 'text-emerald-700 font-medium',
-                      isActive && 'text-foreground font-medium',
-                      !isDone && !isActive && 'text-muted-foreground',
-                    )}>
+                    <span
+                      className={cn(
+                        'text-sm pt-1 transition-colors duration-300',
+                        isDone && 'text-emerald-700 font-medium',
+                        isActive && 'text-foreground font-medium',
+                        !isDone && !isActive && 'text-muted-foreground',
+                      )}
+                    >
                       {isDone ? stage.doneLabel : isActive ? stage.label : stage.doneLabel}
                     </span>
                   </div>
@@ -711,11 +825,20 @@ function SendDialogContent({
 /* ── Sub-components ─────────────────────────────────── */
 
 function ItemRow({
-  item, index, editingNoteIdx, setEditingNoteIdx, onUpdateQty, onRemove, onUpdateNotes,
+  item,
+  index,
+  editingNoteIdx,
+  setEditingNoteIdx,
+  onUpdateQty,
+  onRemove,
+  onUpdateNotes,
 }: {
-  item: CartItem; index: number;
-  editingNoteIdx: number | null; setEditingNoteIdx: (v: number | null) => void;
-  onUpdateQty: (i: number, d: number) => void; onRemove: (i: number) => void;
+  item: CartItem;
+  index: number;
+  editingNoteIdx: number | null;
+  setEditingNoteIdx: (v: number | null) => void;
+  onUpdateQty: (i: number, d: number) => void;
+  onRemove: (i: number) => void;
   onUpdateNotes?: (i: number, n: string) => void;
 }) {
   return (
@@ -726,41 +849,68 @@ function ItemRow({
           <p className="text-xs text-muted-foreground">
             {item.precio_referencia && item.precio_referencia > item.precio_unitario ? (
               <>
-                <span className="line-through mr-1">$ {item.precio_referencia.toLocaleString('es-AR')}</span>
-                <span className="text-destructive font-semibold">$ {item.precio_unitario.toLocaleString('es-AR')}</span>
+                <span className="line-through mr-1">
+                  $ {item.precio_referencia.toLocaleString('es-AR')}
+                </span>
+                <span className="text-destructive font-semibold">
+                  $ {item.precio_unitario.toLocaleString('es-AR')}
+                </span>
                 <span className="ml-1"> × {item.cantidad}</span>
               </>
             ) : (
-              <>$ {item.precio_unitario.toLocaleString('es-AR')} × {item.cantidad}</>
+              <>
+                $ {item.precio_unitario.toLocaleString('es-AR')} × {item.cantidad}
+              </>
             )}
           </p>
           {item.notas && editingNoteIdx !== index && (
             <div className="mt-0.5 space-y-0">
               {item.notas.split(/[,|]/).map((note, ni) => {
                 const trimmed = note.trim();
-                return trimmed ? <p key={ni} className="text-xs text-primary truncate">{trimmed}</p> : null;
+                return trimmed ? (
+                  <p key={ni} className="text-xs text-primary truncate">
+                    {trimmed}
+                  </p>
+                ) : null;
               })}
             </div>
           )}
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(index, -1)} disabled={item.cantidad <= 1}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onUpdateQty(index, -1)}
+            disabled={item.cantidad <= 1}
+          >
             <Minus className="h-3.5 w-3.5" />
           </Button>
           <span className="text-sm font-medium w-6 text-center">{item.cantidad}</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onUpdateQty(index, 1)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onUpdateQty(index, 1)}
+          >
             <Plus className="h-3.5 w-3.5" />
           </Button>
           {onUpdateNotes && (
             <Button
-              variant="ghost" size="icon"
+              variant="ghost"
+              size="icon"
               className={`h-8 w-8 ${item.notas ? 'text-primary' : 'text-muted-foreground'}`}
               onClick={() => setEditingNoteIdx(editingNoteIdx === index ? null : index)}
             >
               <MessageSquare className="h-3.5 w-3.5" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onRemove(index)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive"
+            onClick={() => onRemove(index)}
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -773,9 +923,16 @@ function ItemRow({
             onChange={(e) => onUpdateNotes(index, e.target.value)}
             className="h-8 text-xs flex-1"
             autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter') setEditingNoteIdx(null); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setEditingNoteIdx(null);
+            }}
           />
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setEditingNoteIdx(null)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setEditingNoteIdx(null)}
+          >
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -784,7 +941,13 @@ function ItemRow({
   );
 }
 
-function PaymentRow({ payment, onRemovePayment }: { payment: LocalPayment; onRemovePayment: (id: string) => void }) {
+function PaymentRow({
+  payment,
+  onRemovePayment,
+}: {
+  payment: LocalPayment;
+  onRemovePayment: (id: string) => void;
+}) {
   const Icon = METODO_ICONS[payment.method];
   const style = PAYMENT_STYLES[payment.method];
   const iconStyle = PAYMENT_ICON_STYLES[payment.method];
@@ -795,8 +958,15 @@ function PaymentRow({ payment, onRemovePayment }: { payment: LocalPayment; onRem
         <span className="text-sm font-medium">{METODO_LABELS[payment.method]}</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold tabular-nums">$ {payment.amount.toLocaleString('es-AR')}</span>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onRemovePayment(payment.id)}>
+        <span className="text-sm font-semibold tabular-nums">
+          $ {payment.amount.toLocaleString('es-AR')}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-destructive hover:text-destructive"
+          onClick={() => onRemovePayment(payment.id)}
+        >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>

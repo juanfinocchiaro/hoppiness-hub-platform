@@ -1,4 +1,8 @@
-export { CertificationBadge, CertificationBadgeRow, CertificationLegend } from './CertificationBadge';
+export {
+  CertificationBadge,
+  CertificationBadgeRow,
+  CertificationLegend,
+} from './CertificationBadge';
 export { CertificationMatrix } from './CertificationMatrix';
 export { CoachingPendingCard } from './CoachingPendingCard';
 export { CoachingHistory } from './CoachingHistory';

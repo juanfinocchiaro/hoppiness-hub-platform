@@ -33,9 +33,7 @@ interface WorkShellProps {
 }
 
 export function WorkShell({
-  mode,
   title,
-  mobileTitle,
   sidebarContext,
   sidebarNav,
   footer,
@@ -65,11 +63,7 @@ export function WorkShell({
       <ImpersonationBanner />
 
       {/* Universal header */}
-      <AppHeader
-        mode="work"
-        breadcrumb={breadcrumb}
-        onToggleSidebar={() => setSidebarOpen(true)}
-      />
+      <AppHeader mode="work" breadcrumb={breadcrumb} onToggleSidebar={() => setSidebarOpen(true)} />
 
       {/* Mobile sidebar drawer — same structure for consistency */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -85,9 +79,7 @@ export function WorkShell({
             <div className={cn('shrink-0', SIDEBAR_CONTEXT_MIN_H)}>{sidebarContext ?? null}</div>
             <div className={cn('flex-1 pt-2', SIDEBAR_NAV_MIN_H)}>{sidebarNav}</div>
           </div>
-          {footer && (
-            <div className="pt-4 border-t space-y-3">{footer}</div>
-          )}
+          {footer && <div className="pt-4 border-t space-y-3">{footer}</div>}
         </SheetContent>
       </Sheet>
 
@@ -96,13 +88,11 @@ export function WorkShell({
         <aside
           className={cn(
             'hidden lg:flex lg:flex-col lg:w-72 lg:shrink-0 bg-card border-r',
-            'sticky top-[calc(56px+4px)] h-[calc(100vh-56px-4px)] overflow-hidden'
+            'sticky top-[calc(56px+4px)] h-[calc(100vh-56px-4px)] overflow-hidden',
           )}
         >
           {sidebarBody}
-          {footer && (
-            <div className="p-4 border-t space-y-4 shrink-0">{footer}</div>
-          )}
+          {footer && <div className="p-4 border-t space-y-4 shrink-0">{footer}</div>}
         </aside>
 
         <main className={cn('flex-1 min-w-0', className)}>

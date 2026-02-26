@@ -10,19 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Users,
-  FileText,
-  Target,
-  Plus,
-  X,
-  CheckCircle2,
-  XCircle,
-  Send,
-  Save,
-} from 'lucide-react';
+import { Users, FileText, Target, Plus, X, CheckCircle2, XCircle, Send, Save } from 'lucide-react';
 import { useCloseMeeting, useSaveMeetingNotes, useUpdateAttendance } from '@/hooks/useMeetings';
 import type { MeetingWithDetails } from '@/types/meeting';
 import { toast } from 'sonner';
@@ -42,29 +31,29 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
   // Attendance state
   const [attendance, setAttendance] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    meeting.participants.forEach(p => {
+    meeting.participants.forEach((p) => {
       initial[p.user_id] = p.was_present ?? false;
     });
     return initial;
   });
-  
+
   // Notes state
   const [notes, setNotes] = useState(meeting.notes || '');
-  
+
   // Agreements state
   const [agreements, setAgreements] = useState<AgreementDraft[]>([]);
   const [newAgreementText, setNewAgreementText] = useState('');
   const [newAgreementAssignees, setNewAgreementAssignees] = useState<string[]>([]);
-  
+
   const closeMeeting = useCloseMeeting();
   const saveNotes = useSaveMeetingNotes();
   const updateAttendance = useUpdateAttendance();
-  
+
   const presentCount = Object.values(attendance).filter(Boolean).length;
   const absentCount = meeting.participants.length - presentCount;
 
   const toggleAttendance = (userId: string) => {
-    setAttendance(prev => ({
+    setAttendance((prev) => ({
       ...prev,
       [userId]: !prev[userId],
     }));
@@ -72,8 +61,8 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
 
   const addAgreement = () => {
     if (!newAgreementText.trim()) return;
-    
-    setAgreements(prev => [
+
+    setAgreements((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
@@ -86,14 +75,12 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
   };
 
   const removeAgreement = (id: string) => {
-    setAgreements(prev => prev.filter(a => a.id !== id));
+    setAgreements((prev) => prev.filter((a) => a.id !== id));
   };
 
   const toggleAssignee = (userId: string) => {
-    setNewAgreementAssignees(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    setNewAgreementAssignees((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
@@ -114,13 +101,13 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
       toast.error('Las notas son obligatorias para cerrar la reunión');
       return;
     }
-    
+
     try {
       await closeMeeting.mutateAsync({
         meetingId: meeting.id,
         notes: notes.trim(),
         attendance,
-        agreements: agreements.map(a => ({
+        agreements: agreements.map((a) => ({
           description: a.description,
           assigneeIds: a.assigneeIds,
         })),
@@ -156,21 +143,23 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            {meeting.participants.map(participant => (
+            {meeting.participants.map((participant) => (
               <div
                 key={participant.id}
                 className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
-                  attendance[participant.user_id] 
-                    ? 'bg-success/10 hover:bg-success/20' 
+                  attendance[participant.user_id]
+                    ? 'bg-success/10 hover:bg-success/20'
                     : 'bg-muted/50 hover:bg-muted'
                 }`}
                 onClick={() => toggleAttendance(participant.user_id)}
               >
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                  attendance[participant.user_id] 
-                    ? 'bg-success text-success-foreground' 
-                    : 'bg-muted-foreground/20'
-                }`}>
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                    attendance[participant.user_id]
+                      ? 'bg-success text-success-foreground'
+                      : 'bg-muted-foreground/20'
+                  }`}
+                >
                   {attendance[participant.user_id] ? (
                     <CheckCircle2 className="w-3 h-3" />
                   ) : (
@@ -183,8 +172,13 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
                     {participant.profile?.full_name?.charAt(0) || '?'}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm flex-1">{participant.profile?.full_name || 'Usuario'}</span>
-                <Badge variant={attendance[participant.user_id] ? 'default' : 'secondary'} className="text-xs">
+                <span className="text-sm flex-1">
+                  {participant.profile?.full_name || 'Usuario'}
+                </span>
+                <Badge
+                  variant={attendance[participant.user_id] ? 'default' : 'secondary'}
+                  className="text-xs"
+                >
                   {attendance[participant.user_id] ? 'Presente' : 'Ausente'}
                 </Badge>
               </div>
@@ -229,7 +223,10 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
           {agreements.length > 0 && (
             <div className="space-y-2">
               {agreements.map((agreement, index) => (
-                <div key={agreement.id} className="flex items-start gap-2 p-2 bg-muted/50 rounded-md">
+                <div
+                  key={agreement.id}
+                  className="flex items-start gap-2 p-2 bg-muted/50 rounded-md"
+                >
                   <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     {index + 1}
                   </div>
@@ -237,8 +234,10 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
                     <p className="text-sm">{agreement.description}</p>
                     {agreement.assigneeIds.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {agreement.assigneeIds.map(userId => {
-                          const participant = meeting.participants.find(p => p.user_id === userId);
+                        {agreement.assigneeIds.map((userId) => {
+                          const participant = meeting.participants.find(
+                            (p) => p.user_id === userId,
+                          );
                           return (
                             <Badge key={userId} variant="outline" className="text-xs">
                               {participant?.profile?.full_name || 'Usuario'}
@@ -274,13 +273,13 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
                 }
               }}
             />
-            
+
             {/* Selector de responsables */}
             <div>
               <Label className="text-xs text-muted-foreground">Responsables (opcional)</Label>
               <ScrollArea className="h-24 mt-1">
                 <div className="flex flex-wrap gap-1">
-                  {meeting.participants.map(p => (
+                  {meeting.participants.map((p) => (
                     <Badge
                       key={p.user_id}
                       variant={newAgreementAssignees.includes(p.user_id) ? 'default' : 'outline'}
@@ -318,10 +317,7 @@ export function MeetingExecutionForm({ meeting, onClose }: MeetingExecutionFormP
           <Save className="w-4 h-4 mr-1" />
           Guardar
         </Button>
-        <Button
-          onClick={handleCloseAndNotify}
-          disabled={!notes.trim() || closeMeeting.isPending}
-        >
+        <Button onClick={handleCloseAndNotify} disabled={!notes.trim() || closeMeeting.isPending}>
           <Send className="w-4 h-4 mr-1" />
           {closeMeeting.isPending ? 'Cerrando...' : 'Cerrar y Notificar'}
         </Button>

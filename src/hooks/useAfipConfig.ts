@@ -71,7 +71,7 @@ export function useAfipConfig(branchId: string | undefined) {
         .eq('branch_id', branchId)
         .maybeSingle() as any);
       if (error) throw error;
-      return (data as AfipConfig | null);
+      return data as AfipConfig | null;
     },
     enabled: !!branchId,
   });
@@ -107,9 +107,7 @@ export function useAfipConfigMutations(branchId: string | undefined) {
           .eq('branch_id', input.branch_id) as any);
         if (error) throw error;
       } else {
-        const { error } = await (supabase
-          .from('afip_config' as any)
-          .insert(input) as any);
+        const { error } = await (supabase.from('afip_config' as any).insert(input) as any);
         if (error) throw error;
       }
     },
@@ -144,9 +142,7 @@ export function useAfipConfigMutations(branchId: string | undefined) {
           .eq('branch_id', input.branch_id) as any);
         if (error) throw error;
       } else {
-        const { error } = await (supabase
-          .from('afip_config' as any)
-          .insert(payload) as any);
+        const { error } = await (supabase.from('afip_config' as any).insert(payload) as any);
         if (error) throw error;
       }
     },

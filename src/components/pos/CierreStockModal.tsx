@@ -21,7 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useStockCierrePeriod, useSaveCierreMensual, type CierreInsumoRow } from '@/hooks/pos/useStockCierre';
+import {
+  useStockCierrePeriod,
+  useSaveCierreMensual,
+  type CierreInsumoRow,
+} from '@/hooks/pos/useStockCierre';
 
 interface CierreStockModalProps {
   open: boolean;
@@ -29,10 +33,7 @@ interface CierreStockModalProps {
   branchId: string;
 }
 
-const MONTHS = [
-  '01', '02', '03', '04', '05', '06',
-  '07', '08', '09', '10', '11', '12',
-];
+const MONTHS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
 const current = new Date();
 const defaultYear = current.getFullYear();
 const defaultMonth = String(current.getMonth() + 1).padStart(2, '0');
@@ -72,7 +73,8 @@ export function CierreStockModal({ open, onOpenChange, branchId }: CierreStockMo
         <DialogHeader>
           <DialogTitle>Cargar stock de cierre mensual</DialogTitle>
           <DialogDescription>
-            Elegí el período. Se muestra stock esperado (apertura + compras - ventas). Ingresá el stock físico por insumo; se calculará la merma al guardar.
+            Elegí el período. Se muestra stock esperado (apertura + compras - ventas). Ingresá el
+            stock físico por insumo; se calculará la merma al guardar.
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-2">
@@ -84,7 +86,9 @@ export function CierreStockModal({ open, onOpenChange, branchId }: CierreStockMo
               </SelectTrigger>
               <SelectContent>
                 {years.map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -97,7 +101,9 @@ export function CierreStockModal({ open, onOpenChange, branchId }: CierreStockMo
               </SelectTrigger>
               <SelectContent>
                 {MONTHS.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                  <SelectItem key={m} value={m}>
+                    {m}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -106,7 +112,9 @@ export function CierreStockModal({ open, onOpenChange, branchId }: CierreStockMo
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Cargando datos del período…</div>
         ) : rows.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No hay insumos con movimiento en este período ni stock actual.</p>
+          <p className="text-muted-foreground text-sm">
+            No hay insumos con movimiento en este período ni stock actual.
+          </p>
         ) : (
           <ScrollArea className="h-[280px] rounded-md border p-2">
             <div className="space-y-2">
@@ -119,13 +127,16 @@ export function CierreStockModal({ open, onOpenChange, branchId }: CierreStockMo
               {rows.map((r: CierreInsumoRow) => {
                 const f = fisico[r.insumo_id];
                 const fisicoNum = f !== undefined && f !== '' ? Number(f) : NaN;
-                const merma = !Number.isNaN(fisicoNum) && fisicoNum >= 0
-                  ? Math.max(0, r.stock_esperado - fisicoNum)
-                  : null;
+                const merma =
+                  !Number.isNaN(fisicoNum) && fisicoNum >= 0
+                    ? Math.max(0, r.stock_esperado - fisicoNum)
+                    : null;
                 return (
                   <div key={r.insumo_id} className="grid grid-cols-4 gap-2 items-center">
                     <span className="truncate text-sm">{r.insumo_nombre}</span>
-                    <span className="text-right tabular-nums text-sm">{r.stock_esperado} {r.unidad}</span>
+                    <span className="text-right tabular-nums text-sm">
+                      {r.stock_esperado} {r.unidad}
+                    </span>
                     <Input
                       type="number"
                       min={0}
@@ -133,7 +144,9 @@ export function CierreStockModal({ open, onOpenChange, branchId }: CierreStockMo
                       placeholder="0"
                       className="h-8 text-right"
                       value={fisico[r.insumo_id] ?? ''}
-                      onChange={(e) => setFisico((prev) => ({ ...prev, [r.insumo_id]: e.target.value }))}
+                      onChange={(e) =>
+                        setFisico((prev) => ({ ...prev, [r.insumo_id]: e.target.value }))
+                      }
                     />
                     <span className="text-right tabular-nums text-sm">
                       {merma != null ? `${merma} ${r.unidad}` : '-'}

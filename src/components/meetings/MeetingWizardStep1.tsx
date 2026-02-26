@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MEETING_AREAS, type MeetingWizardData, type MeetingArea } from '@/types/meeting';
 import { cn } from '@/lib/utils';
-import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissions';
 
 interface Step1Props {
   data: MeetingWizardData;
@@ -31,13 +31,13 @@ export function MeetingWizardStep1({ data, teamMembers, onChange }: Step1Props) 
   const toggleParticipant = (userId: string) => {
     const current = data.participantIds;
     const updated = current.includes(userId)
-      ? current.filter(id => id !== userId)
+      ? current.filter((id) => id !== userId)
       : [...current, userId];
     onChange({ participantIds: updated });
   };
 
   const selectAll = () => {
-    onChange({ participantIds: teamMembers.map(m => m.id) });
+    onChange({ participantIds: teamMembers.map((m) => m.id) });
   };
 
   const selectNone = () => {
@@ -66,12 +66,12 @@ export function MeetingWizardStep1({ data, teamMembers, onChange }: Step1Props) 
               <Button
                 variant="outline"
                 className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !data.date && "text-muted-foreground"
+                  'w-full justify-start text-left font-normal',
+                  !data.date && 'text-muted-foreground',
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {data.date ? format(data.date, "d MMM yyyy", { locale: es }) : "Seleccionar"}
+                {data.date ? format(data.date, 'd MMM yyyy', { locale: es }) : 'Seleccionar'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -99,15 +99,12 @@ export function MeetingWizardStep1({ data, teamMembers, onChange }: Step1Props) 
       {/* Area */}
       <div className="space-y-2">
         <Label>Área</Label>
-        <Select
-          value={data.area}
-          onValueChange={(value: MeetingArea) => onChange({ area: value })}
-        >
+        <Select value={data.area} onValueChange={(value: MeetingArea) => onChange({ area: value })}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {MEETING_AREAS.map(area => (
+            {MEETING_AREAS.map((area) => (
               <SelectItem key={area.value} value={area.value}>
                 {area.label}
               </SelectItem>
@@ -132,14 +129,14 @@ export function MeetingWizardStep1({ data, teamMembers, onChange }: Step1Props) 
             </Button>
           </div>
         </div>
-        
+
         <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
           {teamMembers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-2">
               No hay miembros del equipo
             </p>
           ) : (
-            teamMembers.map(member => (
+            teamMembers.map((member) => (
               <label
                 key={member.id}
                 className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
@@ -160,10 +157,8 @@ export function MeetingWizardStep1({ data, teamMembers, onChange }: Step1Props) 
             ))
           )}
         </div>
-        
-        <p className="text-xs text-muted-foreground">
-          {data.participantIds.length} seleccionados
-        </p>
+
+        <p className="text-xs text-muted-foreground">{data.participantIds.length} seleccionados</p>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ export function BurgersSection({ data, onChange, totalHamburguesas }: BurgersSec
   const handleChange = (path: string, value: number) => {
     const parts = path.split('.');
     const newData = { ...data };
-    
+
     if (parts.length === 1) {
       (newData as any)[parts[0]] = value;
     } else if (parts.length === 2) {
@@ -27,10 +27,10 @@ export function BurgersSection({ data, onChange, totalHamburguesas }: BurgersSec
         [parts[1]]: value,
       };
     }
-    
+
     onChange(newData);
   };
-  
+
   const parseNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value) || 0;
     return Math.max(0, val);
@@ -93,7 +93,7 @@ export function BurgersSection({ data, onChange, totalHamburguesas }: BurgersSec
                 />
               </div>
             </div>
-            
+
             {/* Veggies and Ultrasmash - 2 columns */}
             <div className="grid grid-cols-2 gap-4">
               {/* Veggies */}
@@ -124,7 +124,7 @@ export function BurgersSection({ data, onChange, totalHamburguesas }: BurgersSec
                   </div>
                 </div>
               </div>
-              
+
               {/* Ultrasmash */}
               <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                 <Label className="text-xs font-semibold text-muted-foreground">ULTRASMASH</Label>
@@ -154,10 +154,12 @@ export function BurgersSection({ data, onChange, totalHamburguesas }: BurgersSec
                 </div>
               </div>
             </div>
-            
+
             {/* Extras */}
             <div className="p-3 rounded-lg border border-dashed space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground">EXTRAS (modificadores)</Label>
+              <Label className="text-xs font-semibold text-muted-foreground">
+                EXTRAS (modificadores)
+              </Label>
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Label className="text-xs">Extra Carne c/Q</Label>

@@ -1,4 +1,4 @@
-import type { BrandRole, LocalRole } from '@/hooks/usePermissionsV2';
+import type { BrandRole, LocalRole } from '@/hooks/usePermissions';
 import type { WorkPositionType } from '@/types/workPosition';
 
 /**
@@ -70,11 +70,11 @@ export const ROLE_LABELS: Record<string, string> = {
 
 export function getHighestRole(brandRole: BrandRole, branchRoles: BranchRoleInfo[]): string {
   const brandPriority = brandRole ? ROLE_PRIORITY[brandRole] || 0 : 0;
-  
+
   // Encontrar el rol local más alto entre todas las sucursales
   let maxLocalPriority = 0;
   let maxLocalRole: LocalRole = null;
-  
+
   for (const br of branchRoles) {
     const priority = br.local_role ? ROLE_PRIORITY[br.local_role] || 0 : 0;
     if (priority > maxLocalPriority) {
@@ -82,7 +82,7 @@ export function getHighestRole(brandRole: BrandRole, branchRoles: BranchRoleInfo
       maxLocalRole = br.local_role;
     }
   }
-  
+
   if (brandPriority >= maxLocalPriority && brandRole) return brandRole;
   if (maxLocalRole) return maxLocalRole;
   return 'staff';
@@ -93,22 +93,22 @@ export function getHighestRole(brandRole: BrandRole, branchRoles: BranchRoleInfo
  * Útil para filtrado inclusivo (no solo por rol más alto)
  */
 export function userHasRole(
-  brandRole: BrandRole, 
-  branchRoles: BranchRoleInfo[], 
-  targetRole: string
+  brandRole: BrandRole,
+  branchRoles: BranchRoleInfo[],
+  targetRole: string,
 ): boolean {
   // Chequear rol de marca
   if (brandRole === targetRole) return true;
-  
+
   // Chequear cualquier rol local
-  return branchRoles.some(br => br.local_role === targetRole);
+  return branchRoles.some((br) => br.local_role === targetRole);
 }
 
 // Compatibilidad con código viejo
 export function getHighestRoleLegacy(brandRole: BrandRole, localRole: LocalRole): string {
   const brandPriority = brandRole ? ROLE_PRIORITY[brandRole] || 0 : 0;
   const localPriority = localRole ? ROLE_PRIORITY[localRole] || 0 : 0;
-  
+
   if (brandPriority >= localPriority && brandRole) return brandRole;
   if (localRole) return localRole;
   return 'staff';
@@ -126,12 +126,12 @@ export function formatMoney(amount: number): string {
 
 export function formatRelativeDate(dateStr: string | null): string {
   if (!dateStr) return '-';
-  
+
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) return 'Hoy';
   if (diffDays === 1) return 'Ayer';
   if (diffDays < 7) return `Hace ${diffDays} días`;
@@ -149,9 +149,9 @@ export function formatRelativeDate(dateStr: string | null): string {
 
 export function formatShortDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('es-AR', { 
-    day: '2-digit', 
-    month: '2-digit', 
-    year: '2-digit' 
+  return date.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
   });
 }

@@ -1,11 +1,7 @@
 import { HelpCircle, ChevronDown, X } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useContextualHelp } from '@/hooks/useContextualHelp';
 import { useState } from 'react';
 
@@ -28,7 +24,9 @@ export function PageHelp({ pageId }: PageHelpProps) {
               <HelpCircle className="h-5 w-5 text-primary" />
               <span className="font-medium text-primary">{config.title}</span>
             </div>
-            <ChevronDown className={`h-4 w-4 text-primary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`h-4 w-4 text-primary transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -42,9 +40,9 @@ export function PageHelp({ pageId }: PageHelpProps) {
                 </li>
               ))}
             </ul>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={dismissHelp}
               className="text-muted-foreground hover:text-foreground"
             >

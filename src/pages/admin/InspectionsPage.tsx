@@ -12,7 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/states';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
@@ -71,7 +77,7 @@ export default function InspectionsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las sucursales</SelectItem>
-            {branches?.map(branch => (
+            {branches?.map((branch) => (
               <SelectItem key={branch.id} value={branch.id}>
                 {branch.name}
               </SelectItem>
@@ -108,11 +114,16 @@ export default function InspectionsPage() {
         />
       ) : (
         <div className="space-y-3">
-          {inspections.map(inspection => {
+          {inspections.map((inspection) => {
             const score = inspection.score_total;
-            const scoreColor = score !== null 
-              ? (score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-destructive')
-              : 'text-muted-foreground';
+            const scoreColor =
+              score !== null
+                ? score >= 80
+                  ? 'text-green-600'
+                  : score >= 60
+                    ? 'text-yellow-600'
+                    : 'text-destructive'
+                : 'text-muted-foreground';
 
             return (
               <Link key={inspection.id} to={`/mimarca/supervisiones/${inspection.id}`}>
@@ -121,17 +132,20 @@ export default function InspectionsPage() {
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={
-                            inspection.status === 'completada' ? 'default' :
-                            inspection.status === 'en_curso' ? 'secondary' : 'outline'
-                          }>
+                          <Badge
+                            variant={
+                              inspection.status === 'completada'
+                                ? 'default'
+                                : inspection.status === 'en_curso'
+                                  ? 'secondary'
+                                  : 'outline'
+                            }
+                          >
                             {TYPE_SHORT_LABELS[inspection.inspection_type]}
                           </Badge>
-                          <Badge variant="outline">
-                            {STATUS_LABELS[inspection.status]}
-                          </Badge>
+                          <Badge variant="outline">{STATUS_LABELS[inspection.status]}</Badge>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
@@ -139,7 +153,9 @@ export default function InspectionsPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
-                            {format(new Date(inspection.started_at), "d MMM yyyy, HH:mm", { locale: es })}
+                            {format(new Date(inspection.started_at), 'd MMM yyyy, HH:mm', {
+                              locale: es,
+                            })}
                           </span>
                           {inspection.inspector && (
                             <span className="flex items-center gap-1">
@@ -152,7 +168,7 @@ export default function InspectionsPage() {
 
                       <div className="flex items-center gap-2">
                         {score !== null && (
-                          <div className={cn("text-2xl font-bold", scoreColor)}>
+                          <div className={cn('text-2xl font-bold', scoreColor)}>
                             {score}
                             <span className="text-sm text-muted-foreground">/100</span>
                           </div>

@@ -7,11 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  Trophy, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
+import {
+  Trophy,
+  TrendingUp,
+  TrendingDown,
+  Minus,
   AlertTriangle,
   Crown,
   Target,
@@ -52,15 +52,24 @@ export function TeamAnalysisTab({ branchId }: TeamAnalysisTabProps) {
     );
   }
 
-  const getInitials = (name: string) => 
-    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name: string) =>
+    name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case 'up': return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case 'down': return <TrendingDown className="h-4 w-4 text-red-500" />;
-      case 'stable': return <Minus className="h-4 w-4 text-muted-foreground" />;
-      default: return <Star className="h-4 w-4 text-blue-500" />;
+      case 'up':
+        return <TrendingUp className="h-4 w-4 text-green-500" />;
+      case 'down':
+        return <TrendingDown className="h-4 w-4 text-red-500" />;
+      case 'stable':
+        return <Minus className="h-4 w-4 text-muted-foreground" />;
+      default:
+        return <Star className="h-4 w-4 text-blue-500" />;
     }
   };
 
@@ -78,9 +87,8 @@ export function TeamAnalysisTab({ branchId }: TeamAnalysisTabProps) {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Atención requerida</AlertTitle>
           <AlertDescription>
-            {data.trendAlerts.length} empleado{data.trendAlerts.length > 1 ? 's' : ''} con tendencia negativa:
-            {' '}
-            {data.trendAlerts.map(a => a.fullName).join(', ')}
+            {data.trendAlerts.length} empleado{data.trendAlerts.length > 1 ? 's' : ''} con tendencia
+            negativa: {data.trendAlerts.map((a) => a.fullName).join(', ')}
           </AlertDescription>
         </Alert>
       )}
@@ -120,21 +128,37 @@ export function TeamAnalysisTab({ branchId }: TeamAnalysisTabProps) {
           <CardContent>
             <div className="space-y-2">
               {data.ranking.slice(0, 10).map((employee, index) => (
-                <div 
+                <div
                   key={employee.userId}
                   className={`flex items-center justify-between p-2 rounded-lg ${
-                    index === 0 ? 'bg-amber-50 dark:bg-amber-950/20 border border-amber-200' : 
-                    index === 1 ? 'bg-slate-100 dark:bg-slate-900/20' :
-                    index === 2 ? 'bg-orange-50 dark:bg-orange-950/20' : 'hover:bg-muted/50'
+                    index === 0
+                      ? 'bg-amber-50 dark:bg-amber-950/20 border border-amber-200'
+                      : index === 1
+                        ? 'bg-slate-100 dark:bg-slate-900/20'
+                        : index === 2
+                          ? 'bg-orange-50 dark:bg-orange-950/20'
+                          : 'hover:bg-muted/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`w-6 text-center font-bold ${
-                      index === 0 ? 'text-amber-500' : 
-                      index === 1 ? 'text-slate-400' :
-                      index === 2 ? 'text-orange-400' : 'text-muted-foreground'
-                    }`}>
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
+                    <span
+                      className={`w-6 text-center font-bold ${
+                        index === 0
+                          ? 'text-amber-500'
+                          : index === 1
+                            ? 'text-slate-400'
+                            : index === 2
+                              ? 'text-orange-400'
+                              : 'text-muted-foreground'
+                      }`}
+                    >
+                      {index === 0
+                        ? '🥇'
+                        : index === 1
+                          ? '🥈'
+                          : index === 2
+                            ? '🥉'
+                            : `${index + 1}`}
                     </span>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={employee.avatarUrl || undefined} />
@@ -173,8 +197,8 @@ export function TeamAnalysisTab({ branchId }: TeamAnalysisTabProps) {
           <CardContent>
             {data.stationChampions.length > 0 ? (
               <div className="space-y-2">
-                {data.stationChampions.map(champion => (
-                  <div 
+                {data.stationChampions.map((champion) => (
+                  <div
                     key={champion.stationId}
                     className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
                   >
@@ -218,7 +242,7 @@ export function TeamAnalysisTab({ branchId }: TeamAnalysisTabProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.competencyAnalysis.slice(0, 5).map(comp => (
+              {data.competencyAnalysis.slice(0, 5).map((comp) => (
                 <div key={comp.competencyId} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{comp.competencyName}</span>
@@ -227,17 +251,20 @@ export function TeamAnalysisTab({ branchId }: TeamAnalysisTabProps) {
                     </span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${
-                        comp.avgScore >= 3 ? 'bg-green-500' :
-                        comp.avgScore >= 2 ? 'bg-amber-500' : 'bg-red-500'
+                        comp.avgScore >= 3
+                          ? 'bg-green-500'
+                          : comp.avgScore >= 2
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
                       }`}
                       style={{ width: `${(comp.avgScore / 4) * 100}%` }}
                     />
                   </div>
                   {comp.lowestEmployees.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Necesitan refuerzo: {comp.lowestEmployees.map(e => e.name).join(', ')}
+                      Necesitan refuerzo: {comp.lowestEmployees.map((e) => e.name).join(', ')}
                     </p>
                   )}
                 </div>

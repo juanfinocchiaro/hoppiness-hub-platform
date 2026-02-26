@@ -20,8 +20,14 @@ export function RequireBranchAccess({
   children,
   fallbackPath = '/cuenta',
 }: RequireBranchAccessProps) {
-  const { loading, hasAccessToBranch, isSuperadmin, canAccessLocalPanel, isViewingAs, realUserPermissions } = 
-    usePermissionsWithImpersonation(branchId);
+  const {
+    loading,
+    hasAccessToBranch,
+    isSuperadmin,
+    canAccessLocalPanel,
+    isViewingAs,
+    realUserPermissions,
+  } = usePermissionsWithImpersonation(branchId);
 
   if (loading) {
     return <HoppinessLoader fullScreen size="lg" />;

@@ -11,7 +11,8 @@ export const salaryAdvanceKeys = {
   list: (branchId: string) => [...salaryAdvanceKeys.all, 'list', branchId] as const,
   user: (userId: string) => [...salaryAdvanceKeys.all, 'user', userId] as const,
   shift: (shiftId: string) => [...salaryAdvanceKeys.all, 'shift', shiftId] as const,
-  pendingTransfers: (branchId: string) => [...salaryAdvanceKeys.all, 'pending-transfers', branchId] as const,
+  pendingTransfers: (branchId: string) =>
+    [...salaryAdvanceKeys.all, 'pending-transfers', branchId] as const,
 };
 
 export interface SalaryAdvance {
@@ -42,33 +43,42 @@ export function useSalaryAdvances(branchId: string | undefined, selectedMonth?: 
     queryKey: salaryAdvanceKeys.list(branchId || ''),
     queryFn: async () => {
       if (!branchId) return [];
-      
+
       let query = supabase
         .from('salary_advances')
         .select('*')
         .eq('branch_id', branchId)
         .order('created_at', { ascending: false })
         .limit(100);
-      
+
       // Filter by month if provided
       if (selectedMonth) {
         const startOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-        const endOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59);
+        const endOfMonth = new Date(
+          selectedMonth.getFullYear(),
+          selectedMonth.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+        );
         query = query
           .gte('created_at', startOfMonth.toISOString())
           .lte('created_at', endOfMonth.toISOString());
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
-      
+
       // Get profile names for user_ids
-      const userIds = [...new Set([
-        ...(data?.map(a => a.user_id).filter(Boolean) || []),
-        ...(data?.map(a => a.authorized_by).filter(Boolean) || [])
-      ])];
-      
+      const userIds = [
+        ...new Set([
+          ...(data?.map((a) => a.user_id).filter(Boolean) || []),
+          ...(data?.map((a) => a.authorized_by).filter(Boolean) || []),
+        ]),
+      ];
+
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
@@ -76,16 +86,16 @@ export function useSalaryAdvances(branchId: string | undefined, selectedMonth?: 
           .from('profiles')
           .select('id, full_name')
           .in('id', userIds);
-        
-        profiles?.forEach(p => {
+
+        profiles?.forEach((p) => {
           if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
-      
-      return (data || []).map(a => ({
+
+      return (data || []).map((a) => ({
         ...a,
         user_name: a.user_id ? profileMap[a.user_id] : 'N/A',
-        authorizer_name: a.authorized_by ? profileMap[a.authorized_by] : null
+        authorizer_name: a.authorized_by ? profileMap[a.authorized_by] : null,
       })) as SalaryAdvance[];
     },
     enabled: !!branchId,
@@ -97,7 +107,7 @@ export function useMyAdvances(userId: string | undefined) {
     queryKey: salaryAdvanceKeys.user(userId || ''),
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const { data, error } = await supabase
         .from('salary_advances')
         .select('*')
@@ -105,28 +115,28 @@ export function useMyAdvances(userId: string | undefined) {
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false })
         .limit(20);
-      
+
       if (error) throw error;
-      
+
       // Get authorizer names
-      const authorizerIds = [...new Set(data?.map(a => a.authorized_by).filter(Boolean) || [])];
+      const authorizerIds = [...new Set(data?.map((a) => a.authorized_by).filter(Boolean) || [])];
       let profileMap: Record<string, string> = {};
-      
+
       if (authorizerIds.length > 0) {
         // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name')
           .in('id', authorizerIds);
-        
-        profiles?.forEach(p => {
+
+        profiles?.forEach((p) => {
           if (p.id) profileMap[p.id] = p.full_name || '';
         });
       }
-      
-      return (data || []).map(a => ({
+
+      return (data || []).map((a) => ({
         ...a,
-        authorizer_name: a.authorized_by ? profileMap[a.authorized_by] : null
+        authorizer_name: a.authorized_by ? profileMap[a.authorized_by] : null,
       })) as SalaryAdvance[];
     },
     enabled: !!userId,
@@ -138,7 +148,7 @@ export function useShiftAdvances(shiftId: string | undefined) {
     queryKey: salaryAdvanceKeys.shift(shiftId || ''),
     queryFn: async () => {
       if (!shiftId) return [];
-      
+
       // Direct query instead of RPC (RPC references legacy employee table)
       const { data, error } = await supabase
         .from('salary_advances')
@@ -146,15 +156,17 @@ export function useShiftAdvances(shiftId: string | undefined) {
         .eq('shift_id', shiftId)
         .eq('status', 'paid')
         .order('paid_at');
-      
+
       if (error) throw error;
-      
+
       // Get names
-      const userIds = [...new Set([
-        ...(data?.map(a => a.user_id).filter(Boolean) || []),
-        ...(data?.map(a => a.authorized_by).filter(Boolean) || [])
-      ])];
-      
+      const userIds = [
+        ...new Set([
+          ...(data?.map((a) => a.user_id).filter(Boolean) || []),
+          ...(data?.map((a) => a.authorized_by).filter(Boolean) || []),
+        ]),
+      ];
+
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
@@ -162,13 +174,13 @@ export function useShiftAdvances(shiftId: string | undefined) {
           .from('profiles')
           .select('id, full_name')
           .in('id', userIds);
-        
-        profiles?.forEach(p => {
+
+        profiles?.forEach((p) => {
           if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
-      
-      return (data || []).map(a => ({
+
+      return (data || []).map((a) => ({
         id: a.id,
         employee_name: a.user_id ? profileMap[a.user_id] : 'N/A',
         amount: a.amount,
@@ -185,35 +197,35 @@ export function usePendingTransferAdvances(branchId: string | undefined) {
     queryKey: salaryAdvanceKeys.pendingTransfers(branchId || ''),
     queryFn: async () => {
       if (!branchId) return [];
-      
+
       const { data, error } = await supabase
         .from('salary_advances')
         .select('*')
         .eq('branch_id', branchId)
         .eq('status', 'pending_transfer')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
-      
+
       // Get user names
-      const userIds = data?.map(a => a.user_id).filter(Boolean) || [];
+      const userIds = data?.map((a) => a.user_id).filter(Boolean) || [];
       let profileMap: Record<string, string> = {};
-      
+
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name')
           .in('id', userIds);
-        
-        profiles?.forEach(p => {
+
+        profiles?.forEach((p) => {
           if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
-      
-      return (data || []).map(a => ({
+
+      return (data || []).map((a) => ({
         ...a,
-        user_name: a.user_id ? profileMap[a.user_id] : 'N/A'
+        user_name: a.user_id ? profileMap[a.user_id] : 'N/A',
       })) as SalaryAdvance[];
     },
     enabled: !!branchId,
@@ -231,16 +243,18 @@ interface CreateAdvanceParams {
 
 export function useCreateAdvance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (params: CreateAdvanceParams) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
-      
+
       const isCash = params.paymentMethod === 'cash';
       // Both cash and transfer are recorded as already completed
       const status = isCash ? 'paid' : 'transferred';
-      
+
       // Create advance - using user_id (V2) + employee_id for DB constraint
       const { data: advance, error: advanceError } = await supabase
         .from('salary_advances')
@@ -263,9 +277,9 @@ export function useCreateAdvance() {
         })
         .select()
         .single();
-      
+
       if (advanceError) throw advanceError;
-      
+
       return advance;
     },
     onSuccess: (_, variables) => {
@@ -290,15 +304,17 @@ interface ApproveAdvanceParams {
 
 export function useApproveAdvance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (params: ApproveAdvanceParams) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
-      
+
       const isCash = params.paymentMethod === 'cash';
       const status = isCash ? 'paid' : 'transferred';
-      
+
       const { data, error } = await supabase
         .from('salary_advances')
         .update({
@@ -316,7 +332,7 @@ export function useApproveAdvance() {
         .eq('status', 'pending')
         .select('branch_id')
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -333,7 +349,7 @@ export function useApproveAdvance() {
 
 export function useRejectAdvance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (advanceId: string) => {
       const { data, error } = await supabase
@@ -343,7 +359,7 @@ export function useRejectAdvance() {
         .eq('status', 'pending')
         .select('branch_id')
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -360,12 +376,14 @@ export function useRejectAdvance() {
 
 export function useMarkAdvanceTransferred() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ advanceId, reference }: { advanceId: string; reference?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
-      
+
       const { data, error } = await supabase
         .from('salary_advances')
         .update({
@@ -377,7 +395,7 @@ export function useMarkAdvanceTransferred() {
         .eq('id', advanceId)
         .select('branch_id')
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -400,12 +418,14 @@ interface RequestAdvanceParams {
 
 export function useRequestAdvance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (params: RequestAdvanceParams) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
-      
+
       const { data, error } = await supabase
         .from('salary_advances')
         .insert({
@@ -420,7 +440,7 @@ export function useRequestAdvance() {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -437,7 +457,7 @@ export function useRequestAdvance() {
 
 export function useCancelAdvance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (advanceId: string) => {
       const { data, error } = await supabase
@@ -446,7 +466,7 @@ export function useCancelAdvance() {
         .eq('id', advanceId)
         .select('branch_id')
         .single();
-      
+
       if (error) throw error;
       return data;
     },

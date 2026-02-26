@@ -31,9 +31,9 @@ export function useBrandClosureConfig() {
         .select('*')
         .eq('activo', true)
         .order('orden');
-      
+
       if (error) throw error;
-      
+
       // Group by type
       const config = {
         categorias: [] as ClosureConfigItem[],
@@ -42,8 +42,8 @@ export function useBrandClosureConfig() {
         apps: [] as ClosureConfigItem[],
         all: [] as ClosureConfigItem[],
       };
-      
-      (data || []).forEach(row => {
+
+      (data || []).forEach((row) => {
         const item = toClosureConfigItem(row);
         config.all.push(item);
         switch (item.tipo) {
@@ -61,7 +61,7 @@ export function useBrandClosureConfig() {
             break;
         }
       });
-      
+
       return config;
     },
   });
@@ -79,9 +79,9 @@ export function useBranchClosureConfig(branchId: string) {
         .from('branch_closure_config')
         .select('*, brand_closure_config(*)')
         .eq('branch_id', branchId);
-      
+
       if (configError) throw configError;
-      
+
       // Get all apps from brand config
       const { data: brandApps, error: appsError } = await supabase
         .from('brand_closure_config')
@@ -89,27 +89,29 @@ export function useBranchClosureConfig(branchId: string) {
         .eq('tipo', 'app_delivery')
         .eq('activo', true)
         .order('orden');
-      
+
       if (appsError) throw appsError;
-      
+
       // Build enabled apps map
       const enabledApps = new Map<string, boolean>();
-      
+
       // Default: all apps enabled
-      (brandApps || []).forEach(row => {
+      (brandApps || []).forEach((row) => {
         enabledApps.set(row.clave, true);
       });
-      
+
       // Override with branch-specific config
-      (branchConfig || []).forEach(bc => {
+      (branchConfig || []).forEach((bc) => {
         const raw = bc.brand_closure_config as any;
         if (raw && raw.tipo === 'app_delivery') {
           enabledApps.set(raw.clave, bc.habilitado);
         }
       });
-      
+
       return {
-        branchConfig: branchConfig as (BranchClosureConfig & { brand_closure_config: ClosureConfigItem })[],
+        branchConfig: branchConfig as (BranchClosureConfig & {
+          brand_closure_config: ClosureConfigItem;
+        })[],
         brandApps: (brandApps || []).map(toClosureConfigItem),
         enabledApps,
       };
@@ -123,36 +125,39 @@ export function useBranchClosureConfig(branchId: string) {
  */
 export function useUpdateBranchClosureConfig() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      branchId, 
-      configId, 
-      habilitado 
-    }: { 
-      branchId: string; 
-      configId: string; 
+    mutationFn: async ({
+      branchId,
+      configId,
+      habilitado,
+    }: {
+      branchId: string;
+      configId: string;
       habilitado: boolean;
     }) => {
       // Upsert
       const { data, error } = await supabase
         .from('branch_closure_config')
-        .upsert({
-          branch_id: branchId,
-          config_id: configId,
-          habilitado,
-        }, {
-          onConflict: 'branch_id,config_id',
-        })
+        .upsert(
+          {
+            branch_id: branchId,
+            config_id: configId,
+            habilitado,
+          },
+          {
+            onConflict: 'branch_id,config_id',
+          },
+        )
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['branch-closure-config', variables.branchId] 
+      queryClient.invalidateQueries({
+        queryKey: ['branch-closure-config', variables.branchId],
       });
       toast.success('Configuración actualizada');
     },
@@ -167,10 +172,8 @@ export function useUpdateBranchClosureConfig() {
  */
 export function useEnabledApps(branchId: string) {
   const { data: config } = useBranchClosureConfig(branchId);
-  
+
   if (!config) return [];
-  
-  return config.brandApps.filter(app => 
-    config.enabledApps.get(app.clave) !== false
-  );
+
+  return config.brandApps.filter((app) => config.enabledApps.get(app.clave) !== false);
 }

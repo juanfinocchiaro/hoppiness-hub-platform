@@ -3,7 +3,14 @@ import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImper
 import { useBrandClosuresSummary } from '@/hooks/useShiftClosures';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +19,11 @@ import { BarChart3, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, parse } from 'date-fns';
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(n);
 
 export default function BranchComparisonPage() {
   const { branchRoles } = usePermissionsWithImpersonation();
@@ -23,12 +34,12 @@ export default function BranchComparisonPage() {
 
   const { data: allSummary, isLoading } = useBrandClosuresSummary(from, to);
 
-  const myBranchIds = new Set(branchRoles.map(r => r.branch_id));
+  const myBranchIds = new Set(branchRoles.map((r) => r.branch_id));
 
   const summary = useMemo(() => {
     if (!allSummary) return [];
     return allSummary
-      .filter(s => myBranchIds.has(s.branch.id))
+      .filter((s) => myBranchIds.has(s.branch.id))
       .sort((a, b) => b.totals.vendido - a.totals.vendido);
   }, [allSummary, myBranchIds]);
 
@@ -42,7 +53,7 @@ export default function BranchComparisonPage() {
         digital: acc.digital + s.totals.digital,
         alertas: acc.alertas + s.totals.alertas,
       }),
-      { vendido: 0, hamburguesas: 0, efectivo: 0, digital: 0, alertas: 0 }
+      { vendido: 0, hamburguesas: 0, efectivo: 0, digital: 0, alertas: 0 },
     );
   }, [summary]);
 
@@ -57,7 +68,10 @@ export default function BranchComparisonPage() {
   if (branchRoles.length < 2) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Comparativo de sucursales" subtitle="Necesitás al menos 2 locales asignados" />
+        <PageHeader
+          title="Comparativo de sucursales"
+          subtitle="Necesitás al menos 2 locales asignados"
+        />
       </div>
     );
   }
@@ -73,7 +87,12 @@ export default function BranchComparisonPage() {
       <div className="flex items-end gap-3">
         <div className="space-y-1">
           <Label>Período</Label>
-          <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-44" />
+          <Input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="w-44"
+          />
         </div>
       </div>
 
@@ -102,7 +121,9 @@ export default function BranchComparisonPage() {
               <Card>
                 <CardContent className="pt-4 pb-3 text-center">
                   <p className="text-xs text-muted-foreground uppercase">Hamburguesas</p>
-                  <p className="text-xl font-bold">{totalNetwork.hamburguesas.toLocaleString('es-AR')}</p>
+                  <p className="text-xl font-bold">
+                    {totalNetwork.hamburguesas.toLocaleString('es-AR')}
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -141,15 +162,16 @@ export default function BranchComparisonPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {summary.map(s => {
-                      const ticket = s.totals.hamburguesas > 0
-                        ? s.totals.vendido / s.totals.hamburguesas
-                        : 0;
+                    {summary.map((s) => {
+                      const ticket =
+                        s.totals.hamburguesas > 0 ? s.totals.vendido / s.totals.hamburguesas : 0;
                       return (
                         <TableRow key={s.branch.id}>
                           <TableCell className="font-medium">{s.branch.name}</TableCell>
                           <TableCell className="text-right">{fmt(s.totals.vendido)}</TableCell>
-                          <TableCell className="text-right">{s.totals.hamburguesas.toLocaleString('es-AR')}</TableCell>
+                          <TableCell className="text-right">
+                            {s.totals.hamburguesas.toLocaleString('es-AR')}
+                          </TableCell>
                           <TableCell className="text-right">{fmt(s.totals.efectivo)}</TableCell>
                           <TableCell className="text-right">{fmt(s.totals.digital)}</TableCell>
                           <TableCell className="text-right">{fmt(ticket)}</TableCell>

@@ -44,7 +44,7 @@ export function PromoCodeInput({
           onApply(result.descuento, result.code.id, result.code.codigo);
           setCode('');
         },
-      }
+      },
     );
   };
 
@@ -62,7 +62,12 @@ export function PromoCodeInput({
             {appliedCode} — ${appliedDiscount.toLocaleString('es-AR')} off
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600" onClick={handleRemove}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-green-600"
+          onClick={handleRemove}
+        >
           <X className="w-3.5 h-3.5" />
         </Button>
       </div>
@@ -78,10 +83,12 @@ export function PromoCodeInput({
       <div className="flex gap-2">
         <Input
           value={code}
-          onChange={e => setCode(e.target.value.toUpperCase())}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="BIENVENIDO20"
           className="h-8 text-xs font-mono flex-1"
-          onKeyDown={e => { if (e.key === 'Enter') handleApply(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleApply();
+          }}
         />
         <Button
           size="sm"

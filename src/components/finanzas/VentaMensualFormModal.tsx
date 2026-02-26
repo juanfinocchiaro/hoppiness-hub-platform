@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +23,20 @@ interface VentaMensualFormModalProps {
   venta?: VentaMensual | null;
 }
 
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const MESES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
 
 function formatPeriodoLargo(p: string) {
   if (!p) return '';
@@ -25,7 +44,14 @@ function formatPeriodoLargo(p: string) {
   return `${MESES[parseInt(m) - 1]} ${y}`;
 }
 
-export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName, periodo, venta }: VentaMensualFormModalProps) {
+export function VentaMensualFormModal({
+  open,
+  onOpenChange,
+  branchId,
+  branchName,
+  periodo,
+  venta,
+}: VentaMensualFormModalProps) {
   const { create, update } = useVentaMensualMutations();
   const isEditing = !!venta;
 
@@ -89,7 +115,7 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
     onOpenChange(false);
   };
 
-  const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
+  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
   const isPending = create.isPending || update.isPending;
 
   return (
@@ -109,12 +135,14 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
           <div>
             <Label>Venta Total *</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                $
+              </span>
               <Input
                 type="number"
                 step="0.01"
                 value={form.venta_total}
-                onChange={e => set('venta_total', e.target.value)}
+                onChange={(e) => set('venta_total', e.target.value)}
                 placeholder="0.00"
                 className="pl-7"
               />
@@ -124,12 +152,14 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
           <div>
             <Label>Efectivo</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                $
+              </span>
               <Input
                 type="number"
                 step="0.01"
                 value={form.efectivo}
-                onChange={e => set('efectivo', e.target.value)}
+                onChange={(e) => set('efectivo', e.target.value)}
                 placeholder="0.00"
                 className="pl-7"
               />
@@ -150,46 +180,70 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
             </div>
 
             <div className="border-t pt-2 mt-2 space-y-1">
-              <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">Desglose de Canon</p>
+              <p className="font-medium text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                Desglose de Canon
+              </p>
               <div className="flex justify-between text-muted-foreground">
-                <span>Canon 4,5% Uso de Marca <span className="text-xs">(sobre efectivo)</span></span>
-                <span className="font-mono">$ {marcaEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span>
+                  Canon 4,5% Uso de Marca <span className="text-xs">(sobre efectivo)</span>
+                </span>
+                <span className="font-mono">
+                  $ {marcaEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Canon 0,5% Mkt y Publicidad <span className="text-xs">(sobre efectivo)</span></span>
-                <span className="font-mono">$ {mktEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span>
+                  Canon 0,5% Mkt y Publicidad <span className="text-xs">(sobre efectivo)</span>
+                </span>
+                <span className="font-mono">
+                  $ {mktEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Canon 4,5% Uso de Marca <span className="text-xs">(sobre online)</span></span>
-                <span className="font-mono">$ {marcaOnline.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span>
+                  Canon 4,5% Uso de Marca <span className="text-xs">(sobre online)</span>
+                </span>
+                <span className="font-mono">
+                  $ {marcaOnline.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Canon 0,5% Mkt y Publicidad <span className="text-xs">(sobre online)</span></span>
-                <span className="font-mono">$ {mktOnline.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span>
+                  Canon 0,5% Mkt y Publicidad <span className="text-xs">(sobre online)</span>
+                </span>
+                <span className="font-mono">
+                  $ {mktOnline.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
 
             <div className="border-t pt-2 mt-1 space-y-1">
               <div className="flex justify-between font-semibold text-green-700">
                 <span>💵 Pagar en efectivo</span>
-                <span className="font-mono">$ {pagarEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono">
+                  $ {pagarEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between font-semibold text-blue-700">
                 <span>🏦 Pagar por transferencia</span>
-                <span className="font-mono">$ {pagarTransferencia.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono">
+                  $ {pagarTransferencia.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between font-semibold border-t pt-1">
                 <span>Canon Total</span>
-                <span className="font-mono">$ {canonTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono">
+                  $ {canonTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
           </div>
 
           <div>
             <Label>Observaciones</Label>
-            <Textarea 
-              value={form.observaciones} 
-              onChange={e => set('observaciones', e.target.value)} 
+            <Textarea
+              value={form.observaciones}
+              onChange={(e) => set('observaciones', e.target.value)}
               rows={2}
               placeholder="Notas adicionales sobre el período..."
             />
@@ -199,10 +253,7 @@ export function VentaMensualFormModal({ open, onOpenChange, branchId, branchName
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isPending || !form.venta_total}
-            >
+            <Button onClick={handleSubmit} disabled={isPending || !form.venta_total}>
               {isPending ? 'Guardando...' : isEditing ? 'Guardar Cambios' : 'Registrar'}
             </Button>
           </div>

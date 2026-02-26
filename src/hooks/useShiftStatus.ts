@@ -19,55 +19,61 @@ export function useShiftStatus(branchId: string | undefined): ShiftStatus {
   const [loading, setLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
 
-  const fetchData = useCallback(async (signal?: { cancelled: boolean }) => {
-    if (!branchId) {
-      setLoading(false);
-      setHasChecked(true);
-      setActiveCashShift(null);
-      return;
-    }
-    try {
-      const { data: ventasRegisters } = await supabase
-        .from('cash_registers')
-        .select('id')
-        .eq('branch_id', branchId)
-        .eq('register_type', 'ventas');
-      if (signal?.cancelled) return;
-
-      const ventasIds = (ventasRegisters ?? []).map(r => r.id);
-      
-      let data = null;
-      if (ventasIds.length > 0) {
-        const { data: shiftData } = await supabase
-          .from('cash_register_shifts')
-          .select('*')
-          .eq('branch_id', branchId)
-          .eq('status', 'open')
-          .in('cash_register_id', ventasIds)
-          .order('opened_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (signal?.cancelled) return;
-        data = shiftData;
-      }
-      setActiveCashShift(data as CashRegisterShift | null);
-    } catch (e) {
-      if (signal?.cancelled) return;
-      if (import.meta.env.DEV) console.error('useShiftStatus:', e);
-      setActiveCashShift(null);
-    } finally {
-      if (!signal?.cancelled) {
+  const fetchData = useCallback(
+    async (signal?: { cancelled: boolean }) => {
+      if (!branchId) {
         setLoading(false);
         setHasChecked(true);
+        setActiveCashShift(null);
+        return;
       }
-    }
-  }, [branchId]);
+      try {
+        const { data: ventasRegisters } = await supabase
+          .from('cash_registers')
+          .select('id')
+          .eq('branch_id', branchId)
+          .eq('register_type', 'ventas');
+        if (signal?.cancelled) return;
+
+        const ventasIds = (ventasRegisters ?? []).map((r) => r.id);
+
+        let data = null;
+        if (ventasIds.length > 0) {
+          const { data: shiftData } = await supabase
+            .from('cash_register_shifts')
+            .select('*')
+            .eq('branch_id', branchId)
+            .eq('status', 'open')
+            .in('cash_register_id', ventasIds)
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (signal?.cancelled) return;
+          data = shiftData;
+        }
+        setActiveCashShift(data as CashRegisterShift | null);
+      } catch (e) {
+        if (signal?.cancelled) return;
+        if (import.meta.env.DEV) console.error('useShiftStatus:', e);
+        setActiveCashShift(null);
+      } finally {
+        if (!signal?.cancelled) {
+          setLoading(false);
+          setHasChecked(true);
+        }
+      }
+    },
+    [branchId],
+  );
 
   useEffect(() => {
     const signal = { cancelled: false };
     fetchData(signal);
     const interval = setInterval(() => fetchData(signal), 60000);
-    return () => { signal.cancelled = true; clearInterval(interval); };
+    return () => {
+      signal.cancelled = true;
+      clearInterval(interval);
+    };
   }, [fetchData]);
 
   return {

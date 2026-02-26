@@ -3,12 +3,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { FileText, BarChart3 } from 'lucide-react';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { useConceptoServicioMutations, type ConceptoServicioFormData } from '@/hooks/useConceptosServicio';
+import {
+  useConceptoServicioMutations,
+  type ConceptoServicioFormData,
+} from '@/hooks/useConceptosServicio';
 import { RdoCategorySelector } from '@/components/rdo/RdoCategorySelector';
 
 const TIPO_CONCEPTO_OPTIONS = [
@@ -59,7 +68,7 @@ export function ConceptoServicioFormModal({ open, onOpenChange, concepto }: Prop
   }, [concepto, open]);
 
   const set = (key: keyof ConceptoServicioFormData, value: any) =>
-    setForm(prev => ({ ...prev, [key]: value }));
+    setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) return;
@@ -83,33 +92,52 @@ export function ConceptoServicioFormModal({ open, onOpenChange, concepto }: Prop
           <FormSection title="Datos del Concepto" icon={FileText}>
             <FormLayout columns={1}>
               <FormRow label="Nombre" required>
-                <Input value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Ej: Energía Eléctrica EPEC" />
+                <Input
+                  value={form.nombre}
+                  onChange={(e) => set('nombre', e.target.value)}
+                  placeholder="Ej: Energía Eléctrica EPEC"
+                />
               </FormRow>
               <FormLayout columns={2}>
                 <FormRow label="Tipo" required>
-                  <Select value={form.tipo} onValueChange={v => set('tipo', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={form.tipo} onValueChange={(v) => set('tipo', v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {TIPO_CONCEPTO_OPTIONS.map(o => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      {TIPO_CONCEPTO_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </FormRow>
                 <FormRow label="Periodicidad">
-                  <Select value={form.periodicidad || 'none'} onValueChange={v => set('periodicidad', v === 'none' ? undefined : v)}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <Select
+                    value={form.periodicidad || 'none'}
+                    onValueChange={(v) => set('periodicidad', v === 'none' ? undefined : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Sin definir</SelectItem>
-                      {PERIODICIDAD_OPTIONS.map(o => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      {PERIODICIDAD_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </FormRow>
               </FormLayout>
               <FormRow label="Descripción">
-                <Textarea value={form.descripcion || ''} onChange={e => set('descripcion', e.target.value)} rows={2} />
+                <Textarea
+                  value={form.descripcion || ''}
+                  onChange={(e) => set('descripcion', e.target.value)}
+                  rows={2}
+                />
               </FormRow>
             </FormLayout>
           </FormSection>
@@ -119,7 +147,7 @@ export function ConceptoServicioFormModal({ open, onOpenChange, concepto }: Prop
               <FormRow label="Categoría RDO" hint="Posición en el Estado de Resultados (RDO)">
                 <RdoCategorySelector
                   value={form.rdo_category_code}
-                  onChange={v => set('rdo_category_code', v)}
+                  onChange={(v) => set('rdo_category_code', v)}
                   itemType="servicio"
                   placeholder="Seleccionar categoría RDO..."
                 />
@@ -128,7 +156,9 @@ export function ConceptoServicioFormModal({ open, onOpenChange, concepto }: Prop
           </FormSection>
 
           <StickyActions>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <LoadingButton loading={isPending} onClick={handleSubmit}>
               {isEdit ? 'Guardar' : 'Crear Concepto'}
             </LoadingButton>

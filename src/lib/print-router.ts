@@ -103,11 +103,11 @@ export async function buildPrintJobs(
   const jobs: PrintJob[] = [];
 
   const findPrinter = (id: string | null | undefined) =>
-    id ? printers.find(p => p.id === id && p.is_active) : undefined;
+    id ? printers.find((p) => p.id === id && p.is_active) : undefined;
 
   const getTipoImpresion = (item: OrderItemWithCategoria): 'comanda' | 'vale' | 'no_imprimir' => {
     if (!item.categoria_carta_id) return 'comanda';
-    const cat = categorias.find(c => c.id === item.categoria_carta_id);
+    const cat = categorias.find((c) => c.id === item.categoria_carta_id);
     return cat?.tipo_impresion || 'comanda';
   };
 
@@ -156,7 +156,7 @@ export async function buildPrintJobs(
               order.created_at,
               order.canal_venta || undefined,
               order.numero_llamador,
-              printer.paper_width
+              printer.paper_width,
             );
             jobs.push({
               type: 'vale',
@@ -178,21 +178,28 @@ export async function buildPrintJobs(
 
       if (esSalon) {
         // Salón: bebidas en vale, cocina solo comanda.
-        comandaItems = order.items.filter(item => getTipoImpresion(item) === 'comanda');
+        comandaItems = order.items.filter((item) => getTipoImpresion(item) === 'comanda');
       } else {
         // Delivery/takeaway/apps: todo junto salvo no_imprimir.
-        comandaItems = order.items.filter(item => getTipoImpresion(item) !== 'no_imprimir');
+        comandaItems = order.items.filter((item) => getTipoImpresion(item) !== 'no_imprimir');
       }
 
       if (comandaItems.length > 0) {
         const comandaOrder = { ...order, items: comandaItems };
-        const isDelivery = order.tipo_servicio === 'delivery' || order.canal_venta === 'rappi' || order.canal_venta === 'pedidos_ya' || order.canal_venta === 'mp_delivery' || order.canal_venta === 'masdelivery';
+        const isDelivery =
+          order.tipo_servicio === 'delivery' ||
+          order.canal_venta === 'rappi' ||
+          order.canal_venta === 'pedidos_ya' ||
+          order.canal_venta === 'mp_delivery' ||
+          order.canal_venta === 'masdelivery';
 
         let trackingQrBitmap: string | undefined;
         if (isDelivery && trackingToken) {
           try {
             trackingQrBitmap = await generateTrackingQrBitmap(trackingToken);
-          } catch { /* QR generation failed — print without it */ }
+          } catch {
+            /* QR generation failed — print without it */
+          }
         }
 
         const data = isDelivery

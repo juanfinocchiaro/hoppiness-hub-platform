@@ -65,7 +65,8 @@ export function DeliveryRadiusControl({ branchId }: DeliveryRadiusControlProps) 
     );
   }
 
-  const isOverridden = config.radius_override_km != null &&
+  const isOverridden =
+    config.radius_override_km != null &&
     (!config.radius_override_until || new Date(config.radius_override_until) > new Date());
   const effectiveRadius = isOverridden ? config.radius_override_km! : config.default_radius_km;
   const currentSlider = sliderValue ?? effectiveRadius;
@@ -112,12 +113,11 @@ export function DeliveryRadiusControl({ branchId }: DeliveryRadiusControlProps) 
             {config.delivery_enabled ? (
               <Badge className="bg-green-600 text-xs">ON</Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs">OFF</Badge>
+              <Badge variant="secondary" className="text-xs">
+                OFF
+              </Badge>
             )}
-            <Switch
-              checked={config.delivery_enabled}
-              onCheckedChange={handleToggle}
-            />
+            <Switch checked={config.delivery_enabled} onCheckedChange={handleToggle} />
           </div>
         </div>
       </CardHeader>
@@ -129,12 +129,17 @@ export function DeliveryRadiusControl({ branchId }: DeliveryRadiusControlProps) 
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Truck className="h-3.5 w-3.5" />
-                <span>Activos: <span className="font-medium text-foreground">{stats.activeCount}</span></span>
+                <span>
+                  Activos: <span className="font-medium text-foreground">{stats.activeCount}</span>
+                </span>
               </div>
               {stats.avgMinutes != null && (
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>Promedio: <span className="font-medium text-foreground">{stats.avgMinutes} min</span></span>
+                  <span>
+                    Promedio:{' '}
+                    <span className="font-medium text-foreground">{stats.avgMinutes} min</span>
+                  </span>
                 </div>
               )}
             </div>
@@ -146,7 +151,10 @@ export function DeliveryRadiusControl({ branchId }: DeliveryRadiusControlProps) 
               <span className="text-sm font-medium">
                 Radio actual: {currentSlider} km
                 {isOverridden && (
-                  <span className="text-muted-foreground font-normal"> (de {config.default_radius_km} km)</span>
+                  <span className="text-muted-foreground font-normal">
+                    {' '}
+                    (de {config.default_radius_km} km)
+                  </span>
                 )}
               </span>
             </div>
@@ -168,7 +176,8 @@ export function DeliveryRadiusControl({ branchId }: DeliveryRadiusControlProps) 
           {isOverridden && overrideExpiry && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Se restaura: {overrideExpiry.toLocaleDateString('es-AR', {
+              Se restaura:{' '}
+              {overrideExpiry.toLocaleDateString('es-AR', {
                 weekday: 'short',
                 day: 'numeric',
                 month: 'short',
@@ -181,11 +190,7 @@ export function DeliveryRadiusControl({ branchId }: DeliveryRadiusControlProps) 
           {/* Action buttons */}
           <div className="flex gap-2">
             {sliderValue != null && sliderValue !== effectiveRadius && (
-              <Button
-                size="sm"
-                onClick={handleApplyOverride}
-                disabled={radiusOverride.isPending}
-              >
+              <Button size="sm" onClick={handleApplyOverride} disabled={radiusOverride.isPending}>
                 {radiusOverride.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
                 Aplicar {sliderValue} km
               </Button>

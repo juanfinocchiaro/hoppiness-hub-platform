@@ -3,7 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { usePagoCanonMutations } from '@/hooks/useCanonLiquidaciones';
 import { MEDIO_PAGO_OPTIONS } from '@/types/compra';
@@ -41,7 +47,7 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
     onOpenChange(false);
   };
 
-  const set = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
+  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -52,8 +58,15 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
 
         <div className="space-y-4">
           <div className="p-3 rounded-md bg-muted text-sm">
-            <p>Total Canon: <strong>$ {Number(canon?.total_canon).toLocaleString('es-AR')}</strong></p>
-            <p>Saldo pendiente: <strong className="text-destructive">$ {Number(saldo).toLocaleString('es-AR')}</strong></p>
+            <p>
+              Total Canon: <strong>$ {Number(canon?.total_canon).toLocaleString('es-AR')}</strong>
+            </p>
+            <p>
+              Saldo pendiente:{' '}
+              <strong className="text-destructive">
+                $ {Number(saldo).toLocaleString('es-AR')}
+              </strong>
+            </p>
           </div>
 
           <div>
@@ -62,23 +75,31 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
               type="number"
               step="0.01"
               value={form.monto}
-              onChange={e => set('monto', e.target.value)}
+              onChange={(e) => set('monto', e.target.value)}
               placeholder={`Máx $ ${Number(saldo).toLocaleString('es-AR')}`}
             />
           </div>
 
           <div>
             <Label>Fecha de pago</Label>
-            <Input type="date" value={form.fecha_pago} onChange={e => set('fecha_pago', e.target.value)} />
+            <Input
+              type="date"
+              value={form.fecha_pago}
+              onChange={(e) => set('fecha_pago', e.target.value)}
+            />
           </div>
 
           <div>
             <Label>Medio de pago</Label>
-            <Select value={form.medio_pago} onValueChange={v => set('medio_pago', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={form.medio_pago} onValueChange={(v) => set('medio_pago', v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {MEDIO_PAGO_OPTIONS.map(m => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                {MEDIO_PAGO_OPTIONS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -86,16 +107,22 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
 
           <div>
             <Label>Referencia</Label>
-            <Input value={form.referencia} onChange={e => set('referencia', e.target.value)} />
+            <Input value={form.referencia} onChange={(e) => set('referencia', e.target.value)} />
           </div>
 
           <div>
             <Label>Observaciones</Label>
-            <Textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={2} />
+            <Textarea
+              value={form.observaciones}
+              onChange={(e) => set('observaciones', e.target.value)}
+              rows={2}
+            />
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSubmit} disabled={create.isPending || !form.monto}>
               {create.isPending ? 'Guardando...' : 'Registrar Pago'}
             </Button>

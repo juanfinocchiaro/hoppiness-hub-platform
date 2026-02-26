@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { WorkStation, StationCompetency, GeneralCompetency, ManagerCompetency } from '@/types/coaching';
+import type {
+  WorkStation,
+  StationCompetency,
+  GeneralCompetency,
+  ManagerCompetency,
+} from '@/types/coaching';
 
 /**
  * Hook para obtener estaciones de trabajo
@@ -14,7 +19,7 @@ export function useWorkStations() {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      
+
       if (error) throw error;
       return data as WorkStation[];
     },
@@ -30,14 +35,14 @@ export function useStationCompetencies(stationId: string | null) {
     queryKey: ['station-competencies', stationId],
     queryFn: async (): Promise<StationCompetency[]> => {
       if (!stationId) return [];
-      
+
       const { data, error } = await supabase
         .from('station_competencies')
         .select('*')
         .eq('station_id', stationId)
         .eq('is_active', true)
         .order('sort_order');
-      
+
       if (error) throw error;
       return data as StationCompetency[];
     },
@@ -59,7 +64,7 @@ export function useAllStationCompetencies() {
         .eq('is_active', true)
         .order('station_id')
         .order('sort_order');
-      
+
       if (error) throw error;
       return data as StationCompetency[];
     },
@@ -79,7 +84,7 @@ export function useGeneralCompetencies() {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      
+
       if (error) throw error;
       return data as GeneralCompetency[];
     },
@@ -99,7 +104,7 @@ export function useManagerCompetencies() {
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
-      
+
       if (error) throw error;
       return data as ManagerCompetency[];
     },
@@ -116,20 +121,30 @@ export function useCompetencyConfig() {
   const generalCompetencies = useGeneralCompetencies();
   const managerCompetencies = useManagerCompetencies();
 
-  const isLoading = stations.isLoading || stationCompetencies.isLoading || 
-                    generalCompetencies.isLoading || managerCompetencies.isLoading;
-  
-  const error = stations.error || stationCompetencies.error || 
-                generalCompetencies.error || managerCompetencies.error;
+  const isLoading =
+    stations.isLoading ||
+    stationCompetencies.isLoading ||
+    generalCompetencies.isLoading ||
+    managerCompetencies.isLoading;
+
+  const error =
+    stations.error ||
+    stationCompetencies.error ||
+    generalCompetencies.error ||
+    managerCompetencies.error;
 
   // Agrupar competencias por estación
-  const competenciesByStation = stationCompetencies.data?.reduce((acc, comp) => {
-    if (!acc[comp.station_id]) {
-      acc[comp.station_id] = [];
-    }
-    acc[comp.station_id].push(comp);
-    return acc;
-  }, {} as Record<string, StationCompetency[]>) ?? {};
+  const competenciesByStation =
+    stationCompetencies.data?.reduce(
+      (acc, comp) => {
+        if (!acc[comp.station_id]) {
+          acc[comp.station_id] = [];
+        }
+        acc[comp.station_id].push(comp);
+        return acc;
+      },
+      {} as Record<string, StationCompetency[]>,
+    ) ?? {};
 
   return {
     stations: stations.data ?? [],

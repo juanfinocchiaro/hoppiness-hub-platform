@@ -1,6 +1,6 @@
 /**
  * MiHorarioPage - Employee personal schedule view page
- * 
+ *
  * Full page view of the employee's monthly schedule with:
  * - Month navigation
  * - Today's schedule prominently displayed
@@ -17,13 +17,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Calendar, Clock, ChevronLeft, ChevronRight,
-  Flame, CreditCard, Package, Utensils, Info, Coffee 
+import {
+  Calendar,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  CreditCard,
+  Package,
+  Utensils,
+  Info,
+  Coffee,
 } from 'lucide-react';
-import { 
-  format, isToday, startOfWeek, endOfWeek, eachDayOfInterval, 
-  addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth
+import {
+  format,
+  isToday,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  isSameMonth,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PageHeader } from '@/components/ui/page-header';
@@ -37,12 +53,30 @@ interface ScheduleEntry {
   work_position: string | null;
 }
 
-const POSITION_CONFIG: Record<string, { icon: React.ComponentType<any>; color: string; bgColor: string; label: string }> = {
-  sandwichero: { icon: Flame, color: 'text-orange-600', bgColor: 'bg-orange-50', label: 'Sandwichero' },
+const POSITION_CONFIG: Record<
+  string,
+  { icon: React.ComponentType<any>; color: string; bgColor: string; label: string }
+> = {
+  sandwichero: {
+    icon: Flame,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    label: 'Sandwichero',
+  },
   cajero: { icon: CreditCard, color: 'text-blue-600', bgColor: 'bg-blue-50', label: 'Cajero' },
   delivery: { icon: Package, color: 'text-green-600', bgColor: 'bg-green-50', label: 'Delivery' },
-  limpieza: { icon: Utensils, color: 'text-purple-600', bgColor: 'bg-purple-50', label: 'Limpieza' },
-  cumple: { icon: Coffee, color: 'text-pink-600', bgColor: 'bg-pink-50', label: 'Día libre (Cumple)' },
+  limpieza: {
+    icon: Utensils,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    label: 'Limpieza',
+  },
+  cumple: {
+    icon: Coffee,
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-50',
+    label: 'Día libre (Cumple)',
+  },
 };
 
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -50,9 +84,9 @@ const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vierne
 export default function MiHorarioPage() {
   const { id: userId } = useEffectiveUser();
   const now = new Date();
-  
+
   const [currentDate, setCurrentDate] = useState(now);
-  
+
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
@@ -61,10 +95,10 @@ export default function MiHorarioPage() {
     queryKey: ['my-schedules-v2', userId, currentMonth, currentYear],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const startDate = format(startOfMonth(new Date(currentYear, currentMonth - 1)), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(currentYear, currentMonth - 1)), 'yyyy-MM-dd');
-      
+
       const { data, error } = await supabase
         .from('employee_schedules')
         .select('id, schedule_date, start_time, end_time, is_day_off, work_position')
@@ -72,7 +106,7 @@ export default function MiHorarioPage() {
         .gte('schedule_date', startDate)
         .lte('schedule_date', endDate)
         .order('schedule_date', { ascending: true });
-      
+
       if (error) throw error;
       return (data || []) as ScheduleEntry[];
     },
@@ -84,7 +118,7 @@ export default function MiHorarioPage() {
   // Create map by date for efficient lookup
   const schedulesByDate = useMemo(() => {
     const map = new Map<string, ScheduleEntry>();
-    schedules?.forEach(s => {
+    schedules?.forEach((s) => {
       if (s.schedule_date) {
         map.set(s.schedule_date, s);
       }
@@ -109,30 +143,30 @@ export default function MiHorarioPage() {
   // Calculate total scheduled hours
   const totalHours = useMemo(() => {
     let minutes = 0;
-    schedules?.forEach(s => {
+    schedules?.forEach((s) => {
       if (!s.is_day_off && s.start_time && s.end_time && s.start_time !== '00:00:00') {
         const [startH, startM] = s.start_time.split(':').map(Number);
         const [endH, endM] = s.end_time.split(':').map(Number);
-        
+
         let startMins = startH * 60 + startM;
         let endMins = endH * 60 + endM;
-        
+
         // Handle overnight shifts
         if (endMins <= startMins) {
           endMins += 24 * 60;
         }
-        
+
         minutes += endMins - startMins;
       }
     });
-    return Math.round(minutes / 60 * 10) / 10;
+    return Math.round((minutes / 60) * 10) / 10;
   }, [schedules]);
 
   // Count work days and francos
   const { workDays, francos } = useMemo(() => {
     let work = 0;
     let free = 0;
-    schedules?.forEach(s => {
+    schedules?.forEach((s) => {
       if (s.is_day_off) {
         free++;
       } else if (s.start_time && s.start_time !== '00:00:00') {
@@ -162,29 +196,36 @@ export default function MiHorarioPage() {
     if (!start || !end || start === '00:00:00') return '';
     const [startH, startM] = start.split(':').map(Number);
     const [endH, endM] = end.split(':').map(Number);
-    
+
     let startMins = startH * 60 + startM;
     let endMins = endH * 60 + endM;
-    
+
     if (endMins <= startMins) endMins += 24 * 60;
-    
+
     const duration = endMins - startMins;
     const hours = Math.floor(duration / 60);
     const mins = duration % 60;
-    
+
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
   const renderPosition = (position: string | null, size: 'sm' | 'md' = 'sm') => {
     if (!position) return null;
     const config = POSITION_CONFIG[position];
-    if (!config) return <Badge variant="outline" className="text-xs">{position}</Badge>;
-    
+    if (!config)
+      return (
+        <Badge variant="outline" className="text-xs">
+          {position}
+        </Badge>
+      );
+
     const Icon = config.icon;
     const sizeClass = size === 'md' ? 'text-sm py-1 px-2' : 'text-xs py-0.5 px-1.5';
-    
+
     return (
-      <span className={`inline-flex items-center gap-1 rounded ${config.bgColor} ${config.color} ${sizeClass}`}>
+      <span
+        className={`inline-flex items-center gap-1 rounded ${config.bgColor} ${config.color} ${sizeClass}`}
+      >
         <Icon className={size === 'md' ? 'w-4 h-4' : 'w-3 h-3'} />
         {config.label}
       </span>
@@ -194,14 +235,12 @@ export default function MiHorarioPage() {
   // Today's schedule
   const todayStr = format(now, 'yyyy-MM-dd');
   const todaySchedule = schedulesByDate.get(todayStr);
-  const hasWorkToday = todaySchedule && !todaySchedule.is_day_off && todaySchedule.start_time !== '00:00:00';
+  const hasWorkToday =
+    todaySchedule && !todaySchedule.is_day_off && todaySchedule.start_time !== '00:00:00';
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Mi Horario" 
-        subtitle="Tu horario de trabajo mensual"
-      />
+      <PageHeader title="Mi Horario" subtitle="Tu horario de trabajo mensual" />
 
       {/* Month navigation */}
       <Card>
@@ -211,10 +250,10 @@ export default function MiHorarioPage() {
               <ChevronLeft className="w-4 h-4 mr-1" />
               Anterior
             </Button>
-            
+
             <div className="text-center">
               <h2 className="text-xl font-semibold capitalize">
-                {format(currentDate, "MMMM yyyy", { locale: es })}
+                {format(currentDate, 'MMMM yyyy', { locale: es })}
               </h2>
               {!isSameMonth(currentDate, now) && (
                 <Button variant="link" size="sm" onClick={goToCurrentMonth} className="text-xs">
@@ -222,7 +261,7 @@ export default function MiHorarioPage() {
                 </Button>
               )}
             </div>
-            
+
             <Button variant="outline" size="sm" onClick={goToNextMonth}>
               Siguiente
               <ChevronRight className="w-4 h-4 ml-1" />
@@ -248,8 +287,9 @@ export default function MiHorarioPage() {
               <Info className="w-16 h-16 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Sin horarios publicados</h3>
               <p className="text-muted-foreground max-w-md">
-                Tu encargado aún no publicó los horarios para {format(currentDate, "MMMM yyyy", { locale: es })}.
-                Te notificaremos cuando estén disponibles.
+                Tu encargado aún no publicó los horarios para{' '}
+                {format(currentDate, 'MMMM yyyy', { locale: es })}. Te notificaremos cuando estén
+                disponibles.
               </p>
             </div>
           </CardContent>
@@ -297,13 +337,15 @@ export default function MiHorarioPage() {
                       <div className="flex items-center gap-3 text-lg">
                         <Clock className="w-5 h-5 text-muted-foreground" />
                         <span className="font-semibold">
-                          {formatTime(todaySchedule.start_time)} - {formatTime(todaySchedule.end_time)}
+                          {formatTime(todaySchedule.start_time)} -{' '}
+                          {formatTime(todaySchedule.end_time)}
                         </span>
                         <span className="text-muted-foreground">
                           ({calculateDuration(todaySchedule.start_time, todaySchedule.end_time)})
                         </span>
                       </div>
-                      {todaySchedule.work_position && renderPosition(todaySchedule.work_position, 'md')}
+                      {todaySchedule.work_position &&
+                        renderPosition(todaySchedule.work_position, 'md')}
                     </div>
                     <Badge className="bg-primary text-primary-foreground text-base px-4 py-2">
                       Trabajás
@@ -312,7 +354,9 @@ export default function MiHorarioPage() {
                 ) : todaySchedule?.is_day_off ? (
                   <div className="flex items-center justify-between">
                     <p className="text-lg text-muted-foreground">Día franco</p>
-                    <Badge variant="secondary" className="text-base px-4 py-2">Franco</Badge>
+                    <Badge variant="secondary" className="text-base px-4 py-2">
+                      Franco
+                    </Badge>
                   </div>
                 ) : (
                   <p className="text-muted-foreground">Sin turno asignado para hoy</p>
@@ -334,9 +378,9 @@ export default function MiHorarioPage() {
                     const isDayOff = schedule?.is_day_off;
                     const hasWork = schedule && !isDayOff && schedule.start_time !== '00:00:00';
                     const isCurrentDay = isToday(day);
-                    
+
                     return (
-                      <div 
+                      <div
                         key={idx}
                         className={`
                           flex items-center justify-between p-3 rounded-lg
@@ -344,11 +388,15 @@ export default function MiHorarioPage() {
                         `}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 text-center ${isCurrentDay ? 'font-bold text-primary' : ''}`}>
-                            <div className="text-xs text-muted-foreground">{DAY_NAMES[day.getDay()].slice(0, 3)}</div>
+                          <div
+                            className={`w-10 text-center ${isCurrentDay ? 'font-bold text-primary' : ''}`}
+                          >
+                            <div className="text-xs text-muted-foreground">
+                              {DAY_NAMES[day.getDay()].slice(0, 3)}
+                            </div>
                             <div className="text-lg">{format(day, 'd')}</div>
                           </div>
-                          
+
                           {hasWork ? (
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
@@ -362,7 +410,7 @@ export default function MiHorarioPage() {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </div>
-                        
+
                         {hasWork && (
                           <span className="text-sm text-muted-foreground">
                             {calculateDuration(schedule.start_time, schedule.end_time)}
@@ -380,36 +428,39 @@ export default function MiHorarioPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg capitalize">
-                Calendario de {format(currentDate, "MMMM", { locale: es })}
+                Calendario de {format(currentDate, 'MMMM', { locale: es })}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {/* Calendar header */}
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, idx) => (
-                  <div key={idx} className="text-center text-xs font-medium text-muted-foreground py-2">
+                  <div
+                    key={idx}
+                    className="text-center text-xs font-medium text-muted-foreground py-2"
+                  >
                     {day}
                   </div>
                 ))}
               </div>
-              
+
               {/* Calendar grid */}
               <div className="grid grid-cols-7 gap-1">
                 {/* Empty cells for start of month (Monday = 0) */}
                 {Array.from({ length: (monthDays[0].getDay() + 6) % 7 }).map((_, idx) => (
                   <div key={`empty-${idx}`} className="h-20" />
                 ))}
-                
+
                 {/* Month days */}
                 {monthDays.map((day, idx) => {
                   const schedule = getScheduleForDate(day);
                   const isDayOff = schedule?.is_day_off;
                   const hasWork = schedule && !isDayOff && schedule.start_time !== '00:00:00';
                   const isCurrentDay = isToday(day);
-                  
+
                   return (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className={`
                         flex flex-col p-2 rounded-lg h-20 text-sm
                         ${isCurrentDay ? 'ring-2 ring-primary' : 'border'}
@@ -419,7 +470,7 @@ export default function MiHorarioPage() {
                       <span className={`font-medium ${isCurrentDay ? 'text-primary' : ''}`}>
                         {format(day, 'd')}
                       </span>
-                      
+
                       {hasWork ? (
                         <div className="mt-1 space-y-0.5">
                           <p className="text-xs font-medium">
@@ -427,7 +478,8 @@ export default function MiHorarioPage() {
                           </p>
                           {schedule.work_position && (
                             <p className="text-xs text-muted-foreground truncate">
-                              {POSITION_CONFIG[schedule.work_position]?.label || schedule.work_position}
+                              {POSITION_CONFIG[schedule.work_position]?.label ||
+                                schedule.work_position}
                             </p>
                           )}
                         </div>

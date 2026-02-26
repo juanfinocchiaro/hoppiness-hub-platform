@@ -10,7 +10,15 @@
  * gradient accent line (from-primary via-accent to-warning).
  */
 import { type ReactNode, useState } from 'react';
-import { ArrowLeft, Search, ShoppingBag, Menu as MenuIcon, Home, Phone, Users2, Store as StoreIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  Search,
+  ShoppingBag,
+  Menu as MenuIcon,
+  Phone,
+  Users2,
+  Store as StoreIcon,
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -68,9 +76,7 @@ export function AppHeader(props: AppHeaderProps) {
   return (
     <header
       className={`${variant === 'transparent' ? 'fixed' : 'sticky'} top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isTransparent
-          ? 'bg-transparent border-b-0 shadow-none'
-          : 'bg-background border-b shadow-sm'
+        isTransparent ? 'bg-transparent border-b-0 shadow-none' : 'bg-background border-b shadow-sm'
       }`}
     >
       {!isTransparent && (
@@ -79,13 +85,19 @@ export function AppHeader(props: AppHeaderProps) {
 
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center h-14 px-4 gap-3">
-          {mode === 'public' && <PublicCenter isTransparent={isTransparent} title={(props as PublicModeProps).title} />}
-          {mode === 'store' && <StoreCenter isTransparent={isTransparent} {...(props as StoreModeProps)} />}
+          {mode === 'public' && (
+            <PublicCenter isTransparent={isTransparent} title={(props as PublicModeProps).title} />
+          )}
+          {mode === 'store' && (
+            <StoreCenter isTransparent={isTransparent} {...(props as StoreModeProps)} />
+          )}
           {mode === 'work' && <WorkCenter {...(props as WorkModeProps)} />}
 
           {/* Right zone — always the same */}
           <div className="flex items-center gap-1 shrink-0">
-            {mode === 'store' && <StoreActions isTransparent={isTransparent} {...(props as StoreModeProps)} />}
+            {mode === 'store' && (
+              <StoreActions isTransparent={isTransparent} {...(props as StoreModeProps)} />
+            )}
             {mode === 'public' && <PublicCTA isTransparent={isTransparent} />}
             <UserMenuDropdown />
             {mode === 'public' && <PublicMobileMenu />}
@@ -111,14 +123,16 @@ function PublicCenter({ isTransparent, title }: { isTransparent: boolean; title?
           alt="Hoppiness"
           className={`w-8 h-8 rounded-full object-contain ${isTransparent ? 'drop-shadow-lg' : ''}`}
         />
-        <span className={`text-sm font-bold font-brand hidden sm:inline ${isTransparent ? 'text-white' : 'text-foreground'}`}>
+        <span
+          className={`text-sm font-bold font-brand hidden sm:inline ${isTransparent ? 'text-white' : 'text-foreground'}`}
+        >
           {title || 'HOPPINESS CLUB'}
         </span>
       </Link>
 
       {/* Desktop nav — active = Nuestros Clubes on home, or path matches route */}
       <nav className="hidden md:flex items-center gap-0.5 ml-4">
-        {publicNavItems.map(item => {
+        {publicNavItems.map((item) => {
           const active = item.anchor ? isHome : location.pathname.startsWith(item.to);
           const activeStyles = active
             ? isTransparent
@@ -140,11 +154,7 @@ function PublicCenter({ isTransparent, title }: { isTransparent: boolean; title?
                   }
                 }}
               >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`${baseStyles} ${activeStyles}`}
-                >
+                <Button variant="ghost" size="sm" className={`${baseStyles} ${activeStyles}`}>
                   {item.label}
                 </Button>
               </Link>
@@ -152,11 +162,7 @@ function PublicCenter({ isTransparent, title }: { isTransparent: boolean; title?
           }
           return (
             <Link key={item.to} to={item.to}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${baseStyles} ${activeStyles}`}
-              >
+              <Button variant="ghost" size="sm" className={`${baseStyles} ${activeStyles}`}>
                 {item.label}
               </Button>
             </Link>
@@ -172,9 +178,10 @@ function PublicCTA({ isTransparent }: { isTransparent: boolean }) {
     <Link to="/pedir" className="hidden md:block">
       <Button
         size="sm"
-        className={isTransparent
-          ? 'bg-accent hover:bg-accent/90 text-accent-foreground'
-          : 'bg-accent hover:bg-accent/90 text-accent-foreground'
+        className={
+          isTransparent
+            ? 'bg-accent hover:bg-accent/90 text-accent-foreground'
+            : 'bg-accent hover:bg-accent/90 text-accent-foreground'
         }
       >
         <ShoppingBag className="w-4 h-4 mr-1" />
@@ -223,20 +230,22 @@ function PublicMobileMenu() {
                 Nuestros Clubes
               </Button>
             </Link>
-            {publicNavItems.filter(i => !i.anchor).map(item => {
-              const active = location.pathname.startsWith(item.to);
-              return (
-                <Link key={item.to} to={item.to} onClick={() => setOpen(false)}>
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-start ${active ? 'bg-accent/15 text-accent-foreground font-semibold border-l-2 border-accent' : ''}`}
-                  >
-                    <item.icon className="w-4 h-4 mr-2" />
-                    {item.label}
-                  </Button>
-                </Link>
-              );
-            })}
+            {publicNavItems
+              .filter((i) => !i.anchor)
+              .map((item) => {
+                const active = location.pathname.startsWith(item.to);
+                return (
+                  <Link key={item.to} to={item.to} onClick={() => setOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start ${active ? 'bg-accent/15 text-accent-foreground font-semibold border-l-2 border-accent' : ''}`}
+                    >
+                      <item.icon className="w-4 h-4 mr-2" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                );
+              })}
           </nav>
         </SheetContent>
       </Sheet>
@@ -246,7 +255,13 @@ function PublicMobileMenu() {
 
 // ======================== STORE MODE ========================
 
-function StoreCenter({ isTransparent, title, subtitle, showBack, onBack }: StoreModeProps & { isTransparent: boolean }) {
+function StoreCenter({
+  isTransparent,
+  title,
+  subtitle,
+  showBack,
+  onBack,
+}: StoreModeProps & { isTransparent: boolean }) {
   const navigate = useNavigate();
   const handleBack = () => {
     if (onBack) onBack();
@@ -259,7 +274,9 @@ function StoreCenter({ isTransparent, title, subtitle, showBack, onBack }: Store
         <button
           onClick={handleBack}
           className={`p-1.5 -ml-1 rounded-lg transition-colors shrink-0 ${
-            isTransparent ? 'text-white/80 hover:bg-white/10' : 'hover:bg-muted text-muted-foreground'
+            isTransparent
+              ? 'text-white/80 hover:bg-white/10'
+              : 'hover:bg-muted text-muted-foreground'
           }`}
         >
           <ArrowLeft className="w-5 h-5" />
@@ -275,11 +292,15 @@ function StoreCenter({ isTransparent, title, subtitle, showBack, onBack }: Store
       </Link>
 
       <div className="min-w-0">
-        <h1 className={`font-brand text-sm font-bold truncate leading-tight ${isTransparent ? 'text-white' : 'text-foreground'}`}>
+        <h1
+          className={`font-brand text-sm font-bold truncate leading-tight ${isTransparent ? 'text-white' : 'text-foreground'}`}
+        >
           {title}
         </h1>
         {subtitle && (
-          <p className={`text-[11px] truncate leading-tight ${isTransparent ? 'text-white/70' : 'text-muted-foreground'}`}>
+          <p
+            className={`text-[11px] truncate leading-tight ${isTransparent ? 'text-white/70' : 'text-muted-foreground'}`}
+          >
             {subtitle}
           </p>
         )}
@@ -288,14 +309,24 @@ function StoreCenter({ isTransparent, title, subtitle, showBack, onBack }: Store
   );
 }
 
-function StoreActions({ isTransparent, showSearch, onSearchToggle, showCart, onCartClick, cartCount = 0, extraActions }: StoreModeProps & { isTransparent: boolean }) {
+function StoreActions({
+  isTransparent,
+  showSearch,
+  onSearchToggle,
+  showCart,
+  onCartClick,
+  cartCount = 0,
+  extraActions,
+}: StoreModeProps & { isTransparent: boolean }) {
   return (
     <>
       {showSearch && (
         <button
           onClick={onSearchToggle}
           className={`p-1.5 rounded-lg transition-colors ${
-            isTransparent ? 'text-white/80 hover:bg-white/10' : 'hover:bg-muted text-muted-foreground'
+            isTransparent
+              ? 'text-white/80 hover:bg-white/10'
+              : 'hover:bg-muted text-muted-foreground'
           }`}
         >
           <Search className="w-5 h-5" />
@@ -305,7 +336,9 @@ function StoreActions({ isTransparent, showSearch, onSearchToggle, showCart, onC
         <button
           onClick={onCartClick}
           className={`p-1.5 rounded-lg transition-colors relative ${
-            isTransparent ? 'text-white/80 hover:bg-white/10' : 'hover:bg-muted text-muted-foreground'
+            isTransparent
+              ? 'text-white/80 hover:bg-white/10'
+              : 'hover:bg-muted text-muted-foreground'
           }`}
         >
           <ShoppingBag className="w-5 h-5" />
@@ -336,17 +369,11 @@ function WorkCenter({ breadcrumb, onToggleSidebar }: WorkModeProps) {
       )}
 
       <Link to="/" className="shrink-0">
-        <img
-          src={logoHoppiness}
-          alt="Hoppiness"
-          className="w-8 h-8 rounded-full object-contain"
-        />
+        <img src={logoHoppiness} alt="Hoppiness" className="w-8 h-8 rounded-full object-contain" />
       </Link>
 
       {breadcrumb && (
-        <span className="text-sm font-semibold text-foreground truncate">
-          {breadcrumb}
-        </span>
+        <span className="text-sm font-semibold text-foreground truncate">{breadcrumb}</span>
       )}
     </div>
   );

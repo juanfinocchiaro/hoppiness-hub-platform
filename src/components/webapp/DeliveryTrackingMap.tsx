@@ -106,10 +106,7 @@ export function DeliveryTrackingMap({
   const houseIcon = useMemo(() => svgToIcon(houseSvg, [48, 48]), []);
   const motoIcon = useMemo(() => svgToIcon(motoSvg, [56, 56]), []);
 
-  const center: [number, number] = [
-    (storeLat + destLat) / 2,
-    (storeLng + destLng) / 2,
-  ];
+  const center: [number, number] = [(storeLat + destLat) / 2, (storeLng + destLng) / 2];
 
   const fitPoints: [number, number][] = [
     [storeLat, storeLng],

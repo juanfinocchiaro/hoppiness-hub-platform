@@ -2,12 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Bell, 
-  Check, 
-  Info, 
-  AlertTriangle, 
-  AlertCircle, 
+import {
+  Bell,
+  Info,
+  AlertTriangle,
+  AlertCircle,
   PartyPopper,
   ChevronRight,
   Megaphone,
@@ -16,20 +15,15 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  useUserCommunications, 
+import {
+  useUserCommunications,
   useMarkAsRead,
   useConfirmCommunication,
-  getTypeLabel, 
+  getTypeLabel,
   getTypeColor,
   type CommunicationWithSource,
 } from '@/hooks/useCommunications';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -51,9 +45,9 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
   const [selectedComm, setSelectedComm] = useState<CommunicationWithSource | null>(null);
 
   const brandComms = data?.brand || [];
-  const localComms = showOnlyBrand ? [] : (data?.local || []);
-  const brandUnread = brandComms.filter(c => !c.is_read).length;
-  const localUnread = localComms.filter(c => !c.is_read).length;
+  const localComms = showOnlyBrand ? [] : data?.local || [];
+  const brandUnread = brandComms.filter((c) => !c.is_read).length;
+  const localUnread = localComms.filter((c) => !c.is_read).length;
 
   const handleOpen = async (comm: CommunicationWithSource) => {
     setSelectedComm(comm);
@@ -70,7 +64,7 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
       }
       // Update local state to show "Cerrar" button
       if (selectedComm?.id === commId) {
-        setSelectedComm(prev => prev ? { ...prev, is_read: true } : null);
+        setSelectedComm((prev) => (prev ? { ...prev, is_read: true } : null));
       }
       toast.success('Lectura confirmada');
     } catch {
@@ -89,7 +83,7 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16" />
             ))}
           </div>
@@ -98,9 +92,14 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
     );
   }
 
-  const renderCommList = (comms: CommunicationWithSource[], icon: React.ReactNode, title: string, unread: number) => {
+  const renderCommList = (
+    comms: CommunicationWithSource[],
+    icon: React.ReactNode,
+    title: string,
+    unread: number,
+  ) => {
     if (comms.length === 0) return null;
-    
+
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -112,10 +111,10 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
             </Badge>
           )}
         </div>
-        {comms.slice(0, 3).map(comm => {
+        {comms.slice(0, 3).map((comm) => {
           const TypeIcon = TYPE_ICONS[comm.type as keyof typeof TYPE_ICONS] || Info;
           const needsConfirmation = comm.requires_confirmation && !comm.is_confirmed;
-          
+
           return (
             <button
               key={comm.id}
@@ -128,27 +127,32 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
                 <div className={`p-1.5 rounded ${getTypeColor(comm.type)}`}>
                   <TypeIcon className="w-4 h-4" />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`font-medium truncate ${!comm.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    <span
+                      className={`font-medium truncate ${!comm.is_read ? 'text-foreground' : 'text-muted-foreground'}`}
+                    >
                       {comm.title}
                     </span>
                     {!comm.is_read && (
                       <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                     )}
                     {needsConfirmation && (
-                      <Badge variant="outline" className="text-xs px-1.5 py-0 border-orange-300 text-orange-600">
+                      <Badge
+                        variant="outline"
+                        className="text-xs px-1.5 py-0 border-orange-300 text-orange-600"
+                      >
                         Confirmar
                       </Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(comm.published_at), "d MMM", { locale: es })}
+                    {format(new Date(comm.published_at), 'd MMM', { locale: es })}
                     {comm.branch_name && ` • ${comm.branch_name}`}
                   </p>
                 </div>
-                
+
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </div>
             </button>
@@ -167,7 +171,7 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
           <CardTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
             Comunicados
-            {(brandUnread + localUnread) > 0 && (
+            {brandUnread + localUnread > 0 && (
               <Badge variant="destructive" className="ml-auto">
                 {brandUnread + localUnread} sin leer
               </Badge>
@@ -177,13 +181,22 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
         <CardContent>
           {hasAny ? (
             <div className="space-y-4">
-              {renderCommList(brandComms, <Megaphone className="w-4 h-4" />, "De la Marca", brandUnread)}
-              {!showOnlyBrand && renderCommList(localComms, <MessageSquare className="w-4 h-4" />, "De tu Encargado", localUnread)}
+              {renderCommList(
+                brandComms,
+                <Megaphone className="w-4 h-4" />,
+                'De la Marca',
+                brandUnread,
+              )}
+              {!showOnlyBrand &&
+                renderCommList(
+                  localComms,
+                  <MessageSquare className="w-4 h-4" />,
+                  'De tu Encargado',
+                  localUnread,
+                )}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">
-              No hay comunicados
-            </p>
+            <p className="text-center text-muted-foreground py-4">No hay comunicados</p>
           )}
         </CardContent>
       </Card>
@@ -204,39 +217,35 @@ export default function MyCommunicationsCard({ showOnlyBrand = false }: MyCommun
                   <div>
                     <DialogTitle>{selectedComm.title}</DialogTitle>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(selectedComm.published_at), "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })}
+                      {format(
+                        new Date(selectedComm.published_at),
+                        "EEEE d 'de' MMMM 'a las' HH:mm",
+                        { locale: es },
+                      )}
                     </p>
                   </div>
                 </div>
               </DialogHeader>
-              
+
               <div className="flex-1 overflow-y-auto py-4 min-h-0">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {selectedComm.body}
-                </p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{selectedComm.body}</p>
               </div>
-              
+
               <div className="flex-shrink-0 flex items-center justify-between pt-4 border-t">
                 <div className="flex gap-2">
-                  <Badge variant="secondary">
-                    {getTypeLabel(selectedComm.type)}
-                  </Badge>
+                  <Badge variant="secondary">{getTypeLabel(selectedComm.type)}</Badge>
                   {selectedComm.source_type === 'local' && selectedComm.branch_name && (
                     <Badge variant="outline">{selectedComm.branch_name}</Badge>
                   )}
                 </div>
-                
+
                 {selectedComm.is_read ? (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => setSelectedComm(null)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setSelectedComm(null)}>
                     Cerrar
                   </Button>
                 ) : (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => handleConfirm(selectedComm.id)}
                     disabled={confirmMutation.isPending || markAsRead.isPending}
                   >

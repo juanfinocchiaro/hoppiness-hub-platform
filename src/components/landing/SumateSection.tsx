@@ -21,8 +21,8 @@ function SumateCard({ icon, title, description, buttonText, to }: SumateCardProp
         <h3 className="text-xl font-bold">{title}</h3>
         <p className="text-muted-foreground text-sm">{description}</p>
         <Link to={to}>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="mt-2 text-primary hover:text-primary/80 group-hover:translate-x-1 transition-transform"
           >
             {buttonText}
@@ -39,9 +39,7 @@ export function SumateSection() {
     <section className="py-20 px-4 bg-secondary/30">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-black mb-4 font-brand text-primary">
-            SUMATE A HOPPINESS
-          </h2>
+          <h2 className="text-4xl font-black mb-4 font-brand text-primary">SUMATE A HOPPINESS</h2>
           <p className="text-lg text-muted-foreground">
             HAY MUCHAS FORMAS DE SER PARTE DE LA FAMILIA
           </p>
@@ -55,7 +53,7 @@ export function SumateSection() {
             buttonText="Más info"
             to="/franquicias"
           />
-          
+
           <SumateCard
             icon={<Users className="w-8 h-8" />}
             title="Trabajá con nosotros"
@@ -63,7 +61,7 @@ export function SumateSection() {
             buttonText="Postulate"
             to="/contacto?asunto=empleo"
           />
-          
+
           <SumateCard
             icon={<Handshake className="w-8 h-8" />}
             title="Proveedores"

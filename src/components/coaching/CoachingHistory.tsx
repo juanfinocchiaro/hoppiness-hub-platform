@@ -15,11 +15,11 @@ interface CoachingHistoryProps {
   onViewCoaching?: (coachingId: string) => void;
 }
 
-export function CoachingHistory({ 
-  userId, 
-  branchId = null, 
+export function CoachingHistory({
+  userId,
+  branchId = null,
   maxItems = 6,
-  onViewCoaching 
+  onViewCoaching,
 }: CoachingHistoryProps) {
   const { data: coachings, isLoading } = useEmployeeCoachings(userId, branchId);
 
@@ -63,19 +63,17 @@ export function CoachingHistory({
           <Calendar className="h-4 w-4" />
           Historial de Coachings
         </CardTitle>
-        <CardDescription>
-          {coachings?.length ?? 0} evaluaciones registradas
-        </CardDescription>
+        <CardDescription>{coachings?.length ?? 0} evaluaciones registradas</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[250px] pr-4">
           <div className="space-y-3">
-            {displayCoachings.map(coaching => {
+            {displayCoachings.map((coaching) => {
               const date = new Date(coaching.coaching_date);
               const monthName = format(date, 'MMMM yyyy', { locale: es });
-              
+
               return (
-                <div 
+                <div
                   key={coaching.id}
                   className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                 >
@@ -98,19 +96,13 @@ export function CoachingHistory({
                         </div>
                       )}
                       {coaching.evaluator && (
-                        <span className="truncate">
-                          Por: {coaching.evaluator.full_name}
-                        </span>
+                        <span className="truncate">Por: {coaching.evaluator.full_name}</span>
                       )}
                     </div>
                   </div>
-                  
+
                   {onViewCoaching && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => onViewCoaching(coaching.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => onViewCoaching(coaching.id)}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   )}

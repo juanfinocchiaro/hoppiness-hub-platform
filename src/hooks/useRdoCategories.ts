@@ -15,11 +15,7 @@ export function useRdoCategories(filters?: RdoCategoryFilters) {
   return useQuery({
     queryKey: ['rdo-categories', filters],
     queryFn: async () => {
-      let q = supabase
-        .from('rdo_categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
+      let q = supabase.from('rdo_categories').select('*').eq('is_active', true).order('sort_order');
 
       if (filters?.level) {
         q = q.eq('level', filters.level);

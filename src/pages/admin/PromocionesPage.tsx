@@ -7,16 +7,40 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
-import { Plus, Trash2, Tag, Calendar, Search, X, Copy, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Tag,
+  Calendar,
+  Search,
+  X,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  usePromociones, usePromocionMutations, usePromocionItems,
-  type Promocion, type PromocionFormData,
+  usePromociones,
+  usePromocionMutations,
+  usePromocionItems,
+  type Promocion,
+  type PromocionFormData,
 } from '@/hooks/usePromociones';
 import { useItemsCarta } from '@/hooks/useItemsCarta';
 import { useItemExtras } from '@/hooks/useItemExtras';
@@ -51,16 +75,16 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 function formatTimeRange(inicio: string, fin: string): string {
   const h0 = inicio?.slice(0, 5) || '00:00';
   const h1 = fin?.slice(0, 5) || '23:59';
-  if ((h0 === '00:00') && (h1 === '23:59')) return 'Todo el día';
+  if (h0 === '00:00' && h1 === '23:59') return 'Todo el día';
   return `${h0} - ${h1}`;
 }
 
 function formatChannels(canales?: string[]): string {
   if (!canales || canales.length === 0) return '';
-  if (canales.length >= ALL_CANALES.length && ALL_CANALES.every(c => canales.includes(c))) {
+  if (canales.length >= ALL_CANALES.length && ALL_CANALES.every((c) => canales.includes(c))) {
     return 'Todos los canales';
   }
-  return canales.map(c => CANAL_LABELS[c] || c).join(', ');
+  return canales.map((c) => CANAL_LABELS[c] || c).join(', ');
 }
 
 interface PromoItemExtraDraft {
@@ -109,7 +133,12 @@ const EMPTY_FORM: PromocionFormData = {
 
 /* ── Promo Card (compact, with extras + auto-subtitle) ── */
 
-function buildItemLabel(item: { item_nombre?: string; precio_base?: number; precio_promo: number; preconfigExtras?: { nombre?: string; cantidad: number }[] }) {
+function buildItemLabel(item: {
+  item_nombre?: string;
+  precio_base?: number;
+  precio_promo: number;
+  preconfigExtras?: { nombre?: string; cantidad: number }[];
+}) {
   const parts = [item.item_nombre || ''];
   if (item.preconfigExtras && item.preconfigExtras.length > 0) {
     for (const ex of item.preconfigExtras) {
@@ -120,7 +149,14 @@ function buildItemLabel(item: { item_nombre?: string; precio_base?: number; prec
   return parts.join(' + ');
 }
 
-function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onToggle }: {
+function PromoCard({
+  promo,
+  isEditing,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onToggle,
+}: {
   promo: Promocion;
   isEditing?: boolean;
   onEdit: () => void;
@@ -131,7 +167,8 @@ function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onToggle }
   const { data: items = [] } = usePromocionItems(promo.id);
   const timeLabel = formatTimeRange(promo.hora_inicio, promo.hora_fin);
   const channelsLabel = formatChannels(promo.canales);
-  const discountLabel = promo.tipo === 'descuento_porcentaje' && promo.valor > 0 ? `${promo.valor}% OFF` : null;
+  const discountLabel =
+    promo.tipo === 'descuento_porcentaje' && promo.valor > 0 ? `${promo.valor}% OFF` : null;
 
   return (
     <div
@@ -140,22 +177,40 @@ function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onToggle }
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          {isEditing ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+          {isEditing ? (
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+          )}
           <h3 className="font-semibold text-sm truncate">{promo.nombre}</h3>
-          {!promo.activa && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Inactiva</Badge>}
-          {discountLabel && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{discountLabel}</Badge>}
+          {!promo.activa && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              Inactiva
+            </Badge>
+          )}
+          {discountLabel && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {discountLabel}
+            </Badge>
+          )}
           {promo.restriccion_pago !== 'cualquiera' && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">{PAGO_LABELS[promo.restriccion_pago]}</Badge>
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+              {PAGO_LABELS[promo.restriccion_pago]}
+            </Badge>
           )}
         </div>
         {items.length > 0 && (
           <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
-            {items.map(item => (
+            {items.map((item) => (
               <div key={item.id} className="flex items-center gap-1 flex-wrap">
                 <span className="font-medium text-foreground/80">{buildItemLabel(item)}</span>
                 <span className="text-muted-foreground/60">→</span>
-                <span className="line-through text-muted-foreground/50">${item.precio_base?.toLocaleString('es-AR')}</span>
-                <span className="font-semibold text-green-600">${item.precio_promo.toLocaleString('es-AR')}</span>
+                <span className="line-through text-muted-foreground/50">
+                  ${item.precio_base?.toLocaleString('es-AR')}
+                </span>
+                <span className="font-semibold text-green-600">
+                  ${item.precio_promo.toLocaleString('es-AR')}
+                </span>
               </div>
             ))}
           </div>
@@ -176,9 +231,35 @@ function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onToggle }
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <Switch checked={promo.activa} onCheckedChange={onToggle} onClick={(e) => e.stopPropagation()} />
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicar"><Copy className="w-3.5 h-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Eliminar"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+        <Switch
+          checked={promo.activa}
+          onCheckedChange={onToggle}
+          onClick={(e) => e.stopPropagation()}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDuplicate();
+          }}
+          title="Duplicar"
+        >
+          <Copy className="w-3.5 h-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          title="Eliminar"
+        >
+          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+        </Button>
       </div>
     </div>
   );
@@ -186,7 +267,15 @@ function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onToggle }
 
 /* ── Grouped by day ────────────────────────────────────── */
 
-function PromosByDay({ promos, openPromoIds, renderInlineForm, onEdit, onDuplicate, onDelete, onToggle }: {
+function PromosByDay({
+  promos,
+  openPromoIds,
+  renderInlineForm,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onToggle,
+}: {
   promos: Promocion[];
   openPromoIds: string[];
   renderInlineForm: (promo: Promocion) => React.ReactNode;
@@ -226,7 +315,9 @@ function PromosByDay({ promos, openPromoIds, renderInlineForm, onEdit, onDuplica
 
   const renderGroup = (label: string, items: Promocion[], isToday: boolean, key: string) => (
     <Card key={key} className={isToday ? 'border-primary/50 shadow-card' : ''}>
-      <div className={`flex items-center justify-between px-4 py-2 border-b rounded-t-lg ${isToday ? 'bg-primary/5' : 'bg-muted/40'}`}>
+      <div
+        className={`flex items-center justify-between px-4 py-2 border-b rounded-t-lg ${isToday ? 'bg-primary/5' : 'bg-muted/40'}`}
+      >
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-sm">{label}</h3>
           {isToday && (
@@ -235,57 +326,68 @@ function PromosByDay({ promos, openPromoIds, renderInlineForm, onEdit, onDuplica
             </span>
           )}
         </div>
-        <span className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? 'promo' : 'promos'}</span>
+        <span className="text-xs text-muted-foreground">
+          {items.length} {items.length === 1 ? 'promo' : 'promos'}
+        </span>
       </div>
-      {items.map(promo => {
+      {items.map((promo) => {
         const showInline = openPromoIds.includes(promo.id) && !renderedInline.has(promo.id);
         if (showInline) renderedInline.add(promo.id);
         return (
-        <div key={promo.id}>
-          <PromoCard
-            promo={promo}
-            isEditing={openPromoIds.includes(promo.id)}
-            onEdit={() => onEdit(promo)}
-            onDuplicate={() => onDuplicate(promo)}
-            onDelete={() => onDelete(promo)}
-            onToggle={(checked) => onToggle(promo.id, checked)}
-          />
-          {showInline && (
-            <div className="border-t-2 border-primary/30 bg-muted/10 px-5 py-4">
-              {renderInlineForm(promo)}
-            </div>
-          )}
-        </div>
-      )})}
+          <div key={promo.id}>
+            <PromoCard
+              promo={promo}
+              isEditing={openPromoIds.includes(promo.id)}
+              onEdit={() => onEdit(promo)}
+              onDuplicate={() => onDuplicate(promo)}
+              onDelete={() => onDelete(promo)}
+              onToggle={(checked) => onToggle(promo.id, checked)}
+            />
+            {showInline && (
+              <div className="border-t-2 border-primary/30 bg-muted/10 px-5 py-4">
+                {renderInlineForm(promo)}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </Card>
   );
 
   return (
     <div className="space-y-4">
       {allDaysPromos.length > 0 && renderGroup('Todos los días', allDaysPromos, true, 'all')}
-      {dayGroups.map(g => renderGroup(DIAS_FULL[g.day], g.promos, g.day === today, `day-${g.day}`))}
+      {dayGroups.map((g) =>
+        renderGroup(DIAS_FULL[g.day], g.promos, g.day === today, `day-${g.day}`),
+      )}
     </div>
   );
 }
 
 /* ── Promo Item Row with extras from product ───────────── */
 
-function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
+function PromoItemRow({
+  item,
+  discountPercent,
+  onUpdate,
+  onRemove,
+}: {
   item: PromoItemDraft;
   discountPercent: number;
   onUpdate: (updated: PromoItemDraft) => void;
   onRemove: () => void;
 }) {
   const { data: productExtras = [] } = useItemExtras(item.item_carta_id);
-  const [showExtras, setShowExtras] = useState(!!(item.preconfigExtras?.length));
+  const [showExtras, setShowExtras] = useState(!!item.preconfigExtras?.length);
 
-  const availableExtras = useMemo(() =>
-    productExtras.map(e => ({
-      id: e.id,
-      nombre: e.preparaciones?.nombre || e.insumos?.nombre || '',
-      precio: Number(e.preparaciones?.precio_extra ?? e.insumos?.precio_extra ?? 0),
-    })),
-    [productExtras]
+  const availableExtras = useMemo(
+    () =>
+      productExtras.map((e) => ({
+        id: e.id,
+        nombre: e.preparaciones?.nombre || e.insumos?.nombre || '',
+        precio: Number(e.preparaciones?.precio_extra ?? e.insumos?.precio_extra ?? 0),
+      })),
+    [productExtras],
   );
 
   const computeAutoPrice = (base: number, extras: PromoItemExtraDraft[], disc: number) => {
@@ -296,31 +398,43 @@ function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
   const toggleExtra = (extraId: string, nombre: string, precio: number) => {
     const existing = item.preconfigExtras || [];
     let next: PromoItemExtraDraft[];
-    if (existing.some(e => e.extra_item_carta_id === extraId)) {
-      next = existing.filter(e => e.extra_item_carta_id !== extraId);
+    if (existing.some((e) => e.extra_item_carta_id === extraId)) {
+      next = existing.filter((e) => e.extra_item_carta_id !== extraId);
     } else {
-      next = [...existing, { extra_item_carta_id: extraId, nombre, cantidad: 1, precio_extra: precio }];
+      next = [
+        ...existing,
+        { extra_item_carta_id: extraId, nombre, cantidad: 1, precio_extra: precio },
+      ];
     }
     const newPrice = computeAutoPrice(item.precio_base, next, discountPercent);
-    onUpdate({ ...item, preconfigExtras: next.length > 0 ? next : undefined, precio_promo: newPrice });
+    onUpdate({
+      ...item,
+      preconfigExtras: next.length > 0 ? next : undefined,
+      precio_promo: newPrice,
+    });
   };
 
   const updateQty = (extraId: string, qty: number) => {
-    const next = (item.preconfigExtras || []).map(e =>
-      e.extra_item_carta_id === extraId ? { ...e, cantidad: Math.max(1, qty) } : e
+    const next = (item.preconfigExtras || []).map((e) =>
+      e.extra_item_carta_id === extraId ? { ...e, cantidad: Math.max(1, qty) } : e,
     );
     const newPrice = computeAutoPrice(item.precio_base, next, discountPercent);
     onUpdate({ ...item, preconfigExtras: next, precio_promo: newPrice });
   };
 
-  const extrasSubtotal = (item.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.cantidad, 0);
+  const extrasSubtotal = (item.preconfigExtras || []).reduce(
+    (s, e) => s + e.precio_extra * e.cantidad,
+    0,
+  );
   const baseWithExtras = item.precio_base + extrasSubtotal;
-  const autoPrice = discountPercent > 0
-    ? computeAutoPrice(item.precio_base, item.preconfigExtras || [], discountPercent)
-    : null;
-  const effectivePercent = baseWithExtras > 0
-    ? Math.max(0, Math.min(100, Math.round((1 - (item.precio_promo / baseWithExtras)) * 1000) / 10))
-    : 0;
+  const autoPrice =
+    discountPercent > 0
+      ? computeAutoPrice(item.precio_base, item.preconfigExtras || [], discountPercent)
+      : null;
+  const effectivePercent =
+    baseWithExtras > 0
+      ? Math.max(0, Math.min(100, Math.round((1 - item.precio_promo / baseWithExtras) * 1000) / 10))
+      : 0;
   const isOverride = autoPrice != null && item.precio_promo !== autoPrice;
   const isMoreDiscountThanConfigured = autoPrice != null && item.precio_promo < autoPrice;
 
@@ -328,12 +442,16 @@ function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
     <div className="px-3 py-2 space-y-1.5">
       <div className="flex items-center gap-2">
         <span className="text-sm truncate flex-1">{item.nombre}</span>
-        <span className="text-xs text-muted-foreground line-through">${item.precio_base.toLocaleString('es-AR')}</span>
+        <span className="text-xs text-muted-foreground line-through">
+          ${item.precio_base.toLocaleString('es-AR')}
+        </span>
         <span className="text-xs">→</span>
         <Input
           type="number"
           value={item.precio_promo}
-          onChange={e => onUpdate({ ...item, precio_promo: Math.max(0, Number(e.target.value) || 0) })}
+          onChange={(e) =>
+            onUpdate({ ...item, precio_promo: Math.max(0, Number(e.target.value) || 0) })
+          }
           className="h-7 w-24 text-xs"
         />
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove}>
@@ -344,7 +462,9 @@ function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
       {/* Percentage mode: show auto price + effective % when overridden */}
       {discountPercent > 0 && autoPrice != null && (
         <div className="flex items-center justify-between gap-2">
-          <div className={`text-[11px] ${isMoreDiscountThanConfigured ? 'text-destructive' : 'text-muted-foreground'}`}>
+          <div
+            className={`text-[11px] ${isMoreDiscountThanConfigured ? 'text-destructive' : 'text-muted-foreground'}`}
+          >
             Auto ({discountPercent}%): ${autoPrice.toLocaleString('es-AR')}
             {isOverride && (
               <>
@@ -387,8 +507,10 @@ function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
 
           {showExtras && (
             <div className="pl-3 border-l-2 border-primary/20 space-y-1">
-              {availableExtras.map(ex => {
-                const selected = (item.preconfigExtras || []).find(pe => pe.extra_item_carta_id === ex.id);
+              {availableExtras.map((ex) => {
+                const selected = (item.preconfigExtras || []).find(
+                  (pe) => pe.extra_item_carta_id === ex.id,
+                );
                 return (
                   <div key={ex.id} className="flex items-center gap-2 text-xs">
                     <Checkbox
@@ -396,14 +518,18 @@ function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
                       onCheckedChange={() => toggleExtra(ex.id, ex.nombre, ex.precio)}
                     />
                     <span className="truncate flex-1">{ex.nombre}</span>
-                    <span className="text-muted-foreground shrink-0">${ex.precio.toLocaleString('es-AR')}</span>
+                    <span className="text-muted-foreground shrink-0">
+                      ${ex.precio.toLocaleString('es-AR')}
+                    </span>
                     {selected && (
                       <>
                         <span className="text-muted-foreground">×</span>
                         <Input
-                          type="number" min={1} max={10}
+                          type="number"
+                          min={1}
+                          max={10}
                           value={selected.cantidad}
-                          onChange={e => updateQty(ex.id, Number(e.target.value) || 1)}
+                          onChange={(e) => updateQty(ex.id, Number(e.target.value) || 1)}
                           className="h-6 w-14 text-xs text-center"
                         />
                       </>
@@ -432,7 +558,12 @@ function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: {
                     </div>
                     <div className="flex justify-between text-red-500">
                       <span>- {discountPercent}% desc</span>
-                      <span>-${Math.round((item.precio_base + extrasSubtotal) * discountPercent / 100).toLocaleString('es-AR')}</span>
+                      <span>
+                        -$
+                        {Math.round(
+                          ((item.precio_base + extrasSubtotal) * discountPercent) / 100,
+                        ).toLocaleString('es-AR')}
+                      </span>
                     </div>
                   </>
                 )}
@@ -465,9 +596,9 @@ export default function PromocionesPage() {
   const [promoDrafts, setPromoDrafts] = useState<Record<string, PromoEditDraft>>({});
   const [confirmClosePromo, setConfirmClosePromo] = useState<Promocion | null>(null);
 
-  const menuItems = useMemo(() =>
-    (allItems as any[]).filter((i: any) => i.tipo === 'item' && i.activo),
-    [allItems]
+  const menuItems = useMemo(
+    () => (allItems as any[]).filter((i: any) => i.tipo === 'item' && i.activo),
+    [allItems],
   );
 
   const getSearchResults = (itemSearch: string, promoItems: PromoItemDraft[]) => {
@@ -475,7 +606,7 @@ export default function PromocionesPage() {
     const q = itemSearch.toLowerCase();
     return menuItems
       .filter((i: any) => i.nombre.toLowerCase().includes(q))
-      .filter((i: any) => !promoItems.some(pi => pi.item_carta_id === i.id))
+      .filter((i: any) => !promoItems.some((pi) => pi.item_carta_id === i.id))
       .slice(0, 8);
   };
 
@@ -510,11 +641,11 @@ export default function PromocionesPage() {
         canales: [...form.canales].sort(),
       },
       promoItems: [...promoItems]
-        .map(item => ({
+        .map((item) => ({
           item_carta_id: item.item_carta_id,
           precio_promo: item.precio_promo,
           preconfigExtras: (item.preconfigExtras || [])
-            .map(extra => ({
+            .map((extra) => ({
               extra_item_carta_id: extra.extra_item_carta_id,
               cantidad: extra.cantidad,
             }))
@@ -539,16 +670,28 @@ export default function PromocionesPage() {
         .select('promocion_item_id, extra_item_carta_id, cantidad')
         .in('promocion_item_id', promoItemIds);
       if (extrasData && extrasData.length > 0) {
-        const extraItemIds = [...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id))];
+        const extraItemIds = [
+          ...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id)),
+        ];
         const { data: extraInfo } = await supabase
           .from('items_carta')
           .select('id, nombre, precio_base')
           .in('id', extraItemIds);
-        const infoMap = new Map((extraInfo || []).map((n: any) => [n.id, { nombre: n.nombre, precio: Number(n.precio_base ?? 0) }]));
+        const infoMap = new Map(
+          (extraInfo || []).map((n: any) => [
+            n.id,
+            { nombre: n.nombre, precio: Number(n.precio_base ?? 0) },
+          ]),
+        );
         for (const e of extrasData as any[]) {
           const list = extrasMap.get(e.promocion_item_id) || [];
           const info = infoMap.get(e.extra_item_carta_id);
-          list.push({ extra_item_carta_id: e.extra_item_carta_id, cantidad: e.cantidad, nombre: info?.nombre || '', precio_extra: info?.precio || 0 });
+          list.push({
+            extra_item_carta_id: e.extra_item_carta_id,
+            cantidad: e.cantidad,
+            nombre: info?.nombre || '',
+            precio_extra: info?.precio || 0,
+          });
           extrasMap.set(e.promocion_item_id, list);
         }
       }
@@ -572,8 +715,8 @@ export default function PromocionesPage() {
   };
 
   const closePromoNow = (promoId: string) => {
-    setOpenPromoIds(prev => prev.filter(id => id !== promoId));
-    setPromoDrafts(prev => {
+    setOpenPromoIds((prev) => prev.filter((id) => id !== promoId));
+    setPromoDrafts((prev) => {
       const next = { ...prev };
       delete next[promoId];
       return next;
@@ -581,10 +724,10 @@ export default function PromocionesPage() {
   };
 
   const openEdit = async (promo: Promocion) => {
-    setOpenPromoIds(prev => (prev.includes(promo.id) ? prev : [...prev, promo.id]));
+    setOpenPromoIds((prev) => (prev.includes(promo.id) ? prev : [...prev, promo.id]));
     if (promoDrafts[promo.id]) return;
 
-    setPromoDrafts(prev => ({
+    setPromoDrafts((prev) => ({
       ...prev,
       [promo.id]: {
         form: buildFormFromPromo(promo),
@@ -598,7 +741,7 @@ export default function PromocionesPage() {
     const loadedItems = await fetchPromoItems(promo.id);
     const loadedForm = buildFormFromPromo(promo);
     const initialSignature = getDraftSignature(loadedForm, loadedItems);
-    setPromoDrafts(prev => ({
+    setPromoDrafts((prev) => ({
       ...prev,
       [promo.id]: {
         form: loadedForm,
@@ -639,13 +782,16 @@ export default function PromocionesPage() {
     setItems: Dispatch<SetStateAction<PromoItemDraft[]>>,
     setSearch: Dispatch<SetStateAction<string>>,
   ) => {
-    setItems(prev => [...prev, {
-      item_carta_id: item.id,
-      nombre: item.nombre,
-      imagen_url: item.imagen_url,
-      precio_base: Number(item.precio_base),
-      precio_promo: Number(item.precio_base),
-    }]);
+    setItems((prev) => [
+      ...prev,
+      {
+        item_carta_id: item.id,
+        nombre: item.nombre,
+        imagen_url: item.imagen_url,
+        precio_base: Number(item.precio_base),
+        precio_promo: Number(item.precio_base),
+      },
+    ]);
     setSearch('');
   };
 
@@ -653,7 +799,7 @@ export default function PromocionesPage() {
     itemCartaId: string,
     setItems: Dispatch<SetStateAction<PromoItemDraft[]>>,
   ) => {
-    setItems(prev => prev.filter(i => i.item_carta_id !== itemCartaId));
+    setItems((prev) => prev.filter((i) => i.item_carta_id !== itemCartaId));
   };
 
   const updatePromoItem = (
@@ -661,9 +807,7 @@ export default function PromocionesPage() {
     updated: PromoItemDraft,
     setItems: Dispatch<SetStateAction<PromoItemDraft[]>>,
   ) => {
-    setItems(prev => prev.map(i =>
-      i.item_carta_id === itemCartaId ? updated : i
-    ));
+    setItems((prev) => prev.map((i) => (i.item_carta_id === itemCartaId ? updated : i)));
   };
 
   const applyPercentageToAll = (
@@ -671,35 +815,34 @@ export default function PromocionesPage() {
     setItems: Dispatch<SetStateAction<PromoItemDraft[]>>,
   ) => {
     if (form.tipo !== 'descuento_porcentaje' || form.valor <= 0) return;
-    setItems(prev => prev.map(i => {
-      const extrasTotal = (i.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.cantidad, 0);
-      return {
-        ...i,
-        precio_promo: Math.round((i.precio_base + extrasTotal) * (1 - form.valor / 100)),
-      };
-    }));
+    setItems((prev) =>
+      prev.map((i) => {
+        const extrasTotal = (i.preconfigExtras || []).reduce(
+          (s, e) => s + e.precio_extra * e.cantidad,
+          0,
+        );
+        return {
+          ...i,
+          precio_promo: Math.round((i.precio_base + extrasTotal) * (1 - form.valor / 100)),
+        };
+      }),
+    );
   };
 
-  const toggleCanal = (
-    canal: string,
-    setForm: Dispatch<SetStateAction<PromocionFormData>>,
-  ) => {
-    setForm(prev => ({
+  const toggleCanal = (canal: string, setForm: Dispatch<SetStateAction<PromocionFormData>>) => {
+    setForm((prev) => ({
       ...prev,
       canales: prev.canales.includes(canal)
-        ? prev.canales.filter(c => c !== canal)
+        ? prev.canales.filter((c) => c !== canal)
         : [...prev.canales, canal],
     }));
   };
 
-  const toggleDay = (
-    day: number,
-    setForm: Dispatch<SetStateAction<PromocionFormData>>,
-  ) => {
-    setForm(prev => ({
+  const toggleDay = (day: number, setForm: Dispatch<SetStateAction<PromocionFormData>>) => {
+    setForm((prev) => ({
       ...prev,
       dias_semana: prev.dias_semana.includes(day)
-        ? prev.dias_semana.filter(d => d !== day)
+        ? prev.dias_semana.filter((d) => d !== day)
         : [...prev.dias_semana, day].sort(),
     }));
   };
@@ -733,10 +876,10 @@ export default function PromocionesPage() {
   };
 
   const buildItemsPayload = (promoItems: PromoItemDraft[]) =>
-    promoItems.map(i => ({
+    promoItems.map((i) => ({
       item_carta_id: i.item_carta_id,
       precio_promo: i.precio_promo,
-      preconfigExtras: i.preconfigExtras?.map(e => ({
+      preconfigExtras: i.preconfigExtras?.map((e) => ({
         extra_item_carta_id: e.extra_item_carta_id,
         cantidad: e.cantidad,
       })),
@@ -759,7 +902,11 @@ export default function PromocionesPage() {
     const draft = promoDrafts[promoId];
     if (!draft || !validateForm(draft.form)) return;
     try {
-      await update.mutateAsync({ id: promoId, data: draft.form, items: buildItemsPayload(draft.promoItems) });
+      await update.mutateAsync({
+        id: promoId,
+        data: draft.form,
+        items: buildItemsPayload(draft.promoItems),
+      });
       closePromoNow(promoId);
     } catch {
       // handled by toast in mutations
@@ -784,27 +931,35 @@ export default function PromocionesPage() {
     const searchResults = getSearchResults(itemSearch, promoItems);
     const timeLabel = formatTimeRange(form.hora_inicio, form.hora_fin);
     const channelsLabel = formatChannels(form.canales) || '—';
-    const daysLabel = form.dias_semana.length >= 7
-      ? 'Todos los días'
-      : form.dias_semana
-        .slice()
-        .sort((a, b) => a - b)
-        .map((d) => DIAS[d] ?? String(d))
-        .join(', ');
+    const daysLabel =
+      form.dias_semana.length >= 7
+        ? 'Todos los días'
+        : form.dias_semana
+            .slice()
+            .sort((a, b) => a - b)
+            .map((d) => DIAS[d] ?? String(d))
+            .join(', ');
     const discountLabel = (() => {
       if (!form.valor || form.valor <= 0) return '';
       if (form.tipo === 'descuento_porcentaje') return `${form.valor}% OFF`;
-      if (form.tipo === 'descuento_fijo') return `$${Number(form.valor).toLocaleString('es-AR')} OFF`;
+      if (form.tipo === 'descuento_fijo')
+        return `$${Number(form.valor).toLocaleString('es-AR')} OFF`;
       return TIPO_LABELS[form.tipo] || '';
     })();
     const itemsLabel = promoItems.length === 1 ? '1 producto' : `${promoItems.length} productos`;
-    const hasOverrides = form.tipo === 'descuento_porcentaje' && form.valor > 0
-      ? promoItems.some((it) => {
-        const extrasTotal = (it.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.cantidad, 0);
-        const auto = Math.round((Number(it.precio_base) + extrasTotal) * (1 - form.valor / 100));
-        return Number(it.precio_promo) !== auto;
-      })
-      : false;
+    const hasOverrides =
+      form.tipo === 'descuento_porcentaje' && form.valor > 0
+        ? promoItems.some((it) => {
+            const extrasTotal = (it.preconfigExtras || []).reduce(
+              (s, e) => s + e.precio_extra * e.cantidad,
+              0,
+            );
+            const auto = Math.round(
+              (Number(it.precio_base) + extrasTotal) * (1 - form.valor / 100),
+            );
+            return Number(it.precio_promo) !== auto;
+          })
+        : false;
     const summary = `${daysLabel} · ${timeLabel} · ${channelsLabel}${discountLabel ? ` · ${discountLabel}` : ''} · ${itemsLabel}${hasOverrides ? ' · precios ajustados' : ''}`;
 
     const sectionHeader = (title: string, hint?: string) => (
@@ -819,19 +974,39 @@ export default function PromocionesPage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label>Tipo</Label>
-            <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v as any }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.tipo}
+              onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as any }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {Object.entries(TIPO_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                {Object.entries(TIPO_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Valor</Label>
             <div className="flex gap-2">
-              <Input type="number" value={form.valor} onChange={e => setForm(f => ({ ...f, valor: Number(e.target.value) }))} className="flex-1" />
+              <Input
+                type="number"
+                value={form.valor}
+                onChange={(e) => setForm((f) => ({ ...f, valor: Number(e.target.value) }))}
+                className="flex-1"
+              />
               {form.tipo === 'descuento_porcentaje' && promoItems.length > 0 && (
-                <Button type="button" variant="outline" size="sm" onClick={() => applyPercentageToAll(form, setPromoItems)} className="shrink-0 text-xs h-9">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyPercentageToAll(form, setPromoItems)}
+                  className="shrink-0 text-xs h-9"
+                >
                   Aplicar a todos
                 </Button>
               )}
@@ -839,7 +1014,8 @@ export default function PromocionesPage() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          El precio final se calcula por producto (base + extras incluidos) y podés ajustarlo manualmente.
+          El precio final se calcula por producto (base + extras incluidos) y podés ajustarlo
+          manualmente.
         </p>
       </div>
     );
@@ -848,9 +1024,12 @@ export default function PromocionesPage() {
       <div className="space-y-2">
         <Label className="font-medium">Canales</Label>
         <div className="flex gap-3 flex-wrap">
-          {ALL_CANALES.map(canal => (
+          {ALL_CANALES.map((canal) => (
             <label key={canal} className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={form.canales.includes(canal)} onCheckedChange={() => toggleCanal(canal, setForm)} />
+              <Checkbox
+                checked={form.canales.includes(canal)}
+                onCheckedChange={() => toggleCanal(canal, setForm)}
+              />
               {CANAL_LABELS[canal]}
             </label>
           ))}
@@ -881,11 +1060,19 @@ export default function PromocionesPage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label>Hora inicio</Label>
-            <Input type="time" value={form.hora_inicio} onChange={e => setForm(f => ({ ...f, hora_inicio: e.target.value }))} />
+            <Input
+              type="time"
+              value={form.hora_inicio}
+              onChange={(e) => setForm((f) => ({ ...f, hora_inicio: e.target.value }))}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Hora fin</Label>
-            <Input type="time" value={form.hora_fin} onChange={e => setForm(f => ({ ...f, hora_fin: e.target.value }))} />
+            <Input
+              type="time"
+              value={form.hora_fin}
+              onChange={(e) => setForm((f) => ({ ...f, hora_fin: e.target.value }))}
+            />
           </div>
         </div>
 
@@ -897,11 +1084,19 @@ export default function PromocionesPage() {
           <div className="pt-3 grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Fecha inicio</Label>
-              <Input type="date" value={form.fecha_inicio || ''} onChange={e => setForm(f => ({ ...f, fecha_inicio: e.target.value || null }))} />
+              <Input
+                type="date"
+                value={form.fecha_inicio || ''}
+                onChange={(e) => setForm((f) => ({ ...f, fecha_inicio: e.target.value || null }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Fecha fin</Label>
-              <Input type="date" value={form.fecha_fin || ''} onChange={e => setForm(f => ({ ...f, fecha_fin: e.target.value || null }))} />
+              <Input
+                type="date"
+                value={form.fecha_fin || ''}
+                onChange={(e) => setForm((f) => ({ ...f, fecha_fin: e.target.value || null }))}
+              />
             </div>
           </div>
         </details>
@@ -912,17 +1107,31 @@ export default function PromocionesPage() {
       <div className="space-y-3">
         <div className="space-y-1.5">
           <Label>Restricción de pago</Label>
-          <Select value={form.restriccion_pago} onValueChange={v => setForm(f => ({ ...f, restriccion_pago: v as any }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={form.restriccion_pago}
+            onValueChange={(v) => setForm((f) => ({ ...f, restriccion_pago: v as any }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {Object.entries(PAGO_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              {Object.entries(PAGO_LABELS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Tipo de usuario</Label>
-          <Select value={form.tipo_usuario} onValueChange={v => setForm(f => ({ ...f, tipo_usuario: v as any }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={form.tipo_usuario}
+            onValueChange={(v) => setForm((f) => ({ ...f, tipo_usuario: v as any }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="nuevo">Nuevos</SelectItem>
@@ -935,133 +1144,147 @@ export default function PromocionesPage() {
     );
 
     return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1.5 flex-1 min-w-0">
-            <Label>Nombre *</Label>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <Label>Nombre *</Label>
+              <Input
+                value={form.nombre}
+                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                placeholder="Ej: Miércoles de Doble Royal"
+              />
+            </div>
+            <div className="pt-6 flex items-center gap-2 shrink-0">
+              <span className="text-xs text-muted-foreground">Activa</span>
+              <Switch
+                checked={form.activa}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, activa: v }))}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descripción (visible a clientes)</Label>
             <Input
-              value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Miércoles de Doble Royal"
+              value={form.descripcion || ''}
+              onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
+              placeholder="Ej: 30% OFF pagando en efectivo"
             />
           </div>
-          <div className="pt-6 flex items-center gap-2 shrink-0">
-            <span className="text-xs text-muted-foreground">Activa</span>
-            <Switch checked={form.activa} onCheckedChange={(v) => setForm(f => ({ ...f, activa: v }))} />
+          <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+            <Calendar className="w-3.5 h-3.5" />
+            <span className="font-medium text-foreground/80">{summary}</span>
           </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>Descripción (visible a clientes)</Label>
-          <Input
-            value={form.descripcion || ''}
-            onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-            placeholder="Ej: 30% OFF pagando en efectivo"
-          />
-        </div>
-        <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-          <Calendar className="w-3.5 h-3.5" />
-          <span className="font-medium text-foreground/80">{summary}</span>
-        </div>
-      </div>
 
-      {/* Main: products + rules */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        {/* Products (primary) */}
-        <div className="space-y-2">
-          {sectionHeader('Productos', promoItems.length > 0 ? `${promoItems.length} seleccionados` : undefined)}
-          <p className="text-xs text-muted-foreground">
-            Importá productos y definí qué incluye la promo. Los extras marcados acá quedan <span className="font-medium">incluidos</span>.
-          </p>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input value={itemSearch} onChange={e => setItemSearch(e.target.value)} placeholder="Buscar producto de la carta..." className="pl-9 h-9" />
-          </div>
-          {searchResults.length > 0 && (
-            <div className="border rounded-lg max-h-40 overflow-y-auto divide-y">
-              {searchResults.map((item: any) => (
-                <button
-                  key={item.id}
-                  onClick={() => addItem(item, setPromoItems, setItemSearch)}
-                  className="w-full text-left px-3 py-2 hover:bg-muted/50 flex items-center justify-between text-sm"
-                >
-                  <span className="truncate">{item.nombre}</span>
-                  <span className="text-muted-foreground shrink-0 ml-2">${Number(item.precio_base).toLocaleString('es-AR')}</span>
-                </button>
-              ))}
+        {/* Main: products + rules */}
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          {/* Products (primary) */}
+          <div className="space-y-2">
+            {sectionHeader(
+              'Productos',
+              promoItems.length > 0 ? `${promoItems.length} seleccionados` : undefined,
+            )}
+            <p className="text-xs text-muted-foreground">
+              Importá productos y definí qué incluye la promo. Los extras marcados acá quedan{' '}
+              <span className="font-medium">incluidos</span>.
+            </p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={itemSearch}
+                onChange={(e) => setItemSearch(e.target.value)}
+                placeholder="Buscar producto de la carta..."
+                className="pl-9 h-9"
+              />
             </div>
-          )}
-          {promoItems.length > 0 ? (
-            <div className="border rounded-lg divide-y">
-              {promoItems.map(item => (
-                <PromoItemRow
-                  key={item.item_carta_id}
-                  item={item}
-                  discountPercent={form.tipo === 'descuento_porcentaje' ? form.valor : 0}
-                  onUpdate={(updated) => updatePromoItem(item.item_carta_id, updated, setPromoItems)}
-                  onRemove={() => removeItem(item.item_carta_id, setPromoItems)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
-              Agregá al menos un producto para configurar precios y extras.
-            </div>
-          )}
-        </div>
-
-        {/* Rules (secondary) */}
-        <div className="space-y-4">
-          {/* Mobile: accordion */}
-          <div className="lg:hidden rounded-lg border">
-            <Accordion type="single" collapsible defaultValue="discount">
-              <AccordionItem value="discount">
-                <AccordionTrigger className="px-3">Descuento</AccordionTrigger>
-                <AccordionContent className="px-3">{discountSection}</AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="where">
-                <AccordionTrigger className="px-3">Dónde aplica</AccordionTrigger>
-                <AccordionContent className="px-3">{whereSection}</AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="when">
-                <AccordionTrigger className="px-3">Cuándo aplica</AccordionTrigger>
-                <AccordionContent className="px-3">{whenSection}</AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="advanced">
-                <AccordionTrigger className="px-3">Restricciones (avanzado)</AccordionTrigger>
-                <AccordionContent className="px-3">{advancedSection}</AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-
-          {/* Desktop: simple blocks */}
-          <div className="hidden lg:block space-y-4">
-            <div className="rounded-lg border p-3 space-y-2">
-              {sectionHeader('Descuento')}
-              {discountSection}
-            </div>
-            <div className="rounded-lg border p-3 space-y-2">
-              {sectionHeader('Dónde aplica')}
-              {whereSection}
-            </div>
-            <div className="rounded-lg border p-3 space-y-2">
-              {sectionHeader('Cuándo aplica')}
-              {whenSection}
-            </div>
-            <details className="rounded-lg border p-3 bg-muted/10">
-              <summary className="cursor-pointer select-none text-sm font-bold flex items-center justify-between">
-                <span>Restricciones (avanzado)</span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </summary>
-              <div className="pt-3">
-                {advancedSection}
+            {searchResults.length > 0 && (
+              <div className="border rounded-lg max-h-40 overflow-y-auto divide-y">
+                {searchResults.map((item: any) => (
+                  <button
+                    key={item.id}
+                    onClick={() => addItem(item, setPromoItems, setItemSearch)}
+                    className="w-full text-left px-3 py-2 hover:bg-muted/50 flex items-center justify-between text-sm"
+                  >
+                    <span className="truncate">{item.nombre}</span>
+                    <span className="text-muted-foreground shrink-0 ml-2">
+                      ${Number(item.precio_base).toLocaleString('es-AR')}
+                    </span>
+                  </button>
+                ))}
               </div>
-            </details>
+            )}
+            {promoItems.length > 0 ? (
+              <div className="border rounded-lg divide-y">
+                {promoItems.map((item) => (
+                  <PromoItemRow
+                    key={item.item_carta_id}
+                    item={item}
+                    discountPercent={form.tipo === 'descuento_porcentaje' ? form.valor : 0}
+                    onUpdate={(updated) =>
+                      updatePromoItem(item.item_carta_id, updated, setPromoItems)
+                    }
+                    onRemove={() => removeItem(item.item_carta_id, setPromoItems)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+                Agregá al menos un producto para configurar precios y extras.
+              </div>
+            )}
+          </div>
+
+          {/* Rules (secondary) */}
+          <div className="space-y-4">
+            {/* Mobile: accordion */}
+            <div className="lg:hidden rounded-lg border">
+              <Accordion type="single" collapsible defaultValue="discount">
+                <AccordionItem value="discount">
+                  <AccordionTrigger className="px-3">Descuento</AccordionTrigger>
+                  <AccordionContent className="px-3">{discountSection}</AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="where">
+                  <AccordionTrigger className="px-3">Dónde aplica</AccordionTrigger>
+                  <AccordionContent className="px-3">{whereSection}</AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="when">
+                  <AccordionTrigger className="px-3">Cuándo aplica</AccordionTrigger>
+                  <AccordionContent className="px-3">{whenSection}</AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="advanced">
+                  <AccordionTrigger className="px-3">Restricciones (avanzado)</AccordionTrigger>
+                  <AccordionContent className="px-3">{advancedSection}</AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            {/* Desktop: simple blocks */}
+            <div className="hidden lg:block space-y-4">
+              <div className="rounded-lg border p-3 space-y-2">
+                {sectionHeader('Descuento')}
+                {discountSection}
+              </div>
+              <div className="rounded-lg border p-3 space-y-2">
+                {sectionHeader('Dónde aplica')}
+                {whereSection}
+              </div>
+              <div className="rounded-lg border p-3 space-y-2">
+                {sectionHeader('Cuándo aplica')}
+                {whenSection}
+              </div>
+              <details className="rounded-lg border p-3 bg-muted/10">
+                <summary className="cursor-pointer select-none text-sm font-bold flex items-center justify-between">
+                  <span>Restricciones (avanzado)</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </summary>
+                <div className="pt-3">{advancedSection}</div>
+              </details>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     );
   };
 
@@ -1075,30 +1298,50 @@ export default function PromocionesPage() {
       <>
         {renderFormFields({
           form: draft.form,
-          setForm: (next) => setPromoDrafts(prev => ({
-            ...prev,
-            [promo.id]: prev[promo.id]
-              ? { ...prev[promo.id], form: typeof next === 'function' ? next(prev[promo.id].form) : next }
-              : prev[promo.id],
-          })),
+          setForm: (next) =>
+            setPromoDrafts((prev) => ({
+              ...prev,
+              [promo.id]: prev[promo.id]
+                ? {
+                    ...prev[promo.id],
+                    form: typeof next === 'function' ? next(prev[promo.id].form) : next,
+                  }
+                : prev[promo.id],
+            })),
           promoItems: draft.promoItems,
-          setPromoItems: (next) => setPromoDrafts(prev => ({
-            ...prev,
-            [promo.id]: prev[promo.id]
-              ? { ...prev[promo.id], promoItems: typeof next === 'function' ? next(prev[promo.id].promoItems) : next }
-              : prev[promo.id],
-          })),
+          setPromoItems: (next) =>
+            setPromoDrafts((prev) => ({
+              ...prev,
+              [promo.id]: prev[promo.id]
+                ? {
+                    ...prev[promo.id],
+                    promoItems: typeof next === 'function' ? next(prev[promo.id].promoItems) : next,
+                  }
+                : prev[promo.id],
+            })),
           itemSearch: draft.itemSearch,
-          setItemSearch: (next) => setPromoDrafts(prev => ({
-            ...prev,
-            [promo.id]: prev[promo.id]
-              ? { ...prev[promo.id], itemSearch: typeof next === 'function' ? next(prev[promo.id].itemSearch) : next }
-              : prev[promo.id],
-          })),
+          setItemSearch: (next) =>
+            setPromoDrafts((prev) => ({
+              ...prev,
+              [promo.id]: prev[promo.id]
+                ? {
+                    ...prev[promo.id],
+                    itemSearch: typeof next === 'function' ? next(prev[promo.id].itemSearch) : next,
+                  }
+                : prev[promo.id],
+            })),
         })}
         <div className="flex gap-2 mt-4">
-          <Button variant="outline" onClick={() => requestClosePromo(promo)} className="flex-1">Cerrar</Button>
-          <Button onClick={() => handleEditSubmit(promo.id)} disabled={update.isPending} className="flex-1">Guardar cambios</Button>
+          <Button variant="outline" onClick={() => requestClosePromo(promo)} className="flex-1">
+            Cerrar
+          </Button>
+          <Button
+            onClick={() => handleEditSubmit(promo.id)}
+            disabled={update.isPending}
+            className="flex-1"
+          >
+            Guardar cambios
+          </Button>
         </div>
       </>
     );
@@ -1118,7 +1361,11 @@ export default function PromocionesPage() {
 
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => <Card key={i}><CardContent className="h-20 animate-pulse" /></Card>)}
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="h-20 animate-pulse" />
+            </Card>
+          ))}
         </div>
       ) : !promos?.length ? (
         <EmptyState icon={Tag} title="Sin promociones" description="Creá tu primera promoción" />

@@ -5,7 +5,17 @@
 
 import type { ReglasFacturacion } from '@/types/shiftClosure';
 
-export type PaymentMethod = 'efectivo' | 'debito' | 'credito' | 'qr' | 'transferencia' | 'mercadopago' | 'vales' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr';
+export type PaymentMethod =
+  | 'efectivo'
+  | 'debito'
+  | 'credito'
+  | 'qr'
+  | 'transferencia'
+  | 'mercadopago'
+  | 'vales'
+  | 'tarjeta_debito'
+  | 'tarjeta_credito'
+  | 'mercadopago_qr';
 
 export interface OrderPayment {
   method: PaymentMethod;
@@ -13,8 +23,8 @@ export interface OrderPayment {
 }
 
 export type SalesChannel =
-  | 'mostrador'   // salon / comer_aca / takeaway
-  | 'delivery'    // delivery manual propio
+  | 'mostrador' // salon / comer_aca / takeaway
+  | 'delivery' // delivery manual propio
   | 'rappi'
   | 'pedidosya'
   | 'mas_delivery'
@@ -24,18 +34,26 @@ export type SalesChannel =
  * Maps a POS payment method to the corresponding invoicing rule key.
  * Returns null if the payment method isn't covered by the rules (shouldn't invoice).
  */
-function getInternalRuleKey(method: PaymentMethod): keyof ReglasFacturacion['canales_internos'] | null {
+function getInternalRuleKey(
+  method: PaymentMethod,
+): keyof ReglasFacturacion['canales_internos'] | null {
   switch (method) {
-    case 'efectivo': return 'efectivo';
+    case 'efectivo':
+      return 'efectivo';
     case 'debito':
-    case 'tarjeta_debito': return 'debito';
+    case 'tarjeta_debito':
+      return 'debito';
     case 'credito':
-    case 'tarjeta_credito': return 'credito';
+    case 'tarjeta_credito':
+      return 'credito';
     case 'qr':
     case 'mercadopago':
-    case 'mercadopago_qr': return 'qr';
-    case 'transferencia': return 'transferencia';
-    default: return null;
+    case 'mercadopago_qr':
+      return 'qr';
+    case 'transferencia':
+      return 'transferencia';
+    default:
+      return null;
   }
 }
 

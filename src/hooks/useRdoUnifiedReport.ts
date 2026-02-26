@@ -71,10 +71,18 @@ function asArray<T>(value: unknown): T[] {
 export function useRdoUnifiedReport(
   branchId: string | undefined,
   periodo: string,
-  filtros: Omit<FiltrosRdo, 'fechaDesde' | 'fechaHasta'>
+  filtros: Omit<FiltrosRdo, 'fechaDesde' | 'fechaHasta'>,
 ) {
   return useQuery({
-    queryKey: ['rdo-unified-report', branchId, periodo, filtros.canales, filtros.mediosPago, filtros.categorias, filtros.productos],
+    queryKey: [
+      'rdo-unified-report',
+      branchId,
+      periodo,
+      filtros.canales,
+      filtros.mediosPago,
+      filtros.categorias,
+      filtros.productos,
+    ],
     queryFn: async (): Promise<RdoUnifiedReportData> => {
       if (!branchId) throw new Error('Branch ID requerido');
 
@@ -138,9 +146,18 @@ export function useRdoUnifiedReport(
             food_cost: asNumber(r.food_cost),
           })),
           opciones_filtros: {
-            canales: asArray<any>(mv?.opciones_filtros?.canales).map((o) => ({ id: String(o.id), label: String(o.label ?? o.id) })),
-            medios_pago: asArray<any>(mv?.opciones_filtros?.medios_pago).map((o) => ({ id: String(o.id), label: String(o.label ?? o.id) })),
-            categorias: asArray<any>(mv?.opciones_filtros?.categorias).map((o) => ({ id: String(o.id), nombre: String(o.nombre ?? 'Sin categoría') })),
+            canales: asArray<any>(mv?.opciones_filtros?.canales).map((o) => ({
+              id: String(o.id),
+              label: String(o.label ?? o.id),
+            })),
+            medios_pago: asArray<any>(mv?.opciones_filtros?.medios_pago).map((o) => ({
+              id: String(o.id),
+              label: String(o.label ?? o.id),
+            })),
+            categorias: asArray<any>(mv?.opciones_filtros?.categorias).map((o) => ({
+              id: String(o.id),
+              nombre: String(o.nombre ?? 'Sin categoría'),
+            })),
             productos: asArray<any>(mv?.opciones_filtros?.productos).map((o) => ({
               id: String(o.id),
               nombre: String(o.nombre ?? 'Sin nombre'),
@@ -168,7 +185,9 @@ export function useRdoUnifiedReport(
         },
         fiscal: {
           ventas_brutas_totales: asNumber(payload?.fiscal?.ventas_brutas_totales),
-          ventas_facturadas_brutas_original: asNumber(payload?.fiscal?.ventas_facturadas_brutas_original),
+          ventas_facturadas_brutas_original: asNumber(
+            payload?.fiscal?.ventas_facturadas_brutas_original,
+          ),
           ventas_facturadas_brutas: asNumber(payload?.fiscal?.ventas_facturadas_brutas),
           notas_credito_brutas: asNumber(payload?.fiscal?.notas_credito_brutas),
           ventas_facturadas_netas: asNumber(payload?.fiscal?.ventas_facturadas_netas),
@@ -185,7 +204,9 @@ export function useRdoUnifiedReport(
         diagnostico_costos: {
           items_sin_costo_count: asNumber(payload?.diagnostico_costos?.items_sin_costo_count),
           ventas_afectadas: asNumber(payload?.diagnostico_costos?.ventas_afectadas),
-          productos_top_sin_costo: asArray<any>(payload?.diagnostico_costos?.productos_top_sin_costo).map((p) => ({
+          productos_top_sin_costo: asArray<any>(
+            payload?.diagnostico_costos?.productos_top_sin_costo,
+          ).map((p) => ({
             producto_id: p.producto_id ? String(p.producto_id) : null,
             producto_nombre: String(p.producto_nombre ?? 'Sin nombre'),
             cantidad: asNumber(p.cantidad),

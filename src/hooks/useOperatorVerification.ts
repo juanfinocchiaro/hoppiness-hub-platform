@@ -1,7 +1,7 @@
 /**
  * useOperatorVerification - Verificación y cambio de operador (Fase 5)
  */
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -96,7 +96,11 @@ export function useOperatorVerification(branchId: string | undefined) {
           .eq('is_active', true)
           .limit(1);
         const matchedRole = roles?.[0]?.brand_role || roles?.[0]?.local_role;
-        if (roles && roles.length > 0 && ['encargado', 'franquiciado', 'superadmin', 'coordinador'].includes(matchedRole || '')) {
+        if (
+          roles &&
+          roles.length > 0 &&
+          ['encargado', 'franquiciado', 'superadmin', 'coordinador'].includes(matchedRole || '')
+        ) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name')
@@ -112,15 +116,11 @@ export function useOperatorVerification(branchId: string | undefined) {
 
       return null;
     },
-    [branchId, user]
+    [branchId, user],
   );
 
   const changeOperator = useCallback(
-    async (
-      email: string,
-      password: string,
-      triggeredBy: string
-    ): Promise<OperatorInfo | null> => {
+    async (email: string, password: string, triggeredBy: string): Promise<OperatorInfo | null> => {
       const previousUserId = user?.id;
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -161,7 +161,7 @@ export function useOperatorVerification(branchId: string | undefined) {
 
       return null;
     },
-    [user, logOperatorChange, queryClient]
+    [user, logOperatorChange, queryClient],
   );
 
   const currentOperator: OperatorInfo | null = user

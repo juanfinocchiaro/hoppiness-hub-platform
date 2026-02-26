@@ -8,10 +8,19 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Download, DollarSign, ShoppingBag, TrendingUp, Receipt } from 'lucide-react';
 import { useRdoMultivista } from '@/hooks/useRdoMultivista';
@@ -42,7 +51,10 @@ const RANGE_OPTIONS = [
 
 function fmtCurrency(value: number) {
   return new Intl.NumberFormat('es-AR', {
-    style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0,
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value || 0);
 }
 
@@ -104,7 +116,11 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
     const base = data?.opciones_filtros.productos || [];
     const query = productoSearch.trim().toLowerCase();
     return query
-      ? base.filter((p) => p.nombre.toLowerCase().includes(query) || (p.categoria_nombre || '').toLowerCase().includes(query))
+      ? base.filter(
+          (p) =>
+            p.nombre.toLowerCase().includes(query) ||
+            (p.categoria_nombre || '').toLowerCase().includes(query),
+        )
       : base;
   }, [data?.opciones_filtros.productos, productoSearch]);
 
@@ -130,10 +146,19 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
     if (!rows.length) return;
     exportToExcel(
       rows.map((r) => ({
-        canal: r.canal, pedidos: r.pedidos, ventas: r.ventas,
-        porcentaje: Number(r.porcentaje.toFixed(2)), ticket_promedio: r.ticket_promedio,
+        canal: r.canal,
+        pedidos: r.pedidos,
+        ventas: r.ventas,
+        porcentaje: Number(r.porcentaje.toFixed(2)),
+        ticket_promedio: r.ticket_promedio,
       })),
-      { canal: 'Canal', pedidos: 'Pedidos', ventas: 'Ventas', porcentaje: '%', ticket_promedio: 'Ticket Prom' },
+      {
+        canal: 'Canal',
+        pedidos: 'Pedidos',
+        ventas: 'Ventas',
+        porcentaje: '%',
+        ticket_promedio: 'Ticket Prom',
+      },
       { filename: `analisis-canal-${fileDateTag()}` },
     );
   };
@@ -143,10 +168,19 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
     if (!rows.length) return;
     exportToExcel(
       rows.map((r) => ({
-        medio_pago: r.medio_pago, pedidos: r.pedidos, ventas: r.ventas,
-        porcentaje: Number(r.porcentaje.toFixed(2)), facturado: r.facturado,
+        medio_pago: r.medio_pago,
+        pedidos: r.pedidos,
+        ventas: r.ventas,
+        porcentaje: Number(r.porcentaje.toFixed(2)),
+        facturado: r.facturado,
       })),
-      { medio_pago: 'Medio', pedidos: 'Pedidos', ventas: 'Ventas', porcentaje: '%', facturado: 'Facturado' },
+      {
+        medio_pago: 'Medio',
+        pedidos: 'Pedidos',
+        ventas: 'Ventas',
+        porcentaje: '%',
+        facturado: 'Facturado',
+      },
       { filename: `analisis-medio-${fileDateTag()}` },
     );
   };
@@ -156,10 +190,21 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
     if (!rows.length) return;
     exportToExcel(
       rows.map((r) => ({
-        categoria: r.categoria_nombre, cantidad: r.cantidad, ventas: r.ventas,
-        porcentaje: Number(r.porcentaje.toFixed(2)), costo: r.costo_total, food_cost: Number(r.food_cost.toFixed(2)),
+        categoria: r.categoria_nombre,
+        cantidad: r.cantidad,
+        ventas: r.ventas,
+        porcentaje: Number(r.porcentaje.toFixed(2)),
+        costo: r.costo_total,
+        food_cost: Number(r.food_cost.toFixed(2)),
       })),
-      { categoria: 'Categoría', cantidad: 'Cant', ventas: 'Ventas', porcentaje: '%', costo: 'Costo', food_cost: 'Food Cost' },
+      {
+        categoria: 'Categoría',
+        cantidad: 'Cant',
+        ventas: 'Ventas',
+        porcentaje: '%',
+        costo: 'Costo',
+        food_cost: 'Food Cost',
+      },
       { filename: `analisis-categoria-${fileDateTag()}` },
     );
   };
@@ -169,10 +214,21 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
     if (!rows.length) return;
     exportToExcel(
       rows.map((r) => ({
-        producto: r.producto_nombre, categoria: r.categoria_nombre, cantidad: r.cantidad,
-        ventas: r.ventas, porcentaje: Number(r.porcentaje.toFixed(2)), fc: Number(r.food_cost.toFixed(2)),
+        producto: r.producto_nombre,
+        categoria: r.categoria_nombre,
+        cantidad: r.cantidad,
+        ventas: r.ventas,
+        porcentaje: Number(r.porcentaje.toFixed(2)),
+        fc: Number(r.food_cost.toFixed(2)),
       })),
-      { producto: 'Producto', categoria: 'Categoría', cantidad: 'Cant', ventas: 'Ventas', porcentaje: '%', fc: 'FC' },
+      {
+        producto: 'Producto',
+        categoria: 'Categoría',
+        cantidad: 'Cant',
+        ventas: 'Ventas',
+        porcentaje: '%',
+        fc: 'FC',
+      },
       { filename: `analisis-producto-${fileDateTag()}` },
     );
   };
@@ -180,7 +236,9 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
   if (isLoading) {
     return (
       <div className="grid gap-4">
-        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 w-full" />
+        ))}
       </div>
     );
   }
@@ -193,9 +251,15 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
       {/* Rango + KPIs */}
       <div className="flex flex-wrap items-center gap-4">
         <Select value={daysBack} onValueChange={onDaysBackChange}>
-          <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-44 h-9">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
-            {RANGE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {RANGE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -229,7 +293,12 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
                 <label key={canal.id} className="flex items-center gap-2 cursor-pointer text-sm">
                   <Checkbox
                     checked={filtros.canales.includes(canal.id)}
-                    onCheckedChange={() => setFiltros((prev) => ({ ...prev, canales: toggleInArray(prev.canales, canal.id) }))}
+                    onCheckedChange={() =>
+                      setFiltros((prev) => ({
+                        ...prev,
+                        canales: toggleInArray(prev.canales, canal.id),
+                      }))
+                    }
                   />
                   <span>{canal.label}</span>
                 </label>
@@ -238,13 +307,20 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-medium uppercase text-muted-foreground">Medios de Pago</Label>
+            <Label className="text-xs font-medium uppercase text-muted-foreground">
+              Medios de Pago
+            </Label>
             <div className="flex flex-wrap gap-3">
               {mediosDisponibles.map((medio) => (
                 <label key={medio.id} className="flex items-center gap-2 cursor-pointer text-sm">
                   <Checkbox
                     checked={filtros.mediosPago.includes(medio.id)}
-                    onCheckedChange={() => setFiltros((prev) => ({ ...prev, mediosPago: toggleInArray(prev.mediosPago, medio.id) }))}
+                    onCheckedChange={() =>
+                      setFiltros((prev) => ({
+                        ...prev,
+                        mediosPago: toggleInArray(prev.mediosPago, medio.id),
+                      }))
+                    }
                   />
                   <span>{medio.label}</span>
                 </label>
@@ -254,14 +330,26 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase text-muted-foreground">Categorías</Label>
-              <Input value={categoriaSearch} onChange={(e) => setCategoriaSearch(e.target.value)} placeholder="Buscar categoría..." className="h-8" />
+              <Label className="text-xs font-medium uppercase text-muted-foreground">
+                Categorías
+              </Label>
+              <Input
+                value={categoriaSearch}
+                onChange={(e) => setCategoriaSearch(e.target.value)}
+                placeholder="Buscar categoría..."
+                className="h-8"
+              />
               <div className="max-h-36 overflow-auto border rounded-md p-2 space-y-2">
                 {categoriasDisponibles.map((cat) => (
                   <label key={cat.id} className="flex items-center gap-2 cursor-pointer text-sm">
                     <Checkbox
                       checked={filtros.categorias.includes(cat.id)}
-                      onCheckedChange={() => setFiltros((prev) => ({ ...prev, categorias: toggleInArray(prev.categorias, cat.id) }))}
+                      onCheckedChange={() =>
+                        setFiltros((prev) => ({
+                          ...prev,
+                          categorias: toggleInArray(prev.categorias, cat.id),
+                        }))
+                      }
                     />
                     <span>{cat.nombre}</span>
                   </label>
@@ -269,14 +357,26 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase text-muted-foreground">Productos</Label>
-              <Input value={productoSearch} onChange={(e) => setProductoSearch(e.target.value)} placeholder="Buscar producto..." className="h-8" />
+              <Label className="text-xs font-medium uppercase text-muted-foreground">
+                Productos
+              </Label>
+              <Input
+                value={productoSearch}
+                onChange={(e) => setProductoSearch(e.target.value)}
+                placeholder="Buscar producto..."
+                className="h-8"
+              />
               <div className="max-h-36 overflow-auto border rounded-md p-2 space-y-2">
                 {productosDisponibles.map((prod) => (
                   <label key={prod.id} className="flex items-center gap-2 cursor-pointer text-sm">
                     <Checkbox
                       checked={filtros.productos.includes(prod.id)}
-                      onCheckedChange={() => setFiltros((prev) => ({ ...prev, productos: toggleInArray(prev.productos, prod.id) }))}
+                      onCheckedChange={() =>
+                        setFiltros((prev) => ({
+                          ...prev,
+                          productos: toggleInArray(prev.productos, prod.id),
+                        }))
+                      }
                     />
                     <span>{prod.nombre}</span>
                   </label>
@@ -285,7 +385,9 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
             </div>
           </div>
 
-          <Button variant="outline" size="sm" onClick={clearFilters}>Limpiar filtros</Button>
+          <Button variant="outline" size="sm" onClick={clearFilters}>
+            Limpiar filtros
+          </Button>
         </CardContent>
       </Card>
 
@@ -302,15 +404,30 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Ventas por Canal</CardTitle>
-              <Button variant="outline" size="sm" onClick={exportCanal}><Download className="h-4 w-4 mr-2" />Excel</Button>
+              <Button variant="outline" size="sm" onClick={exportCanal}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>Canal</TableHead><TableHead className="text-right">Pedidos</TableHead><TableHead className="text-right">Ventas</TableHead><TableHead className="text-right">%</TableHead><TableHead className="text-right">Ticket Prom.</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Canal</TableHead>
+                    <TableHead className="text-right">Pedidos</TableHead>
+                    <TableHead className="text-right">Ventas</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                    <TableHead className="text-right">Ticket Prom.</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {(data?.por_canal || []).map((r) => (
                     <TableRow key={r.canal}>
-                      <TableCell>{r.canal}</TableCell><TableCell className="text-right">{r.pedidos}</TableCell><TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell><TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell><TableCell className="text-right">{fmtCurrency(r.ticket_promedio)}</TableCell>
+                      <TableCell>{r.canal}</TableCell>
+                      <TableCell className="text-right">{r.pedidos}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell>
+                      <TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.ticket_promedio)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -323,15 +440,30 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Ventas por Medio de Pago</CardTitle>
-              <Button variant="outline" size="sm" onClick={exportMedio}><Download className="h-4 w-4 mr-2" />Excel</Button>
+              <Button variant="outline" size="sm" onClick={exportMedio}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>Medio</TableHead><TableHead className="text-right">Pedidos</TableHead><TableHead className="text-right">Ventas</TableHead><TableHead className="text-right">%</TableHead><TableHead className="text-right">Facturado</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Medio</TableHead>
+                    <TableHead className="text-right">Pedidos</TableHead>
+                    <TableHead className="text-right">Ventas</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                    <TableHead className="text-right">Facturado</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {(data?.por_medio_pago || []).map((r) => (
                     <TableRow key={r.medio_pago}>
-                      <TableCell>{r.medio_pago}</TableCell><TableCell className="text-right">{r.pedidos}</TableCell><TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell><TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell><TableCell className="text-right">{fmtCurrency(r.facturado)}</TableCell>
+                      <TableCell>{r.medio_pago}</TableCell>
+                      <TableCell className="text-right">{r.pedidos}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell>
+                      <TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.facturado)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -344,15 +476,32 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Ventas por Categoría</CardTitle>
-              <Button variant="outline" size="sm" onClick={exportCategoria}><Download className="h-4 w-4 mr-2" />Excel</Button>
+              <Button variant="outline" size="sm" onClick={exportCategoria}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>Categoría</TableHead><TableHead className="text-right">Cant</TableHead><TableHead className="text-right">Ventas</TableHead><TableHead className="text-right">%</TableHead><TableHead className="text-right">Costo</TableHead><TableHead className="text-right">Food Cost</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead className="text-right">Cant</TableHead>
+                    <TableHead className="text-right">Ventas</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                    <TableHead className="text-right">Costo</TableHead>
+                    <TableHead className="text-right">Food Cost</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {(data?.por_categoria || []).map((r, idx) => (
                     <TableRow key={r.categoria_id || `cat-${idx}`}>
-                      <TableCell>{r.categoria_nombre}</TableCell><TableCell className="text-right">{r.cantidad}</TableCell><TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell><TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell><TableCell className="text-right">{fmtCurrency(r.costo_total)}</TableCell><TableCell className="text-right">{fmtPercent(r.food_cost)}</TableCell>
+                      <TableCell>{r.categoria_nombre}</TableCell>
+                      <TableCell className="text-right">{r.cantidad}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell>
+                      <TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.costo_total)}</TableCell>
+                      <TableCell className="text-right">{fmtPercent(r.food_cost)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -365,21 +514,40 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Ventas por Producto</CardTitle>
-              <Button variant="outline" size="sm" onClick={exportProducto}><Download className="h-4 w-4 mr-2" />Excel</Button>
+              <Button variant="outline" size="sm" onClick={exportProducto}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Categoría</TableHead><TableHead className="text-right">Cant</TableHead><TableHead className="text-right">Ventas</TableHead><TableHead className="text-right">%</TableHead><TableHead className="text-right">FC</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead className="text-right">Cant</TableHead>
+                    <TableHead className="text-right">Ventas</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                    <TableHead className="text-right">FC</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {productoRows.map((r, idx) => (
                     <TableRow key={r.producto_id || `prod-${idx}`}>
-                      <TableCell>{r.producto_nombre}</TableCell><TableCell>{r.categoria_nombre}</TableCell><TableCell className="text-right">{r.cantidad}</TableCell><TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell><TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell><TableCell className="text-right">{fmtPercent(r.food_cost)}</TableCell>
+                      <TableCell>{r.producto_nombre}</TableCell>
+                      <TableCell>{r.categoria_nombre}</TableCell>
+                      <TableCell className="text-right">{r.cantidad}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(r.ventas)}</TableCell>
+                      <TableCell className="text-right">{fmtPercent(r.porcentaje)}</TableCell>
+                      <TableCell className="text-right">{fmtPercent(r.food_cost)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               {(data?.por_producto.length || 0) > 200 && (
-                <p className="text-xs text-muted-foreground mt-2">Mostrando 200 productos para mantener rendimiento.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Mostrando 200 productos para mantener rendimiento.
+                </p>
               )}
             </CardContent>
           </Card>

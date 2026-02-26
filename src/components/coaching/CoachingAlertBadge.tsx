@@ -14,12 +14,12 @@ export function CoachingAlertBadge({ branchId, className }: CoachingAlertBadgePr
   const { data: stats } = useCoachingStats(branchId);
 
   const pendingCount = stats?.pendingCoachings ?? 0;
-  
+
   if (pendingCount === 0) return null;
 
   return (
-    <Badge 
-      variant="destructive" 
+    <Badge
+      variant="destructive"
       className={`text-xs px-1.5 py-0.5 min-w-[1.25rem] justify-center ${className}`}
     >
       {pendingCount}
@@ -32,7 +32,7 @@ export function CoachingAlertBadge({ branchId, className }: CoachingAlertBadgePr
  */
 export function usePendingAcknowledgments(branchId: string | null) {
   const { data: stats } = useCoachingStats(branchId);
-  
+
   return {
     count: stats?.pendingAcknowledgments ?? 0,
     hasOverdue: (stats?.pendingAcknowledgments ?? 0) > 0,

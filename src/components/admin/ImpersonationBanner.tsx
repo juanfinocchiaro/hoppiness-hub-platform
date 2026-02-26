@@ -1,31 +1,15 @@
 /**
  * ImpersonationBanner - Banner que indica modo "Ver como..."
- * 
+ *
  * Aparece en la parte superior cuando el superadmin está impersonando a otro usuario.
  */
 import { useImpersonation } from '@/contexts/ImpersonationContext';
-import { Button } from '@/components/ui/button';
-import { Eye, X, User, Building2 } from 'lucide-react';
-import { LOCAL_ROLE_LABELS, BRAND_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { Eye, X, User } from 'lucide-react';
 
 export default function ImpersonationBanner() {
   const { isImpersonating, targetUser, stopImpersonating } = useImpersonation();
 
   if (!isImpersonating || !targetUser) return null;
-
-  // Determine the main role to display
-  const getRoleLabel = () => {
-    if (targetUser.brandRole) {
-      return BRAND_ROLE_LABELS[targetUser.brandRole] || targetUser.brandRole;
-    }
-    if (targetUser.branchRoles.length > 0) {
-      const firstRole = targetUser.branchRoles[0];
-      const roleLabel = LOCAL_ROLE_LABELS[firstRole.local_role || ''] || firstRole.local_role;
-      const branch = targetUser.accessibleBranches.find(b => b.id === firstRole.branch_id);
-      return `${roleLabel}${branch ? ` - ${branch.name}` : ''}`;
-    }
-    return 'Sin rol asignado';
-  };
 
   return (
     <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[100]">
@@ -34,11 +18,7 @@ export default function ImpersonationBanner() {
         <span className="text-amber-800 font-medium">Viendo como</span>
         <div className="flex items-center gap-1.5">
           {targetUser.avatar_url ? (
-            <img 
-              src={targetUser.avatar_url} 
-              alt="" 
-              className="w-5 h-5 rounded-full object-cover"
-            />
+            <img src={targetUser.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
           ) : (
             <User className="w-4 h-4 text-amber-700" />
           )}

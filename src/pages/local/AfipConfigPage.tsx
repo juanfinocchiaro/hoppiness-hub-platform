@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAfipConfig, useAfipConfigMutations, type ReglasFacturacion, DEFAULT_REGLAS_FACTURACION } from '@/hooks/useAfipConfig';
-import { usePermissionsV2 } from '@/hooks/usePermissionsV2';
+import {
+  useAfipConfig,
+  useAfipConfigMutations,
+  type ReglasFacturacion,
+  DEFAULT_REGLAS_FACTURACION,
+} from '@/hooks/useAfipConfig';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +21,21 @@ import { CopyArcaConfigDialog } from '@/components/local/arca/CopyArcaConfigDial
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getArcaErrorMessage } from '@/lib/arca-error-messages';
 import {
-  Wifi, Shield, Copy, RotateCcw, ShieldAlert,
-  Pencil, X, RefreshCw, CheckCircle, AlertCircle, AlertTriangle,
-  ChevronDown, Lock, Info, ClipboardList,
+  Wifi,
+  Shield,
+  Copy,
+  RotateCcw,
+  ShieldAlert,
+  Pencil,
+  X,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
+  ChevronDown,
+  Lock,
+  Info,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,14 +61,20 @@ function ReglasFacturacionSection({
       setReglas({
         ...DEFAULT_REGLAS_FACTURACION,
         ...config.reglas_facturacion,
-        canales_internos: { ...DEFAULT_REGLAS_FACTURACION.canales_internos, ...config.reglas_facturacion.canales_internos },
-        canales_externos: { ...DEFAULT_REGLAS_FACTURACION.canales_externos, ...config.reglas_facturacion.canales_externos },
+        canales_internos: {
+          ...DEFAULT_REGLAS_FACTURACION.canales_internos,
+          ...config.reglas_facturacion.canales_internos,
+        },
+        canales_externos: {
+          ...DEFAULT_REGLAS_FACTURACION.canales_externos,
+          ...config.reglas_facturacion.canales_externos,
+        },
       });
     }
   }, [config?.reglas_facturacion]);
 
   const toggleInterno = (key: keyof ReglasFacturacion['canales_internos'], value: boolean) => {
-    setReglas(prev => ({
+    setReglas((prev) => ({
       ...prev,
       canales_internos: { ...prev.canales_internos, [key]: value },
     }));
@@ -59,7 +82,7 @@ function ReglasFacturacionSection({
   };
 
   const toggleExterno = (key: keyof ReglasFacturacion['canales_externos'], value: boolean) => {
-    setReglas(prev => ({
+    setReglas((prev) => ({
       ...prev,
       canales_externos: { ...prev.canales_externos, [key]: value },
     }));
@@ -92,7 +115,11 @@ function ReglasFacturacionSection({
     );
   }
 
-  const internosRows: { key: keyof ReglasFacturacion['canales_internos']; icon: string; label: string }[] = [
+  const internosRows: {
+    key: keyof ReglasFacturacion['canales_internos'];
+    icon: string;
+    label: string;
+  }[] = [
     { key: 'efectivo', icon: '💵', label: 'Efectivo' },
     { key: 'debito', icon: '💳', label: 'Débito' },
     { key: 'credito', icon: '💳', label: 'Crédito' },
@@ -100,7 +127,11 @@ function ReglasFacturacionSection({
     { key: 'transferencia', icon: '🏦', label: 'Transferencia' },
   ];
 
-  const externosRows: { key: keyof ReglasFacturacion['canales_externos']; icon: string; label: string }[] = [
+  const externosRows: {
+    key: keyof ReglasFacturacion['canales_externos'];
+    icon: string;
+    label: string;
+  }[] = [
     { key: 'rappi', icon: '🟡', label: 'Rappi' },
     { key: 'pedidosya', icon: '🔴', label: 'PedidosYa' },
     { key: 'mas_delivery_efectivo', icon: '🟢', label: 'MásDelivery efectivo' },
@@ -127,7 +158,10 @@ function ReglasFacturacionSection({
         </p>
         <div className="space-y-2">
           {internosRows.map(({ key, icon, label }) => (
-            <div key={key} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50">
+            <div
+              key={key}
+              className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
+            >
               <span className="text-sm flex items-center gap-2">
                 <span>{icon}</span> {label}
               </span>
@@ -152,7 +186,10 @@ function ReglasFacturacionSection({
         </p>
         <div className="space-y-2">
           {externosRows.map(({ key, icon, label }) => (
-            <div key={key} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50">
+            <div
+              key={key}
+              className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50"
+            >
               <span className="text-sm flex items-center gap-2">
                 <span>{icon}</span> {label}
               </span>
@@ -174,16 +211,13 @@ function ReglasFacturacionSection({
       <div className="flex items-start gap-2 text-xs text-muted-foreground">
         <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         <p>
-          Estas reglas determinan qué medios de pago generan factura electrónica automática desde el POS y cómo se calcula la facturación esperada en el cierre de turno.
+          Estas reglas determinan qué medios de pago generan factura electrónica automática desde el
+          POS y cómo se calcula la facturación esperada en el cierre de turno.
         </p>
       </div>
 
       {/* Guardar */}
-      <Button
-        size="sm"
-        onClick={handleSave}
-        disabled={!dirty || save.isPending}
-      >
+      <Button size="sm" onClick={handleSave} disabled={!dirty || save.isPending}>
         {save.isPending ? 'Guardando...' : 'Guardar reglas'}
       </Button>
     </div>
@@ -195,7 +229,7 @@ export default function AfipConfigPage() {
   const navigate = useNavigate();
   const { data: config, isLoading } = useAfipConfig(branchId);
   const { save, saveKeyAndCSR, saveCertificate, testConnection } = useAfipConfigMutations(branchId);
-  const { isSuperadmin, localRole, loading: permLoading } = usePermissionsV2(branchId);
+  const { isSuperadmin, localRole, loading: permLoading } = usePermissions(branchId);
 
   const [form, setForm] = useState({
     cuit: '',
@@ -274,23 +308,26 @@ export default function AfipConfigPage() {
 
   const handleReset = () => {
     if (!branchId) return;
-    save.mutate({
-      branch_id: branchId,
-      certificado_crt: null,
-      clave_privada_enc: null,
-      csr_pem: null,
-      estado_certificado: 'sin_configurar',
-      estado_conexion: 'sin_configurar',
-      ultimo_error: null,
-      es_produccion: false,
-    } as any, {
-      onSuccess: () => {
-        toast.success('Configuración ARCA reseteada.');
+    save.mutate(
+      {
+        branch_id: branchId,
+        certificado_crt: null,
+        clave_privada_enc: null,
+        csr_pem: null,
+        estado_certificado: 'sin_configurar',
+        estado_conexion: 'sin_configurar',
+        ultimo_error: null,
+        es_produccion: false,
+      } as any,
+      {
+        onSuccess: () => {
+          toast.success('Configuración ARCA reseteada.');
+        },
+        onError: (err: any) => {
+          toast.error('Error al resetear configuración', { description: err?.message });
+        },
       },
-      onError: (err: any) => {
-        toast.error('Error al resetear configuración', { description: err?.message });
-      },
-    });
+    );
     setShowResetConfirm(false);
   };
 
@@ -302,9 +339,12 @@ export default function AfipConfigPage() {
         <ShieldAlert className="h-12 w-12 text-muted-foreground" />
         <h2 className="text-xl font-semibold">Acceso restringido</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          Solo el dueño de la franquicia o un superadmin pueden acceder a la configuración de facturación electrónica.
+          Solo el dueño de la franquicia o un superadmin pueden acceder a la configuración de
+          facturación electrónica.
         </p>
-        <Button variant="outline" onClick={() => navigate(-1)}>Volver</Button>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          Volver
+        </Button>
       </div>
     );
   }
@@ -325,9 +365,7 @@ export default function AfipConfigPage() {
             Configuración de facturación electrónica para esta sucursal
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {estadoBadge()}
-        </div>
+        <div className="flex items-center gap-2">{estadoBadge()}</div>
       </div>
 
       {/* Banner Homologación */}
@@ -340,7 +378,8 @@ export default function AfipConfigPage() {
                 MODO HOMOLOGACIÓN ACTIVO
               </p>
               <p className="text-sm text-orange-700 dark:text-orange-400">
-                Las facturas emitidas en este modo NO son válidas fiscalmente. Si ya terminaste de probar, cambiá a Producción.
+                Las facturas emitidas en este modo NO son válidas fiscalmente. Si ya terminaste de
+                probar, cambiá a Producción.
               </p>
             </div>
           </div>
@@ -370,7 +409,9 @@ export default function AfipConfigPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Modo */}
             <div className="rounded-lg border p-4 space-y-1">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Modo</p>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                Modo
+              </p>
               <div className="flex items-center gap-2">
                 {config?.es_produccion ? (
                   <>
@@ -393,12 +434,16 @@ export default function AfipConfigPage() {
 
             {/* Conexión */}
             <div className="rounded-lg border p-4 space-y-1">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Conexión</p>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                Conexión
+              </p>
               <div className="flex items-center gap-2">
                 {isConnected ? (
                   <>
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-semibold text-green-700 dark:text-green-400">Verificada</span>
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                      Verificada
+                    </span>
                   </>
                 ) : hasError ? (
                   <>
@@ -408,7 +453,9 @@ export default function AfipConfigPage() {
                 ) : (
                   <>
                     <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground" />
-                    <span className="text-sm font-semibold text-muted-foreground">Sin configurar</span>
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      Sin configurar
+                    </span>
                   </>
                 )}
               </div>
@@ -447,17 +494,23 @@ export default function AfipConfigPage() {
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Factura A</p>
-                <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_a)}</p>
+                <p className="text-lg font-bold font-mono">
+                  {formatComprobante(config?.ultimo_nro_factura_a)}
+                </p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Factura B</p>
-                <p className="text-lg font-bold font-mono">{formatComprobante(config?.ultimo_nro_factura_b)}</p>
+                <p className="text-lg font-bold font-mono">
+                  {formatComprobante(config?.ultimo_nro_factura_b)}
+                </p>
               </div>
-              
             </div>
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <p>Se sincronizan con ARCA al emitir facturas y al verificar la conexión. Si recién configuraste, es normal que estén en 0.</p>
+              <p>
+                Se sincronizan con ARCA al emitir facturas y al verificar la conexión. Si recién
+                configuraste, es normal que estén en 0.
+              </p>
             </div>
           </div>
 
@@ -468,7 +521,9 @@ export default function AfipConfigPage() {
             onClick={() => testConnection.mutate()}
             disabled={testConnection.isPending}
           >
-            {testConnection.isPending ? 'Verificando...' : (
+            {testConnection.isPending ? (
+              'Verificando...'
+            ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Verificar conexión ahora
@@ -502,9 +557,13 @@ export default function AfipConfigPage() {
                 onClick={() => setIsEditingFiscal(!isEditingFiscal)}
               >
                 {isEditingFiscal ? (
-                  <><X className="mr-1.5 h-4 w-4" /> Cancelar</>
+                  <>
+                    <X className="mr-1.5 h-4 w-4" /> Cancelar
+                  </>
                 ) : (
-                  <><Pencil className="mr-1.5 h-4 w-4" /> Editar</>
+                  <>
+                    <Pencil className="mr-1.5 h-4 w-4" /> Editar
+                  </>
                 )}
               </Button>
             )}
@@ -601,7 +660,13 @@ export default function AfipConfigPage() {
           cuit={form.cuit}
           razonSocial={form.razon_social}
           onSaveKeyAndCSR={async (data) => {
-            if (form.cuit || form.razon_social || form.direccion_fiscal || form.inicio_actividades || form.punto_venta) {
+            if (
+              form.cuit ||
+              form.razon_social ||
+              form.direccion_fiscal ||
+              form.inicio_actividades ||
+              form.punto_venta
+            ) {
               await save.mutateAsync({
                 branch_id: branchId,
                 cuit: form.cuit || null,
@@ -635,19 +700,19 @@ export default function AfipConfigPage() {
                 <span className="text-sm font-semibold">Zona restringida</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Acciones que pueden afectar la facturación</span>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${restrictedOpen ? 'rotate-180' : ''}`} />
+                <span className="text-xs text-muted-foreground">
+                  Acciones que pueden afectar la facturación
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${restrictedOpen ? 'rotate-180' : ''}`}
+                />
               </div>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="border-t px-5 pb-5 pt-4 space-y-5">
               {/* Reglas de facturación */}
-              <ReglasFacturacionSection
-                config={config}
-                branchId={branchId!}
-                save={save}
-              />
+              <ReglasFacturacionSection config={config} branchId={branchId!} save={save} />
 
               <div className="border-t" />
               <div className="space-y-2">
@@ -662,7 +727,8 @@ export default function AfipConfigPage() {
                 {config?.es_produccion ? (
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Cambiar a homologación significa que las facturas emitidas NO serán válidas fiscalmente. Solo usá homologación para probar la configuración inicial.
+                      Cambiar a homologación significa que las facturas emitidas NO serán válidas
+                      fiscalmente. Solo usá homologación para probar la configuración inicial.
                     </p>
                     <Button
                       variant="outline"
@@ -676,7 +742,8 @@ export default function AfipConfigPage() {
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Activar producción para que las facturas se emitan contra ARCA de forma real. Asegurate de haber probado en homologación primero.
+                      Activar producción para que las facturas se emitan contra ARCA de forma real.
+                      Asegurate de haber probado en homologación primero.
                     </p>
                     <Button
                       variant="outline"
@@ -695,7 +762,9 @@ export default function AfipConfigPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium">Resetear configuración</p>
                 <p className="text-xs text-muted-foreground">
-                  Borra TODA la configuración de ARCA de esta sucursal: certificados y conexión. Los datos fiscales se mantienen. Las facturas no se podrán emitir hasta reconfigurar todo.
+                  Borra TODA la configuración de ARCA de esta sucursal: certificados y conexión. Los
+                  datos fiscales se mantienen. Las facturas no se podrán emitir hasta reconfigurar
+                  todo.
                 </p>
                 <Button
                   variant="outline"
@@ -715,13 +784,10 @@ export default function AfipConfigPage() {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Copiar datos fiscales de otra sucursal</p>
                     <p className="text-xs text-muted-foreground">
-                      Copia CUIT, razón social, dirección e inicio de actividades de otra sucursal. No copia certificados ni punto de venta.
+                      Copia CUIT, razón social, dirección e inicio de actividades de otra sucursal.
+                      No copia certificados ni punto de venta.
                     </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCopyDialog(true)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setShowCopyDialog(true)}>
                       <Copy className="mr-2 h-4 w-4" />
                       Copiar datos fiscales...
                     </Button>

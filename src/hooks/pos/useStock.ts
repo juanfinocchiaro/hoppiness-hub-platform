@@ -57,7 +57,9 @@ export function useStockCompleto(branchId: string) {
       // Fetch all active insumos
       const { data: insumos, error: errIns } = await supabase
         .from('insumos')
-        .select('id, nombre, unidad_base, categoria_id, costo_por_unidad_base, categorias_insumo:categorias_insumo!insumos_categoria_id_fkey(nombre)')
+        .select(
+          'id, nombre, unidad_base, categoria_id, costo_por_unidad_base, categorias_insumo:categorias_insumo!insumos_categoria_id_fkey(nombre)',
+        )
         .is('deleted_at', null)
         .neq('activo', false)
         .order('nombre');
@@ -79,17 +81,15 @@ export function useStockCompleto(branchId: string) {
       if (errMov) throw errMov;
 
       // Build maps
-      const stockMap = new Map(
-        (stockActual ?? []).map(s => [s.insumo_id, s])
-      );
+      const stockMap = new Map((stockActual ?? []).map((s) => [s.insumo_id, s]));
       const lastMovMap = new Map<string, string>();
-      (movimientos ?? []).forEach(m => {
+      (movimientos ?? []).forEach((m) => {
         if (!lastMovMap.has(m.insumo_id)) {
           lastMovMap.set(m.insumo_id, m.created_at ?? '');
         }
       });
 
-      const items: StockItem[] = (insumos ?? []).map(ins => {
+      const items: StockItem[] = (insumos ?? []).map((ins) => {
         const sa = stockMap.get(ins.id);
         const cantidad = sa ? Number(sa.cantidad) : 0;
         const cat = ins.categorias_insumo as any;
@@ -102,7 +102,8 @@ export function useStockCompleto(branchId: string) {
           stock_minimo: sa?.stock_minimo != null ? Number(sa.stock_minimo) : null,
           stock_critico: sa?.stock_critico != null ? Number(sa.stock_critico) : null,
           stock_minimo_local: sa?.stock_minimo_local != null ? Number(sa.stock_minimo_local) : null,
-          stock_critico_local: sa?.stock_critico_local != null ? Number(sa.stock_critico_local) : null,
+          stock_critico_local:
+            sa?.stock_critico_local != null ? Number(sa.stock_critico_local) : null,
           estado: calcularEstado(
             cantidad,
             sa?.stock_minimo != null ? Number(sa.stock_minimo) : null,
@@ -128,10 +129,10 @@ export function useStockResumen(branchId: string) {
 
   const resumen: StockResumen = {
     total: items?.length ?? 0,
-    ok: items?.filter(i => i.estado === 'ok').length ?? 0,
-    bajo: items?.filter(i => i.estado === 'bajo').length ?? 0,
-    critico: items?.filter(i => i.estado === 'critico').length ?? 0,
-    sin_stock: items?.filter(i => i.estado === 'sin_stock').length ?? 0,
+    ok: items?.filter((i) => i.estado === 'ok').length ?? 0,
+    bajo: items?.filter((i) => i.estado === 'bajo').length ?? 0,
+    critico: items?.filter((i) => i.estado === 'critico').length ?? 0,
+    sin_stock: items?.filter((i) => i.estado === 'sin_stock').length ?? 0,
   };
 
   return resumen;
@@ -145,7 +146,7 @@ export function useStockInicialMasivo(branchId: string) {
   return useMutation({
     mutationFn: async (items: StockInicialItem[]) => {
       if (!branchId || items.length === 0) return;
-      const nonZero = items.filter(i => i.cantidad > 0);
+      const nonZero = items.filter((i) => i.cantidad > 0);
       if (nonZero.length === 0) return;
 
       for (const it of nonZero) {
@@ -160,7 +161,7 @@ export function useStockInicialMasivo(branchId: string) {
           .from('stock_actual')
           .upsert(
             { branch_id: branchId, insumo_id: it.insumo_id, cantidad: it.cantidad, unidad },
-            { onConflict: 'branch_id,insumo_id' }
+            { onConflict: 'branch_id,insumo_id' },
           );
         if (errUpsert) throw errUpsert;
 
@@ -208,10 +209,12 @@ export function useAjusteInline(branchId: string) {
         .maybeSingle();
       const cantidadAnterior = Number(row?.cantidad ?? 0);
 
-      const { error: errUpsert } = await supabase.from('stock_actual').upsert(
-        { branch_id: branchId, insumo_id: p.insumo_id, cantidad: p.cantidad_nueva, unidad },
-        { onConflict: 'branch_id,insumo_id' }
-      );
+      const { error: errUpsert } = await supabase
+        .from('stock_actual')
+        .upsert(
+          { branch_id: branchId, insumo_id: p.insumo_id, cantidad: p.cantidad_nueva, unidad },
+          { onConflict: 'branch_id,insumo_id' },
+        );
       if (errUpsert) throw errUpsert;
 
       const { error: errMov } = await supabase.from('stock_movimientos').insert({
@@ -292,19 +295,16 @@ export function useStockConteo(branchId: string) {
       }>;
     }) => {
       // Delete existing items first
-      await supabase
-        .from('stock_conteo_items')
-        .delete()
-        .eq('conteo_id', params.conteo_id);
+      await supabase.from('stock_conteo_items').delete().eq('conteo_id', params.conteo_id);
 
       const { error } = await supabase.from('stock_conteo_items').insert(
-        params.items.map(it => ({
+        params.items.map((it) => ({
           conteo_id: params.conteo_id,
           insumo_id: it.insumo_id,
           stock_teorico: it.stock_teorico,
           stock_real: it.stock_real,
           costo_unitario: it.costo_unitario,
-        }))
+        })),
       );
       if (error) throw error;
     },
@@ -324,19 +324,16 @@ export function useStockConteo(branchId: string) {
       nota_general?: string;
     }) => {
       // Save items
-      await supabase
-        .from('stock_conteo_items')
-        .delete()
-        .eq('conteo_id', params.conteo_id);
+      await supabase.from('stock_conteo_items').delete().eq('conteo_id', params.conteo_id);
 
       await supabase.from('stock_conteo_items').insert(
-        params.items.map(it => ({
+        params.items.map((it) => ({
           conteo_id: params.conteo_id,
           insumo_id: it.insumo_id,
           stock_teorico: it.stock_teorico,
           stock_real: it.stock_real,
           costo_unitario: it.costo_unitario,
-        }))
+        })),
       );
 
       // Adjust stock for each item
@@ -355,7 +352,7 @@ export function useStockConteo(branchId: string) {
               cantidad: it.stock_real,
               unidad: insumo?.unidad_base ?? 'un',
             },
-            { onConflict: 'branch_id,insumo_id' }
+            { onConflict: 'branch_id,insumo_id' },
           );
 
           await supabase.from('stock_movimientos').insert({
@@ -371,23 +368,27 @@ export function useStockConteo(branchId: string) {
       }
 
       // Calculate resumen
-      const conDiferencia = params.items.filter(i => i.stock_real !== i.stock_teorico);
+      const conDiferencia = params.items.filter((i) => i.stock_real !== i.stock_teorico);
       const valorDiferencias = conDiferencia.reduce(
-        (sum, i) => sum + Math.abs((i.stock_real - i.stock_teorico) * i.costo_unitario), 0
+        (sum, i) => sum + Math.abs((i.stock_real - i.stock_teorico) * i.costo_unitario),
+        0,
       );
 
       // Mark conteo as confirmed
-      await supabase.from('stock_conteos').update({
-        status: 'confirmado',
-        confirmed_at: new Date().toISOString(),
-        nota_general: params.nota_general,
-        resumen: {
-          total_insumos: params.items.length,
-          con_diferencia: conDiferencia.length,
-          sin_diferencia: params.items.length - conDiferencia.length,
-          valor_diferencias: valorDiferencias,
-        },
-      }).eq('id', params.conteo_id);
+      await supabase
+        .from('stock_conteos')
+        .update({
+          status: 'confirmado',
+          confirmed_at: new Date().toISOString(),
+          nota_general: params.nota_general,
+          resumen: {
+            total_insumos: params.items.length,
+            con_diferencia: conDiferencia.length,
+            sin_diferencia: params.items.length - conDiferencia.length,
+            valor_diferencias: valorDiferencias,
+          },
+        })
+        .eq('id', params.conteo_id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['stock-completo', branchId] });

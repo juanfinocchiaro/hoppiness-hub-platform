@@ -24,9 +24,7 @@ export function useSidebarOrder() {
     staleTime: 60_000,
   });
 
-  const sortedIds = orderMap
-    ? orderMap.map((r) => r.section_id)
-    : DEFAULT_ORDER;
+  const sortedIds = orderMap ? orderMap.map((r) => r.section_id) : DEFAULT_ORDER;
 
   const reorder = useMutation({
     mutationFn: async (newOrder: string[]) => {

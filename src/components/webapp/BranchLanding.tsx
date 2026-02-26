@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Truck, ShoppingBag, Pause, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import {
+  MapPin,
+  Clock,
+  Truck,
+  ShoppingBag,
+  Pause,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { WebappConfig, TipoServicioWebapp } from '@/types/webapp';
 import { WebappHeader } from './WebappHeader';
@@ -65,7 +74,9 @@ function getTodayHours(publicHours: any) {
 
 function WeeklySchedule({ publicHours }: { publicHours: any }) {
   if (!publicHours) return null;
-  const asArray = Array.isArray(publicHours) ? publicHours : DAY_NAMES.map((_, i) => publicHours[String(i)]).filter(Boolean);
+  const asArray = Array.isArray(publicHours)
+    ? publicHours
+    : DAY_NAMES.map((_, i) => publicHours[String(i)]).filter(Boolean);
   if (asArray.length === 0) return null;
   const todayIdx = getTodayIdx();
 
@@ -85,7 +96,10 @@ function WeeklySchedule({ publicHours }: { publicHours: any }) {
               isToday ? 'bg-primary/10 font-bold text-primary' : 'text-muted-foreground'
             }`}
           >
-            <span>{label}{isToday ? ' (hoy)' : ''}</span>
+            <span>
+              {label}
+              {isToday ? ' (hoy)' : ''}
+            </span>
             <span>{isClosed ? 'Cerrado' : `${formatTime(open)} - ${formatTime(close)}`}</span>
           </div>
         );
@@ -94,7 +108,17 @@ function WeeklySchedule({ publicHours }: { publicHours: any }) {
   );
 }
 
-export function BranchLanding({ branch, config, onSelectService, onViewMenu, onBack, branchId, googleApiKey, onDeliveryValidated, initialDeliveryAddress }: Props) {
+export function BranchLanding({
+  branch,
+  config,
+  onSelectService,
+  onViewMenu,
+  onBack,
+  branchId,
+  googleApiKey,
+  onDeliveryValidated,
+  initialDeliveryAddress,
+}: Props) {
   const [showWeek, setShowWeek] = useState(false);
   const resolvedBranchId = branchId || branch.id;
   const isOpen = config.estado === 'abierto';
@@ -117,7 +141,9 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
 
   // Delivery address pre-validation
   const [showAddressInput, setShowAddressInput] = useState(false);
-  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(initialDeliveryAddress ?? null);
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(
+    initialDeliveryAddress ?? null,
+  );
   const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalcResult | null>(null);
   const [calcLoading, setCalcLoading] = useState(false);
   const calculateDelivery = useCalculateDelivery();
@@ -128,18 +154,22 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
       return;
     }
     setCalcLoading(true);
-    calculateDelivery.mutateAsync({
-      branch_id: resolvedBranchId,
-      customer_lat: deliveryAddress.lat,
-      customer_lng: deliveryAddress.lng,
-      neighborhood_name: deliveryAddress.neighborhood_name,
-    }).then((result) => {
-      setDeliveryCalc(result);
-    }).catch(() => {
-      setDeliveryCalc(null);
-    }).finally(() => {
-      setCalcLoading(false);
-    });
+    calculateDelivery
+      .mutateAsync({
+        branch_id: resolvedBranchId,
+        customer_lat: deliveryAddress.lat,
+        customer_lng: deliveryAddress.lng,
+        neighborhood_name: deliveryAddress.neighborhood_name,
+      })
+      .then((result) => {
+        setDeliveryCalc(result);
+      })
+      .catch(() => {
+        setDeliveryCalc(null);
+      })
+      .finally(() => {
+        setCalcLoading(false);
+      });
   }, [deliveryAddress, resolvedBranchId]);
 
   const handleDeliveryClick = () => {
@@ -162,15 +192,13 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
 
   return (
     <div className="flex-1 flex flex-col bg-background">
-      <WebappHeader
-        title={branch.name}
-        showBack={!!onBack}
-        onBack={onBack}
-      />
+      <WebappHeader title={branch.name} showBack={!!onBack} onBack={onBack} />
 
       {/* Branch info */}
       <div className="border-b bg-background px-6 py-6 lg:py-8 text-center">
-        <h2 className="text-2xl lg:text-3xl font-black font-brand tracking-tight text-foreground">{branch.name}</h2>
+        <h2 className="text-2xl lg:text-3xl font-black font-brand tracking-tight text-foreground">
+          {branch.name}
+        </h2>
         <a
           href={mapsUrl}
           target="_blank"
@@ -178,7 +206,9 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5 hover:text-primary transition-colors"
         >
           <MapPin className="w-3.5 h-3.5" />
-          <span className="underline-offset-2 hover:underline">{branch.address}, {branch.city}</span>
+          <span className="underline-offset-2 hover:underline">
+            {branch.address}, {branch.city}
+          </span>
         </a>
 
         {/* Status badge */}
@@ -208,7 +238,10 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
           {/* Today's hours */}
           {todayHours && (
             <p className="text-xs text-muted-foreground">
-              Hoy: {todayHours.isClosed ? 'Cerrado' : `${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`}
+              Hoy:{' '}
+              {todayHours.isClosed
+                ? 'Cerrado'
+                : `${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`}
             </p>
           )}
 
@@ -216,11 +249,15 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
           {branch.public_hours && (
             <>
               <button
-                onClick={() => setShowWeek(v => !v)}
+                onClick={() => setShowWeek((v) => !v)}
                 className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 {showWeek ? 'Ocultar horarios' : 'Ver horarios'}
-                {showWeek ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {showWeek ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
               </button>
               {showWeek && (
                 <div className="w-full max-w-xs mx-auto">
@@ -268,8 +305,7 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                 </div>
                 <div className="text-right shrink-0">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    ~{retiroTime} min
+                    <Clock className="w-3 h-3" />~{retiroTime} min
                   </div>
                   {retiroHighDemand && (
                     <p className="text-[10px] text-amber-600 font-medium mt-0.5">Alta demanda</p>
@@ -288,14 +324,11 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-foreground">Delivery</p>
-                  <p className="text-xs text-muted-foreground">
-                    Que me lo traigan
-                  </p>
+                  <p className="text-xs text-muted-foreground">Que me lo traigan</p>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    ~{deliveryTime} min
+                    <Clock className="w-3 h-3" />~{deliveryTime} min
                   </div>
                   {deliveryHighDemand && (
                     <p className="text-[10px] text-amber-600 font-medium mt-0.5">Alta demanda</p>
@@ -369,11 +402,13 @@ export function BranchLanding({ branch, config, onSelectService, onViewMenu, onB
               </div>
             )}
 
-            {config.delivery_pedido_minimo != null && config.delivery_pedido_minimo > 0 && config.delivery_habilitado && (
-              <p className="text-center text-[11px] text-muted-foreground pt-1">
-                Pedido mínimo delivery: {formatPrice(config.delivery_pedido_minimo)}
-              </p>
-            )}
+            {config.delivery_pedido_minimo != null &&
+              config.delivery_pedido_minimo > 0 &&
+              config.delivery_habilitado && (
+                <p className="text-center text-[11px] text-muted-foreground pt-1">
+                  Pedido mínimo delivery: {formatPrice(config.delivery_pedido_minimo)}
+                </p>
+              )}
           </div>
         ) : (
           <div className="w-full bg-card rounded-xl shadow-sm border p-6 text-center space-y-4">

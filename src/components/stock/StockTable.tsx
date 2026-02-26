@@ -1,8 +1,21 @@
 import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, AlertTriangle, CheckCircle, XCircle, CircleDot, Package } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  CircleDot,
+  Package,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { StockAjustePopover } from './StockAjustePopover';
@@ -11,7 +24,14 @@ import { StockHistorial } from './StockHistorial';
 import { EmptyState } from '@/components/ui/states/empty-state';
 import type { StockItem, StockEstado } from '@/hooks/pos/useStock';
 
-const ESTADO_CONFIG: Record<StockEstado, { label: string; icon: typeof AlertTriangle; variant: 'destructive' | 'secondary' | 'outline' | 'default' }> = {
+const ESTADO_CONFIG: Record<
+  StockEstado,
+  {
+    label: string;
+    icon: typeof AlertTriangle;
+    variant: 'destructive' | 'secondary' | 'outline' | 'default';
+  }
+> = {
   critico: { label: 'Crítico', icon: AlertTriangle, variant: 'destructive' },
   bajo: { label: 'Bajo', icon: CircleDot, variant: 'secondary' },
   sin_stock: { label: 'Sin stock', icon: XCircle, variant: 'outline' },
@@ -28,27 +48,39 @@ interface StockTableProps {
   filtroCategoria: string;
 }
 
-export function StockTable({ items, branchId, searchQuery, filtroEstado, filtroCategoria }: StockTableProps) {
+export function StockTable({
+  items,
+  branchId,
+  searchQuery,
+  filtroEstado,
+  filtroCategoria,
+}: StockTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let result = [...items];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(i => i.nombre.toLowerCase().includes(q));
+      result = result.filter((i) => i.nombre.toLowerCase().includes(q));
     }
     if (filtroEstado && filtroEstado !== 'todos') {
-      result = result.filter(i => i.estado === filtroEstado);
+      result = result.filter((i) => i.estado === filtroEstado);
     }
     if (filtroCategoria && filtroCategoria !== 'todas') {
-      result = result.filter(i => i.categoria === filtroCategoria);
+      result = result.filter((i) => i.categoria === filtroCategoria);
     }
     result.sort((a, b) => ESTADO_ORDER[a.estado] - ESTADO_ORDER[b.estado]);
     return result;
   }, [items, searchQuery, filtroEstado, filtroCategoria]);
 
   if (filtered.length === 0) {
-    return <EmptyState icon={Package} title="Sin insumos" description="No hay insumos cargados o el filtro no tiene resultados." />;
+    return (
+      <EmptyState
+        icon={Package}
+        title="Sin insumos"
+        description="No hay insumos cargados o el filtro no tiene resultados."
+      />
+    );
   }
 
   return (
@@ -67,7 +99,7 @@ export function StockTable({ items, branchId, searchQuery, filtroEstado, filtroC
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filtered.map(it => {
+          {filtered.map((it) => {
             const config = ESTADO_CONFIG[it.estado];
             const Icon = config.icon;
             const isExpanded = expandedId === it.insumo_id;
@@ -82,10 +114,11 @@ export function StockTable({ items, branchId, searchQuery, filtroEstado, filtroC
                       onClick={() => setExpandedId(isExpanded ? null : it.insumo_id)}
                       className="p-1 rounded hover:bg-muted"
                     >
-                      {isExpanded
-                        ? <ChevronDown className="w-3 h-3" />
-                        : <ChevronRight className="w-3 h-3" />
-                      }
+                      {isExpanded ? (
+                        <ChevronDown className="w-3 h-3" />
+                      ) : (
+                        <ChevronRight className="w-3 h-3" />
+                      )}
                     </button>
                   </TableCell>
                   <TableCell className="font-medium">{it.nombre}</TableCell>

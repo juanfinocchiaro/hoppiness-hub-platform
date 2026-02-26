@@ -1,4 +1,4 @@
-import { BRAND } from "./brand-tokens";
+import { BRAND } from './brand-tokens';
 
 export function DotsLoader() {
   const colors = [BRAND.azul, BRAND.naranja, BRAND.amarillo];
@@ -6,21 +6,21 @@ export function DotsLoader() {
     <>
       <span
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "5px",
-          padding: "2px 4px",
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '2px 4px',
         }}
       >
         {colors.map((color, i) => (
           <span
             key={i}
             style={{
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
               background: color,
-              display: "inline-block",
+              display: 'inline-block',
               animation: `hoppDotBounce 1.2s ease-in-out ${i * 0.15}s infinite`,
             }}
           />

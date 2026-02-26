@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { useProveedores, useProveedorMutations } from '@/hooks/useProveedores';
@@ -13,17 +19,18 @@ import { EmptyState } from '@/components/ui/states';
 import type { Proveedor } from '@/types/financial';
 
 export default function ProveedoresPage() {
-  const { data: proveedores, isLoading, error } = useProveedores('__marca_only__');
+  const { data: proveedores, isLoading, error: _error } = useProveedores('__marca_only__');
   const { softDelete } = useProveedorMutations();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Proveedor | null>(null);
   const [deleting, setDeleting] = useState<Proveedor | null>(null);
 
-  const filtered = proveedores?.filter((p) =>
-    p.razon_social.toLowerCase().includes(search.toLowerCase()) ||
-    p.cuit?.includes(search) ||
-    p.contacto?.toLowerCase().includes(search.toLowerCase())
+  const filtered = proveedores?.filter(
+    (p) =>
+      p.razon_social.toLowerCase().includes(search.toLowerCase()) ||
+      p.cuit?.includes(search) ||
+      p.contacto?.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -32,7 +39,12 @@ export default function ProveedoresPage() {
         title="Proveedores"
         subtitle="Proveedores asignados a items obligatorios de la marca"
         actions={
-          <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" /> Nuevo Proveedor
           </Button>
         }
@@ -57,15 +69,21 @@ export default function ProveedoresPage() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
-                    {Array.from({ length: 3 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
-                    ))}
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
                 <TableCell colSpan={3} className="h-40">
-                  <EmptyState icon={Package} title="Sin proveedores" description="Agregá tu primer proveedor para empezar" />
+                  <EmptyState
+                    icon={Package}
+                    title="Sin proveedores"
+                    description="Agregá tu primer proveedor para empezar"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -83,7 +101,14 @@ export default function ProveedoresPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditing(row); setModalOpen(true); }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditing(row);
+                          setModalOpen(true);
+                        }}
+                      >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleting(row)}>
@@ -100,7 +125,10 @@ export default function ProveedoresPage() {
 
       <ProveedorFormModal
         open={modalOpen}
-        onOpenChange={(open) => { setModalOpen(open); if (!open) setEditing(null); }}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) setEditing(null);
+        }}
         proveedor={editing}
         context="brand"
       />

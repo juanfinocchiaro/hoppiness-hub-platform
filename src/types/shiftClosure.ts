@@ -51,23 +51,23 @@ export interface VentasLocalData {
 // App sales with their specific payment methods and panel comparison
 export interface VentasAppsData {
   mas_delivery: {
-    efectivo: number;      // Payment type "Efectivo" in Núcleo
-    mercadopago: number;   // Payment type "MercadoPago" in Núcleo
+    efectivo: number; // Payment type "Efectivo" in Núcleo
+    mercadopago: number; // Payment type "MercadoPago" in Núcleo
     cobrado_posnet: number; // Orders entered as cash but paid by card at store
-    total_panel: number;   // Total from MásDelivery panel
+    total_panel: number; // Total from MásDelivery panel
   };
   rappi: {
-    vales: number;         // Payment type "Vales" in Núcleo
-    total_panel: number;   // Total from Rappi panel
+    vales: number; // Payment type "Vales" in Núcleo
+    total_panel: number; // Total from Rappi panel
   };
   pedidosya: {
-    efectivo: number;      // Payment type "Efectivo" in Núcleo
-    vales: number;         // Payment type "Vales" in Núcleo
-    total_panel: number;   // Total from PeYa panel
+    efectivo: number; // Payment type "Efectivo" in Núcleo
+    vales: number; // Payment type "Vales" in Núcleo
+    total_panel: number; // Total from PeYa panel
   };
   mp_delivery: {
-    vales: number;         // Payment type "Vales" in Núcleo
-    total_panel: number;   // Total from MP Delivery panel
+    vales: number; // Payment type "Vales" in Núcleo
+    total_panel: number; // Total from MP Delivery panel
   };
 }
 
@@ -83,30 +83,30 @@ export interface ShiftClosure {
   fecha: string; // DATE as string 'YYYY-MM-DD'
   turno: ShiftType;
   fuente?: 'pos' | 'manual'; // pos = generado desde POS, manual = carga manual
-  
+
   hamburguesas: HamburguesasData;
   ventas_local: VentasLocalData;
   ventas_apps: VentasAppsData;
   arqueo_caja: ArqueoCaja;
-  
+
   total_facturado: number;
   total_hamburguesas: number;
   total_vendido: number;
   total_efectivo: number;
   total_digital: number;
-  
+
   facturacion_esperada: number;
   facturacion_diferencia: number;
   tiene_alerta_facturacion: boolean;
-  
+
   diferencia_posnet: number;
   diferencia_apps: number;
   tiene_alerta_posnet: boolean;
   tiene_alerta_apps: boolean;
   tiene_alerta_caja: boolean;
-  
+
   notas: string | null;
-  
+
   cerrado_por: string;
   cerrado_at: string;
   updated_at: string | null;
@@ -168,14 +168,18 @@ export function calcularTotalCanal(canal: ChannelPayments): number {
   return canal.efectivo + canal.debito + canal.credito + canal.qr + canal.transferencia;
 }
 
-export function calcularTotalesVentasLocal(data: VentasLocalData): { total: number; efectivo: number; digital: number } {
+export function calcularTotalesVentasLocal(data: VentasLocalData): {
+  total: number;
+  efectivo: number;
+  digital: number;
+} {
   const salonTotal = calcularTotalCanal(data.salon);
   const takeawayTotal = calcularTotalCanal(data.takeaway);
   const deliveryTotal = calcularTotalCanal(data.delivery_manual);
-  
+
   const efectivo = data.salon.efectivo + data.takeaway.efectivo + data.delivery_manual.efectivo;
   const total = salonTotal + takeawayTotal + deliveryTotal;
-  
+
   return {
     total,
     efectivo,
@@ -185,17 +189,25 @@ export function calcularTotalesVentasLocal(data: VentasLocalData): { total: numb
 
 // Calculate total cards in Núcleo (for Posnet comparison)
 // Includes cobrado_posnet from MásDelivery (orders that changed payment method to card)
-export function calcularTotalTarjetasNucleo(ventasLocal: VentasLocalData, ventasApps?: VentasAppsData): number {
+export function calcularTotalTarjetasNucleo(
+  ventasLocal: VentasLocalData,
+  ventasApps?: VentasAppsData,
+): number {
   const canales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
-  const tarjetasLocal = canales.reduce((sum, canal) => 
-    sum + canal.debito + canal.credito + canal.qr, 0
+  const tarjetasLocal = canales.reduce(
+    (sum, canal) => sum + canal.debito + canal.credito + canal.qr,
+    0,
   );
   const cobradoPosnet = ventasApps?.mas_delivery?.cobrado_posnet || 0;
   return tarjetasLocal + cobradoPosnet;
 }
 
 // Calculate card breakdown for display
-export function calcularDesgloseTarjetas(ventasLocal: VentasLocalData): { debito: number; credito: number; qr: number } {
+export function calcularDesgloseTarjetas(ventasLocal: VentasLocalData): {
+  debito: number;
+  credito: number;
+  qr: number;
+} {
   const canales = [ventasLocal.salon, ventasLocal.takeaway, ventasLocal.delivery_manual];
   return {
     debito: canales.reduce((sum, c) => sum + c.debito, 0),
@@ -205,7 +217,10 @@ export function calcularDesgloseTarjetas(ventasLocal: VentasLocalData): { debito
 }
 
 // Calculate Posnet difference
-export function calcularDiferenciaPosnet(ventasLocal: VentasLocalData, ventasApps?: VentasAppsData): {
+export function calcularDiferenciaPosnet(
+  ventasLocal: VentasLocalData,
+  ventasApps?: VentasAppsData,
+): {
   nucleo: number;
   posnet: number;
   diferencia: number;
@@ -252,29 +267,29 @@ export function calcularDiferenciasApps(ventasApps: VentasAppsData): {
   tieneAlerta: boolean;
 } {
   const apps: Array<keyof VentasAppsData> = ['mas_delivery', 'rappi', 'pedidosya', 'mp_delivery'];
-  
+
   const porApp = {} as any;
   let totalNucleo = 0;
   let totalPaneles = 0;
-  
+
   for (const app of apps) {
     const nucleo = calcularNucleoApp(app, ventasApps);
     const panel = ventasApps[app].total_panel || 0;
     const diferencia = nucleo - panel;
-    
+
     porApp[app] = {
       nucleo,
       panel,
       diferencia,
       tieneAlerta: diferencia !== 0 && panel > 0, // Only alert if panel was filled
     };
-    
+
     totalNucleo += nucleo;
     totalPaneles += panel;
   }
-  
+
   const diferencia = totalNucleo - totalPaneles;
-  
+
   return {
     porApp,
     totalNucleo,
@@ -284,15 +299,19 @@ export function calcularDiferenciasApps(ventasApps: VentasAppsData): {
   };
 }
 
-export function calcularTotalesVentasApps(data: VentasAppsData): { total: number; efectivo: number; digital: number } {
+export function calcularTotalesVentasApps(data: VentasAppsData): {
+  total: number;
+  efectivo: number;
+  digital: number;
+} {
   const masDeliveryTotal = data.mas_delivery.efectivo + data.mas_delivery.mercadopago;
   const rappiTotal = data.rappi.vales;
   const pedidosyaTotal = data.pedidosya.efectivo + data.pedidosya.vales;
   const mpDeliveryTotal = data.mp_delivery.vales;
-  
+
   const efectivo = data.mas_delivery.efectivo + data.pedidosya.efectivo;
   const total = masDeliveryTotal + rappiTotal + pedidosyaTotal + mpDeliveryTotal;
-  
+
   return {
     total,
     efectivo,
@@ -319,13 +338,19 @@ export interface ReglasFacturacion {
 
 const DEFAULT_REGLAS: ReglasFacturacion = {
   canales_internos: { efectivo: false, debito: true, credito: true, qr: true, transferencia: true },
-  canales_externos: { rappi: true, pedidosya: true, mas_delivery_efectivo: false, mas_delivery_digital: true, mp_delivery: true },
+  canales_externos: {
+    rappi: true,
+    pedidosya: true,
+    mas_delivery_efectivo: false,
+    mas_delivery_digital: true,
+    mp_delivery: true,
+  },
 };
 
 export function calcularFacturacionEsperada(
   ventasLocal: VentasLocalData,
   ventasApps: VentasAppsData,
-  reglas?: ReglasFacturacion | null
+  reglas?: ReglasFacturacion | null,
 ): number {
   const r = reglas || DEFAULT_REGLAS;
 
@@ -370,7 +395,7 @@ export function calcularFacturacionEsperada(
 export function calcularNoFacturado(
   ventasLocal: VentasLocalData,
   ventasApps: VentasAppsData,
-  reglas?: ReglasFacturacion | null
+  reglas?: ReglasFacturacion | null,
 ): number {
   const totalesLocal = calcularTotalesVentasLocal(ventasLocal);
   const totalesApps = calcularTotalesVentasApps(ventasApps);
@@ -447,7 +472,13 @@ export function migrateVentasLocal(data: any): VentasLocalData {
   return {
     salon: data?.salon || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
     takeaway: data?.takeaway || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
-    delivery_manual: data?.delivery_manual || { efectivo: 0, debito: 0, credito: 0, qr: 0, transferencia: 0 },
+    delivery_manual: data?.delivery_manual || {
+      efectivo: 0,
+      debito: 0,
+      credito: 0,
+      qr: 0,
+      transferencia: 0,
+    },
     comparacion_posnet: data?.comparacion_posnet || { total_posnet: 0 },
   };
 }

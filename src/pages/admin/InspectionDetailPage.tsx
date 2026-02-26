@@ -9,7 +9,13 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Check, X, AlertTriangle, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +24,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/ui/page-header';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { InspectionChecklist, InspectionSummary, InspectionActionItems, InspectionStaffChecklist } from '@/components/inspections';
-import { 
-  useInspection, 
-  useCompleteInspection, 
+import {
+  InspectionChecklist,
+  InspectionSummary,
+  InspectionActionItems,
+  InspectionStaffChecklist,
+} from '@/components/inspections';
+import {
+  useInspection,
+  useCompleteInspection,
   useCancelInspection,
-  useUpdateInspection
+  useUpdateInspection,
 } from '@/hooks/useInspections';
 import { TYPE_SHORT_LABELS, STATUS_LABELS } from '@/types/inspection';
 import type { InspectionActionItem } from '@/types/inspection';
@@ -60,7 +71,7 @@ export default function InspectionDetailPage() {
     queryKey: ['branch-managers', inspection?.branch_id],
     queryFn: async () => {
       if (!inspection?.branch_id) return [];
-      
+
       // Query user_branch_roles for encargado only
       const { data: roles } = await supabase
         .from('user_branch_roles')
@@ -71,7 +82,7 @@ export default function InspectionDetailPage() {
 
       if (!roles?.length) return [];
 
-      const userIds = [...new Set(roles.map(r => r.user_id))];
+      const userIds = [...new Set(roles.map((r) => r.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -88,7 +99,7 @@ export default function InspectionDetailPage() {
     queryKey: ['team-members-for-actions', inspection?.branch_id],
     queryFn: async () => {
       if (!inspection?.branch_id) return [];
-      
+
       // Get roles excluding franquiciado (owners are not operational staff)
       const { data: roles } = await supabase
         .from('user_branch_roles')
@@ -99,7 +110,7 @@ export default function InspectionDetailPage() {
 
       if (!roles?.length) return [];
 
-      const userIds = [...new Set(roles.map(r => r.user_id))];
+      const userIds = [...new Set(roles.map((r) => r.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -115,7 +126,7 @@ export default function InspectionDetailPage() {
   const handleManagerChange = async (managerId: string) => {
     const newValue = managerId === 'none' ? null : managerId;
     setPresentManagerId(newValue || '');
-    
+
     if (id) {
       await updateInspection.mutateAsync({
         inspectionId: id,
@@ -127,25 +138,25 @@ export default function InspectionDetailPage() {
   // Calculate current score
   const currentScore = useMemo(() => {
     if (!inspection?.items) return 0;
-    const applicable = inspection.items.filter(i => i.complies !== null);
-    const compliant = applicable.filter(i => i.complies === true).length;
+    const applicable = inspection.items.filter((i) => i.complies !== null);
+    const compliant = applicable.filter((i) => i.complies === true).length;
     return applicable.length > 0 ? Math.round((compliant / applicable.length) * 100) : 0;
   }, [inspection?.items]);
 
   // Check if all items are answered
   const allAnswered = useMemo(() => {
     if (!inspection?.items) return false;
-    return inspection.items.every(i => i.complies !== null);
+    return inspection.items.every((i) => i.complies !== null);
   }, [inspection?.items]);
 
   // Non-compliant items
   const nonCompliantItems = useMemo(() => {
-    return inspection?.items?.filter(i => i.complies === false) || [];
+    return inspection?.items?.filter((i) => i.complies === false) || [];
   }, [inspection?.items]);
 
   const handleComplete = async () => {
     if (!id) return;
-    
+
     await completeInspection.mutateAsync({
       inspectionId: id,
       data: {
@@ -181,7 +192,12 @@ export default function InspectionDetailPage() {
   }
 
   const isEditable = inspection.status === 'en_curso';
-  const scoreColor = currentScore >= 80 ? 'text-green-600' : currentScore >= 60 ? 'text-yellow-600' : 'text-destructive';
+  const scoreColor =
+    currentScore >= 80
+      ? 'text-green-600'
+      : currentScore >= 60
+        ? 'text-yellow-600'
+        : 'text-destructive';
 
   const titleContent = `Visita ${TYPE_SHORT_LABELS[inspection.inspection_type]} - ${inspection.branch?.name || 'Sucursal'}`;
 
@@ -189,13 +205,20 @@ export default function InspectionDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={titleContent}
-        subtitle={format(new Date(inspection.started_at), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
+        subtitle={format(new Date(inspection.started_at), "d 'de' MMMM yyyy, HH:mm", {
+          locale: es,
+        })}
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant={
-              inspection.status === 'completada' ? 'default' :
-              inspection.status === 'en_curso' ? 'secondary' : 'outline'
-            }>
+            <Badge
+              variant={
+                inspection.status === 'completada'
+                  ? 'default'
+                  : inspection.status === 'en_curso'
+                    ? 'secondary'
+                    : 'outline'
+              }
+            >
               {STATUS_LABELS[inspection.status]}
             </Badge>
             <Button variant="ghost" onClick={() => navigate('/mimarca/supervisiones')}>
@@ -212,7 +235,7 @@ export default function InspectionDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">Puntaje Actual</div>
-              <div className={cn("text-4xl font-bold", scoreColor)}>
+              <div className={cn('text-4xl font-bold', scoreColor)}>
                 {currentScore}
                 <span className="text-lg text-muted-foreground">/100</span>
               </div>
@@ -220,7 +243,7 @@ export default function InspectionDetailPage() {
             <div className="flex items-center gap-3">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">
-                  {inspection.items?.filter(i => i.complies === true).length || 0}
+                  {inspection.items?.filter((i) => i.complies === true).length || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Cumple</div>
               </div>
@@ -232,7 +255,7 @@ export default function InspectionDetailPage() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-muted-foreground">
-                  {inspection.items?.filter(i => i.complies === null).length || 0}
+                  {inspection.items?.filter((i) => i.complies === null).length || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Pendiente</div>
               </div>
@@ -249,16 +272,13 @@ export default function InspectionDetailPage() {
               <Users className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
                 <div className="text-sm font-medium mb-1">Encargado Presente</div>
-                <Select 
-                  value={presentManagerId || 'none'} 
-                  onValueChange={handleManagerChange}
-                >
+                <Select value={presentManagerId || 'none'} onValueChange={handleManagerChange}>
                   <SelectTrigger className="w-full max-w-xs">
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin especificar</SelectItem>
-                    {branchManagers?.map(manager => (
+                    {branchManagers?.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>
                         {manager.full_name}
                       </SelectItem>
@@ -308,7 +328,7 @@ export default function InspectionDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-1 text-sm">
-                    {nonCompliantItems.map(item => (
+                    {nonCompliantItems.map((item) => (
                       <li key={item.id} className="flex items-start gap-2">
                         <X className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                         <span>{item.item_label}</span>
@@ -384,10 +404,7 @@ export default function InspectionDetailPage() {
         </Tabs>
       ) : (
         /* View Mode */
-        <InspectionSummary
-          inspection={inspection}
-          items={inspection.items}
-        />
+        <InspectionSummary inspection={inspection} items={inspection.items} />
       )}
 
       {/* Confirm Dialogs */}

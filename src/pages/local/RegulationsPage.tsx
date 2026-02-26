@@ -14,7 +14,10 @@ export default function RegulationsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Firmas de Reglamento" subtitle="Gestión de firmas del reglamento interno para el equipo" />
+      <PageHeader
+        title="Firmas de Reglamento"
+        subtitle="Gestión de firmas del reglamento interno para el equipo"
+      />
       <RegulationSignaturesPanel branchId={branch.id} />
     </div>
   );

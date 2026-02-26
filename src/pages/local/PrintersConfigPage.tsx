@@ -8,8 +8,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  Printer, Plus, Trash2, TestTube, Pencil, Download, CheckCircle2,
-  Loader2, AlertCircle, HelpCircle, ChevronDown, RefreshCw, Wifi, WifiOff,
+  Printer,
+  Plus,
+  Trash2,
+  TestTube,
+  Pencil,
+  Download,
+  Loader2,
+  HelpCircle,
+  ChevronDown,
+  RefreshCw,
+  Wifi,
+  WifiOff,
   AlertTriangle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
@@ -19,8 +29,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { EmptyState } from '@/components/ui/states/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -52,7 +74,13 @@ const DEFAULT_PRINTER = {
 const BRIDGE_VERSION = '2026.02.21.0030';
 
 /* ─────────── Setup Screen (State 1) ─────────── */
-function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; onSkip: () => void }) {
+function SetupScreen({
+  state,
+  onSkip,
+}: {
+  state: 'checking' | 'not_available';
+  onSkip: () => void;
+}) {
   const handleDownload = async () => {
     try {
       const response = await fetch('/instalar-impresoras.bat');
@@ -86,7 +114,8 @@ function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; o
             </div>
             <h2 className="text-xl font-semibold">Configuración de impresoras</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Para imprimir tickets desde esta computadora necesitás instalar un pequeño programa. Solo se hace una vez.
+              Para imprimir tickets desde esta computadora necesitás instalar un pequeño programa.
+              Solo se hace una vez.
             </p>
           </div>
 
@@ -145,7 +174,9 @@ function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; o
         <CollapsibleContent className="px-4 pb-4">
           <div className="space-y-3 text-sm text-muted-foreground">
             <div>
-              <p className="font-medium text-foreground">Windows muestra advertencia de seguridad</p>
+              <p className="font-medium text-foreground">
+                Windows muestra advertencia de seguridad
+              </p>
               <p>Hacé clic en "Más información" y luego "Ejecutar de todos modos". Es seguro.</p>
             </div>
             <div>
@@ -154,7 +185,9 @@ function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; o
             </div>
             <div>
               <p className="font-medium text-foreground">Ya lo instalé pero sigue sin detectar</p>
-              <p>Buscá "Hoppiness Print Bridge" en el menú inicio o ejecutá el instalador de nuevo.</p>
+              <p>
+                Buscá "Hoppiness Print Bridge" en el menú inicio o ejecutá el instalador de nuevo.
+              </p>
             </div>
           </div>
         </CollapsibleContent>
@@ -163,21 +196,24 @@ function SetupScreen({ state, onSkip }: { state: 'checking' | 'not_available'; o
   );
 }
 
-
 /* ─────────── Network Warning Banner ─────────── */
-function NetworkWarningBanner({ currentNetwork, printerNetwork }: { currentNetwork: string; printerNetwork: string }) {
+function NetworkWarningBanner({
+  currentNetwork,
+  printerNetwork,
+}: {
+  currentNetwork: string;
+  printerNetwork: string;
+}) {
   return (
     <Card className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="font-medium text-sm">
-              Estás en una red diferente a la configurada
-            </p>
+            <p className="font-medium text-sm">Estás en una red diferente a la configurada</p>
             <p className="text-xs text-muted-foreground">
-              Red actual: {currentNetwork} · Red configurada: {printerNetwork}.
-              Las impresoras pueden no responder porque sus IPs son de otra red local.
+              Red actual: {currentNetwork} · Red configurada: {printerNetwork}. Las impresoras
+              pueden no responder porque sus IPs son de otra red local.
             </p>
           </div>
         </div>
@@ -258,7 +294,9 @@ function PrinterCard({
           </div>
         </div>
         <div className="text-sm text-muted-foreground space-y-1">
-          <p>IP: {printer.ip_address}:{printer.port}</p>
+          <p>
+            IP: {printer.ip_address}:{printer.port}
+          </p>
           <p>Papel: {printer.paper_width}mm</p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -273,12 +311,7 @@ function PrinterCard({
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive"
-            onClick={onDelete}
-          >
+          <Button variant="outline" size="sm" className="text-destructive" onClick={onDelete}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -326,7 +359,9 @@ function ReadyScreen({
     // Set all to checking
     setHealthMap((prev) => {
       const next = { ...prev };
-      toCheck.forEach((p) => { next[p.id] = { status: 'checking' }; });
+      toCheck.forEach((p) => {
+        next[p.id] = { status: 'checking' };
+      });
       return next;
     });
 
@@ -335,7 +370,7 @@ function ReadyScreen({
       toCheck.map(async (p) => {
         const result = await testPrinterConnection(p.ip_address!, p.port);
         return { id: p.id, result };
-      })
+      }),
     );
 
     setHealthMap((prev) => {
@@ -395,13 +430,12 @@ function ReadyScreen({
     if (editing) {
       update.mutate(
         { id: editing.id, ...form, configured_from_network: networkFp },
-        { onSuccess: () => setModalOpen(false) }
+        { onSuccess: () => setModalOpen(false) },
       );
     } else {
-      create.mutate(
-        { branch_id: branchId, ...form, configured_from_network: networkFp } as any,
-        { onSuccess: () => setModalOpen(false) }
-      );
+      create.mutate({ branch_id: branchId, ...form, configured_from_network: networkFp } as any, {
+        onSuccess: () => setModalOpen(false),
+      });
     }
   };
 
@@ -417,11 +451,10 @@ function ReadyScreen({
 
   // Determine if we should show network warning
   const hasUnreachable = Object.values(healthMap).some((h) => h.status === 'unreachable');
-  const configuredNetworks = printers
-    ?.map((p) => p.configured_from_network)
-    .filter((n): n is string => !!n) || [];
-  const mismatchedNetwork = currentNetwork && configuredNetworks.length > 0
-    && !configuredNetworks.includes(currentNetwork);
+  const configuredNetworks =
+    printers?.map((p) => p.configured_from_network).filter((n): n is string => !!n) || [];
+  const mismatchedNetwork =
+    currentNetwork && configuredNetworks.length > 0 && !configuredNetworks.includes(currentNetwork);
   const showNetworkWarning = hasUnreachable && mismatchedNetwork;
 
   return (
@@ -433,7 +466,11 @@ function ReadyScreen({
         actions={
           <div className="flex gap-2">
             {(printers?.length ?? 0) > 0 && (
-              <Button variant="outline" size="sm" onClick={() => printers && runHealthChecks(printers)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => printers && runHealthChecks(printers)}
+              >
                 <RefreshCw className="w-4 h-4 mr-1" /> Verificar todas
               </Button>
             )}
@@ -447,9 +484,7 @@ function ReadyScreen({
       {/* Status badge */}
       <div className="flex items-center gap-2">
         <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-        <span className="text-sm font-medium text-primary">
-          Sistema de impresión listo
-        </span>
+        <span className="text-sm font-medium text-primary">Sistema de impresión listo</span>
       </div>
 
       {/* Network warning */}
@@ -466,11 +501,10 @@ function ReadyScreen({
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-medium text-sm">
-                  Sistema de impresión no detectado en esta PC
-                </p>
+                <p className="font-medium text-sm">Sistema de impresión no detectado en esta PC</p>
                 <p className="text-xs text-muted-foreground">
-                  Podés configurar impresoras pero no vas a poder imprimir hasta que Print Bridge esté corriendo en esta computadora.
+                  Podés configurar impresoras pero no vas a poder imprimir hasta que Print Bridge
+                  esté corriendo en esta computadora.
                 </p>
               </div>
             </div>
@@ -514,7 +548,10 @@ function ReadyScreen({
           <div className="space-y-3 text-sm text-muted-foreground">
             <div>
               <p className="font-medium text-foreground">¿Cómo encuentro la IP de mi impresora?</p>
-              <p>Imprimí la página de configuración de red de tu impresora (generalmente manteniendo un botón al encenderla). Ahí aparece la IP actual.</p>
+              <p>
+                Imprimí la página de configuración de red de tu impresora (generalmente manteniendo
+                un botón al encenderla). Ahí aparece la IP actual.
+              </p>
             </div>
             <div>
               <p className="font-medium text-foreground">¿Qué puerto uso?</p>
@@ -522,18 +559,27 @@ function ReadyScreen({
             </div>
             <div>
               <p className="font-medium text-foreground">La impresora no imprime</p>
-              <p>La impresora debe estar conectada por cable de red al mismo router que esta computadora. Verificá que esté encendida y en la misma subred.</p>
+              <p>
+                La impresora debe estar conectada por cable de red al mismo router que esta
+                computadora. Verificá que esté encendida y en la misma subred.
+              </p>
             </div>
             <div>
-              <p className="font-medium text-foreground">Dice "No responde" pero la impresora está encendida</p>
-              <p>Verificá que estás en la misma red WiFi/LAN que la impresora. Si la configuraste desde otra ubicación, actualizá la IP.</p>
+              <p className="font-medium text-foreground">
+                Dice "No responde" pero la impresora está encendida
+              </p>
+              <p>
+                Verificá que estás en la misma red WiFi/LAN que la impresora. Si la configuraste
+                desde otra ubicación, actualizá la IP.
+              </p>
             </div>
 
             {/* Installer update section */}
             <div className="border-t border-border pt-3 mt-3 space-y-2">
               <p className="font-medium text-foreground">Actualizar sistema de impresión</p>
               <p>
-                Si las impresoras piden permiso cada vez que abrís la página, descargá y ejecutá el instalador actualizado. Se puede ejecutar aunque ya esté instalado.
+                Si las impresoras piden permiso cada vez que abrís la página, descargá y ejecutá el
+                instalador actualizado. Se puede ejecutar aunque ya esté instalado.
               </p>
               <Button
                 variant="outline"
@@ -591,7 +637,9 @@ function ReadyScreen({
                 <Input
                   type="number"
                   value={form.port}
-                  onChange={(e) => setForm((f) => ({ ...f, port: parseInt(e.target.value) || 9100 }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, port: parseInt(e.target.value) || 9100 }))
+                  }
                 />
               </div>
             </div>
@@ -619,7 +667,9 @@ function ReadyScreen({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={!form.name || !form.ip_address}>
               {editing ? 'Guardar' : 'Crear'}
             </Button>
@@ -643,9 +693,12 @@ export default function PrintersConfigPage() {
     },
     enabled: !!branchId,
   });
-  const printTest = useCallback((p: BranchPrinter) => {
-    printTestFn(p, branchData?.name || '');
-  }, [printTestFn, branchData]);
+  const printTest = useCallback(
+    (p: BranchPrinter) => {
+      printTestFn(p, branchData?.name || '');
+    },
+    [printTestFn, branchData],
+  );
   const [systemState, setSystemState] = useState<SystemState>('checking');
   const [bridgeAvailable, setBridgeAvailable] = useState(false);
 
@@ -654,7 +707,7 @@ export default function PrintersConfigPage() {
     setBridgeAvailable(result.available);
     if (result.available && systemState !== 'ready') {
       setSystemState('ready');
-    } else if (!result.available && (systemState === 'checking')) {
+    } else if (!result.available && systemState === 'checking') {
       setSystemState('not_available');
     }
   }, [systemState]);

@@ -7,7 +7,13 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePrintConfig } from '@/hooks/usePrintConfig';
@@ -54,7 +60,9 @@ export default function PrintConfigPage() {
   }, [config]);
 
   if (!branchId) {
-    return <div className="p-6 text-sm text-muted-foreground">No se encontró el ID de sucursal.</div>;
+    return (
+      <div className="p-6 text-sm text-muted-foreground">No se encontró el ID de sucursal.</div>
+    );
   }
 
   const handleSave = () => {
@@ -77,17 +85,29 @@ export default function PrintConfigPage() {
   const printerOptions = printers?.filter((p) => p.is_active) || [];
   const noPrinters = printerOptions.length === 0;
 
-  const PrinterSelect = ({ value, onChange, disabled }: { value: string | null; onChange: (v: string | null) => void; disabled?: boolean }) => (
+  const PrinterSelect = ({
+    value,
+    onChange,
+    disabled,
+  }: {
+    value: string | null;
+    onChange: (v: string | null) => void;
+    disabled?: boolean;
+  }) => (
     <Select
       value={value || 'none'}
       onValueChange={(v) => onChange(v === 'none' ? null : v)}
       disabled={disabled || noPrinters}
     >
-      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
       <SelectContent>
         <SelectItem value="none">Sin impresora</SelectItem>
         {printerOptions.map((p) => (
-          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+          <SelectItem key={p.id} value={p.id}>
+            {p.name}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -185,7 +205,9 @@ export default function PrintConfigPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Comportamiento por canal</CardTitle>
-          <CardDescription>Controlá cómo se imprimen los documentos según el tipo de venta</CardDescription>
+          <CardDescription>
+            Controlá cómo se imprimen los documentos según el tipo de venta
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
@@ -195,7 +217,9 @@ export default function PrintConfigPage() {
                 checked={form.salon_vales_enabled}
                 onCheckedChange={(v) => setForm((f) => ({ ...f, salon_vales_enabled: v }))}
               />
-              <Label className="text-sm">Imprimir vales individuales (1 por unidad de cada ítem tipo "vale")</Label>
+              <Label className="text-sm">
+                Imprimir vales individuales (1 por unidad de cada ítem tipo "vale")
+              </Label>
             </div>
           </div>
 
@@ -237,7 +261,9 @@ export default function PrintConfigPage() {
                 value={form.ticket_trigger}
                 onValueChange={(v) => setForm((f) => ({ ...f, ticket_trigger: v }))}
               >
-                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="on_payment">Al cobrar</SelectItem>
                   <SelectItem value="on_confirm">Al confirmar pedido</SelectItem>

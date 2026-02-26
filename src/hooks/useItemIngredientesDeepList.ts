@@ -39,11 +39,13 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
       // 1. Get item composition
       const { data: composicion, error: compError } = await supabase
         .from('item_carta_composicion')
-        .select(`
+        .select(
+          `
           *,
           preparaciones(id, nombre, costo_calculado, tipo),
           insumos(id, nombre, costo_por_unidad_base, unidad_base)
-        `)
+        `,
+        )
         .eq('item_carta_id', itemId)
         .order('orden');
       if (compError) throw compError;
@@ -51,20 +53,18 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
       const groups: DeepIngredientGroup[] = [];
 
       // Recursive function to fetch ingredients of a preparation
-      async function fetchPrepIngredients(
-        prepId: string,
-        prepNombre: string,
-        depth: number
-      ) {
+      async function fetchPrepIngredients(prepId: string, prepNombre: string, depth: number) {
         if (depth > 3) return; // safety limit
 
         const { data: ingredientes, error: ingError } = await supabase
           .from('preparacion_ingredientes')
-          .select(`
+          .select(
+            `
             *,
             insumos(id, nombre, costo_por_unidad_base, unidad_base),
             sub_prep:preparaciones!preparacion_ingredientes_sub_preparacion_id_fkey(id, nombre)
-          `)
+          `,
+          )
           .eq('preparacion_id', prepId)
           .order('orden');
         if (ingError) throw ingError;
@@ -72,7 +72,7 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
         const insumoItems: DeepIngredient[] = [];
         const subPrepItems: DeepSubPrep[] = [];
 
-        for (const ing of (ingredientes || [])) {
+        for (const ing of ingredientes || []) {
           if (ing.insumo_id && (ing as any).insumos) {
             insumoItems.push({
               insumo_id: (ing as any).insumos.id || ing.insumo_id,
@@ -96,7 +96,7 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
             await fetchPrepIngredients(
               subPrep.id || ing.sub_preparacion_id,
               subPrep.nombre || 'Desconocido',
-              depth + 1
+              depth + 1,
             );
           }
         }
@@ -112,7 +112,7 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
       }
 
       // 2. For each preparacion in composition, fetch its ingredients recursively
-      for (const comp of (composicion || [])) {
+      for (const comp of composicion || []) {
         if (comp.preparacion_id && (comp as any).preparaciones) {
           const prep = (comp as any).preparaciones;
           await fetchPrepIngredients(prep.id, prep.nombre, 0);
@@ -121,7 +121,7 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
         // Direct insumos at composition level
         if (comp.insumo_id && (comp as any).insumos) {
           const ins = (comp as any).insumos;
-          const directGroup = groups.find(g => g.receta_id === '__direct__');
+          const directGroup = groups.find((g) => g.receta_id === '__direct__');
           const ingredient: DeepIngredient = {
             insumo_id: ins.id,
             nombre: ins.nombre,

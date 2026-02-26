@@ -5,7 +5,7 @@
  * cuando hay pedidos con origen='webapp' y estado='pendiente'.
  */
 import { useNavigate } from 'react-router-dom';
-import { Globe, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWebappPendingCount } from '@/hooks/useWebappPendingCount';
 

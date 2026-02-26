@@ -11,8 +11,35 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Search, X, Tag, ZoomIn, ZoomOut } from 'lucide-react';
 import { toast } from 'sonner';
-import { useActivePromoItems, type PromocionItem } from '@/hooks/usePromociones';
+import { useActivePromoItems, type PromocionItem, type PromocionItemExtra } from '@/hooks/usePromociones';
 import { useDebounce } from '@/hooks/useDebounce';
+import type { Tables } from '@/integrations/supabase/types';
+
+type ItemCarta = Tables<'items_carta'>;
+
+type MenuItemWithCategory = ItemCarta & {
+  menu_categorias: { id: string; nombre: string; orden: number | null } | null;
+  rdo_categories: { code: string; name: string } | null;
+};
+
+type PromoArticle = MenuItemWithCategory & {
+  _isPromoArticle: true;
+  _sourceItemId: string;
+  _promoData: PromocionItem;
+  _precioSinPromo: number;
+  _includedLabel: string | null;
+};
+
+type GridItem = MenuItemWithCategory | PromoArticle;
+
+interface SelectableItem extends MenuItemWithCategory {
+  _promoPrice?: number;
+  _originalPrecioBase?: number;
+  _preconfigExtras?: PromocionItemExtra[];
+  _promoId?: string;
+  _promoRestriccionPago?: 'cualquiera' | 'solo_efectivo' | 'solo_digital';
+  _promoNombre?: string;
+}
 
 export interface CartItemExtra {
   id: string;
@@ -58,7 +85,7 @@ export interface CartItem {
 
 interface ProductGridProps {
   onAddItem: (item: CartItem) => void;
-  onSelectItem?: (item: any) => void;
+  onSelectItem?: (item: SelectableItem) => void;
   cart?: CartItem[];
   branchId?: string;
   disabled?: boolean;
@@ -73,7 +100,7 @@ const DENSITY_ORDER: GridDensity[] = ['large', 'default', 'compact'];
 const GRID_CLASSES: Record<GridDensity, string> = {
   compact: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6',
   default: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4',
-  large:   'grid-cols-1 sm:grid-cols-2 md:grid-cols-3',
+  large: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3',
 };
 
 function getInitials(name: string) {
@@ -85,7 +112,14 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disabled, promoChannel }: ProductGridProps) {
+export function ProductGrid({
+  onAddItem,
+  onSelectItem,
+  cart = [],
+  branchId,
+  disabled,
+  promoChannel,
+}: ProductGridProps) {
   const { data: items, isLoading } = useItemsCarta();
   const { data: promoItems = [] } = useActivePromoItems(branchId, promoChannel);
 
@@ -100,7 +134,9 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     try {
       const saved = localStorage.getItem(GRID_DENSITY_KEY);
       if (saved && DENSITY_ORDER.includes(saved as GridDensity)) return saved as GridDensity;
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
     return 'default';
   });
 
@@ -109,9 +145,14 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
   const handleZoom = useCallback((direction: 'in' | 'out') => {
     setGridDensity((prev) => {
       const idx = DENSITY_ORDER.indexOf(prev);
-      const next = direction === 'in' ? Math.min(idx + 1, DENSITY_ORDER.length - 1) : Math.max(idx - 1, 0);
+      const next =
+        direction === 'in' ? Math.min(idx + 1, DENSITY_ORDER.length - 1) : Math.max(idx - 1, 0);
       const val = DENSITY_ORDER[next];
-      try { localStorage.setItem(GRID_DENSITY_KEY, val); } catch { /* noop */ }
+      try {
+        localStorage.setItem(GRID_DENSITY_KEY, val);
+      } catch {
+        /* noop */
+      }
       return val;
     });
   }, []);
@@ -126,23 +167,23 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
   }, [cart]);
 
   const allItems = useMemo(
-    () => (items ?? []).filter((item: any) => item.tipo !== 'extra'),
-    [items]
+    () => ((items ?? []) as MenuItemWithCategory[]).filter((item) => item.tipo !== 'extra'),
+    [items],
   );
 
   const promoArticles = useMemo(() => {
     if (!allItems.length || !promoItems.length) return [];
-    const baseById = new Map(allItems.map((item: any) => [item.id, item]));
+    const baseById = new Map(allItems.map((item) => [item.id, item]));
     return promoItems
-      .map(pi => {
+      .map((pi) => {
         const base = baseById.get(pi.item_carta_id);
         if (!base || pi.precio_promo >= Number(base.precio_base ?? 0)) return null;
         const extras = pi.preconfigExtras || [];
         const extrasTotal = extras.reduce((sum, ex) => sum + (ex.precio ?? 0) * ex.cantidad, 0);
         const precioSinPromo = Number(base.precio_base ?? 0) + extrasTotal;
         const included = extras
-          .filter((ex: any) => ex.nombre)
-          .map((ex: any) => ex.cantidad > 1 ? `${ex.cantidad}x ${ex.nombre}` : ex.nombre);
+          .filter((ex) => ex.nombre)
+          .map((ex) => (ex.cantidad > 1 ? `${ex.cantidad}x ${ex.nombre}` : ex.nombre));
         return {
           ...base,
           id: `promo:${pi.id}`,
@@ -156,13 +197,13 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
           precio_base: precioSinPromo,
         };
       })
-      .filter(Boolean) as any[];
+      .filter(Boolean) as PromoArticle[];
   }, [allItems, promoItems]);
 
   const searchResults = useMemo(() => {
     if (!debouncedSearch.trim()) return [];
     const term = debouncedSearch.toLowerCase();
-    const match = (item: any) => {
+    const match = (item: GridItem) => {
       const nombre = (item.nombre ?? '').toLowerCase();
       const nombreCorto = (item.nombre_corto ?? '').toLowerCase();
       return nombre.includes(term) || nombreCorto.includes(term);
@@ -171,9 +212,9 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
   }, [allItems, promoArticles, debouncedSearch]);
 
   const byCategory = useMemo(() => {
-    const acc = allItems.reduce<Record<string, { items: any[]; orden: number }>>((acc, item) => {
-      const cat = (item as any).menu_categorias?.nombre ?? 'Sin categoría';
-      const orden = (item as any).menu_categorias?.orden ?? 999;
+    const acc = allItems.reduce<Record<string, { items: GridItem[]; orden: number }>>((acc, item) => {
+      const cat = item.menu_categorias?.nombre ?? 'Sin categoría';
+      const orden = item.menu_categorias?.orden ?? 999;
       if (!acc[cat]) acc[cat] = { items: [], orden };
       acc[cat].items.push(item);
       return acc;
@@ -206,7 +247,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
           }
         }
       },
-      { root: viewport, threshold: 0.3 }
+      { root: viewport, threshold: 0.3 },
     );
 
     Object.entries(sectionRefs.current).forEach(([, el]) => {
@@ -222,7 +263,9 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     const el = sectionRefs.current[cat];
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setTimeout(() => { isManualScroll.current = false; }, 600);
+      setTimeout(() => {
+        isManualScroll.current = false;
+      }, 600);
     } else {
       isManualScroll.current = false;
     }
@@ -232,70 +275,87 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
   const queryClient = useQueryClient();
   const prefetchedRef = useRef(new Set<string>());
 
-  const handlePrefetch = useCallback((itemId: string) => {
-    if (prefetchedRef.current.has(itemId) || disabled) return;
-    prefetchedRef.current.add(itemId);
+  const handlePrefetch = useCallback(
+    (itemId: string) => {
+      if (prefetchedRef.current.has(itemId) || disabled) return;
+      prefetchedRef.current.add(itemId);
 
-    queryClient.prefetchQuery({
-      queryKey: ['item-carta-extras', itemId],
-      queryFn: async () => {
-        const { data: asignaciones } = await supabase
-          .from('item_extra_asignaciones' as any)
-          .select('extra_id')
-          .eq('item_carta_id', itemId);
-        if (asignaciones && asignaciones.length > 0) {
-          const extraIds = (asignaciones as any[]).map((a: any) => a.extra_id);
-          const { data: extras } = await supabase
-            .from('items_carta')
-            .select('id, nombre, precio_base, activo')
-            .in('id', extraIds)
-            .eq('activo', true)
-            .is('deleted_at', null);
-          return (extras || []).map((e: any, i: number) => ({
-            id: e.id, item_carta_id: itemId, preparacion_id: null, insumo_id: null, orden: i,
-            preparaciones: { id: e.id, nombre: e.nombre, costo_calculado: 0, precio_extra: e.precio_base, puede_ser_extra: true },
-            insumos: null,
-          }));
-        }
-        const { data } = await supabase
-          .from('item_carta_extras')
-          .select('*, preparaciones(id, nombre, costo_calculado, precio_extra, puede_ser_extra), insumos(id, nombre, costo_por_unidad_base, precio_extra, puede_ser_extra)')
-          .eq('item_carta_id', itemId)
-          .order('orden');
-        return data ?? [];
-      },
-      staleTime: 5 * 60 * 1000,
-    });
+      queryClient.prefetchQuery({
+        queryKey: ['item-carta-extras', itemId],
+        queryFn: async () => {
+          const { data: asignaciones } = await supabase
+            .from('item_extra_asignaciones')
+            .select('extra_id')
+            .eq('item_carta_id', itemId);
+          if (asignaciones && asignaciones.length > 0) {
+            const extraIds = asignaciones.map((a) => a.extra_id);
+            const { data: extras } = await supabase
+              .from('items_carta')
+              .select('id, nombre, precio_base, activo')
+              .in('id', extraIds)
+              .eq('activo', true)
+              .is('deleted_at', null);
+            return (extras || []).map((e, i) => ({
+              id: e.id,
+              item_carta_id: itemId,
+              preparacion_id: null,
+              insumo_id: null,
+              orden: i,
+              preparaciones: {
+                id: e.id,
+                nombre: e.nombre,
+                costo_calculado: 0,
+                precio_extra: e.precio_base,
+                puede_ser_extra: true,
+              },
+              insumos: null,
+            }));
+          }
+          const { data } = await supabase
+            .from('item_carta_extras')
+            .select(
+              '*, preparaciones(id, nombre, costo_calculado, precio_extra, puede_ser_extra), insumos(id, nombre, costo_por_unidad_base, precio_extra, puede_ser_extra)',
+            )
+            .eq('item_carta_id', itemId)
+            .order('orden');
+          return data ?? [];
+        },
+        staleTime: 5 * 60 * 1000,
+      });
 
-    queryClient.prefetchQuery({
-      queryKey: ['item-removibles', itemId],
-      queryFn: async () => {
-        const { data } = await supabase
-          .from('item_removibles' as any)
-          .select('*, insumos(id, nombre), preparaciones(id, nombre)')
-          .eq('item_carta_id', itemId)
-          .eq('activo', true);
-        return data ?? [];
-      },
-      staleTime: 5 * 60 * 1000,
-    });
-  }, [queryClient, disabled]);
+      queryClient.prefetchQuery({
+        queryKey: ['item-removibles', itemId],
+        queryFn: async () => {
+          const { data } = await supabase
+            .from('item_removibles')
+            .select('*, insumos(id, nombre), preparaciones(id, nombre)')
+            .eq('item_carta_id', itemId)
+            .eq('activo', true);
+          return data ?? [];
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+    },
+    [queryClient, disabled],
+  );
 
-  const handleProductClick = (item: any) => {
+  const handleProductClick = (item: GridItem) => {
     if (disabled) {
-      toast('Iniciá la venta primero', { description: 'Configurá el canal y servicio antes de agregar productos' });
+      toast('Iniciá la venta primero', {
+        description: 'Configurá el canal y servicio antes de agregar productos',
+      });
       return;
     }
 
-    if (item._isPromoArticle) {
-      addPromoItemToCart(item);
+    if ('_isPromoArticle' in item && item._isPromoArticle) {
+      addPromoItemToCart(item as PromoArticle);
       return;
     }
 
     addItemToCart(item);
   };
 
-  const addItemToCart = (item: any) => {
+  const addItemToCart = (item: MenuItemWithCategory) => {
     const precio = item.precio_base ?? 0;
     const nombre = item.nombre_corto ?? item.nombre;
     const precioRef = item.precio_referencia ? Number(item.precio_referencia) : undefined;
@@ -315,9 +375,9 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
     }
   };
 
-  const addPromoItemToCart = (promoArticle: any) => {
-    const pi = promoArticle._promoData as PromocionItem;
-    const baseItem = allItems.find((i: any) => i.id === promoArticle._sourceItemId);
+  const addPromoItemToCart = (promoArticle: PromoArticle) => {
+    const pi = promoArticle._promoData;
+    const baseItem = allItems.find((i) => i.id === promoArticle._sourceItemId);
     if (!baseItem) return;
     const precioSinPromo = promoArticle._precioSinPromo ?? Number(baseItem.precio_base ?? 0);
 
@@ -424,7 +484,7 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
         <div className="flex flex-wrap gap-1.5 shrink-0">
           {cats.map((cat) => {
             const catItems = byCategory[cat]?.items ?? [];
-            const hasCartItems = catItems.some((item: any) => cartQtyMap.has(item.id));
+            const hasCartItems = catItems.some((item) => cartQtyMap.has(item.id));
             return (
               <button
                 key={cat}
@@ -433,15 +493,17 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
                   'relative px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border',
                   activeCategory === cat
                     ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+                    : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground',
                 )}
               >
                 {cat}
                 {hasCartItems && (
-                  <span className={cn(
-                    'absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full',
-                    activeCategory === cat ? 'bg-primary-foreground' : 'bg-primary'
-                  )} />
+                  <span
+                    className={cn(
+                      'absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full',
+                      activeCategory === cat ? 'bg-primary-foreground' : 'bg-primary',
+                    )}
+                  />
                 )}
               </button>
             );
@@ -458,18 +520,18 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
                 {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''}
               </h3>
               <div className={cn('grid gap-3', gridClass)}>
-                {searchResults.map((item: any) => {
-                  const isPromo = !!item._isPromoArticle;
+                {searchResults.map((item: GridItem) => {
+                  const promo = '_isPromoArticle' in item ? (item as PromoArticle) : null;
                   return (
                     <ProductCard
                       key={item.id}
                       item={item}
-                      qty={isPromo ? 0 : (cartQtyMap.get(item.id) || 0)}
+                      qty={promo ? 0 : cartQtyMap.get(item.id) || 0}
                       onClick={handleProductClick}
-                      onHover={(id) => handlePrefetch(isPromo ? item._sourceItemId : id)}
-                      promoPrice={isPromo ? item._promoData.precio_promo : undefined}
-                      promoLabel={isPromo ? (item._promoData.promocion_nombre || 'PROMO') : undefined}
-                      subtitle={isPromo ? item._includedLabel : undefined}
+                      onHover={(id) => handlePrefetch(promo ? promo._sourceItemId : id)}
+                      promoPrice={promo ? promo._promoData.precio_promo : undefined}
+                      promoLabel={promo ? promo._promoData.promocion_nombre || 'PROMO' : undefined}
+                      subtitle={promo ? promo._includedLabel : undefined}
                     />
                   );
                 })}
@@ -481,25 +543,29 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
               return (
                 <div
                   key={cat}
-                  ref={(el) => { sectionRefs.current[cat] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current[cat] = el;
+                  }}
                   data-category={cat}
                 >
                   <h3 className="sticky top-0 z-10 bg-slate-50 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     {cat}
                   </h3>
                   <div className={cn('grid gap-3', gridClass)}>
-                    {catItems.map((item: any) => {
-                      const isPromo = !!item._isPromoArticle;
+                    {catItems.map((item: GridItem) => {
+                      const promo = '_isPromoArticle' in item ? (item as PromoArticle) : null;
                       return (
                         <ProductCard
                           key={item.id}
                           item={item}
-                          qty={isPromo ? 0 : (cartQtyMap.get(item.id) || 0)}
+                          qty={promo ? 0 : cartQtyMap.get(item.id) || 0}
                           onClick={handleProductClick}
-                          onHover={(id) => handlePrefetch(isPromo ? item._sourceItemId : id)}
-                          promoPrice={isPromo ? item._promoData.precio_promo : undefined}
-                          promoLabel={isPromo ? (item._promoData.promocion_nombre || 'PROMO') : undefined}
-                          subtitle={isPromo ? item._includedLabel : undefined}
+                          onHover={(id) => handlePrefetch(promo ? promo._sourceItemId : id)}
+                          promoPrice={promo ? promo._promoData.precio_promo : undefined}
+                          promoLabel={
+                            promo ? promo._promoData.promocion_nombre || 'PROMO' : undefined
+                          }
+                          subtitle={promo ? promo._includedLabel : undefined}
                         />
                       );
                     })}
@@ -514,10 +580,18 @@ export function ProductGrid({ onAddItem, onSelectItem, cart = [], branchId, disa
   );
 }
 
-function ProductCard({ item, qty, onClick, onHover, promoPrice, promoLabel, subtitle }: {
-  item: any;
+function ProductCard({
+  item,
+  qty,
+  onClick,
+  onHover,
+  promoPrice,
+  promoLabel,
+  subtitle,
+}: {
+  item: GridItem;
   qty: number;
-  onClick: (item: any) => void;
+  onClick: (item: GridItem) => void;
   onHover?: (id: string) => void;
   promoPrice?: number;
   promoLabel?: string;
@@ -542,7 +616,7 @@ function ProductCard({ item, qty, onClick, onHover, promoPrice, promoLabel, subt
           ? 'border-primary hover:border-primary'
           : hasPromo
             ? 'border-green-400/60 hover:border-green-500'
-            : 'hover:border-primary/50'
+            : 'hover:border-primary/50',
       )}
     >
       {/* Quantity badge */}
@@ -553,7 +627,10 @@ function ProductCard({ item, qty, onClick, onHover, promoPrice, promoLabel, subt
       )}
       {/* Promo badge */}
       {hasPromo && !inCart && (
-        <span className="absolute top-1.5 left-1.5 z-20 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-success text-white text-[10px] font-bold shadow-sm" title={promoLabel || 'Promoción'}>
+        <span
+          className="absolute top-1.5 left-1.5 z-20 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-success text-white text-[10px] font-bold shadow-sm"
+          title={promoLabel || 'Promoción'}
+        >
           <Tag className="w-2.5 h-2.5" /> {promoLabel ? 'PROMO ACTIVA' : 'PROMO'}
         </span>
       )}

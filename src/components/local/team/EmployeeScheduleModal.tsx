@@ -19,12 +19,12 @@ interface EmployeeScheduleModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EmployeeScheduleModal({ 
-  userId, 
-  userName, 
-  branchId, 
-  open, 
-  onOpenChange 
+export function EmployeeScheduleModal({
+  userId,
+  userName,
+  branchId,
+  open,
+  onOpenChange,
 }: EmployeeScheduleModalProps) {
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -50,15 +50,13 @@ export function EmployeeScheduleModal({
   });
 
   const getScheduleForDay = (date: Date) => {
-    return schedules?.find(s => 
-      s.schedule_date && isSameDay(new Date(s.schedule_date), date)
-    );
+    return schedules?.find((s) => s.schedule_date && isSameDay(new Date(s.schedule_date), date));
   };
 
   // Calculate total scheduled hours
   const totalScheduledHours = () => {
     if (!schedules?.length) return 0;
-    
+
     let total = 0;
     for (const s of schedules) {
       if (s.is_day_off) continue;
@@ -83,19 +81,15 @@ export function EmployeeScheduleModal({
 
         <div className="mb-4 p-3 bg-muted rounded-lg">
           <div className="text-sm text-muted-foreground">
-            {format(monthStart, "MMMM yyyy", { locale: es })}
+            {format(monthStart, 'MMMM yyyy', { locale: es })}
           </div>
-          <div className="text-2xl font-bold">
-            {totalScheduledHours()}h programadas
-          </div>
+          <div className="text-2xl font-bold">{totalScheduledHours()}h programadas</div>
         </div>
 
         {isLoading ? (
           <HoppinessLoader size="sm" text="Cargando horarios..." />
         ) : schedules?.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            Sin horarios asignados este mes
-          </p>
+          <p className="text-center text-muted-foreground py-8">Sin horarios asignados este mes</p>
         ) : (
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-2">
@@ -107,29 +101,31 @@ export function EmployeeScheduleModal({
                 const isPast = day < now && !isToday;
 
                 return (
-                  <div 
-                    key={day.toISOString()} 
+                  <div
+                    key={day.toISOString()}
                     className={`flex items-center justify-between p-3 border rounded-lg ${
                       isToday ? 'border-primary bg-primary/5' : ''
                     } ${isPast ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center ${
-                        isToday ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                      }`}>
+                      <div
+                        className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center ${
+                          isToday ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                        }`}
+                      >
                         <span className="text-xs uppercase">
                           {format(day, 'EEE', { locale: es })}
                         </span>
-                        <span className="font-bold text-sm">
-                          {format(day, 'd')}
-                        </span>
+                        <span className="font-bold text-sm">{format(day, 'd')}</span>
                       </div>
                       <div>
                         <div className="font-medium capitalize">
-                          {format(day, "EEEE", { locale: es })}
+                          {format(day, 'EEEE', { locale: es })}
                         </div>
                         {isToday && (
-                          <Badge variant="secondary" className="text-xs">Hoy</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Hoy
+                          </Badge>
                         )}
                       </div>
                     </div>

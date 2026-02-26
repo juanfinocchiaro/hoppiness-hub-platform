@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
 interface VentasAgregadas {
-  fc: number;   // online / digital
-  ft: number;   // efectivo
+  fc: number; // online / digital
+  ft: number; // efectivo
   total: number;
 }
 
@@ -12,11 +12,7 @@ interface VentasAgregadas {
  * Agrega ventas del POS (pedidos + pedido_pagos) para un branch y periodo.
  * Solo se activa cuando posEnabled = true.
  */
-export function usePosVentasAgregadas(
-  branchId: string,
-  periodo: string,
-  enabled: boolean = false
-) {
+export function usePosVentasAgregadas(branchId: string, periodo: string, enabled: boolean = false) {
   const { user } = useAuth();
 
   return useQuery<VentasAgregadas>({
@@ -44,8 +40,8 @@ export function usePosVentasAgregadas(
       const ventaTotal = pedidos.reduce((sum, p) => sum + Number(p.total || 0), 0);
 
       // Get cash payments for these orders
-      const pedidoIds = pedidos.map(p => p.id);
-      
+      const pedidoIds = pedidos.map((p) => p.id);
+
       // Query in batches of 100 to avoid URL length limits
       let totalEfectivo = 0;
       for (let i = 0; i < pedidoIds.length; i += 100) {

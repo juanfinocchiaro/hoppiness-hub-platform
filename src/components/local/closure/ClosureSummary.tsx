@@ -2,7 +2,14 @@
  * ClosureSummary - Real-time summary with alerts
  */
 import { Card, CardContent } from '@/components/ui/card';
-import { UtensilsCrossed, DollarSign, Banknote, CreditCard, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  UtensilsCrossed,
+  DollarSign,
+  Banknote,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AlertInfo {
@@ -30,15 +37,22 @@ export function ClosureSummary({
   alertas,
 }: ClosureSummaryProps) {
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
 
-  const tieneAlertas = alertas && (alertas.posnet || alertas.apps || alertas.caja || alertas.facturacion);
+  const tieneAlertas =
+    alertas && (alertas.posnet || alertas.apps || alertas.caja || alertas.facturacion);
 
   return (
-    <Card className={cn(
-      "border-2",
-      tieneAlertas ? "bg-destructive/5 border-destructive/30" : "bg-primary/5 border-primary/20"
-    )}>
+    <Card
+      className={cn(
+        'border-2',
+        tieneAlertas ? 'bg-destructive/5 border-destructive/30' : 'bg-primary/5 border-primary/20',
+      )}
+    >
       <CardContent className="pt-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           {/* Hamburguesas */}
@@ -49,7 +63,7 @@ export function ClosureSummary({
             </div>
             <p className="text-xl font-bold">{totalHamburguesas}</p>
           </div>
-          
+
           {/* Total vendido */}
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -58,7 +72,7 @@ export function ClosureSummary({
             </div>
             <p className="text-xl font-bold text-primary">{formatCurrency(totalVendido)}</p>
           </div>
-          
+
           {/* Efectivo */}
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -67,7 +81,7 @@ export function ClosureSummary({
             </div>
             <p className="text-xl font-bold">{formatCurrency(totalEfectivo)}</p>
           </div>
-          
+
           {/* Digital */}
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -77,7 +91,7 @@ export function ClosureSummary({
             <p className="text-xl font-bold">{formatCurrency(totalDigital)}</p>
           </div>
         </div>
-        
+
         {/* Facturado */}
         {totalFacturado > 0 && (
           <div className="mt-4 pt-3 border-t text-center">
@@ -85,7 +99,7 @@ export function ClosureSummary({
             <span className="font-bold">{formatCurrency(totalFacturado)}</span>
           </div>
         )}
-        
+
         {/* Alertas section */}
         {alertas && tieneAlertas && (
           <div className="mt-4 pt-3 border-t">
@@ -117,7 +131,7 @@ export function ClosureSummary({
             </div>
           </div>
         )}
-        
+
         {/* All good indicator */}
         {alertas && !tieneAlertas && (
           <div className="mt-4 pt-3 border-t">

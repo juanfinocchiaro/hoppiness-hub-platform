@@ -14,7 +14,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CalendarIcon, Save, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -30,11 +36,7 @@ import { InvoicingSection } from './InvoicingSection';
 import { ClosureSummary } from './ClosureSummary';
 import { ClosureHelpManual } from './ClosureHelpManual';
 
-import {
-  useSaveShiftClosure,
-  useShiftClosure,
-  useEnabledShifts,
-} from '@/hooks/useShiftClosures';
+import { useSaveShiftClosure, useShiftClosure, useEnabledShifts } from '@/hooks/useShiftClosures';
 import { useAfipConfig } from '@/hooks/useAfipConfig';
 import {
   getDefaultHamburguesas,
@@ -51,13 +53,13 @@ import {
   migrateVentasApps,
   migrateVentasLocal,
 } from '@/types/shiftClosure';
-import type { 
-  HamburguesasData, 
-  VentasLocalData, 
-  VentasAppsData, 
+import type {
+  HamburguesasData,
+  VentasLocalData,
+  VentasAppsData,
   ArqueoCaja,
   ComparacionPosnet,
-  ShiftType 
+  ShiftType,
 } from '@/types/shiftClosure';
 
 interface ShiftClosureModalProps {
@@ -85,17 +87,17 @@ export function ShiftClosureModal({
   const [arqueoCaja, setArqueoCaja] = useState<ArqueoCaja>(getDefaultArqueoCaja());
   const [totalFacturado, setTotalFacturado] = useState(0);
   const [notas, setNotas] = useState('');
-  
+
   // Load enabled shifts
   const { data: enabledShifts } = useEnabledShifts(branchId);
-  
+
   // Load existing closure if any
   const fechaStr = format(fecha, 'yyyy-MM-dd');
   const { data: existingClosure } = useShiftClosure(branchId, fechaStr, turno);
-  
+
   // Save mutation
   const saveMutation = useSaveShiftClosure();
-  
+
   // Populate form with existing data (with migration for old format)
   useEffect(() => {
     if (existingClosure) {
@@ -116,7 +118,7 @@ export function ShiftClosureModal({
       setNotas('');
     }
   }, [existingClosure, fechaStr, turno]);
-  
+
   // Load AFIP config for invoicing rules
   const { data: afipConfig } = useAfipConfig(branchId);
   const reglasFacturacion = afipConfig?.reglas_facturacion ?? null;
@@ -126,14 +128,18 @@ export function ShiftClosureModal({
     const totalHamburguesas = calcularTotalesHamburguesas(hamburguesas);
     const totalesLocal = calcularTotalesVentasLocal(ventasLocal);
     const totalesApps = calcularTotalesVentasApps(ventasApps);
-    
+
     const totalVendido = totalesLocal.total + totalesApps.total;
     const totalEfectivo = totalesLocal.efectivo + totalesApps.efectivo;
     const totalDigital = totalesLocal.digital + totalesApps.digital;
-    
-    const facturacionEsperada = calcularFacturacionEsperada(ventasLocal, ventasApps, reglasFacturacion);
+
+    const facturacionEsperada = calcularFacturacionEsperada(
+      ventasLocal,
+      ventasApps,
+      reglasFacturacion,
+    );
     const noFacturado = calcularNoFacturado(ventasLocal, ventasApps, reglasFacturacion);
-    
+
     return {
       totalHamburguesas,
       subtotalLocal: totalesLocal.total,
@@ -145,15 +151,16 @@ export function ShiftClosureModal({
       facturacionEsperada,
     };
   }, [hamburguesas, ventasLocal, ventasApps, reglasFacturacion]);
-  
+
   // Calculate alerts
   const alertas = useMemo(() => {
     const posnetDiff = calcularDiferenciaPosnet(ventasLocal, ventasApps);
     const appsDiff = calcularDiferenciasApps(ventasApps);
     const cajaAlerta = arqueoCaja.diferencia_caja !== 0;
-    const facturacionAlerta = totals.facturacionEsperada > 0 && 
+    const facturacionAlerta =
+      totals.facturacionEsperada > 0 &&
       Math.abs(totalFacturado - totals.facturacionEsperada) > totals.facturacionEsperada * 0.1;
-    
+
     return {
       posnet: posnetDiff.tieneAlerta,
       apps: appsDiff.tieneAlerta,
@@ -161,15 +168,15 @@ export function ShiftClosureModal({
       facturacion: facturacionAlerta,
     };
   }, [ventasLocal, ventasApps, arqueoCaja, totalFacturado, totals.facturacionEsperada]);
-  
+
   // Handle posnet change
   const handlePosnetChange = (data: ComparacionPosnet) => {
-    setVentasLocal(prev => ({
+    setVentasLocal((prev) => ({
       ...prev,
       comparacion_posnet: data,
     }));
   };
-  
+
   const handleSave = async () => {
     await saveMutation.mutateAsync({
       branch_id: branchId,
@@ -198,7 +205,7 @@ export function ShiftClosureModal({
             <ClosureHelpManual />
           </div>
         </DialogHeader>
-        
+
         <ScrollArea className="max-h-[calc(90vh-180px)] px-6">
           <div className="space-y-4 pb-4">
             {/* Date and Shift selectors */}
@@ -212,7 +219,7 @@ export function ShiftClosureModal({
                       variant="outline"
                       className={cn(
                         'w-full justify-start text-left font-normal',
-                        !fecha && 'text-muted-foreground'
+                        !fecha && 'text-muted-foreground',
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -230,7 +237,7 @@ export function ShiftClosureModal({
                   </PopoverContent>
                 </Popover>
               </div>
-              
+
               {/* Shift selector */}
               <div>
                 <Label className="text-xs text-muted-foreground">Turno</Label>
@@ -239,7 +246,7 @@ export function ShiftClosureModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {enabledShifts?.map(s => (
+                    {enabledShifts?.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
                         {s.label}
                       </SelectItem>
@@ -253,14 +260,14 @@ export function ShiftClosureModal({
                 </Select>
               </div>
             </div>
-            
+
             {/* 1. Hamburguesas */}
             <BurgersSection
               data={hamburguesas}
               onChange={setHamburguesas}
               totalHamburguesas={totals.totalHamburguesas}
             />
-            
+
             {/* 2. Ventas Mostrador */}
             <LocalSalesSection
               data={ventasLocal}
@@ -268,14 +275,14 @@ export function ShiftClosureModal({
               subtotal={totals.subtotalLocal}
               ventasApps={ventasApps}
             />
-            
+
             {/* 3. Comparación Posnet */}
             <PosnetComparisonSection
               ventasLocal={ventasLocal}
               ventasApps={ventasApps}
               onPosnetChange={handlePosnetChange}
             />
-            
+
             {/* 4. Ventas Apps */}
             <AppSalesSection
               branchId={branchId}
@@ -283,13 +290,10 @@ export function ShiftClosureModal({
               onChange={setVentasApps}
               subtotal={totals.subtotalApps}
             />
-            
+
             {/* 5. Arqueo de Caja */}
-            <CashCountSection
-              data={arqueoCaja}
-              onChange={setArqueoCaja}
-            />
-            
+            <CashCountSection data={arqueoCaja} onChange={setArqueoCaja} />
+
             {/* 6. Facturación */}
             <InvoicingSection
               totalFacturado={totalFacturado}
@@ -298,7 +302,7 @@ export function ShiftClosureModal({
               totalVendido={totals.totalVendido}
               noFacturado={totals.noFacturado}
             />
-            
+
             {/* 7. Resumen */}
             <ClosureSummary
               totalHamburguesas={totals.totalHamburguesas}
@@ -308,7 +312,7 @@ export function ShiftClosureModal({
               totalFacturado={totalFacturado}
               alertas={alertas}
             />
-            
+
             {/* 8. Notas */}
             <div>
               <Label className="text-xs text-muted-foreground">Notas del turno (opcional)</Label>
@@ -321,7 +325,7 @@ export function ShiftClosureModal({
             </div>
           </div>
         </ScrollArea>
-        
+
         <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar

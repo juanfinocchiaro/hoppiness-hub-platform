@@ -7,8 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { MapPin, Plus, Trash2, GripVertical, Clock, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,18 +61,16 @@ export function DeliveryZonesManager({ branchId }: Props) {
 
   const createZone = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('delivery_zones' as any)
-        .insert({
-          branch_id: branchId,
-          nombre: 'Nueva zona',
-          costo_envio: 0,
-          pedido_minimo: 0,
-          tiempo_estimado_min: 40,
-          barrios: [],
-          orden: zones.length,
-          is_active: true,
-        } as any);
+      const { error } = await supabase.from('delivery_zones' as any).insert({
+        branch_id: branchId,
+        nombre: 'Nueva zona',
+        costo_envio: 0,
+        pedido_minimo: 0,
+        tiempo_estimado_min: 40,
+        barrios: [],
+        orden: zones.length,
+        is_active: true,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -143,7 +148,8 @@ export function DeliveryZonesManager({ branchId }: Props) {
           Zonas de delivery
         </CardTitle>
         <CardDescription>
-          Definí zonas con costos de envío y pedido mínimo diferenciados. Si no hay zonas, se usa el costo plano general.
+          Definí zonas con costos de envío y pedido mínimo diferenciados. Si no hay zonas, se usa el
+          costo plano general.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -171,7 +177,7 @@ export function DeliveryZonesManager({ branchId }: Props) {
                       <Label className="text-xs">Nombre de zona</Label>
                       <Input
                         value={draft.nombre ?? ''}
-                        onChange={(e) => setDraft(d => ({ ...d, nombre: e.target.value }))}
+                        onChange={(e) => setDraft((d) => ({ ...d, nombre: e.target.value }))}
                         placeholder="Ej: Centro, Zona Norte"
                         className="mt-1"
                       />
@@ -184,7 +190,12 @@ export function DeliveryZonesManager({ branchId }: Props) {
                         <Input
                           type="number"
                           value={draft.costo_envio ?? 0}
-                          onChange={(e) => setDraft(d => ({ ...d, costo_envio: parseFloat(e.target.value) || 0 }))}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              costo_envio: parseFloat(e.target.value) || 0,
+                            }))
+                          }
                           className="mt-1"
                         />
                       </div>
@@ -195,7 +206,12 @@ export function DeliveryZonesManager({ branchId }: Props) {
                         <Input
                           type="number"
                           value={draft.pedido_minimo ?? 0}
-                          onChange={(e) => setDraft(d => ({ ...d, pedido_minimo: parseFloat(e.target.value) || 0 }))}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              pedido_minimo: parseFloat(e.target.value) || 0,
+                            }))
+                          }
                           className="mt-1"
                         />
                       </div>
@@ -206,7 +222,12 @@ export function DeliveryZonesManager({ branchId }: Props) {
                         <Input
                           type="number"
                           value={draft.tiempo_estimado_min ?? 40}
-                          onChange={(e) => setDraft(d => ({ ...d, tiempo_estimado_min: parseInt(e.target.value) || 40 }))}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              tiempo_estimado_min: parseInt(e.target.value) || 40,
+                            }))
+                          }
                           className="mt-1"
                         />
                       </div>
@@ -215,10 +236,15 @@ export function DeliveryZonesManager({ branchId }: Props) {
                       <Label className="text-xs">Barrios (separados por coma)</Label>
                       <Input
                         value={(draft.barrios ?? []).join(', ')}
-                        onChange={(e) => setDraft(d => ({
-                          ...d,
-                          barrios: e.target.value.split(',').map(b => b.trim()).filter(Boolean),
-                        }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            barrios: e.target.value
+                              .split(',')
+                              .map((b) => b.trim())
+                              .filter(Boolean),
+                          }))
+                        }
                         placeholder="Centro, Nueva Córdoba, Alberdi"
                         className="mt-1"
                       />
@@ -227,13 +253,22 @@ export function DeliveryZonesManager({ branchId }: Props) {
                       <Label className="text-xs">Descripción (opcional)</Label>
                       <Input
                         value={draft.descripcion ?? ''}
-                        onChange={(e) => setDraft(d => ({ ...d, descripcion: e.target.value || null }))}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, descripcion: e.target.value || null }))
+                        }
                         placeholder="Info adicional para el cliente"
                         className="mt-1"
                       />
                     </div>
                     <div className="flex gap-2 justify-end">
-                      <Button variant="ghost" size="sm" onClick={() => { setEditingId(null); setDraft({}); }}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingId(null);
+                          setDraft({});
+                        }}
+                      >
                         Cancelar
                       </Button>
                       <Button size="sm" onClick={saveEdit} disabled={updateZone.isPending}>
@@ -267,7 +302,12 @@ export function DeliveryZonesManager({ branchId }: Props) {
                         onCheckedChange={(v) => toggleActive.mutate({ id: zone.id, is_active: v })}
                         className="scale-75"
                       />
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startEdit(zone)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => startEdit(zone)}
+                      >
                         Editar
                       </Button>
                       <AlertDialog>
@@ -310,7 +350,11 @@ export function DeliveryZonesManager({ branchId }: Props) {
           onClick={() => createZone.mutate()}
           disabled={createZone.isPending}
         >
-          {createZone.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />}
+          {createZone.isPending ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : (
+            <Plus className="w-3 h-3 mr-1" />
+          )}
           Agregar zona
         </Button>
       </CardContent>

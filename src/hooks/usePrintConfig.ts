@@ -45,7 +45,10 @@ export function usePrintConfig(branchId: string) {
     mutationFn: async (config: Partial<PrintConfig>) => {
       const { error } = await supabase
         .from('print_config')
-        .upsert({ branch_id: branchId, ...config, updated_at: new Date().toISOString() }, { onConflict: 'branch_id' });
+        .upsert(
+          { branch_id: branchId, ...config, updated_at: new Date().toISOString() },
+          { onConflict: 'branch_id' },
+        );
       if (error) throw error;
     },
     onSuccess: () => {

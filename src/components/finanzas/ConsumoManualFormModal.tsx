@@ -3,7 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   useConsumoManualMutations,
@@ -45,7 +51,13 @@ export function ConsumoManualFormModal({ open, onOpenChange, branchId, consumo }
         observaciones: consumo.observaciones || '',
       });
     } else {
-      setForm({ categoria_pl: '', monto_consumido: '', tipo: 'manual', periodo: getCurrentPeriodo(), observaciones: '' });
+      setForm({
+        categoria_pl: '',
+        monto_consumido: '',
+        tipo: 'manual',
+        periodo: getCurrentPeriodo(),
+        observaciones: '',
+      });
     }
   }, [consumo, open]);
 
@@ -79,16 +91,27 @@ export function ConsumoManualFormModal({ open, onOpenChange, branchId, consumo }
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label>Período</Label>
-            <Input value={form.periodo} onChange={(e) => setForm({ ...form, periodo: e.target.value })} placeholder="YYYY-MM" />
+            <Input
+              value={form.periodo}
+              onChange={(e) => setForm({ ...form, periodo: e.target.value })}
+              placeholder="YYYY-MM"
+            />
           </div>
 
           <div className="grid gap-2">
             <Label>Categoría P&L *</Label>
-            <Select value={form.categoria_pl} onValueChange={(v) => setForm({ ...form, categoria_pl: v })}>
-              <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+            <Select
+              value={form.categoria_pl}
+              onValueChange={(v) => setForm({ ...form, categoria_pl: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
               <SelectContent>
                 {CATEGORIA_PL_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -97,10 +120,14 @@ export function ConsumoManualFormModal({ open, onOpenChange, branchId, consumo }
           <div className="grid gap-2">
             <Label>Tipo</Label>
             <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {TIPO_CONSUMO_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -108,18 +135,35 @@ export function ConsumoManualFormModal({ open, onOpenChange, branchId, consumo }
 
           <div className="grid gap-2">
             <Label>Monto *</Label>
-            <Input type="number" min="0" step="0.01" value={form.monto_consumido} onChange={(e) => setForm({ ...form, monto_consumido: e.target.value })} />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.monto_consumido}
+              onChange={(e) => setForm({ ...form, monto_consumido: e.target.value })}
+            />
           </div>
 
           <div className="grid gap-2">
             <Label>Observaciones</Label>
-            <Textarea value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} rows={2} />
+            <Textarea
+              value={form.observaciones}
+              onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+              rows={2}
+            />
           </div>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!form.categoria_pl || !form.monto_consumido || create.isPending || update.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              !form.categoria_pl || !form.monto_consumido || create.isPending || update.isPending
+            }
+          >
             {isEdit ? 'Guardar' : 'Registrar'}
           </Button>
         </div>

@@ -1,13 +1,13 @@
 /**
  * useHolidays - Hook for global holidays CRUD
- * 
+ *
  * Uses special_days table with branch_id = NULL for global holidays
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { format, endOfMonth } from 'date-fns';
 
 export interface Holiday {
   id: string;
@@ -33,7 +33,7 @@ export function useHolidays(month: number, year: number) {
     queryFn: async () => {
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { data, error } = await supabase
         .from('special_days')
         .select('*')
@@ -41,7 +41,7 @@ export function useHolidays(month: number, year: number) {
         .gte('day_date', startDate)
         .lte('day_date', endDate)
         .order('day_date', { ascending: true });
-      
+
       if (error) throw error;
       return (data || []) as Holiday[];
     },
@@ -55,7 +55,7 @@ export function useHolidays(month: number, year: number) {
 export function useHolidaysRange(startDate: Date, endDate: Date) {
   const start = format(startDate, 'yyyy-MM-dd');
   const end = format(endDate, 'yyyy-MM-dd');
-  
+
   return useQuery({
     queryKey: ['holidays-range', start, end],
     queryFn: async () => {
@@ -66,7 +66,7 @@ export function useHolidaysRange(startDate: Date, endDate: Date) {
         .gte('day_date', start)
         .lte('day_date', end)
         .order('day_date', { ascending: true });
-      
+
       if (error) throw error;
       return (data || []) as Holiday[];
     },
@@ -80,11 +80,11 @@ export function useHolidaysRange(startDate: Date, endDate: Date) {
 export function useCreateHoliday() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (input: CreateHolidayInput) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       const { data, error } = await supabase
         .from('special_days')
         .insert({
@@ -96,7 +96,7 @@ export function useCreateHoliday() {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data as Holiday;
     },
@@ -114,7 +114,7 @@ export function useCreateHoliday() {
  */
 export function useDeleteHoliday() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (holidayId: string) => {
       const { error } = await supabase
@@ -122,7 +122,7 @@ export function useDeleteHoliday() {
         .delete()
         .eq('id', holidayId)
         .is('branch_id', null); // Safety: only delete global holidays
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -140,41 +140,38 @@ export function useDeleteHoliday() {
 export function useCreateHolidaysBulk() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (holidays: CreateHolidayInput[]) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       // First, get existing global holidays to avoid duplicates
-      const dates = holidays.map(h => h.day_date);
+      const dates = holidays.map((h) => h.day_date);
       const { data: existing } = await supabase
         .from('special_days')
         .select('day_date')
         .is('branch_id', null)
         .in('day_date', dates);
-      
-      const existingDates = new Set(existing?.map(e => e.day_date) || []);
-      
+
+      const existingDates = new Set(existing?.map((e) => e.day_date) || []);
+
       // Filter out holidays that already exist
-      const newHolidays = holidays.filter(h => !existingDates.has(h.day_date));
-      
+      const newHolidays = holidays.filter((h) => !existingDates.has(h.day_date));
+
       if (newHolidays.length === 0) {
         return []; // All holidays already exist
       }
-      
-      const records = newHolidays.map(h => ({
+
+      const records = newHolidays.map((h) => ({
         branch_id: null,
         day_date: h.day_date,
         day_type: h.day_type || 'holiday',
         description: h.description,
         created_by: user.id,
       }));
-      
-      const { data, error } = await supabase
-        .from('special_days')
-        .insert(records)
-        .select();
-      
+
+      const { data, error } = await supabase.from('special_days').insert(records).select();
+
       if (error) throw error;
       return data as Holiday[];
     },
@@ -190,7 +187,7 @@ export function useCreateHolidaysBulk() {
 /**
  * Get Argentina's official holidays for a year
  * Based on official government calendar (argentina.gob.ar)
- * 
+ *
  * IMPORTANT: This function calculates the correct dates including:
  * - Fixed holidays (inamovibles)
  * - Movable holidays with official transfers (trasladables)
@@ -200,64 +197,70 @@ export function useCreateHolidaysBulk() {
 export function getArgentinaHolidays(year: number): CreateHolidayInput[] {
   // Calculate Easter Sunday (needed for Carnaval and Holy Week)
   const easterSunday = calculateEasterSunday(year);
-  
+
   // Carnaval is 48 and 47 days before Easter Sunday (always Monday and Tuesday)
   const carnavalMonday = new Date(easterSunday);
   carnavalMonday.setDate(carnavalMonday.getDate() - 48);
   const carnavalTuesday = new Date(easterSunday);
   carnavalTuesday.setDate(carnavalTuesday.getDate() - 47);
-  
+
   // Holy Week: Jueves Santo (3 days before) and Viernes Santo (2 days before)
   const juevesSanto = new Date(easterSunday);
   juevesSanto.setDate(juevesSanto.getDate() - 3);
   const viernesSanto = new Date(easterSunday);
   viernesSanto.setDate(viernesSanto.getDate() - 2);
-  
+
   // Calculate trasladables (movable holidays transferred to Monday)
   const guemes = getTransferredHoliday(year, 6, 17); // June 17 -> nearest Monday
   const soberania = getTransferredHoliday(year, 11, 20); // Nov 20 -> nearest Monday
-  
+
   const holidays: CreateHolidayInput[] = [
     // Enero
     { day_date: `${year}-01-01`, description: 'Año Nuevo' },
-    
+
     // Febrero - Carnaval (calculated from Easter)
     { day_date: formatDate(carnavalMonday), description: 'Carnaval' },
     { day_date: formatDate(carnavalTuesday), description: 'Carnaval' },
-    
+
     // Marzo
     { day_date: `${year}-03-24`, description: 'Día de la Memoria por la Verdad y la Justicia' },
-    
+
     // Abril - Malvinas + Semana Santa
     { day_date: `${year}-04-02`, description: 'Día del Veterano y Caídos en Malvinas' },
     { day_date: formatDate(juevesSanto), description: 'Jueves Santo (día no laborable)' },
     { day_date: formatDate(viernesSanto), description: 'Viernes Santo' },
-    
+
     // Mayo
     { day_date: `${year}-05-01`, description: 'Día del Trabajador' },
     { day_date: `${year}-05-25`, description: 'Día de la Revolución de Mayo' },
-    
+
     // Junio - Güemes trasladado + Belgrano
     { day_date: formatDate(guemes), description: 'Paso a la Inmortalidad del Gral. Güemes' },
     { day_date: `${year}-06-20`, description: 'Paso a la Inmortalidad del Gral. Belgrano' },
-    
+
     // Julio
     { day_date: `${year}-07-09`, description: 'Día de la Independencia' },
-    
+
     // Agosto - San Martín (tercer lunes de agosto)
-    { day_date: getThirdMonday(year, 8), description: 'Paso a la Inmortalidad del Gral. San Martín' },
-    
+    {
+      day_date: getThirdMonday(year, 8),
+      description: 'Paso a la Inmortalidad del Gral. San Martín',
+    },
+
     // Octubre - Diversidad Cultural (segundo lunes de octubre)
-    { day_date: getSecondMonday(year, 10), description: 'Día del Respeto a la Diversidad Cultural' },
-    
+    {
+      day_date: getSecondMonday(year, 10),
+      description: 'Día del Respeto a la Diversidad Cultural',
+    },
+
     // Noviembre - Soberanía trasladado
     { day_date: formatDate(soberania), description: 'Día de la Soberanía Nacional' },
-    
+
     // Diciembre
     { day_date: `${year}-12-08`, description: 'Inmaculada Concepción de María' },
     { day_date: `${year}-12-25`, description: 'Navidad' },
   ];
-  
+
   // Add tourist days for 2026 (decreed by government)
   if (year === 2026) {
     holidays.push(
@@ -266,7 +269,7 @@ export function getArgentinaHolidays(year: number): CreateHolidayInput[] {
       { day_date: '2026-12-07', description: 'Día no laborable turístico' },
     );
   }
-  
+
   return holidays.sort((a, b) => a.day_date.localeCompare(b.day_date));
 }
 
@@ -288,7 +291,7 @@ function calculateEasterSunday(year: number): Date {
   const m = Math.floor((a + 11 * h + 22 * l) / 451);
   const month = Math.floor((h + l - 7 * m + 114) / 31);
   const day = ((h + l - 7 * m + 114) % 31) + 1;
-  
+
   return new Date(year, month - 1, day);
 }
 
@@ -300,7 +303,7 @@ function calculateEasterSunday(year: number): Date {
 function getTransferredHoliday(year: number, month: number, day: number): Date {
   const originalDate = new Date(year, month - 1, day);
   const dayOfWeek = originalDate.getDay();
-  
+
   // If already Monday (1) or Sunday (0), no transfer needed
   if (dayOfWeek === 1) return originalDate;
   if (dayOfWeek === 0) {
@@ -308,13 +311,13 @@ function getTransferredHoliday(year: number, month: number, day: number): Date {
     originalDate.setDate(originalDate.getDate() + 1);
     return originalDate;
   }
-  
+
   // Tue (2), Wed (3) -> previous Monday
   if (dayOfWeek === 2 || dayOfWeek === 3) {
     originalDate.setDate(originalDate.getDate() - (dayOfWeek - 1));
     return originalDate;
   }
-  
+
   // Thu (4), Fri (5), Sat (6) -> next Monday
   originalDate.setDate(originalDate.getDate() + (8 - dayOfWeek));
   return originalDate;
@@ -325,7 +328,8 @@ function getTransferredHoliday(year: number, month: number, day: number): Date {
  */
 function getSecondMonday(year: number, month: number): string {
   const firstDay = new Date(year, month - 1, 1);
-  const firstMonday = firstDay.getDay() === 0 ? 2 : (firstDay.getDay() === 1 ? 1 : 9 - firstDay.getDay());
+  const firstMonday =
+    firstDay.getDay() === 0 ? 2 : firstDay.getDay() === 1 ? 1 : 9 - firstDay.getDay();
   const secondMonday = firstMonday + 7;
   return `${year}-${String(month).padStart(2, '0')}-${String(secondMonday).padStart(2, '0')}`;
 }
@@ -335,7 +339,8 @@ function getSecondMonday(year: number, month: number): string {
  */
 function getThirdMonday(year: number, month: number): string {
   const firstDay = new Date(year, month - 1, 1);
-  const firstMonday = firstDay.getDay() === 0 ? 2 : (firstDay.getDay() === 1 ? 1 : 9 - firstDay.getDay());
+  const firstMonday =
+    firstDay.getDay() === 0 ? 2 : firstDay.getDay() === 1 ? 1 : 9 - firstDay.getDay();
   const thirdMonday = firstMonday + 14;
   return `${year}-${String(month).padStart(2, '0')}-${String(thirdMonday).padStart(2, '0')}`;
 }

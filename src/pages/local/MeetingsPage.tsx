@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageHelp } from '@/components/ui/PageHelp';
-import { Calendar } from 'lucide-react';
 import { MeetingsList, MeetingDetail, MeetingConveneModal } from '@/components/meetings';
 import { useBranchMeetings, useMeetingDetail } from '@/hooks/useMeetings';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
@@ -43,10 +42,7 @@ export default function MeetingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Reuniones"
-        subtitle="Registro y seguimiento de reuniones del equipo"
-      />
+      <PageHeader title="Reuniones" subtitle="Registro y seguimiento de reuniones del equipo" />
       <PageHelp pageId="meetings" />
 
       {selectedMeeting ? (

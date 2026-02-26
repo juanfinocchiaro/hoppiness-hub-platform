@@ -20,7 +20,10 @@ export function generateGoogleCalendarLink(meeting: CalendarEventData): string {
 
   // Formato requerido por Google: YYYYMMDDTHHmmssZ
   const formatDate = (d: Date) =>
-    d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    d
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d{3}/, '');
 
   const details = [
     `Reunión de ${meeting.area || 'equipo'} - Hoppiness Club`,

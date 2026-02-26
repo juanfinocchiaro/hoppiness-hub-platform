@@ -1,6 +1,6 @@
 /**
  * SelectionToolbar - Inline action bar when cells are selected
- * 
+ *
  * V5 (Feb 2026) - Added split shift ("Turno cortado") support:
  * - Day type buttons: Franco, Vacaciones, Cumple
  * - Position selector
@@ -18,11 +18,17 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Copy, 
-  ClipboardPaste, 
-  Trash2, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Copy,
+  ClipboardPaste,
+  Trash2,
   X,
   Check,
   Palmtree,
@@ -44,12 +50,12 @@ interface SelectionToolbarProps {
   onApplyVacation: () => void;
   onApplyBirthday: () => void;
   onApplyWithOptions: (
-    start: string, 
-    end: string, 
-    position: string | null, 
+    start: string,
+    end: string,
+    position: string | null,
     includeBreak: boolean,
     start2?: string,
-    end2?: string
+    end2?: string,
   ) => void;
   onDeselect: () => void;
   positions?: WorkPosition[];
@@ -76,7 +82,7 @@ export function SelectionToolbar({
   const [endTime, setEndTime] = useState('23:00');
   const [selectedPosition, setSelectedPosition] = useState<string>('');
   const [includeBreak, setIncludeBreak] = useState(true);
-  
+
   // Split shift state
   const [isSplitShift, setIsSplitShift] = useState(false);
   const [startTime2, setStartTime2] = useState('20:00');
@@ -85,12 +91,12 @@ export function SelectionToolbar({
   const handleApply = () => {
     if (startTime && endTime) {
       onApplyWithOptions(
-        startTime, 
-        endTime, 
-        selectedPosition || null, 
+        startTime,
+        endTime,
+        selectedPosition || null,
         isSplitShift ? false : includeBreak, // No break for split shifts
         isSplitShift && startTime2 ? startTime2 : undefined,
-        isSplitShift && endTime2 ? endTime2 : undefined
+        isSplitShift && endTime2 ? endTime2 : undefined,
       );
     }
   };
@@ -115,9 +121,9 @@ export function SelectionToolbar({
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="secondary" 
-              size="sm" 
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onApplyDayOff}
               className="h-7 text-xs px-2"
             >
@@ -129,9 +135,9 @@ export function SelectionToolbar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="secondary" 
-              size="sm" 
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onApplyVacation}
               className="h-7 text-xs px-2 gap-1"
             >
@@ -145,9 +151,9 @@ export function SelectionToolbar({
         {showBirthday && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="secondary" 
-                size="sm" 
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onApplyBirthday}
                 className="h-7 text-xs px-2 gap-1"
               >
@@ -164,8 +170,8 @@ export function SelectionToolbar({
 
       {/* Position selector */}
       {positions.length > 0 && (
-        <Select 
-          value={selectedPosition} 
+        <Select
+          value={selectedPosition}
           onValueChange={(val) => setSelectedPosition(val === '__none__' ? '' : val)}
         >
           <SelectTrigger className="h-7 w-[120px] text-xs">
@@ -173,7 +179,7 @@ export function SelectionToolbar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">Sin posición</SelectItem>
-            {positions.map(pos => (
+            {positions.map((pos) => (
               <SelectItem key={pos.id} value={pos.key}>
                 {pos.label}
               </SelectItem>
@@ -215,8 +221,8 @@ export function SelectionToolbar({
                 onCheckedChange={setIsSplitShift}
                 className="scale-75"
               />
-              <Label 
-                htmlFor="split-shift-toggle" 
+              <Label
+                htmlFor="split-shift-toggle"
                 className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
               >
                 <SplitSquareHorizontal className="w-3 h-3" />
@@ -224,9 +230,7 @@ export function SelectionToolbar({
               </Label>
             </div>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            Turno cortado (doble jornada)
-          </TooltipContent>
+          <TooltipContent side="bottom">Turno cortado (doble jornada)</TooltipContent>
         </Tooltip>
       </div>
 
@@ -264,8 +268,8 @@ export function SelectionToolbar({
                   onCheckedChange={setIncludeBreak}
                   className="scale-75"
                 />
-                <Label 
-                  htmlFor="break-toggle" 
+                <Label
+                  htmlFor="break-toggle"
                   className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
                 >
                   <Coffee className="w-3 h-3" />
@@ -281,11 +285,7 @@ export function SelectionToolbar({
       )}
 
       {/* Apply button */}
-      <Button 
-        size="sm" 
-        onClick={handleApply}
-        className="h-7 gap-1 px-2 text-xs"
-      >
+      <Button size="sm" onClick={handleApply} className="h-7 gap-1 px-2 text-xs">
         <Check className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">Aplicar</span>
       </Button>
@@ -296,12 +296,7 @@ export function SelectionToolbar({
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onCopy}
-              className="h-7 gap-1 px-2 text-xs"
-            >
+            <Button variant="ghost" size="sm" onClick={onCopy} className="h-7 gap-1 px-2 text-xs">
               <Copy className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Copiar</span>
             </Button>
@@ -311,33 +306,27 @@ export function SelectionToolbar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onPaste}
               disabled={!clipboard}
-              className={cn(
-                'h-7 gap-1 px-2 text-xs',
-                clipboard && 'text-primary'
-              )}
+              className={cn('h-7 gap-1 px-2 text-xs', clipboard && 'text-primary')}
             >
               <ClipboardPaste className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Pegar</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {clipboard 
-              ? `Pegar: ${clipboard.sourceInfo}` 
-              : 'Nada copiado (Ctrl+V)'
-            }
+            {clipboard ? `Pegar: ${clipboard.sourceInfo}` : 'Nada copiado (Ctrl+V)'}
           </TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClear}
               className="h-7 gap-1 px-2 text-xs text-destructive hover:text-destructive"
             >
@@ -354,9 +343,9 @@ export function SelectionToolbar({
       {/* Deselect */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onDeselect}
             className="h-7 w-7 text-muted-foreground"
           >

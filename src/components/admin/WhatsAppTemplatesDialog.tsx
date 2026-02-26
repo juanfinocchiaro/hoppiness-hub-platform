@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +34,9 @@ export function WhatsAppTemplatesDialog() {
   useEffect(() => {
     if (templates.length > 0 && Object.keys(editedTexts).length === 0) {
       const map: Record<string, string> = {};
-      templates.forEach(t => { map[t.id] = t.template_text; });
+      templates.forEach((t) => {
+        map[t.id] = t.template_text;
+      });
       setEditedTexts(map);
     }
   }, [templates]);
@@ -46,10 +54,6 @@ export function WhatsAppTemplatesDialog() {
       .replace(/\[EMAIL\]/g, EXAMPLE_CONTACT.email)
       .replace(/\[TELEFONO\]/g, EXAMPLE_CONTACT.phone);
 
-  const currentTemplate = templates.find(t => t.subject_type === activeTab);
-  const currentText = currentTemplate ? (editedTexts[currentTemplate.id] ?? currentTemplate.template_text) : '';
-  const hasChanges = currentTemplate && editedTexts[currentTemplate.id] !== undefined && editedTexts[currentTemplate.id] !== currentTemplate.template_text;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -64,7 +68,8 @@ export function WhatsAppTemplatesDialog() {
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground mb-2">
-          Variables disponibles: <Badge variant="outline">[NOMBRE]</Badge> <Badge variant="outline">[EMAIL]</Badge> <Badge variant="outline">[TELEFONO]</Badge>
+          Variables disponibles: <Badge variant="outline">[NOMBRE]</Badge>{' '}
+          <Badge variant="outline">[EMAIL]</Badge> <Badge variant="outline">[TELEFONO]</Badge>
         </p>
 
         {isLoading ? (
@@ -76,15 +81,18 @@ export function WhatsAppTemplatesDialog() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex flex-wrap h-auto">
               {Object.entries(typeLabels).map(([key, label]) => (
-                <TabsTrigger key={key} value={key}>{label}</TabsTrigger>
+                <TabsTrigger key={key} value={key}>
+                  {label}
+                </TabsTrigger>
               ))}
             </TabsList>
 
-            {Object.keys(typeLabels).map(key => {
-              const tpl = templates.find(t => t.subject_type === key);
+            {Object.keys(typeLabels).map((key) => {
+              const tpl = templates.find((t) => t.subject_type === key);
               if (!tpl) return null;
               const text = editedTexts[tpl.id] ?? tpl.template_text;
-              const changed = editedTexts[tpl.id] !== undefined && editedTexts[tpl.id] !== tpl.template_text;
+              const changed =
+                editedTexts[tpl.id] !== undefined && editedTexts[tpl.id] !== tpl.template_text;
 
               return (
                 <TabsContent key={key} value={key} className="space-y-3">
@@ -95,7 +103,9 @@ export function WhatsAppTemplatesDialog() {
                   ) : (
                     <Textarea
                       value={text}
-                      onChange={e => setEditedTexts(prev => ({ ...prev, [tpl.id]: e.target.value }))}
+                      onChange={(e) =>
+                        setEditedTexts((prev) => ({ ...prev, [tpl.id]: e.target.value }))
+                      }
                       rows={10}
                       className="font-mono text-sm"
                     />
@@ -110,11 +120,7 @@ export function WhatsAppTemplatesDialog() {
                       {showPreview ? 'Editar' : 'Preview'}
                     </Button>
                     {changed && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleSave(tpl.id)}
-                        disabled={isUpdating}
-                      >
+                      <Button size="sm" onClick={() => handleSave(tpl.id)} disabled={isUpdating}>
                         <Save className="h-4 w-4 mr-1" />
                         Guardar
                       </Button>

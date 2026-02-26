@@ -13,9 +13,9 @@ interface RequireQRAccessProps {
 
 export function RequireQRAccess({ children }: RequireQRAccessProps) {
   const { branchId } = useParams();
-  const { 
-    loading, 
-    isSuperadmin, 
+  const {
+    loading,
+    isSuperadmin,
     isFranquiciado,
     isEncargado,
     hasAccessToBranch,

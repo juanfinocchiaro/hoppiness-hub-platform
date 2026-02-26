@@ -3,4 +3,4 @@ export * from './useUsersData';
 export * from './UsersFilters';
 export * from './UsersTable';
 export * from './UserExpandedRow';
-export * from './UserRoleModalV2';
+export * from './UserRoleModal';

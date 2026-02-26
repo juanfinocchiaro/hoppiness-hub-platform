@@ -176,7 +176,9 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
       // Get facturas
       const { data: facturas, error: fErr } = await supabase
         .from('facturas_proveedores')
-        .select('id, factura_fecha, factura_tipo, factura_numero, total, saldo_pendiente, estado_pago, fecha_vencimiento, items_factura(id)')
+        .select(
+          'id, factura_fecha, factura_tipo, factura_numero, total, saldo_pendiente, estado_pago, fecha_vencimiento, items_factura(id)',
+        )
         .eq('branch_id', branchId!)
         .eq('proveedor_id', proveedorId!)
         .is('deleted_at', null)

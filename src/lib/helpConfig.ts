@@ -22,7 +22,8 @@ export const HELP_CONFIG: Record<string, HelpConfig> = {
   'local-team': {
     pageId: 'local-team',
     title: 'Gestión de Equipo',
-    description: 'Desde aquí podés ver y gestionar a todos los empleados asignados a esta sucursal.',
+    description:
+      'Desde aquí podés ver y gestionar a todos los empleados asignados a esta sucursal.',
     tips: [
       'Tocá en un empleado para ver sus datos completos y certificaciones',
       'Usá el botón "Invitar" para sumar nuevos integrantes al equipo',

@@ -3,7 +3,16 @@
  * Structure: identity → personal (pedidos, direcciones, perfil) → La Tienda →
  * work panels (Mi Trabajo, Mi Local, Mi Marca) when user has roles → Cerrar sesión last.
  */
-import { User, Package, MapPin, LogOut, Store, Building2, Briefcase, ShoppingBag } from 'lucide-react';
+import {
+  User,
+  Package,
+  MapPin,
+  LogOut,
+  Store,
+  Building2,
+  Briefcase,
+  ShoppingBag,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthModal } from '@/contexts/AuthModalContext';
@@ -24,7 +33,8 @@ export function UserMenuDropdown() {
   const location = useLocation();
   const { openAuthModal } = useAuthModal();
   const { openMisPedidos, openDirecciones, openPerfil } = useAccountSheets();
-  const { canAccessLocalPanel, canAccessBrandPanel, accessibleBranches } = usePermissionsWithImpersonation();
+  const { canAccessLocalPanel, canAccessBrandPanel, accessibleBranches } =
+    usePermissionsWithImpersonation();
 
   const canAccessLocal = canAccessLocalPanel;
   const canAccessBrand = canAccessBrandPanel;
@@ -32,15 +42,23 @@ export function UserMenuDropdown() {
   const showMiTrabajo = canAccessLocal || canAccessBrand;
 
   const path = location.pathname;
-  const activeSection =
-    path.startsWith('/pedir') ? 'store' :
-    path.startsWith('/cuenta') ? 'trabajo' :
-    path.startsWith('/milocal') ? 'local' :
-    path.startsWith('/mimarca') ? 'marca' :
-    null;
+  const activeSection = path.startsWith('/pedir')
+    ? 'store'
+    : path.startsWith('/cuenta')
+      ? 'trabajo'
+      : path.startsWith('/milocal')
+        ? 'local'
+        : path.startsWith('/mimarca')
+          ? 'marca'
+          : null;
 
   const initials = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    ? user.user_metadata.full_name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
     : '?';
 
   if (!user) {
@@ -95,7 +113,9 @@ export function UserMenuDropdown() {
         >
           <ShoppingBag className="w-4 h-4 mr-2" />
           La Tienda
-          {activeSection === 'store' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+          {activeSection === 'store' && (
+            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+          )}
         </DropdownMenuItem>
 
         {(showMiTrabajo || canAccessLocal || canAccessBrand) && <DropdownMenuSeparator />}
@@ -106,7 +126,9 @@ export function UserMenuDropdown() {
           >
             <Briefcase className="w-4 h-4 mr-2" />
             Mi Trabajo
-            {activeSection === 'trabajo' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+            {activeSection === 'trabajo' && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+            )}
           </DropdownMenuItem>
         )}
         {canAccessLocal && (
@@ -116,7 +138,9 @@ export function UserMenuDropdown() {
           >
             <Store className="w-4 h-4 mr-2" />
             Mi Local
-            {activeSection === 'local' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+            {activeSection === 'local' && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+            )}
           </DropdownMenuItem>
         )}
         {canAccessBrand && (
@@ -126,7 +150,9 @@ export function UserMenuDropdown() {
           >
             <Building2 className="w-4 h-4 mr-2" />
             Mi Marca
-            {activeSection === 'marca' && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+            {activeSection === 'marca' && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+            )}
           </DropdownMenuItem>
         )}
 

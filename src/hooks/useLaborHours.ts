@@ -1,14 +1,14 @@
 /**
  * useLaborHours Hook
- * 
+ *
  * Calcula horas trabajadas según CCT 329/00 – Servicios Rápidos
  * y art. 201 LCT, con las siguientes reglas de negocio:
- * 
+ *
  * CONSTANTES (hardcodeadas por convenio):
  *   - Límite diario: 9 hs (aplica a todos los roles por igual)
  *   - Límite mensual: 190 hs (aplica a todos los roles por igual)
  *   - Recargo hora extra: +50 % (siempre, tanto hábil como franco/feriado)
- * 
+ *
  * REGLAS DE CÁLCULO:
  *   1) Horas en FRANCO TRABAJADO → SIEMPRE son extras (+50 %), sin importar
  *      si el empleado llegó o no a las 190 hs mensuales.
@@ -17,7 +17,7 @@
  *      hábiles del mes supera las 190 hs. El excedente son extras (+50 %).
  *   4) Alerta diaria: si un día supera 9 hs, se marca como alerta informativa.
  *   5) Presentismo: "SI" si faltas injustificadas del mes == 0.
- * 
+ *
  * Fórmulas resultantes:
  *   - hsExtrasFrancoFeriado = hsFrancoFeriado (siempre extra)
  *   - hsHabiles = hsTrabajadasMes - hsFrancoFeriado
@@ -26,17 +26,13 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  startOfMonth, 
-  endOfMonth, 
-  differenceInMinutes, 
+import {
+  startOfMonth,
+  endOfMonth,
+  differenceInMinutes,
   format,
-  eachDayOfInterval,
-  parseISO,
-  isSameDay,
-  getDay
 } from 'date-fns';
-import type { LocalRole } from './usePermissionsV2';
+import type { LocalRole } from './usePermissions';
 
 export interface ClockEntryRaw {
   id: string;
@@ -65,30 +61,30 @@ export interface EmployeeLaborSummary {
   hireDate: string | null;
   contractType: string; // 'No definido', '60 hs/mes', '190 hs/mes', etc.
   registeredHours: number | null; // Raw value from employee_data
-  
+
   // Horas básicas
   hsTrabajadasMes: number; // Total horas trabajadas
   diasTrabajados: number;
-  
+
   // Feriados y francos
   feriadosHs: number; // Horas trabajadas en feriados
   hsFrancoFeriado: number; // Horas en feriados + francos trabajados
-  
+
   // Extras (CCT 329/00 – recargo siempre +50 %)
   hsHabiles: number; // Horas en días hábiles (sin francos ni feriados)
   hsExtrasDiaHabil: number; // max(0, hsHabiles - 190) → extras por exceder límite mensual
   hsExtrasFrancoFeriado: number; // = hsFrancoFeriado (siempre extras)
   totalExtras: number; // hsExtrasDiaHabil + hsExtrasFrancoFeriado
-  
+
   // Alertas diarias (días > 9hs)
   diasConExceso: number;
   alertasDiarias: { date: string; horasExtra: number }[];
-  
+
   // Presentismo
   faltasInjustificadas: number;
   faltasJustificadas: number;
   presentismo: boolean;
-  
+
   // Control
   entries: DayEntry[];
   hasUnpairedEntries: boolean;
@@ -114,15 +110,15 @@ const HORAS_DIARIAS_LIMITE = 9;
 function pairClockEntries(
   entries: ClockEntryRaw[],
   holidays: Set<string>,
-  scheduledDaysOff: Set<string>
+  scheduledDaysOff: Set<string>,
 ): DayEntry[] {
   const sorted = [...entries].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
-  
+
   const paired: DayEntry[] = [];
   let pendingClockIn: ClockEntryRaw | null = null;
-  
+
   for (const entry of sorted) {
     if (entry.entry_type === 'clock_in') {
       if (pendingClockIn) {
@@ -144,7 +140,7 @@ function pairClockEntries(
         const checkOutTime = new Date(entry.created_at);
         const minutes = differenceInMinutes(checkOutTime, checkInTime);
         const date = format(checkInTime, 'yyyy-MM-dd');
-        
+
         paired.push({
           date,
           checkIn: pendingClockIn.created_at,
@@ -158,7 +154,7 @@ function pairClockEntries(
       }
     }
   }
-  
+
   if (pendingClockIn) {
     const date = format(new Date(pendingClockIn.created_at), 'yyyy-MM-dd');
     paired.push({
@@ -171,7 +167,7 @@ function pairClockEntries(
       isDayOff: scheduledDaysOff.has(date),
     });
   }
-  
+
   return paired;
 }
 
@@ -186,7 +182,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
   const monthEnd = endOfMonth(new Date(year, month));
   const startStr = format(monthStart, 'yyyy-MM-dd');
   const endStr = format(monthEnd, 'yyyy-MM-dd');
-  
+
   // Query fichajes del mes
   const { data: rawEntries = [], isLoading: loadingEntries } = useQuery({
     queryKey: ['labor-clock-entries', branchId, year, month],
@@ -198,14 +194,14 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString())
         .order('created_at', { ascending: true });
-      
+
       if (error) throw error;
       return (data || []) as ClockEntryRaw[];
     },
     enabled: !!branchId,
     staleTime: 60 * 1000,
   });
-  
+
   // Query feriados del mes
   const { data: holidays = [], isLoading: loadingHolidays } = useQuery({
     queryKey: ['labor-holidays', year, month],
@@ -216,13 +212,13 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
         .is('branch_id', null)
         .gte('day_date', startStr)
         .lte('day_date', endStr);
-      
+
       if (error) throw error;
-      return (data || []).map(h => h.day_date);
+      return (data || []).map((h) => h.day_date);
     },
     staleTime: 60 * 1000,
   });
-  
+
   // Query horarios del mes (para detectar francos programados)
   const { data: schedules = [], isLoading: loadingSchedules } = useQuery({
     queryKey: ['labor-schedules', branchId, year, month],
@@ -233,14 +229,14 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
         .eq('branch_id', branchId)
         .gte('schedule_date', startStr)
         .lte('schedule_date', endStr);
-      
+
       if (error) throw error;
       return data || [];
     },
     enabled: !!branchId,
     staleTime: 60 * 1000,
   });
-  
+
   // Query ausencias (para presentismo)
   const { data: absences = [], isLoading: loadingAbsences } = useQuery({
     queryKey: ['labor-absences', branchId, year, month],
@@ -252,53 +248,53 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
         .gte('request_date', startStr)
         .lte('request_date', endStr)
         .in('request_type', ['absence', 'sick_leave', 'justified_absence', 'unjustified_absence']);
-      
+
       if (error) return []; // Puede no existir el tipo
       return data || [];
     },
     enabled: !!branchId,
     staleTime: 60 * 1000,
   });
-  
+
   // Query datos de usuarios
-  const userIds = [...new Set(rawEntries.map(e => e.user_id))];
-  
+  const userIds = [...new Set(rawEntries.map((e) => e.user_id))];
+
   const { data: usersData = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['labor-users', branchId, userIds.join(',')],
     queryFn: async () => {
       if (userIds.length === 0) return [];
-      
+
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
-      
+
       if (profilesError) throw profilesError;
-      
+
       const { data: roles, error: rolesError } = await supabase
         .from('user_branch_roles')
         .select('user_id, local_role')
         .eq('branch_id', branchId)
         .in('user_id', userIds)
         .eq('is_active', true);
-      
+
       if (rolesError) throw rolesError;
-      
+
       // Obtener datos de empleado
-      const { data: employeeData, error: empError } = await supabase
+      const { data: employeeData, error: _empError } = await supabase
         .from('employee_data')
         .select('user_id, cuil, hire_date, registered_hours')
         .eq('branch_id', branchId)
         .in('user_id', userIds);
-      
-      return (profiles || []).map(p => {
-        const role = roles?.find(r => r.user_id === p.id);
-        const empData = employeeData?.find(e => e.user_id === p.id);
+
+      return (profiles || []).map((p) => {
+        const role = roles?.find((r) => r.user_id === p.id);
+        const empData = employeeData?.find((e) => e.user_id === p.id);
         return {
           user_id: p.id,
           full_name: p.full_name,
           avatar_url: p.avatar_url,
-          local_role: role?.local_role as LocalRole || null,
+          local_role: (role?.local_role as LocalRole) || null,
           cuil: empData?.cuil || null,
           hire_date: empData?.hire_date || null,
           registered_hours: empData?.registered_hours ?? null,
@@ -308,55 +304,53 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     enabled: userIds.length > 0,
     staleTime: 60 * 1000,
   });
-  
+
   const holidaySet = new Set(holidays);
-  
+
   // Calcular resumen por empleado
-  const summaries: EmployeeLaborSummary[] = userIds.map(userId => {
-    const userData = usersData.find(u => u.user_id === userId);
-    const userEntries = rawEntries.filter(e => e.user_id === userId);
-    
+  const summaries: EmployeeLaborSummary[] = userIds.map((userId) => {
+    const userData = usersData.find((u) => u.user_id === userId);
+    const userEntries = rawEntries.filter((e) => e.user_id === userId);
+
     // Francos programados del empleado
     const userDaysOff = new Set(
-      schedules
-        .filter(s => s.user_id === userId && s.is_day_off)
-        .map(s => s.schedule_date)
+      schedules.filter((s) => s.user_id === userId && s.is_day_off).map((s) => s.schedule_date),
     );
-    
+
     const paired = pairClockEntries(userEntries, holidaySet, userDaysOff);
-    
-    const unpairedEntries = paired.filter(p => p.checkOut === null);
-    const completedEntries = paired.filter(p => p.checkOut !== null);
-    
+
+    const unpairedEntries = paired.filter((p) => p.checkOut === null);
+    const completedEntries = paired.filter((p) => p.checkOut !== null);
+
     // Horas totales del mes
     const hsTrabajadasMes = completedEntries.reduce((sum, e) => sum + e.hoursDecimal, 0);
-    
+
     // Días únicos trabajados
-    const uniqueDays = new Set(completedEntries.map(e => e.date)).size;
-    
+    const uniqueDays = new Set(completedEntries.map((e) => e.date)).size;
+
     // Horas en feriados
     const feriadosHs = completedEntries
-      .filter(e => e.isHoliday)
+      .filter((e) => e.isHoliday)
       .reduce((sum, e) => sum + e.hoursDecimal, 0);
-    
+
     // Horas en feriados O francos trabajados
     const hsFrancoFeriado = completedEntries
-      .filter(e => e.isHoliday || e.isDayOff)
+      .filter((e) => e.isHoliday || e.isDayOff)
       .reduce((sum, e) => sum + e.hoursDecimal, 0);
-    
+
     // Agrupar horas por día para calcular excesos diarios
     const hoursByDay: Record<string, number> = {};
     for (const entry of completedEntries) {
       hoursByDay[entry.date] = (hoursByDay[entry.date] || 0) + entry.hoursDecimal;
     }
-    
+
     const alertasDiarias = Object.entries(hoursByDay)
       .filter(([_, hours]) => hours > HORAS_DIARIAS_LIMITE)
       .map(([date, hours]) => ({
         date,
         horasExtra: hours - HORAS_DIARIAS_LIMITE,
       }));
-    
+
     // Extras mensuales según CCT 329/00 + reglas de negocio:
     // Franco/feriado trabajado → SIEMPRE extra (+50 %)
     const hsExtrasFrancoFeriado = hsFrancoFeriado;
@@ -365,19 +359,21 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     // Solo el excedente hábil sobre 190 hs es extra
     const hsExtrasDiaHabil = Math.max(0, hsHabiles - HORAS_MENSUALES_LIMITE);
     const totalExtras = hsExtrasFrancoFeriado + hsExtrasDiaHabil;
-    
+
     // Presentismo (faltas injustificadas)
-    const userAbsences = absences.filter(a => a.user_id === userId);
+    const userAbsences = absences.filter((a) => a.user_id === userId);
     const faltasInjustificadas = userAbsences.filter(
-      a => a.request_type === 'unjustified_absence' || 
-           (a.request_type === 'absence' && a.status !== 'approved')
+      (a) =>
+        a.request_type === 'unjustified_absence' ||
+        (a.request_type === 'absence' && a.status !== 'approved'),
     ).length;
     const faltasJustificadas = userAbsences.filter(
-      a => a.request_type === 'justified_absence' || 
-           a.request_type === 'sick_leave' ||
-           (a.request_type === 'absence' && a.status === 'approved')
+      (a) =>
+        a.request_type === 'justified_absence' ||
+        a.request_type === 'sick_leave' ||
+        (a.request_type === 'absence' && a.status === 'approved'),
     ).length;
-    
+
     return {
       userId,
       userName: userData?.full_name || 'Usuario desconocido',
@@ -389,47 +385,48 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
         ? `${userData.registered_hours} hs/mes en blanco`
         : 'No definido',
       registeredHours: userData?.registered_hours ?? null,
-      
+
       hsTrabajadasMes: Number(hsTrabajadasMes.toFixed(2)),
       diasTrabajados: uniqueDays,
-      
+
       feriadosHs: Number(feriadosHs.toFixed(2)),
       hsFrancoFeriado: Number(hsFrancoFeriado.toFixed(2)),
-      
+
       hsHabiles: Number(hsHabiles.toFixed(2)),
       hsExtrasDiaHabil: Number(hsExtrasDiaHabil.toFixed(2)),
       hsExtrasFrancoFeriado: Number(hsExtrasFrancoFeriado.toFixed(2)),
       totalExtras: Number(totalExtras.toFixed(2)),
-      
+
       diasConExceso: alertasDiarias.length,
       alertasDiarias,
-      
+
       faltasInjustificadas,
       faltasJustificadas,
       presentismo: faltasInjustificadas === 0,
-      
+
       entries: paired,
       hasUnpairedEntries: unpairedEntries.length > 0,
       unpairedCount: unpairedEntries.length,
     };
   });
-  
+
   summaries.sort((a, b) => b.hsTrabajadasMes - a.hsTrabajadasMes);
-  
+
   // Stats generales
   const stats: LaborStats = {
     totalEmpleados: summaries.length,
     totalHsEquipo: summaries.reduce((sum, s) => sum + s.hsTrabajadasMes, 0),
     totalExtrasMes: summaries.reduce((sum, s) => sum + s.totalExtras, 0),
-    empleadosConPresentismo: summaries.filter(s => s.presentismo).length,
-    empleadosSinPresentismo: summaries.filter(s => !s.presentismo).length,
+    empleadosConPresentismo: summaries.filter((s) => s.presentismo).length,
+    empleadosSinPresentismo: summaries.filter((s) => !s.presentismo).length,
   };
-  
+
   return {
     summaries,
     stats,
     holidays: holidaySet,
-    loading: loadingEntries || loadingHolidays || loadingSchedules || loadingUsers || loadingAbsences,
+    loading:
+      loadingEntries || loadingHolidays || loadingSchedules || loadingUsers || loadingAbsences,
     monthStart,
     monthEnd,
   };
@@ -448,7 +445,7 @@ export function formatHoursDecimal(hours: number): string {
 /**
  * Genera CSV para liquidación según formato requerido
  */
-export function generateLaborCSV(summaries: EmployeeLaborSummary[], monthLabel: string): string {
+export function generateLaborCSV(summaries: EmployeeLaborSummary[], _monthLabel: string): string {
   const headers = [
     'QTY',
     'LEGAJO',
@@ -467,7 +464,7 @@ export function generateLaborCSV(summaries: EmployeeLaborSummary[], monthLabel: 
     'HS EXTRAS DÍA HÁBIL',
     'HS EXTRAS FRANCO/FERIADO',
   ];
-  
+
   const rows = summaries.map((s, idx) => [
     (idx + 1).toString(),
     '', // Legajo - no tenemos
@@ -486,9 +483,9 @@ export function generateLaborCSV(summaries: EmployeeLaborSummary[], monthLabel: 
     s.hsExtrasDiaHabil.toFixed(2),
     s.hsExtrasFrancoFeriado.toFixed(2),
   ]);
-  
+
   const allRows = [headers, ...rows];
-  return allRows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  return allRows.map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
 }
 
 export default useLaborHours;

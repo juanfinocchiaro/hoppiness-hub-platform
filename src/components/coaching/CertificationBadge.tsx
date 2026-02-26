@@ -24,31 +24,27 @@ const levelColors: Record<CertificationLevel, string> = {
   3: 'bg-blue-500 text-white',
 };
 
-export function CertificationBadge({ 
-  level, 
-  stationName, 
-  showLabel = false, 
+export function CertificationBadge({
+  level,
+  stationName,
+  showLabel = false,
   size = 'md',
-  className 
+  className,
 }: CertificationBadgeProps) {
-  const levelInfo = CERTIFICATION_LEVELS.find(l => l.value === level) || CERTIFICATION_LEVELS[0];
-  
+  const levelInfo = CERTIFICATION_LEVELS.find((l) => l.value === level) || CERTIFICATION_LEVELS[0];
+
   const badge = (
     <div className={cn('flex items-center gap-1.5', className)}>
-      <div 
+      <div
         className={cn(
           'rounded-full flex items-center justify-center font-bold',
           sizeClasses[size],
-          levelColors[level]
+          levelColors[level],
         )}
       >
         {level}
       </div>
-      {showLabel && (
-        <span className="text-sm text-muted-foreground">
-          {levelInfo.label}
-        </span>
-      )}
+      {showLabel && <span className="text-sm text-muted-foreground">{levelInfo.label}</span>}
     </div>
   );
 
@@ -57,9 +53,7 @@ export function CertificationBadge({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          {badge}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{badge}</TooltipTrigger>
         <TooltipContent>
           <div className="text-center">
             <p className="font-medium">{stationName}</p>
@@ -86,7 +80,7 @@ export function CertificationBadgeRow({ certifications, size = 'sm' }: Certifica
 
   return (
     <div className="flex items-center gap-1">
-      {certifications.map(cert => (
+      {certifications.map((cert) => (
         <CertificationBadge
           key={cert.stationKey}
           level={cert.level}
@@ -104,18 +98,22 @@ export function CertificationBadgeRow({ certifications, size = 'sm' }: Certifica
 export function CertificationLegend({ compact = false }: { compact?: boolean }) {
   return (
     <TooltipProvider>
-      <div className={cn(
-        "flex items-center gap-3 text-xs",
-        compact ? "flex-wrap" : "flex-wrap md:flex-nowrap"
-      )}>
+      <div
+        className={cn(
+          'flex items-center gap-3 text-xs',
+          compact ? 'flex-wrap' : 'flex-wrap md:flex-nowrap',
+        )}
+      >
         {CERTIFICATION_LEVELS.map((level) => (
           <Tooltip key={level.value}>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1.5 cursor-help">
-                <div className={cn(
-                  'w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold',
-                  levelColors[level.value]
-                )}>
+                <div
+                  className={cn(
+                    'w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold',
+                    levelColors[level.value],
+                  )}
+                >
                   {level.value}
                 </div>
                 <span className="text-muted-foreground">{level.label}</span>

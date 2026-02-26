@@ -85,7 +85,7 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
       }
 
       // Get unique user IDs
-      const userIds = [...new Set(coachings.map(c => c.user_id))];
+      const userIds = [...new Set(coachings.map((c) => c.user_id))];
 
       // Get profiles
       const { data: profiles, error: profilesErr } = await supabase
@@ -94,11 +94,11 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         .in('id', userIds);
 
       if (profilesErr) throw profilesErr;
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
       // 2. Calculate ranking by average score
       const userScores = new Map<string, number[]>();
-      coachings.forEach(c => {
+      coachings.forEach((c) => {
         if (c.overall_score !== null) {
           const scores = userScores.get(c.user_id) || [];
           scores.push(c.overall_score);
@@ -112,10 +112,10 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
           const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
           const lastScore = scores[0] || null;
           const previousScore = scores[1] || null;
-          
+
           let trend: 'up' | 'down' | 'stable' | 'new' = 'new';
           let trendValue = 0;
-          
+
           if (previousScore !== null && lastScore !== null) {
             trendValue = lastScore - previousScore;
             if (trendValue > 0.1) trend = 'up';
@@ -138,20 +138,23 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
 
       // 3. Calculate team average
       const allScores = coachings
-        .filter(c => c.overall_score !== null)
-        .map(c => c.overall_score as number);
-      const teamAverageScore = allScores.length > 0
-        ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(2))
-        : null;
+        .filter((c) => c.overall_score !== null)
+        .map((c) => c.overall_score as number);
+      const teamAverageScore =
+        allScores.length > 0
+          ? Number((allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(2))
+          : null;
 
       // 4. Get station scores for champions
       const { data: stationScores, error: stationScoresErr } = await supabase
         .from('coaching_station_scores')
-        .select(`
+        .select(
+          `
           station_id,
           score,
           coaching:coachings!inner(user_id, branch_id)
-        `)
+        `,
+        )
         .eq('coaching.branch_id', branchId);
 
       if (stationScoresErr) throw stationScoresErr;
@@ -163,15 +166,15 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         .eq('is_active', true);
 
       if (stationsErr) throw stationsErr;
-      const stationMap = new Map(stations?.map(s => [s.id, s]) || []);
+      const stationMap = new Map(stations?.map((s) => [s.id, s]) || []);
 
       // Calculate champions per station
       const stationUserScores = new Map<string, Map<string, number[]>>();
-      stationScores?.forEach(ss => {
+      stationScores?.forEach((ss) => {
         const stationId = ss.station_id;
         const coaching = ss.coaching as unknown as { user_id: string; branch_id: string };
         const userId = coaching.user_id;
-        
+
         if (!stationUserScores.has(stationId)) {
           stationUserScores.set(stationId, new Map());
         }
@@ -213,8 +216,8 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         if (scores.length >= 3) {
           const lastThree = scores.slice(0, 3);
           const isDecreasing = lastThree[0] < lastThree[1] && lastThree[1] < lastThree[2];
-          const isStagnantLow = lastThree.every(s => s < 2.5);
-          
+          const isStagnantLow = lastThree.every((s) => s < 2.5);
+
           if (isDecreasing || isStagnantLow) {
             const profile = profileMap.get(userId);
             trendAlerts.push({
@@ -230,12 +233,14 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
       // 6. Get competency analysis (general competencies)
       const { data: competencyScores, error: compScoresErr } = await supabase
         .from('coaching_competency_scores')
-        .select(`
+        .select(
+          `
           competency_id,
           score,
           competency_type,
           coaching:coachings!inner(user_id, branch_id)
-        `)
+        `,
+        )
         .eq('coaching.branch_id', branchId)
         .eq('competency_type', 'general');
 
@@ -247,17 +252,20 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         .eq('is_active', true);
 
       if (compErr) throw compErr;
-      const compMap = new Map(competencies?.map(c => [c.id, c]) || []);
+      const compMap = new Map(competencies?.map((c) => [c.id, c]) || []);
 
-      const competencyUserScores = new Map<string, { scores: number[]; users: Map<string, number> }>();
-      competencyScores?.forEach(cs => {
+      const competencyUserScores = new Map<
+        string,
+        { scores: number[]; users: Map<string, number> }
+      >();
+      competencyScores?.forEach((cs) => {
         const coaching = cs.coaching as unknown as { user_id: string; branch_id: string };
         if (!competencyUserScores.has(cs.competency_id)) {
           competencyUserScores.set(cs.competency_id, { scores: [], users: new Map() });
         }
         const data = competencyUserScores.get(cs.competency_id)!;
         data.scores.push(cs.score);
-        
+
         // Keep track of lowest score per user
         const currentUserScore = data.users.get(coaching.user_id) ?? 5;
         if (cs.score < currentUserScore) {
@@ -269,7 +277,7 @@ export function useTeamCoachingAnalysis(branchId: string | null) {
         .map(([compId, data]) => {
           const comp = compMap.get(compId);
           const avgScore = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
-          
+
           // Get 3 lowest performers for this competency
           const lowestEmployees = Array.from(data.users.entries())
             .sort((a, b) => a[1] - b[1])
@@ -332,7 +340,7 @@ export function useEmployeeVsTeam(userId: string | null, branchId: string | null
 
       // Group team scores by month
       const teamByMonth = new Map<string, number[]>();
-      allScores?.forEach(s => {
+      allScores?.forEach((s) => {
         if (s.user_id !== userId) {
           const key = `${s.coaching_year}-${s.coaching_month}`;
           const arr = teamByMonth.get(key) || [];
@@ -342,20 +350,22 @@ export function useEmployeeVsTeam(userId: string | null, branchId: string | null
       });
 
       // Build comparison data
-      const comparison = myScores?.map(s => {
-        const key = `${s.coaching_year}-${s.coaching_month}`;
-        const teamScores = teamByMonth.get(key) || [];
-        const teamAvg = teamScores.length > 0
-          ? teamScores.reduce((a, b) => a + b, 0) / teamScores.length
-          : null;
+      const comparison =
+        myScores?.map((s) => {
+          const key = `${s.coaching_year}-${s.coaching_month}`;
+          const teamScores = teamByMonth.get(key) || [];
+          const teamAvg =
+            teamScores.length > 0
+              ? teamScores.reduce((a, b) => a + b, 0) / teamScores.length
+              : null;
 
-        return {
-          month: s.coaching_month,
-          year: s.coaching_year,
-          myScore: s.overall_score,
-          teamAvg: teamAvg ? Number(teamAvg.toFixed(2)) : null,
-        };
-      }) || [];
+          return {
+            month: s.coaching_month,
+            year: s.coaching_year,
+            myScore: s.overall_score,
+            teamAvg: teamAvg ? Number(teamAvg.toFixed(2)) : null,
+          };
+        }) || [];
 
       // Calculate improvement badges
       let consecutiveImprovements = 0;
@@ -372,7 +382,7 @@ export function useEmployeeVsTeam(userId: string | null, branchId: string | null
       const badges: string[] = [];
       if (consecutiveImprovements >= 3) badges.push('🔥 En racha');
       if (consecutiveImprovements >= 2) badges.push('📈 Mejorando');
-      
+
       const lastScore = myScores?.[myScores.length - 1]?.overall_score;
       if (lastScore && lastScore >= 3.5) badges.push('⭐ Alto rendimiento');
 

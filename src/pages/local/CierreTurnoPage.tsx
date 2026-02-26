@@ -2,12 +2,12 @@
  * CierreTurnoPage - Reporte de cierre de turno (Fase 6)
  * Adaptado para usar pedidos, pedido_pagos y cash_register_shifts
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { useParams, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -15,20 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Accordion,
   AccordionContent,
@@ -49,11 +37,9 @@ import {
   TrendingUp,
   CreditCard,
   Banknote,
-  Camera,
   FileText,
   CalendarIcon,
   XCircle,
-  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -85,7 +71,6 @@ export default function CierreTurnoPage() {
   const reportRef = useRef<HTMLDivElement>(null);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [newNote, setNewNote] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -97,11 +82,13 @@ export default function CierreTurnoPage() {
     queryFn: async (): Promise<ShiftData> => {
       const { data: ordersData } = await supabase
         .from('pedidos')
-        .select(`
+        .select(
+          `
           id, created_at, total, estado, canal_venta, tipo_servicio, canal_app,
           pedido_pagos (metodo, monto),
           pedido_items (nombre, cantidad, precio_unitario, subtotal)
-        `)
+        `,
+        )
         .eq('branch_id', branchId!)
         .gte('created_at', start)
         .lt('created_at', end)
@@ -117,11 +104,13 @@ export default function CierreTurnoPage() {
 
       const { data: cashShiftsData } = await supabase
         .from('cash_register_shifts')
-        .select(`
+        .select(
+          `
           id, opened_at, closed_at, opening_amount, closing_amount,
           expected_amount, difference, status, notes,
           cash_registers (name)
-        `)
+        `,
+        )
         .eq('branch_id', branchId!)
         .gte('opened_at', start)
         .lt('opened_at', end);
@@ -139,23 +128,30 @@ export default function CierreTurnoPage() {
   const orderCount = shiftData?.orders.length || 0;
   const avgTicket = orderCount > 0 ? totalSales / orderCount : 0;
 
-  const paymentBreakdown = shiftData?.orders.flatMap((o) => o.pedido_pagos || []).reduce(
-    (acc, pago) => {
-      const method = pago.metodo || 'otro';
-      acc[method] = (acc[method] || 0) + Number(pago.monto || 0);
-      return acc;
-    },
-    {} as Record<string, number>
-  ) || {};
+  const paymentBreakdown =
+    shiftData?.orders
+      .flatMap((o) => o.pedido_pagos || [])
+      .reduce(
+        (acc, pago) => {
+          const method = pago.metodo || 'otro';
+          acc[method] = (acc[method] || 0) + Number(pago.monto || 0);
+          return acc;
+        },
+        {} as Record<string, number>,
+      ) || {};
 
-  const channelBreakdown = shiftData?.orders.reduce((acc, order) => {
-    let channel = order.canal_venta || 'mostrador';
-    if (channel === 'apps' && order.canal_app) {
-      channel = order.canal_app;
-    }
-    acc[channel] = (acc[channel] || 0) + Number(order.total || 0);
-    return acc;
-  }, {} as Record<string, number>) || {};
+  const channelBreakdown =
+    shiftData?.orders.reduce(
+      (acc, order) => {
+        let channel = order.canal_venta || 'mostrador';
+        if (channel === 'apps' && order.canal_app) {
+          channel = order.canal_app;
+        }
+        acc[channel] = (acc[channel] || 0) + Number(order.total || 0);
+        return acc;
+      },
+      {} as Record<string, number>,
+    ) || {};
 
   const productBreakdown =
     shiftData?.orders
@@ -170,7 +166,7 @@ export default function CierreTurnoPage() {
           acc[name].total += Number(item.subtotal || 0);
           return acc;
         },
-        {} as Record<string, { quantity: number; total: number }>
+        {} as Record<string, { quantity: number; total: number }>,
       ) || {};
 
   const formatCurrency = (amount: number) => {
@@ -179,12 +175,6 @@ export default function CierreTurnoPage() {
       currency: 'ARS',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
-    toast.info('Notas del turno: funcionalidad pendiente (requiere tabla shift_notes)');
-    setNewNote('');
   };
 
   const handleExportPDF = async () => {
@@ -249,7 +239,9 @@ export default function CierreTurnoPage() {
         <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
           <div>
             <h2 className="text-xl font-bold">REPORTE DEL DÍA</h2>
-            <p className="text-muted-foreground">{format(selectedDate, "d 'de' MMMM, yyyy", { locale: es })}</p>
+            <p className="text-muted-foreground">
+              {format(selectedDate, "d 'de' MMMM, yyyy", { locale: es })}
+            </p>
           </div>
           <Badge variant={orderCount > 0 ? 'default' : 'secondary'}>
             {orderCount > 0 ? '✅ Con pedidos' : '⚪ Sin pedidos'}
@@ -325,11 +317,16 @@ export default function CierreTurnoPage() {
                         </Badge>
                       </div>
                     </div>
-                    <Progress value={totalSales > 0 ? (amount / totalSales) * 100 : 0} className="h-2" />
+                    <Progress
+                      value={totalSales > 0 ? (amount / totalSales) * 100 : 0}
+                      className="h-2"
+                    />
                   </div>
                 ))}
               {Object.keys(channelBreakdown).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Sin ventas en este día</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Sin ventas en este día
+                </p>
               )}
             </CardContent>
           </Card>
@@ -362,11 +359,16 @@ export default function CierreTurnoPage() {
                         </Badge>
                       </div>
                     </div>
-                    <Progress value={totalSales > 0 ? (amount / totalSales) * 100 : 0} className="h-2" />
+                    <Progress
+                      value={totalSales > 0 ? (amount / totalSales) * 100 : 0}
+                      className="h-2"
+                    />
                   </div>
                 ))}
               {Object.keys(paymentBreakdown).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Sin ventas en este día</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Sin ventas en este día
+                </p>
               )}
             </CardContent>
           </Card>
@@ -393,13 +395,20 @@ export default function CierreTurnoPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(Object.entries(productBreakdown) as [string, { quantity: number; total: number }][])
+                        {(
+                          Object.entries(productBreakdown) as [
+                            string,
+                            { quantity: number; total: number },
+                          ][]
+                        )
                           .sort(([, a], [, b]) => b.total - a.total)
                           .map(([name, data]) => (
                             <TableRow key={name}>
                               <TableCell>{name}</TableCell>
                               <TableCell className="text-right">{data.quantity}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(data.total)}</TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(data.total)}
+                              </TableCell>
                             </TableRow>
                           ))}
                       </TableBody>
@@ -427,12 +436,14 @@ export default function CierreTurnoPage() {
                       <p className="font-medium">{cashShift.cash_registers?.name || 'Caja'}</p>
                       <p className="text-sm text-muted-foreground">
                         Abierta {format(new Date(cashShift.opened_at), 'HH:mm')}
-                        {cashShift.closed_at && ` — Cerrada ${format(new Date(cashShift.closed_at), 'HH:mm')}`}
+                        {cashShift.closed_at &&
+                          ` — Cerrada ${format(new Date(cashShift.closed_at), 'HH:mm')}`}
                       </p>
                     </div>
                     {cashShift.difference !== null && (
                       <Badge variant={cashShift.difference === 0 ? 'default' : 'destructive'}>
-                        {cashShift.difference === 0 ? '✅' : '⚠️'} {formatCurrency(cashShift.difference)}
+                        {cashShift.difference === 0 ? '✅' : '⚠️'}{' '}
+                        {formatCurrency(cashShift.difference)}
                       </Badge>
                     )}
                   </div>
@@ -443,7 +454,9 @@ export default function CierreTurnoPage() {
                     </div>
                     <div className="p-2 bg-muted/50 rounded">
                       <p className="text-muted-foreground">Esperado</p>
-                      <p className="font-medium">{formatCurrency(cashShift.expected_amount || 0)}</p>
+                      <p className="font-medium">
+                        {formatCurrency(cashShift.expected_amount || 0)}
+                      </p>
                     </div>
                     <div className="p-2 bg-muted/50 rounded">
                       <p className="text-muted-foreground">Declarado</p>
@@ -456,7 +469,9 @@ export default function CierreTurnoPage() {
                     >
                       <p className="text-muted-foreground">Diferencia</p>
                       <p className="font-medium">
-                        {cashShift.difference !== null ? formatCurrency(cashShift.difference) : 'Pendiente'}
+                        {cashShift.difference !== null
+                          ? formatCurrency(cashShift.difference)
+                          : 'Pendiente'}
                       </p>
                     </div>
                   </div>
@@ -488,7 +503,9 @@ export default function CierreTurnoPage() {
                     <TableRow key={order.id}>
                       <TableCell>#{order.numero_llamador || '-'}</TableCell>
                       <TableCell>{format(new Date(order.created_at), 'HH:mm')}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(order.total || 0)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(order.total || 0)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

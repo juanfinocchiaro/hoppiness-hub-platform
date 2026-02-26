@@ -35,7 +35,13 @@ function PriceDisplay({ base, promo }: { base: number; promo: number | null }) {
   return <p className="text-sm font-bold text-primary">{formatPrice(base)}</p>;
 }
 
-function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }: {
+function QtyControls({
+  qty,
+  onQuickAdd,
+  onIncrement,
+  onDecrement,
+  size = 'sm',
+}: {
   qty: number;
   onQuickAdd: () => void;
   onIncrement: () => void;
@@ -79,9 +85,15 @@ function QtyControls({ qty, onQuickAdd, onIncrement, onDecrement, size = 'sm' }:
   );
 }
 
-export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecrement, layout = 'list' }: Props) {
-  const effectivePrice = item.precio_promo != null && item.precio_promo < item.precio_base ? item.precio_promo : item.precio_base;
-
+export function ProductCard({
+  item,
+  qty,
+  onTap,
+  onQuickAdd,
+  onIncrement,
+  onDecrement,
+  layout = 'list',
+}: Props) {
   // Desktop horizontal card
   if (layout === 'desktop') {
     return (
@@ -105,15 +117,26 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
           </div>
           <div className="flex items-center justify-between mt-2">
             <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
-            <div onClick={e => e.stopPropagation()}>
-              <QtyControls qty={qty} onQuickAdd={onQuickAdd} onIncrement={onIncrement} onDecrement={onDecrement} size="sm" />
+            <div onClick={(e) => e.stopPropagation()}>
+              <QtyControls
+                qty={qty}
+                onQuickAdd={onQuickAdd}
+                onIncrement={onIncrement}
+                onDecrement={onDecrement}
+                size="sm"
+              />
             </div>
           </div>
         </div>
 
         {item.imagen_url ? (
           <div className="w-[100px] h-[100px] rounded-lg overflow-hidden shrink-0 bg-muted relative">
-            <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
+            <img
+              src={item.imagen_url}
+              alt={item.nombre}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           </div>
         ) : (
           <div className="w-[100px] h-[100px] rounded-lg shrink-0 bg-muted flex items-center justify-center">
@@ -134,7 +157,12 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
         {item.promo_etiqueta && <PromoBadge label={item.promo_etiqueta} />}
         {item.imagen_url ? (
           <div className="aspect-[3/2] w-full overflow-hidden bg-muted">
-            <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
+            <img
+              src={item.imagen_url}
+              alt={item.nombre}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           </div>
         ) : (
           <div className="aspect-[3/2] w-full bg-muted flex items-center justify-center">
@@ -147,12 +175,19 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
             {item.nombre_corto || item.nombre}
           </h3>
           {item.descripcion && (
-            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{item.descripcion}</p>
+            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+              {item.descripcion}
+            </p>
           )}
           <div className="flex items-center justify-between mt-auto pt-2">
             <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
-            <div onClick={e => e.stopPropagation()}>
-              <QtyControls qty={qty} onQuickAdd={onQuickAdd} onIncrement={onIncrement} onDecrement={onDecrement} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <QtyControls
+                qty={qty}
+                onQuickAdd={onQuickAdd}
+                onIncrement={onIncrement}
+                onDecrement={onDecrement}
+              />
             </div>
           </div>
         </div>
@@ -174,7 +209,12 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
         )}
         {item.imagen_url ? (
           <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted">
-            <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
+            <img
+              src={item.imagen_url}
+              alt={item.nombre}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           </div>
         ) : (
           <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center">
@@ -195,8 +235,14 @@ export function ProductCard({ item, qty, onTap, onQuickAdd, onIncrement, onDecre
         </div>
       </div>
 
-      <div className="shrink-0" onClick={e => e.stopPropagation()}>
-        <QtyControls qty={qty} onQuickAdd={onQuickAdd} onIncrement={onIncrement} onDecrement={onDecrement} size="md" />
+      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+        <QtyControls
+          qty={qty}
+          onQuickAdd={onQuickAdd}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
+          size="md"
+        />
       </div>
     </div>
   );

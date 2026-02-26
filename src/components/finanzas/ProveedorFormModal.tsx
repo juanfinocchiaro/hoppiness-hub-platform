@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { Building2, Phone, Landmark } from 'lucide-react';
@@ -30,7 +36,13 @@ const EMPTY: ProveedorFormData = {
   permite_cuenta_corriente: false,
 };
 
-export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranchId, context }: Props) {
+export function ProveedorFormModal({
+  open,
+  onOpenChange,
+  proveedor,
+  defaultBranchId,
+  context,
+}: Props) {
   const isBrandContext = context === 'brand';
   const { create, update } = useProveedorMutations();
   const isEdit = !!proveedor;
@@ -40,7 +52,11 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
   const { data: branches } = useQuery({
     queryKey: ['branches-select'],
     queryFn: async () => {
-      const { data } = await supabase.from('branches').select('id, name').eq('is_active', true).order('name');
+      const { data } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
       return data || [];
     },
     enabled: open && form.ambito === 'local',
@@ -87,7 +103,7 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
     if (!form.razon_social.trim()) return;
     const payload = {
       ...form,
-      branch_id: form.ambito === 'local' ? (form.branch_id || defaultBranchId || null) : null,
+      branch_id: form.ambito === 'local' ? form.branch_id || defaultBranchId || null : null,
     };
 
     if (isEdit) {
@@ -104,7 +120,13 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar Proveedor' : isBrandContext ? 'Nuevo Proveedor de Marca' : 'Nuevo Proveedor'}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? 'Editar Proveedor'
+              : isBrandContext
+                ? 'Nuevo Proveedor de Marca'
+                : 'Nuevo Proveedor'}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -119,7 +141,11 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
               </FormRow>
               <FormLayout columns={2}>
                 <FormRow label="CUIT">
-                  <Input value={form.cuit || ''} onChange={(e) => set('cuit', e.target.value)} placeholder="XX-XXXXXXXX-X" />
+                  <Input
+                    value={form.cuit || ''}
+                    onChange={(e) => set('cuit', e.target.value)}
+                    placeholder="XX-XXXXXXXX-X"
+                  />
                 </FormRow>
                 {!isBrandContext && (
                   <FormRow label="Ámbito">
@@ -129,7 +155,9 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
                       </div>
                     ) : (
                       <Select value={form.ambito} onValueChange={(v) => set('ambito', v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="marca">Marca (todas)</SelectItem>
                           <SelectItem value="local">Local (una sucursal)</SelectItem>
@@ -142,10 +170,14 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
               {form.ambito === 'local' && !isLocalContext && !isBrandContext && (
                 <FormRow label="Sucursal" required>
                   <Select value={form.branch_id || ''} onValueChange={(v) => set('branch_id', v)}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
                     <SelectContent>
                       {branches?.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -157,22 +189,42 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
           <FormSection title="Contacto" icon={Phone}>
             <FormLayout columns={2}>
               <FormRow label="Contacto principal">
-                <Input value={form.contacto || ''} onChange={(e) => set('contacto', e.target.value)} />
+                <Input
+                  value={form.contacto || ''}
+                  onChange={(e) => set('contacto', e.target.value)}
+                />
               </FormRow>
               <FormRow label="Teléfono principal">
-                <Input value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
+                <Input
+                  value={form.telefono || ''}
+                  onChange={(e) => set('telefono', e.target.value)}
+                />
               </FormRow>
               <FormRow label="Contacto secundario">
-                <Input value={form.contacto_secundario || ''} onChange={(e) => set('contacto_secundario', e.target.value)} placeholder="Ej: Administración" />
+                <Input
+                  value={form.contacto_secundario || ''}
+                  onChange={(e) => set('contacto_secundario', e.target.value)}
+                  placeholder="Ej: Administración"
+                />
               </FormRow>
               <FormRow label="Teléfono secundario">
-                <Input value={form.telefono_secundario || ''} onChange={(e) => set('telefono_secundario', e.target.value)} />
+                <Input
+                  value={form.telefono_secundario || ''}
+                  onChange={(e) => set('telefono_secundario', e.target.value)}
+                />
               </FormRow>
               <FormRow label="Email">
-                <Input type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} />
+                <Input
+                  type="email"
+                  value={form.email || ''}
+                  onChange={(e) => set('email', e.target.value)}
+                />
               </FormRow>
               <FormRow label="Dirección">
-                <Input value={form.direccion || ''} onChange={(e) => set('direccion', e.target.value)} />
+                <Input
+                  value={form.direccion || ''}
+                  onChange={(e) => set('direccion', e.target.value)}
+                />
               </FormRow>
             </FormLayout>
           </FormSection>
@@ -183,17 +235,32 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
                 <Input value={form.banco || ''} onChange={(e) => set('banco', e.target.value)} />
               </FormRow>
               <FormRow label="Nº de Cuenta">
-                <Input value={form.numero_cuenta || ''} onChange={(e) => set('numero_cuenta', e.target.value)} placeholder="Ej: 374-002997/9" />
+                <Input
+                  value={form.numero_cuenta || ''}
+                  onChange={(e) => set('numero_cuenta', e.target.value)}
+                  placeholder="Ej: 374-002997/9"
+                />
               </FormRow>
               <FormRow label="CBU">
-                <Input value={form.cbu || ''} onChange={(e) => set('cbu', e.target.value)} placeholder="22 dígitos" />
+                <Input
+                  value={form.cbu || ''}
+                  onChange={(e) => set('cbu', e.target.value)}
+                  placeholder="22 dígitos"
+                />
               </FormRow>
               <FormRow label="Alias CBU">
-                <Input value={form.alias_cbu || ''} onChange={(e) => set('alias_cbu', e.target.value)} />
+                <Input
+                  value={form.alias_cbu || ''}
+                  onChange={(e) => set('alias_cbu', e.target.value)}
+                />
               </FormRow>
             </FormLayout>
             <FormRow label="Titular de la cuenta" className="mt-4">
-              <Input value={form.titular_cuenta || ''} onChange={(e) => set('titular_cuenta', e.target.value)} placeholder="Completar si difiere de la razón social" />
+              <Input
+                value={form.titular_cuenta || ''}
+                onChange={(e) => set('titular_cuenta', e.target.value)}
+                placeholder="Completar si difiere de la razón social"
+              />
             </FormRow>
           </FormSection>
 
@@ -216,11 +283,17 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
                     <Input
                       type="number"
                       value={form.dias_pago_habitual ?? ''}
-                      onChange={(e) => set('dias_pago_habitual', e.target.value ? Number(e.target.value) : undefined)}
+                      onChange={(e) =>
+                        set(
+                          'dias_pago_habitual',
+                          e.target.value ? Number(e.target.value) : undefined,
+                        )
+                      }
                       placeholder="Ej: 30"
                     />
                     <p className="text-xs text-muted-foreground">
-                      El vencimiento de facturas se calculará automáticamente: fecha factura + estos días.
+                      El vencimiento de facturas se calculará automáticamente: fecha factura + estos
+                      días.
                     </p>
                   </div>
                 </FormRow>
@@ -229,7 +302,12 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
                     type="number"
                     step="0.1"
                     value={form.descuento_pago_contado ?? ''}
-                    onChange={(e) => set('descuento_pago_contado', e.target.value ? Number(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      set(
+                        'descuento_pago_contado',
+                        e.target.value ? Number(e.target.value) : undefined,
+                      )
+                    }
                   />
                 </FormRow>
               </FormLayout>
@@ -244,7 +322,9 @@ export function ProveedorFormModal({ open, onOpenChange, proveedor, defaultBranc
           )}
 
           <StickyActions>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <LoadingButton loading={isPending} onClick={handleSubmit}>
               {isEdit ? 'Guardar' : 'Crear Proveedor'}
             </LoadingButton>

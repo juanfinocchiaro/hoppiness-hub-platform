@@ -11,7 +11,13 @@ import { PageHeader } from '@/components/ui/page-header';
 import { useStockCompleto, useStockResumen } from '@/hooks/pos/useStock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { StockResumenBar } from '@/components/stock/StockResumenBar';
@@ -36,20 +42,20 @@ export default function StockPage() {
   const pageState: PageState = useMemo(() => {
     if (forceConteo) return 'conteo';
     if (!items) return 'operacion';
-    const hasStock = items.some(i => i.tiene_stock_actual && i.cantidad > 0);
+    const hasStock = items.some((i) => i.tiene_stock_actual && i.cantidad > 0);
     return hasStock ? 'operacion' : 'inicial';
   }, [items, forceConteo]);
 
   // Unique categories
   const categorias = useMemo(() => {
     if (!items) return [];
-    const set = new Set(items.map(i => i.categoria).filter(Boolean));
+    const set = new Set(items.map((i) => i.categoria).filter(Boolean));
     return Array.from(set).sort() as string[];
   }, [items]);
 
   const handleExportExcel = () => {
     if (!items) return;
-    const rows = items.map(it => ({
+    const rows = items.map((it) => ({
       Insumo: it.nombre,
       Unidad: it.unidad,
       Stock: it.cantidad,
@@ -67,7 +73,11 @@ export default function StockPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
+        <PageHeader
+          title="Stock"
+          subtitle="Stock en tiempo real"
+          icon={<Package className="w-5 h-5" />}
+        />
         <Alert variant="destructive">
           <AlertDescription>No se pudo cargar el stock.</AlertDescription>
         </Alert>
@@ -78,7 +88,11 @@ export default function StockPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
+        <PageHeader
+          title="Stock"
+          subtitle="Stock en tiempo real"
+          icon={<Package className="w-5 h-5" />}
+        />
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -88,10 +102,15 @@ export default function StockPage() {
   if (!items || items.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Stock" subtitle="Stock en tiempo real" icon={<Package className="w-5 h-5" />} />
+        <PageHeader
+          title="Stock"
+          subtitle="Stock en tiempo real"
+          icon={<Package className="w-5 h-5" />}
+        />
         <Alert>
           <AlertDescription>
-            No hay insumos configurados en la marca. Agregá insumos desde la sección de Insumos para comenzar a trackear stock.
+            No hay insumos configurados en la marca. Agregá insumos desde la sección de Insumos para
+            comenzar a trackear stock.
           </AlertDescription>
         </Alert>
       </div>
@@ -102,7 +121,11 @@ export default function StockPage() {
   if (pageState === 'conteo') {
     return (
       <div className="space-y-6">
-        <PageHeader title="Conteo Físico" subtitle="Comparar stock teórico vs real" icon={<ClipboardList className="w-5 h-5" />} />
+        <PageHeader
+          title="Conteo Físico"
+          subtitle="Comparar stock teórico vs real"
+          icon={<ClipboardList className="w-5 h-5" />}
+        />
         <ConteoFisico branchId={branchId!} items={items} onClose={() => setForceConteo(false)} />
       </div>
     );
@@ -144,7 +167,7 @@ export default function StockPage() {
           <Input
             placeholder="Buscar insumo..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
           />
         </div>
@@ -167,8 +190,10 @@ export default function StockPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
-              {categorias.map(c => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+              {categorias.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

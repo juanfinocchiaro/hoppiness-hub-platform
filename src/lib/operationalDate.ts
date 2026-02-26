@@ -1,10 +1,10 @@
 /**
  * operationalDate.ts - Utilidad para manejar la Jornada Operativa
- * 
+ *
  * En el negocio de gastronomía, la "jornada operativa" no coincide con el día calendario.
  * El turno de cierre (Noche/Trasnoche) que comienza el sábado termina en las primeras
  * horas del domingo, pero operativamente sigue siendo "el sábado".
- * 
+ *
  * Regla de negocio:
  * - Horas 00:00-04:59 pertenecen a la jornada operativa del DÍA ANTERIOR
  * - A las 00:30 del domingo, el sistema debe mostrar datos del SÁBADO
@@ -52,17 +52,17 @@ export function getOperationalDateString(now: Date = new Date()): string {
 /**
  * Formatea la fecha operativa para mostrar en UI
  * Incluye indicador "(cierre)" si es madrugada
- * 
+ *
  * Ejemplo: "sábado 8 feb (cierre)"
  */
 export function formatOperationalDate(now: Date = new Date()): string {
   const operationalDate = getOperationalDate(now);
-  const formatted = format(operationalDate, "EEEE d MMM", { locale: es });
-  
+  const formatted = format(operationalDate, 'EEEE d MMM', { locale: es });
+
   if (isEarlyMorning(now)) {
     return `${formatted} (cierre)`;
   }
-  
+
   return formatted;
 }
 

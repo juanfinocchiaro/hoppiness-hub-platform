@@ -22,7 +22,7 @@ export function CoachingGeneralSection({
   onScoreChange,
 }: CoachingGeneralSectionProps) {
   const getScore = (competencyId: string) => {
-    return scores.find(s => s.competencyId === competencyId)?.score ?? 0;
+    return scores.find((s) => s.competencyId === competencyId)?.score ?? 0;
   };
 
   // Calcular promedio ponderado
@@ -30,7 +30,7 @@ export function CoachingGeneralSection({
     let totalWeight = 0;
     let weightedSum = 0;
 
-    competencies.forEach(comp => {
+    competencies.forEach((comp) => {
       const score = getScore(comp.id);
       if (score > 0) {
         weightedSum += score * comp.weight;
@@ -41,7 +41,7 @@ export function CoachingGeneralSection({
     return totalWeight > 0 ? (weightedSum / totalWeight).toFixed(2) : null;
   };
 
-  const completedCount = scores.filter(s => s.score > 0).length;
+  const completedCount = scores.filter((s) => s.score > 0).length;
   const averageScore = calculateWeightedAverage();
 
   return (
@@ -70,11 +70,14 @@ export function CoachingGeneralSection({
 
       <Card>
         <CardContent className="p-4 space-y-4">
-          {competencies.map(comp => {
+          {competencies.map((comp) => {
             const currentScore = getScore(comp.id);
-            
+
             return (
-              <div key={comp.id} className="flex items-center justify-between gap-4 py-2 border-b last:border-0">
+              <div
+                key={comp.id}
+                className="flex items-center justify-between gap-4 py-2 border-b last:border-0"
+              >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{comp.name}</span>
@@ -85,12 +88,10 @@ export function CoachingGeneralSection({
                     )}
                   </div>
                   {comp.description && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {comp.description}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{comp.description}</p>
                   )}
                 </div>
-                
+
                 {/* Wrapper con stopPropagation para evitar cierre de Collapsible */}
                 <div onClick={(e) => e.stopPropagation()}>
                   <RadioGroup
@@ -98,19 +99,20 @@ export function CoachingGeneralSection({
                     onValueChange={(value) => onScoreChange(comp.id, parseInt(value))}
                     className="flex gap-1"
                   >
-                    {SCORE_LABELS.map(score => (
+                    {SCORE_LABELS.map((score) => (
                       <div key={score.value}>
-                        <RadioGroupItem 
-                          value={score.value.toString()} 
-                          id={`gen-${comp.id}-${score.value}`} 
-                          className="sr-only" 
+                        <RadioGroupItem
+                          value={score.value.toString()}
+                          id={`gen-${comp.id}-${score.value}`}
+                          className="sr-only"
                         />
                         <Label
                           htmlFor={`gen-${comp.id}-${score.value}`}
                           className={`w-8 h-8 flex items-center justify-center text-xs rounded-md cursor-pointer border transition-all
-                            ${currentScore === score.value 
-                              ? `${score.bgColor} ${score.color} border-current`
-                              : 'bg-muted hover:bg-muted/80 border-transparent'
+                            ${
+                              currentScore === score.value
+                                ? `${score.bgColor} ${score.color} border-current`
+                                : 'bg-muted hover:bg-muted/80 border-transparent'
                             }`}
                         >
                           {score.value}

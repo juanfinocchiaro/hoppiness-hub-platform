@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Check, X, Eye, EyeOff, Loader2, AlertCircle, Fingerprint, KeyRound } from 'lucide-react';
+import { Check, X, Eye, EyeOff, Loader2, AlertCircle, Fingerprint } from 'lucide-react';
 
 interface PinManagementModalProps {
   open: boolean;
@@ -190,8 +196,12 @@ export function PinManagementModal({
               {/* Availability indicator */}
               <div className="w-8 flex justify-center">
                 {checkingPin && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
-                {!checkingPin && pinAvailable === true && <Check className="w-5 h-5 text-green-500" />}
-                {!checkingPin && pinAvailable === false && <X className="w-5 h-5 text-destructive" />}
+                {!checkingPin && pinAvailable === true && (
+                  <Check className="w-5 h-5 text-green-500" />
+                )}
+                {!checkingPin && pinAvailable === false && (
+                  <X className="w-5 h-5 text-destructive" />
+                )}
               </div>
             </div>
 

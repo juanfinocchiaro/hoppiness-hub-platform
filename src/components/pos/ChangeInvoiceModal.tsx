@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import type { PosOrderFactura } from '@/hooks/pos/usePosOrderHistory';
 
@@ -38,7 +46,7 @@ const CONDICIONES_IVA = [
 export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConfirm }: Props) {
   const [loading, setLoading] = useState(false);
   const [tipoFactura, setTipoFactura] = useState<'A' | 'B'>(
-    (facturaOriginal.tipo_comprobante === 'A' ? 'A' : 'B') as 'A' | 'B'
+    (facturaOriginal.tipo_comprobante === 'A' ? 'A' : 'B') as 'A' | 'B',
   );
   const [cuit, setCuit] = useState('');
   const [razonSocial, setRazonSocial] = useState('');
@@ -53,9 +61,11 @@ export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConf
     }
   }, [open, facturaOriginal]);
 
-  const needsCuit = condicionIva === 'IVA Responsable Inscripto' || condicionIva === 'Responsable Monotributo';
+  const needsCuit =
+    condicionIva === 'IVA Responsable Inscripto' || condicionIva === 'Responsable Monotributo';
 
-  const canSubmit = tipoFactura && condicionIva && (!needsCuit || (cuit.length >= 10 && razonSocial));
+  const canSubmit =
+    tipoFactura && condicionIva && (!needsCuit || (cuit.length >= 10 && razonSocial));
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -89,14 +99,17 @@ export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConf
               {facturaOriginal.tipo_comprobante} {pvStr}-{numStr}
             </p>
             <p className="text-xs text-muted-foreground">
-              Se emitirá una Nota de Crédito por esta factura y una nueva factura con los datos corregidos.
+              Se emitirá una Nota de Crédito por esta factura y una nueva factura con los datos
+              corregidos.
             </p>
           </div>
 
           <div className="space-y-2">
             <Label>Tipo de factura</Label>
             <Select value={tipoFactura} onValueChange={(v) => setTipoFactura(v as 'A' | 'B')}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="B">Factura B (CF / Mono / Exento)</SelectItem>
                 <SelectItem value="A">Factura A (Resp. Inscripto)</SelectItem>
@@ -107,10 +120,14 @@ export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConf
           <div className="space-y-2">
             <Label>Condición IVA del receptor</Label>
             <Select value={condicionIva} onValueChange={setCondicionIva}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {CONDICIONES_IVA.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                {CONDICIONES_IVA.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

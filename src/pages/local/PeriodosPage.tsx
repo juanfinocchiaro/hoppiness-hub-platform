@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,7 +29,9 @@ export default function PeriodosPage() {
   const [newPeriodoOpen, setNewPeriodoOpen] = useState(false);
   const [newPeriodo, setNewPeriodo] = useState(getCurrentPeriodo());
 
-  const [actionModal, setActionModal] = useState<{ type: 'cerrar' | 'reabrir'; id: string } | null>(null);
+  const [actionModal, setActionModal] = useState<{ type: 'cerrar' | 'reabrir'; id: string } | null>(
+    null,
+  );
   const [motivo, setMotivo] = useState('');
 
   const handleCreate = async () => {
@@ -69,14 +78,20 @@ export default function PeriodosPage() {
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 5 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !periodos?.length ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-40">
-                  <EmptyState icon={CalendarDays} title="Sin períodos" description="Creá el primer período contable" />
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="Sin períodos"
+                    description="Creá el primer período contable"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -96,11 +111,19 @@ export default function PeriodosPage() {
                   </TableCell>
                   <TableCell>
                     {p.estado === 'abierto' ? (
-                      <Button variant="outline" size="sm" onClick={() => setActionModal({ type: 'cerrar', id: p.id })}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActionModal({ type: 'cerrar', id: p.id })}
+                      >
                         <Lock className="w-4 h-4 mr-1" /> Cerrar
                       </Button>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={() => setActionModal({ type: 'reabrir', id: p.id })}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActionModal({ type: 'reabrir', id: p.id })}
+                      >
                         <Unlock className="w-4 h-4 mr-1" /> Reabrir
                       </Button>
                     )}
@@ -115,25 +138,43 @@ export default function PeriodosPage() {
       {/* New Período Modal */}
       <Dialog open={newPeriodoOpen} onOpenChange={setNewPeriodoOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Nuevo Período</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Nuevo Período</DialogTitle>
+          </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Período (YYYY-MM)</Label>
-              <Input value={newPeriodo} onChange={(e) => setNewPeriodo(e.target.value)} placeholder="2026-02" />
+              <Input
+                value={newPeriodo}
+                onChange={(e) => setNewPeriodo(e.target.value)}
+                placeholder="2026-02"
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setNewPeriodoOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={!newPeriodo || create.isPending}>Crear</Button>
+            <Button variant="outline" onClick={() => setNewPeriodoOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreate} disabled={!newPeriodo || create.isPending}>
+              Crear
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Cerrar/Reabrir Modal */}
-      <Dialog open={!!actionModal} onOpenChange={() => { setActionModal(null); setMotivo(''); }}>
+      <Dialog
+        open={!!actionModal}
+        onOpenChange={() => {
+          setActionModal(null);
+          setMotivo('');
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{actionModal?.type === 'cerrar' ? 'Cerrar Período' : 'Reabrir Período'}</DialogTitle>
+            <DialogTitle>
+              {actionModal?.type === 'cerrar' ? 'Cerrar Período' : 'Reabrir Período'}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -142,11 +183,23 @@ export default function PeriodosPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setActionModal(null); setMotivo(''); }}>Cancelar</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setActionModal(null);
+                setMotivo('');
+              }}
+            >
+              Cancelar
+            </Button>
             <Button
               variant={actionModal?.type === 'cerrar' ? 'destructive' : 'default'}
               onClick={handleAction}
-              disabled={(actionModal?.type === 'reabrir' && !motivo) || cerrar.isPending || reabrir.isPending}
+              disabled={
+                (actionModal?.type === 'reabrir' && !motivo) ||
+                cerrar.isPending ||
+                reabrir.isPending
+              }
             >
               {actionModal?.type === 'cerrar' ? 'Cerrar' : 'Reabrir'}
             </Button>

@@ -5,14 +5,32 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import { Plus, Trash2, Pencil, Copy, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCodigosDescuento, useCodigoDescuentoMutations, type CodigoDescuento, type CodigoDescuentoFormData } from '@/hooks/useCodigosDescuento';
+import {
+  useCodigosDescuento,
+  useCodigoDescuentoMutations,
+  type CodigoDescuento,
+  type CodigoDescuentoFormData,
+} from '@/hooks/useCodigosDescuento';
 
 const EMPTY_FORM: CodigoDescuentoFormData = {
   codigo: '',
@@ -116,22 +134,30 @@ export default function CodigosDescuentoPage() {
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 6 }).map((_, j) => (
-                    <TableCell key={j}><div className="h-5 bg-muted rounded animate-pulse" /></TableCell>
+                    <TableCell key={j}>
+                      <div className="h-5 bg-muted rounded animate-pulse" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !codigos?.length ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-40">
-                  <EmptyState icon={Ticket} title="Sin códigos" description="Creá tu primer código de descuento" />
+                  <EmptyState
+                    icon={Ticket}
+                    title="Sin códigos"
+                    description="Creá tu primer código de descuento"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
-              codigos.map(code => (
+              codigos.map((code) => (
                 <TableRow key={code.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <code className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">{code.codigo}</code>
+                      <code className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
+                        {code.codigo}
+                      </code>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -146,7 +172,9 @@ export default function CodigosDescuentoPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {code.tipo === 'descuento_porcentaje' ? `${code.valor}%` : `$${code.valor.toLocaleString('es-AR')}`}
+                    {code.tipo === 'descuento_porcentaje'
+                      ? `${code.valor}%`
+                      : `$${code.valor.toLocaleString('es-AR')}`}
                   </TableCell>
                   <TableCell>
                     {code.usos_actuales}/{code.usos_maximos ?? '∞'}
@@ -186,7 +214,7 @@ export default function CodigosDescuentoPage() {
               <Label>Código *</Label>
               <Input
                 value={form.codigo}
-                onChange={e => setForm(f => ({ ...f, codigo: e.target.value.toUpperCase() }))}
+                onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value.toUpperCase() }))}
                 placeholder="BIENVENIDO20"
                 className="font-mono"
               />
@@ -195,8 +223,13 @@ export default function CodigosDescuentoPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Tipo</Label>
-                <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v as any }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.tipo}
+                  onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as any }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="descuento_porcentaje">% Descuento</SelectItem>
                     <SelectItem value="descuento_fijo">$ Descuento fijo</SelectItem>
@@ -205,7 +238,11 @@ export default function CodigosDescuentoPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Valor</Label>
-                <Input type="number" value={form.valor} onChange={e => setForm(f => ({ ...f, valor: Number(e.target.value) }))} />
+                <Input
+                  type="number"
+                  value={form.valor}
+                  onChange={(e) => setForm((f) => ({ ...f, valor: Number(e.target.value) }))}
+                />
               </div>
             </div>
 
@@ -215,7 +252,12 @@ export default function CodigosDescuentoPage() {
                 <Input
                   type="number"
                   value={form.usos_maximos ?? ''}
-                  onChange={e => setForm(f => ({ ...f, usos_maximos: e.target.value ? Number(e.target.value) : null }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      usos_maximos: e.target.value ? Number(e.target.value) : null,
+                    }))
+                  }
                   placeholder="Ilimitado"
                 />
               </div>
@@ -224,7 +266,12 @@ export default function CodigosDescuentoPage() {
                 <Input
                   type="number"
                   value={form.monto_minimo_pedido ?? ''}
-                  onChange={e => setForm(f => ({ ...f, monto_minimo_pedido: e.target.value ? Number(e.target.value) : null }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      monto_minimo_pedido: e.target.value ? Number(e.target.value) : null,
+                    }))
+                  }
                   placeholder="Sin mínimo"
                 />
               </div>
@@ -233,20 +280,35 @@ export default function CodigosDescuentoPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Fecha inicio</Label>
-                <Input type="date" value={form.fecha_inicio} onChange={e => setForm(f => ({ ...f, fecha_inicio: e.target.value }))} />
+                <Input
+                  type="date"
+                  value={form.fecha_inicio}
+                  onChange={(e) => setForm((f) => ({ ...f, fecha_inicio: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Fecha fin</Label>
-                <Input type="date" value={form.fecha_fin} onChange={e => setForm(f => ({ ...f, fecha_fin: e.target.value }))} />
+                <Input
+                  type="date"
+                  value={form.fecha_fin}
+                  onChange={(e) => setForm((f) => ({ ...f, fecha_fin: e.target.value }))}
+                />
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <Label>Uso único por usuario</Label>
-              <Switch checked={form.uso_unico_por_usuario} onCheckedChange={v => setForm(f => ({ ...f, uso_unico_por_usuario: v }))} />
+              <Switch
+                checked={form.uso_unico_por_usuario}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, uso_unico_por_usuario: v }))}
+              />
             </div>
 
-            <Button className="w-full" onClick={handleSubmit} disabled={create.isPending || update.isPending}>
+            <Button
+              className="w-full"
+              onClick={handleSubmit}
+              disabled={create.isPending || update.isPending}
+            >
               {editing ? 'Guardar cambios' : 'Crear código'}
             </Button>
           </div>

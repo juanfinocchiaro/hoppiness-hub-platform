@@ -1,14 +1,14 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Home, ArrowLeft } from "lucide-react";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Home, ArrowLeft } from 'lucide-react';
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (import.meta.env.DEV) console.warn("404: Ruta no encontrada:", location.pathname);
+    if (import.meta.env.DEV) console.warn('404: Ruta no encontrada:', location.pathname);
   }, [location.pathname]);
 
   return (
@@ -18,16 +18,14 @@ const NotFound = () => {
           src="/hoppiness-logo.webp"
           alt="Hoppiness"
           className="h-16 w-auto opacity-90"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
         <div className="space-y-2">
           <h1 className="text-7xl font-black font-display text-white/90">404</h1>
-          <p className="text-xl font-brand text-white/80">
-            Esta hamburguesa no existe... todavía
-          </p>
-          <p className="text-sm text-white/50">
-            La página que buscás no se encontró o fue movida.
-          </p>
+          <p className="text-xl font-brand text-white/80">Esta hamburguesa no existe... todavía</p>
+          <p className="text-sm text-white/50">La página que buscás no se encontró o fue movida.</p>
         </div>
         <div className="flex gap-3 pt-2">
           <Button
@@ -38,10 +36,7 @@ const NotFound = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver
           </Button>
-          <Button
-            className="bg-white text-primary hover:bg-white/90"
-            onClick={() => navigate('/')}
-          >
+          <Button className="bg-white text-primary hover:bg-white/90" onClick={() => navigate('/')}>
             <Home className="w-4 h-4 mr-2" />
             Ir al inicio
           </Button>

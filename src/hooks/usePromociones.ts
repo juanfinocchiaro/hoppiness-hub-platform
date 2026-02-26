@@ -60,7 +60,7 @@ export function usePromociones() {
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as Promocion[]).map(p => ({
+      return (data as Promocion[]).map((p) => ({
         ...p,
         canales: p.canales ?? ['webapp', 'salon', 'rappi', 'pedidos_ya'],
       }));
@@ -89,24 +89,33 @@ export function usePromocionItems(promoId: string | undefined) {
         precio_base: d.items_carta?.precio_base ? Number(d.items_carta.precio_base) : undefined,
       })) as PromocionItem[];
 
-      const itemIds = items.map(i => i.id);
+      const itemIds = items.map((i) => i.id);
       if (itemIds.length > 0) {
         const { data: extrasData } = await supabase
           .from('promocion_item_extras' as any)
           .select('promocion_item_id, extra_item_carta_id, cantidad')
           .in('promocion_item_id', itemIds);
         if (extrasData && (extrasData as any[]).length > 0) {
-          const extraCartaIds = [...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id))];
+          const extraCartaIds = [
+            ...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id)),
+          ];
           const { data: extraInfo } = await supabase
             .from('items_carta')
             .select('id, nombre, precio_base')
             .in('id', extraCartaIds);
           const nameMap = new Map((extraInfo || []).map((n: any) => [n.id, n.nombre]));
-          const priceMap = new Map((extraInfo || []).map((n: any) => [n.id, Number(n.precio_base ?? 0)]));
+          const priceMap = new Map(
+            (extraInfo || []).map((n: any) => [n.id, Number(n.precio_base ?? 0)]),
+          );
           const byItem = new Map<string, PromocionItemExtra[]>();
           for (const e of extrasData as any[]) {
             const list = byItem.get(e.promocion_item_id) || [];
-            list.push({ extra_item_carta_id: e.extra_item_carta_id, cantidad: e.cantidad, nombre: nameMap.get(e.extra_item_carta_id) || '', precio: priceMap.get(e.extra_item_carta_id) ?? 0 });
+            list.push({
+              extra_item_carta_id: e.extra_item_carta_id,
+              cantidad: e.cantidad,
+              nombre: nameMap.get(e.extra_item_carta_id) || '',
+              precio: priceMap.get(e.extra_item_carta_id) ?? 0,
+            });
             byItem.set(e.promocion_item_id, list);
           }
           for (const item of items) {
@@ -137,24 +146,26 @@ export function useActivePromos(branchId: string | undefined, canal?: string) {
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const today = now.toISOString().slice(0, 10);
 
-      return (data as unknown as Promocion[]).filter((p) => {
-        const bids = p.branch_ids ?? [];
-        if (bids.length > 0 && (!branchId || !bids.includes(branchId))) return false;
-        const ch = p.canales ?? [];
-        if (canal && ch.length > 0 && !ch.includes(canal)) return false;
-        const dias = p.dias_semana ?? [];
-        if (dias.length > 0 && !dias.includes(currentDay)) return false;
-        const hi = (p.hora_inicio ?? '').slice(0, 5);
-        const hf = (p.hora_fin ?? '').slice(0, 5);
-        if (hi && currentTime < hi) return false;
-        if (hf && hf !== '00:00' && currentTime > hf) return false;
-        if (p.fecha_inicio && today < p.fecha_inicio) return false;
-        if (p.fecha_fin && today > p.fecha_fin) return false;
-        return true;
-      }).map(p => ({
-        ...p,
-        canales: p.canales ?? ['webapp', 'salon', 'rappi', 'pedidos_ya'],
-      }));
+      return (data as unknown as Promocion[])
+        .filter((p) => {
+          const bids = p.branch_ids ?? [];
+          if (bids.length > 0 && (!branchId || !bids.includes(branchId))) return false;
+          const ch = p.canales ?? [];
+          if (canal && ch.length > 0 && !ch.includes(canal)) return false;
+          const dias = p.dias_semana ?? [];
+          if (dias.length > 0 && !dias.includes(currentDay)) return false;
+          const hi = (p.hora_inicio ?? '').slice(0, 5);
+          const hf = (p.hora_fin ?? '').slice(0, 5);
+          if (hi && currentTime < hi) return false;
+          if (hf && hf !== '00:00' && currentTime > hf) return false;
+          if (p.fecha_inicio && today < p.fecha_inicio) return false;
+          if (p.fecha_fin && today > p.fecha_fin) return false;
+          return true;
+        })
+        .map((p) => ({
+          ...p,
+          canales: p.canales ?? ['webapp', 'salon', 'rappi', 'pedidos_ya'],
+        }));
     },
     enabled: !!branchId,
     refetchInterval: 5 * 60 * 1000,
@@ -164,14 +175,14 @@ export function useActivePromos(branchId: string | undefined, canal?: string) {
 /** Get active promo items (with prices + preconfig extras) for a channel + branch */
 export function useActivePromoItems(branchId: string | undefined, canal?: string) {
   const { data: promos = [] } = useActivePromos(branchId, canal);
-  const promoIds = promos.map(p => p.id);
+  const promoIds = promos.map((p) => p.id);
   const payRestrictionByPromoId = useMemo(
-    () => new Map(promos.map(p => [p.id, p.restriccion_pago] as const)),
-    [promos]
+    () => new Map(promos.map((p) => [p.id, p.restriccion_pago] as const)),
+    [promos],
   );
   const promoNameById = useMemo(
-    () => new Map(promos.map(p => [p.id, p.nombre] as const)),
-    [promos]
+    () => new Map(promos.map((p) => [p.id, p.nombre] as const)),
+    [promos],
   );
 
   return useQuery({
@@ -193,13 +204,17 @@ export function useActivePromoItems(branchId: string | undefined, canal?: string
           .in('promocion_item_id', promoItemIds);
 
         if (extrasData && extrasData.length > 0) {
-          const extraItemIds = [...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id))];
+          const extraItemIds = [
+            ...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id)),
+          ];
           const { data: extraInfo } = await supabase
             .from('items_carta')
             .select('id, nombre, precio_base')
             .in('id', extraItemIds);
           const nameMap = new Map((extraInfo || []).map((n: any) => [n.id, n.nombre]));
-          const priceMap = new Map((extraInfo || []).map((n: any) => [n.id, Number(n.precio_base ?? 0)]));
+          const priceMap = new Map(
+            (extraInfo || []).map((n: any) => [n.id, Number(n.precio_base ?? 0)]),
+          );
 
           for (const e of extrasData as any[]) {
             const list = extrasMap.get(e.promocion_item_id) || [];
@@ -245,14 +260,25 @@ export function usePromocionMutations() {
 
   const savePreconfigExtras = async (
     insertedItems: Array<{ id: string; item_carta_id: string }>,
-    sourceItems: Array<{ item_carta_id: string; preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }> }>,
+    sourceItems: Array<{
+      item_carta_id: string;
+      preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }>;
+    }>,
   ) => {
-    const rows: Array<{ promocion_item_id: string; extra_item_carta_id: string; cantidad: number }> = [];
+    const rows: Array<{
+      promocion_item_id: string;
+      extra_item_carta_id: string;
+      cantidad: number;
+    }> = [];
     for (const inserted of insertedItems) {
-      const source = sourceItems.find(s => s.item_carta_id === inserted.item_carta_id);
+      const source = sourceItems.find((s) => s.item_carta_id === inserted.item_carta_id);
       if (source?.preconfigExtras?.length) {
         for (const ex of source.preconfigExtras) {
-          rows.push({ promocion_item_id: inserted.id, extra_item_carta_id: ex.extra_item_carta_id, cantidad: ex.cantidad });
+          rows.push({
+            promocion_item_id: inserted.id,
+            extra_item_carta_id: ex.extra_item_carta_id,
+            cantidad: ex.cantidad,
+          });
         }
       }
     }
@@ -263,9 +289,15 @@ export function usePromocionMutations() {
   };
 
   const create = useMutation({
-    mutationFn: async (data: PromocionFormData & {
-      items?: Array<{ item_carta_id: string; precio_promo: number; preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }> }>;
-    }) => {
+    mutationFn: async (
+      data: PromocionFormData & {
+        items?: Array<{
+          item_carta_id: string;
+          precio_promo: number;
+          preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }>;
+        }>;
+      },
+    ) => {
       const { items, ...promoData } = data;
       const { data: result, error } = await fromUntyped('promociones')
         .insert({ ...promoData, created_by: user?.id })
@@ -276,7 +308,13 @@ export function usePromocionMutations() {
       if (items && items.length > 0) {
         const { data: insertedItems, error: itemsErr } = await supabase
           .from('promocion_items')
-          .insert(items.map(i => ({ item_carta_id: i.item_carta_id, precio_promo: i.precio_promo, promocion_id: result.id })) as any)
+          .insert(
+            items.map((i) => ({
+              item_carta_id: i.item_carta_id,
+              precio_promo: i.precio_promo,
+              promocion_id: result.id,
+            })) as any,
+          )
           .select('id, item_carta_id');
         if (itemsErr) throw itemsErr;
 
@@ -293,10 +331,18 @@ export function usePromocionMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, data, items }: {
+    mutationFn: async ({
+      id,
+      data,
+      items,
+    }: {
       id: string;
       data: Partial<PromocionFormData>;
-      items?: Array<{ item_carta_id: string; precio_promo: number; preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }> }>;
+      items?: Array<{
+        item_carta_id: string;
+        precio_promo: number;
+        preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }>;
+      }>;
     }) => {
       const { error } = await fromUntyped('promociones')
         .update({ ...data, updated_at: new Date().toISOString() })
@@ -308,7 +354,13 @@ export function usePromocionMutations() {
         if (items.length > 0) {
           const { data: insertedItems, error: itemsErr } = await supabase
             .from('promocion_items')
-            .insert(items.map(i => ({ item_carta_id: i.item_carta_id, precio_promo: i.precio_promo, promocion_id: id })) as any)
+            .insert(
+              items.map((i) => ({
+                item_carta_id: i.item_carta_id,
+                precio_promo: i.precio_promo,
+                promocion_id: id,
+              })) as any,
+            )
             .select('id, item_carta_id');
           if (itemsErr) throw itemsErr;
 

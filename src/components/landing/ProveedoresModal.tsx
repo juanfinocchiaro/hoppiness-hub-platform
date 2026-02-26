@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,14 +35,20 @@ export function ProveedoresModal({ open, onOpenChange }: ProveedoresModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.companyName || !formData.contactName || !formData.email || !formData.phone || !formData.category) {
+
+    if (
+      !formData.companyName ||
+      !formData.contactName ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.category
+    ) {
       toast.error('Completá todos los campos obligatorios');
       return;
     }
 
     setLoading(true);
-    
+
     try {
       // Save to contact_messages table (reusing existing infrastructure)
       const { error } = await supabase.from('contact_messages').insert({
@@ -70,7 +82,16 @@ ${formData.message || 'Sin mensaje adicional'}
 
   const handleClose = () => {
     setSuccess(false);
-    setFormData({ companyName: '', contactName: '', email: '', phone: '', category: '', coverageArea: '', website: '', message: '' });
+    setFormData({
+      companyName: '',
+      contactName: '',
+      email: '',
+      phone: '',
+      category: '',
+      coverageArea: '',
+      website: '',
+      message: '',
+    });
     onOpenChange(false);
   };
 
@@ -84,9 +105,7 @@ ${formData.message || 'Sin mensaje adicional'}
             </div>
             <div>
               <DialogTitle>Proveedores</DialogTitle>
-              <DialogDescription>
-                ¿Querés ser proveedor de Hoppiness?
-              </DialogDescription>
+              <DialogDescription>¿Querés ser proveedor de Hoppiness?</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -98,7 +117,8 @@ ${formData.message || 'Sin mensaje adicional'}
             </div>
             <h3 className="text-lg font-semibold">¡Propuesta recibida!</h3>
             <p className="text-muted-foreground text-sm">
-              Nuestro equipo de compras evaluará tu propuesta y se pondrá en contacto si hay interés.
+              Nuestro equipo de compras evaluará tu propuesta y se pondrá en contacto si hay
+              interés.
             </p>
             <Button variant="outline" onClick={handleClose} className="mt-4">
               Cerrar

@@ -1,6 +1,6 @@
 /**
  * ImpersonationSelector - Selector de usuario para "Ver como..."
- * 
+ *
  * Modal con búsqueda de usuarios para que el superadmin seleccione quién impersonar.
  * Filtra usuarios según el contexto:
  * - Modo 'brand': Muestra usuarios con rol de marca (acceso a Mi Marca)
@@ -21,8 +21,8 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search, User, Loader2, Eye, Building2 } from 'lucide-react';
-import { LOCAL_ROLE_LABELS, BRAND_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { Search, User, Loader2, Eye } from 'lucide-react';
+import { LOCAL_ROLE_LABELS, BRAND_ROLE_LABELS } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 
 type ImpersonationMode = 'brand' | 'local';
@@ -47,8 +47,8 @@ interface UserWithRoles {
   local_roles: { role: string; branch_name: string; branch_id: string }[];
 }
 
-export default function ImpersonationSelector({ 
-  open, 
+export default function ImpersonationSelector({
+  open,
   onOpenChange,
   mode = 'brand',
   branchId,
@@ -74,8 +74,8 @@ export default function ImpersonationSelector({
           .select('user_id')
           .not('brand_role', 'is', null)
           .eq('is_active', true);
-        
-        eligibleUserIds = brandUsers?.map(u => u.user_id) || [];
+
+        eligibleUserIds = brandUsers?.map((u) => u.user_id) || [];
       } else {
         // Get users with access to this specific branch
         const { data: branchUsers } = await supabase
@@ -83,7 +83,7 @@ export default function ImpersonationSelector({
           .select('user_id')
           .eq('branch_id', branchId!)
           .eq('is_active', true);
-        
+
         // Also include superadmins (they have access to all branches)
         const { data: superadmins } = await supabase
           .from('user_roles_v2')
@@ -91,8 +91,8 @@ export default function ImpersonationSelector({
           .eq('brand_role', 'superadmin')
           .eq('is_active', true);
 
-        const branchUserIds = branchUsers?.map(u => u.user_id) || [];
-        const superadminIds = superadmins?.map(u => u.user_id) || [];
+        const branchUserIds = branchUsers?.map((u) => u.user_id) || [];
+        const superadminIds = superadmins?.map((u) => u.user_id) || [];
         eligibleUserIds = [...new Set([...branchUserIds, ...superadminIds])];
       }
 
@@ -115,7 +115,7 @@ export default function ImpersonationSelector({
       if (error) throw error;
       if (!profiles || profiles.length === 0) return [];
 
-      const userIds = profiles.map(p => p.id);
+      const userIds = profiles.map((p) => p.id);
 
       // STEP 3: Fetch roles for display
       const { data: brandRoles } = await supabase
@@ -131,15 +131,16 @@ export default function ImpersonationSelector({
         .eq('is_active', true);
 
       // Combine data
-      const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const brandRole = brandRoles?.find(r => r.user_id === profile.id);
-        const localRoles = branchRoles
-          ?.filter(r => r.user_id === profile.id)
-          .map(r => ({
-            role: r.local_role,
-            branch_name: (r.branches as { name: string })?.name || 'Desconocido',
-            branch_id: r.branch_id,
-          })) || [];
+      const usersWithRoles: UserWithRoles[] = profiles.map((profile) => {
+        const brandRole = brandRoles?.find((r) => r.user_id === profile.id);
+        const localRoles =
+          branchRoles
+            ?.filter((r) => r.user_id === profile.id)
+            .map((r) => ({
+              role: r.local_role,
+              branch_name: (r.branches as { name: string })?.name || 'Desconocido',
+              branch_id: r.branch_id,
+            })) || [];
 
         return {
           id: profile.id,
@@ -179,21 +180,22 @@ export default function ImpersonationSelector({
       badges.push(
         <Badge key="brand" variant="default" className="bg-primary/80">
           {BRAND_ROLE_LABELS[user.brand_role] || user.brand_role}
-        </Badge>
+        </Badge>,
       );
     }
 
     // Local roles - filter by current branch if in local mode
-    const relevantLocalRoles = mode === 'local' && branchId
-      ? user.local_roles.filter(lr => lr.branch_id === branchId)
-      : user.local_roles;
+    const relevantLocalRoles =
+      mode === 'local' && branchId
+        ? user.local_roles.filter((lr) => lr.branch_id === branchId)
+        : user.local_roles;
 
     relevantLocalRoles.slice(0, 2).forEach((lr, idx) => {
       badges.push(
         <Badge key={`local-${idx}`} variant="secondary" className="text-xs">
           {LOCAL_ROLE_LABELS[lr.role] || lr.role}
           {mode === 'brand' && ` - ${lr.branch_name}`}
-        </Badge>
+        </Badge>,
       );
     });
 
@@ -201,7 +203,7 @@ export default function ImpersonationSelector({
       badges.push(
         <Badge key="more" variant="outline" className="text-xs">
           +{relevantLocalRoles.length - 2} más
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -209,7 +211,7 @@ export default function ImpersonationSelector({
       badges.push(
         <Badge key="none" variant="outline" className="text-muted-foreground">
           Sin rol
-        </Badge>
+        </Badge>,
       );
     }
 
@@ -238,9 +240,7 @@ export default function ImpersonationSelector({
             <Eye className="w-5 h-5" />
             {getTitle()}
           </DialogTitle>
-          <DialogDescription>
-            {getDescription()}
-          </DialogDescription>
+          <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -264,7 +264,9 @@ export default function ImpersonationSelector({
               </div>
             ) : users.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {search ? 'No se encontraron usuarios' : 'No hay usuarios con acceso a esta sección'}
+                {search
+                  ? 'No se encontraron usuarios'
+                  : 'No hay usuarios con acceso a esta sección'}
               </div>
             ) : (
               <div className="space-y-2">
@@ -290,9 +292,7 @@ export default function ImpersonationSelector({
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {getRoleBadges(user)}
-                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1.5">{getRoleBadges(user)}</div>
                       </div>
                     </div>
                   </button>

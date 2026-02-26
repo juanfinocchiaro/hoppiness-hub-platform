@@ -4,9 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
 import { toast } from 'sonner';
-import { format, addDays, subDays } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Loader2, Send, CalendarOff, RefreshCw, HelpCircle, FileWarning, Upload, X } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  Loader2,
+  Send,
+  CalendarOff,
+  RefreshCw,
+  HelpCircle,
+  FileWarning,
+  Upload,
+  X,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +31,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 type RequestType = 'day_off' | 'shift_change' | 'absence_justification' | 'other';
@@ -38,7 +54,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
   const { branchRoles } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [open, setOpen] = useState(false);
   const [requestType, setRequestType] = useState<RequestType>('day_off');
   const [absenceType, setAbsenceType] = useState<AbsenceType>('medical');
@@ -55,18 +71,16 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
     const filePath = `absence-evidence/${fileName}`;
 
-    const { error } = await supabase.storage
-      .from('staff-documents')
-      .upload(filePath, file);
+    const { error } = await supabase.storage.from('staff-documents').upload(filePath, file);
 
     if (error) {
       if (import.meta.env.DEV) console.error('Error uploading evidence:', error);
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('staff-documents')
-      .getPublicUrl(filePath);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('staff-documents').getPublicUrl(filePath);
 
     return publicUrl;
   };
@@ -78,25 +92,23 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
       }
 
       let evidenceUrl: string | null = null;
-      
+
       if (evidenceFile && requestType === 'absence_justification') {
         setUploading(true);
         evidenceUrl = await uploadEvidence(evidenceFile);
         setUploading(false);
       }
 
-      const { error } = await supabase
-        .from('schedule_requests')
-        .insert({
-          user_id: userId,
-          branch_id: targetBranchId,
-          request_type: requestType,
-          request_date: format(selectedDate, 'yyyy-MM-dd'),
-          reason: reason || null,
-          status: 'pending',
-          evidence_url: evidenceUrl,
-          absence_type: requestType === 'absence_justification' ? absenceType : null,
-        });
+      const { error } = await supabase.from('schedule_requests').insert({
+        user_id: userId,
+        branch_id: targetBranchId,
+        request_type: requestType,
+        request_date: format(selectedDate, 'yyyy-MM-dd'),
+        reason: reason || null,
+        status: 'pending',
+        evidence_url: evidenceUrl,
+        absence_type: requestType === 'absence_justification' ? absenceType : null,
+      });
 
       if (error) throw error;
     },
@@ -134,7 +146,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedDate) {
       toast.error('Seleccioná una fecha');
       return;
@@ -161,30 +173,29 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
 
   const getRequestTypeIcon = (type: RequestType) => {
     switch (type) {
-      case 'day_off': return CalendarOff;
-      case 'shift_change': return RefreshCw;
-      case 'absence_justification': return FileWarning;
-      default: return HelpCircle;
+      case 'day_off':
+        return CalendarOff;
+      case 'shift_change':
+        return RefreshCw;
+      case 'absence_justification':
+        return FileWarning;
+      default:
+        return HelpCircle;
     }
   };
 
   const getRequestTypeLabel = (type: RequestType) => {
     switch (type) {
-      case 'day_off': return 'Día libre';
-      case 'shift_change': return 'Cambio turno';
-      case 'absence_justification': return 'Justificar';
-      case 'other': return 'Otro';
-      default: return type;
-    }
-  };
-
-  const getAbsenceTypeLabel = (type: AbsenceType) => {
-    switch (type) {
-      case 'medical': return 'Médico (enfermedad)';
-      case 'personal': return 'Motivo personal';
-      case 'emergency': return 'Emergencia familiar';
-      case 'other': return 'Otro';
-      default: return type;
+      case 'day_off':
+        return 'Día libre';
+      case 'shift_change':
+        return 'Cambio turno';
+      case 'absence_justification':
+        return 'Justificar';
+      case 'other':
+        return 'Otro';
+      default:
+        return type;
     }
   };
 
@@ -198,7 +209,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
           </Button>
         )}
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Solicitar día libre / cambio</DialogTitle>
@@ -216,30 +227,28 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
               onValueChange={(v) => setRequestType(v as RequestType)}
               className="grid grid-cols-2 sm:grid-cols-4 gap-2"
             >
-              {(['day_off', 'shift_change', 'absence_justification', 'other'] as const).map((type) => {
-                const Icon = getRequestTypeIcon(type);
-                return (
-                  <div key={type}>
-                    <RadioGroupItem
-                      value={type}
-                      id={type}
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor={type}
-                      className={cn(
-                        "flex flex-col items-center justify-center rounded-lg border-2 p-3 cursor-pointer transition-all",
-                        "hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                      )}
-                    >
-                      <Icon className="w-5 h-5 mb-1" />
-                      <span className="text-xs text-center font-medium">
-                        {getRequestTypeLabel(type)}
-                      </span>
-                    </Label>
-                  </div>
-                );
-              })}
+              {(['day_off', 'shift_change', 'absence_justification', 'other'] as const).map(
+                (type) => {
+                  const Icon = getRequestTypeIcon(type);
+                  return (
+                    <div key={type}>
+                      <RadioGroupItem value={type} id={type} className="peer sr-only" />
+                      <Label
+                        htmlFor={type}
+                        className={cn(
+                          'flex flex-col items-center justify-center rounded-lg border-2 p-3 cursor-pointer transition-all',
+                          'hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5',
+                        )}
+                      >
+                        <Icon className="w-5 h-5 mb-1" />
+                        <span className="text-xs text-center font-medium">
+                          {getRequestTypeLabel(type)}
+                        </span>
+                      </Label>
+                    </div>
+                  );
+                },
+              )}
             </RadioGroup>
           </div>
 
@@ -263,24 +272,20 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
 
           {/* Date Picker */}
           <div className="space-y-2">
-            <Label>
-              {requestType === 'absence_justification' ? 'Fecha de la falta' : 'Fecha'}
-            </Label>
+            <Label>{requestType === 'absence_justification' ? 'Fecha de la falta' : 'Fecha'}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
+                    'w-full justify-start text-left font-normal',
+                    !selectedDate && 'text-muted-foreground',
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? (
-                    format(selectedDate, "EEEE d 'de' MMMM, yyyy", { locale: es })
-                  ) : (
-                    "Seleccionar fecha..."
-                  )}
+                  {selectedDate
+                    ? format(selectedDate, "EEEE d 'de' MMMM, yyyy", { locale: es })
+                    : 'Seleccionar fecha...'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -288,10 +293,11 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
                   mode="single"
                   selected={selectedDate}
                   onSelect={setSelectedDate}
-                  disabled={(date) => 
-                    requestType === 'absence_justification'
-                      ? date > new Date() // Past dates only for justification
-                      : date < addDays(new Date(), 1) // Future dates for requests
+                  disabled={
+                    (date) =>
+                      requestType === 'absence_justification'
+                        ? date > new Date() // Past dates only for justification
+                        : date < addDays(new Date(), 1) // Future dates for requests
                   }
                   initialFocus
                   className="pointer-events-auto"
@@ -299,9 +305,7 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
               </PopoverContent>
             </Popover>
             {requestType === 'absence_justification' && (
-              <p className="text-xs text-muted-foreground">
-                Seleccioná el día que faltaste
-              </p>
+              <p className="text-xs text-muted-foreground">Seleccioná el día que faltaste</p>
             )}
           </div>
 
@@ -381,12 +385,14 @@ export default function RequestDayOffModal({ branchId, trigger }: RequestDayOffM
               className="flex-1"
               disabled={createRequest.isPending || uploading || !selectedDate}
             >
-              {(createRequest.isPending || uploading) ? (
+              {createRequest.isPending || uploading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Send className="w-4 h-4 mr-2" />
               )}
-              {requestType === 'absence_justification' ? 'Enviar justificativo' : 'Enviar solicitud'}
+              {requestType === 'absence_justification'
+                ? 'Enviar justificativo'
+                : 'Enviar solicitud'}
             </Button>
           </div>
         </form>

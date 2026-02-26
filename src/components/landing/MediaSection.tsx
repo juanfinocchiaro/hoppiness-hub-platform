@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Quote, Newspaper, Building2, Trophy, ExternalLink } from 'lucide-react';
+import { Quote, Newspaper, Building2, Trophy } from 'lucide-react';
 
 // Bloque 1: Medios de negocios
 const businessMedia = [
@@ -20,7 +20,12 @@ const businessMedia = [
 
 // Bloque 2: Timeline Semana Hamburguesa
 const timelineEvents = [
-  { year: '2021', title: 'Sponsor oficial', subtitle: 'Anfitriones del lanzamiento', isAward: false },
+  {
+    year: '2021',
+    title: 'Sponsor oficial',
+    subtitle: 'Anfitriones del lanzamiento',
+    isAward: false,
+  },
   { year: '2022', title: 'Campeones', subtitle: 'Mejor Clásica', isAward: true },
   { year: '2024', title: 'Doble campeones', subtitle: 'Mejor Clásica + Gourmet', isAward: true },
   { year: '2024', title: 'Mejor Hamburguesería', subtitle: 'de Córdoba', isAward: true },
@@ -63,9 +68,7 @@ export function MediaSection() {
                   </div>
                   <div className="relative mb-3">
                     <Quote className="w-6 h-6 text-accent/30 absolute -top-1 -left-1" />
-                    <p className="text-muted-foreground italic pl-5">
-                      "{item.quote}"
-                    </p>
+                    <p className="text-muted-foreground italic pl-5">"{item.quote}"</p>
                   </div>
                   <p className="text-sm text-muted-foreground">{item.context}</p>
                 </CardContent>
@@ -88,15 +91,17 @@ export function MediaSection() {
           <div className="relative mb-8">
             {/* Línea conectora */}
             <div className="absolute top-8 left-0 right-0 h-0.5 bg-primary/20 hidden md:block" />
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {timelineEvents.map((event, i) => (
                 <div key={i} className="text-center relative">
-                  <div className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center ${
-                    event.isAward 
-                      ? 'bg-accent text-accent-foreground' 
-                      : 'bg-primary/10 text-primary'
-                  }`}>
+                  <div
+                    className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center ${
+                      event.isAward
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-primary/10 text-primary'
+                    }`}
+                  >
                     {event.isAward ? (
                       <Trophy className="w-6 h-6" />
                     ) : (
@@ -113,7 +118,9 @@ export function MediaSection() {
 
           {/* Medios que cubren */}
           <div className="border-t pt-6">
-            <p className="text-sm text-muted-foreground mb-3">Medios que cubren nuestra participación:</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              Medios que cubren nuestra participación:
+            </p>
             <div className="flex flex-wrap gap-2">
               {coveringMedia.map((media, i) => (
                 <Badge key={i} variant="outline" className="text-xs">
@@ -134,12 +141,16 @@ export function MediaSection() {
             Nuestros locales, publicados en el mundo
           </h3>
           <p className="text-muted-foreground mb-6">
-            El diseño de Hoppiness fue creado por Estudio Montevideo y publicado en revistas de arquitectura internacionales
+            El diseño de Hoppiness fue creado por Estudio Montevideo y publicado en revistas de
+            arquitectura internacionales
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {designMedia.map((media, i) => (
-              <Card key={i} className="shadow-card text-center hover:shadow-elevated transition-all">
+              <Card
+                key={i}
+                className="shadow-card text-center hover:shadow-elevated transition-all"
+              >
                 <CardContent className="p-4">
                   <span className="text-3xl mb-2 block">{media.flag}</span>
                   <p className="font-bold">{media.name}</p>
@@ -164,7 +175,8 @@ export function MediaSection() {
 
         {/* Mensaje final */}
         <p className="text-center text-muted-foreground mt-12 text-sm max-w-xl mx-auto">
-          Cuando abrís una franquicia Hoppiness, no abrís un local. Abrís un caso de estudio que revistas internacionales publican.
+          Cuando abrís una franquicia Hoppiness, no abrís un local. Abrís un caso de estudio que
+          revistas internacionales publican.
         </p>
       </div>
     </section>

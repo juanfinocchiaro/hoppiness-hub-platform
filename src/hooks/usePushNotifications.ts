@@ -16,7 +16,7 @@ interface UsePushNotificationsResult {
  * Hook to manage push notification subscription.
  * Handles permission request, SW subscription, and persisting the
  * subscription endpoint to the database for server-side delivery.
- * 
+ *
  * Requires:
  * - A `push_subscriptions` table in Supabase (user_id, endpoint, keys, created_at)
  * - VITE_VAPID_PUBLIC_KEY env var with the VAPID public key
@@ -33,10 +33,12 @@ export function usePushNotifications(): UsePushNotificationsResult {
     }
     setPermission(Notification.permission as PushPermission);
 
-    navigator.serviceWorker.ready.then(async (reg) => {
-      const sub = await (reg as any).pushManager.getSubscription();
-      setIsSubscribed(!!sub);
-    }).catch(() => {});
+    navigator.serviceWorker.ready
+      .then(async (reg) => {
+        const sub = await (reg as any).pushManager.getSubscription();
+        setIsSubscribed(!!sub);
+      })
+      .catch(() => {});
   }, []);
 
   const saveMutation = useMutation({
@@ -45,16 +47,14 @@ export function usePushNotifications(): UsePushNotificationsResult {
 
       const subJson = subscription.toJSON();
 
-      const { error } = await supabase
-        .from('push_subscriptions' as any)
-        .upsert(
-          {
-            user_id: user.id,
-            endpoint: subJson.endpoint,
-            keys: subJson.keys,
-          },
-          { onConflict: 'user_id,endpoint' }
-        );
+      const { error } = await supabase.from('push_subscriptions' as any).upsert(
+        {
+          user_id: user.id,
+          endpoint: subJson.endpoint,
+          keys: subJson.keys,
+        },
+        { onConflict: 'user_id,endpoint' },
+      );
       if (error) throw error;
     },
   });

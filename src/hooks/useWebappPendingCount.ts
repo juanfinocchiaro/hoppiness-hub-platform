@@ -80,8 +80,10 @@ export function useWebappPendingCount({ branchId, enabled = true }: UseWebappPen
           filter: `branch_id=eq.${branchId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: [...WEBAPP_PENDING_COUNT_QUERY_KEY, branchId] });
-        }
+          queryClient.invalidateQueries({
+            queryKey: [...WEBAPP_PENDING_COUNT_QUERY_KEY, branchId],
+          });
+        },
       )
       .subscribe();
 

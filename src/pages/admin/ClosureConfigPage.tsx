@@ -1,6 +1,6 @@
 /**
  * ClosureConfigPage - Configuración de Cierre de Turno desde Mi Marca
- * 
+ *
  * Permite gestionar:
  * - Categorías de hamburguesas
  * - Tipos individuales (veggies, ultrasmash)
@@ -44,7 +44,7 @@ function ClosureConfigPageContent() {
         .from('brand_closure_config')
         .select('*')
         .order('orden');
-      
+
       if (error) throw error;
       return (data || []) as ClosureConfigItem[];
     },
@@ -57,7 +57,7 @@ function ClosureConfigPageContent() {
         .from('brand_closure_config')
         .update({ activo, updated_at: new Date().toISOString() })
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -71,26 +71,37 @@ function ClosureConfigPageContent() {
 
   // Add new item
   const addMutation = useMutation({
-    mutationFn: async ({ tipo, etiqueta, categoriaPadre }: { tipo: ConfigTipo; etiqueta: string; categoriaPadre?: string }) => {
-      const clave = etiqueta.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      const maxOrden = configItems?.filter(i => i.tipo === tipo).reduce((max, i) => Math.max(max, i.orden), 0) || 0;
-      
-      const { error } = await supabase
-        .from('brand_closure_config')
-        .insert({
-          tipo,
-          clave,
-          etiqueta,
-          categoria_padre: categoriaPadre,
-          orden: maxOrden + 1,
-          activo: true,
-        });
-      
+    mutationFn: async ({
+      tipo,
+      etiqueta,
+      categoriaPadre,
+    }: {
+      tipo: ConfigTipo;
+      etiqueta: string;
+      categoriaPadre?: string;
+    }) => {
+      const clave = etiqueta
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+      const maxOrden =
+        configItems?.filter((i) => i.tipo === tipo).reduce((max, i) => Math.max(max, i.orden), 0) ||
+        0;
+
+      const { error } = await supabase.from('brand_closure_config').insert({
+        tipo,
+        clave,
+        etiqueta,
+        categoria_padre: categoriaPadre,
+        orden: maxOrden + 1,
+        activo: true,
+      });
+
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['brand-closure-config'] });
-      setNewItemLabel(prev => ({ ...prev, [variables.tipo]: '' }));
+      setNewItemLabel((prev) => ({ ...prev, [variables.tipo]: '' }));
       toast.success('Elemento agregado');
     },
     onError: (err: Error) => {
@@ -101,11 +112,8 @@ function ClosureConfigPageContent() {
   // Delete item
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('brand_closure_config')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('brand_closure_config').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -122,26 +130,28 @@ function ClosureConfigPageContent() {
     {
       tipo: 'categoria_hamburguesa',
       titulo: 'Categorías de Hamburguesas',
-      descripcion: 'Categorías principales que se muestran en el formulario de cierre (Clásicas, Originales, etc.)',
-      items: configItems?.filter(i => i.tipo === 'categoria_hamburguesa') || [],
+      descripcion:
+        'Categorías principales que se muestran en el formulario de cierre (Clásicas, Originales, etc.)',
+      items: configItems?.filter((i) => i.tipo === 'categoria_hamburguesa') || [],
     },
     {
       tipo: 'tipo_hamburguesa',
       titulo: 'Tipos Específicos',
-      descripcion: 'Hamburguesas individuales dentro de categorías (Veggies → Not American, Ultrasmash → Ultra Cheese)',
-      items: configItems?.filter(i => i.tipo === 'tipo_hamburguesa') || [],
+      descripcion:
+        'Hamburguesas individuales dentro de categorías (Veggies → Not American, Ultrasmash → Ultra Cheese)',
+      items: configItems?.filter((i) => i.tipo === 'tipo_hamburguesa') || [],
     },
     {
       tipo: 'extra',
       titulo: 'Extras',
       descripcion: 'Extras que se suman a la venta (Extra Carne, Extra Not Burger, etc.)',
-      items: configItems?.filter(i => i.tipo === 'extra') || [],
+      items: configItems?.filter((i) => i.tipo === 'extra') || [],
     },
     {
       tipo: 'app_delivery',
       titulo: 'Apps de Delivery',
       descripcion: 'Aplicaciones de delivery disponibles para registrar ventas',
-      items: configItems?.filter(i => i.tipo === 'app_delivery') || [],
+      items: configItems?.filter((i) => i.tipo === 'app_delivery') || [],
     },
   ];
 
@@ -155,7 +165,10 @@ function ClosureConfigPageContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Configuración de Cierre de Turno" subtitle="Define las categorías de hamburguesas, extras y apps de delivery que aparecen en el formulario de cierre." />
+      <PageHeader
+        title="Configuración de Cierre de Turno"
+        subtitle="Define las categorías de hamburguesas, extras y apps de delivery que aparecen en el formulario de cierre."
+      />
 
       {groups.map((group) => (
         <Card key={group.tipo}>
@@ -183,13 +196,18 @@ function ClosureConfigPageContent() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor={`active-${item.id}`} className="text-sm text-muted-foreground">
+                      <Label
+                        htmlFor={`active-${item.id}`}
+                        className="text-sm text-muted-foreground"
+                      >
                         Activo
                       </Label>
                       <Switch
                         id={`active-${item.id}`}
                         checked={item.activo}
-                        onCheckedChange={(checked) => toggleMutation.mutate({ id: item.id, activo: checked })}
+                        onCheckedChange={(checked) =>
+                          toggleMutation.mutate({ id: item.id, activo: checked })
+                        }
                       />
                     </div>
                     <Button
@@ -203,7 +221,7 @@ function ClosureConfigPageContent() {
                   </div>
                 </div>
               ))}
-              
+
               {group.items.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   No hay elementos configurados
@@ -221,7 +239,9 @@ function ClosureConfigPageContent() {
                   id={`new-${group.tipo}`}
                   placeholder="Nombre del elemento..."
                   value={newItemLabel[group.tipo] || ''}
-                  onChange={(e) => setNewItemLabel(prev => ({ ...prev, [group.tipo]: e.target.value }))}
+                  onChange={(e) =>
+                    setNewItemLabel((prev) => ({ ...prev, [group.tipo]: e.target.value }))
+                  }
                 />
               </div>
               <Button
@@ -256,4 +276,3 @@ export default function ClosureConfigPage() {
     </RequireBrandPermission>
   );
 }
-

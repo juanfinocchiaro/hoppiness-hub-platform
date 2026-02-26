@@ -3,11 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Link } from 'react-router-dom';
 import { MapPin, Clock, CalendarClock, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,9 +34,15 @@ interface BranchPublic {
 
 const DAYS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-function formatTimeSimple(time: string) { return time; }
+function formatTimeSimple(time: string) {
+  return time;
+}
 
-function getHoursForDay(publicHours: PublicHours | null, openingTime?: string | null, closingTime?: string | null) {
+function getHoursForDay(
+  publicHours: PublicHours | null,
+  openingTime?: string | null,
+  closingTime?: string | null,
+) {
   const today = new Date().getDay().toString();
   if (publicHours && publicHours[today]) {
     const dayHours = publicHours[today];
@@ -48,7 +50,10 @@ function getHoursForDay(publicHours: PublicHours | null, openingTime?: string | 
     return `${dayHours.opens}-${dayHours.closes}`;
   }
   if (openingTime && closingTime) {
-    const fmt = (t: string) => { const [h, m] = t.split(':'); return m === '00' ? h : `${h}:${m}`; };
+    const fmt = (t: string) => {
+      const [h, m] = t.split(':');
+      return m === '00' ? h : `${h}:${m}`;
+    };
     return `${fmt(openingTime)}-${fmt(closingTime)}`;
   }
   return 'Consultar';
@@ -82,8 +87,7 @@ function HoursPopover({ branch }: { branch: BranchPublic }) {
                     ? 'Cerrado'
                     : dayHours
                       ? `${formatTimeSimple(dayHours.opens)}-${formatTimeSimple(dayHours.closes)}`
-                      : getHoursForDay(null, branch.opening_time, branch.closing_time)
-                  }
+                      : getHoursForDay(null, branch.opening_time, branch.closing_time)}
                 </span>
               </div>
             );
@@ -107,17 +111,19 @@ export function LocationsSection() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, opening_time, closing_time, public_status, public_hours, latitude, longitude')
+        .select(
+          'id, name, address, city, opening_time, closing_time, public_status, public_hours, latitude, longitude',
+        )
         .order('name');
-      
+
       if (error) throw error;
       return (data || []) as unknown as BranchPublic[];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const activeBranches = branches?.filter(b => b.public_status === 'active') || [];
-  const comingSoonBranches = branches?.filter(b => b.public_status === 'coming_soon') || [];
+  const activeBranches = branches?.filter((b) => b.public_status === 'active') || [];
+  const comingSoonBranches = branches?.filter((b) => b.public_status === 'coming_soon') || [];
 
   const totalCount = (activeBranches?.length || 0) + (comingSoonBranches?.length || 0);
 
@@ -152,7 +158,10 @@ export function LocationsSection() {
           ) : (
             <>
               {activeBranches.map((branch) => (
-                <Card key={branch.id} className="overflow-hidden hover:border-primary/50 transition-colors group">
+                <Card
+                  key={branch.id}
+                  className="overflow-hidden hover:border-primary/50 transition-colors group"
+                >
                   {branch.latitude != null && branch.longitude != null && (
                     <StaticBranchMap
                       latitude={branch.latitude}
@@ -188,7 +197,10 @@ export function LocationsSection() {
               ))}
 
               {comingSoonBranches.map((branch) => (
-                <Card key={branch.id} className="border-dashed border-accent/50 bg-accent/5 relative overflow-hidden">
+                <Card
+                  key={branch.id}
+                  className="border-dashed border-accent/50 bg-accent/5 relative overflow-hidden"
+                >
                   {branch.latitude != null && branch.longitude != null && (
                     <StaticBranchMap
                       latitude={branch.latitude}
@@ -199,10 +211,11 @@ export function LocationsSection() {
                   )}
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-lg">
-                        {branch.name}
-                      </h3>
-                      <Badge variant="secondary" className="bg-accent/20 text-accent-foreground border-accent/30 gap-1">
+                      <h3 className="font-bold text-lg">{branch.name}</h3>
+                      <Badge
+                        variant="secondary"
+                        className="bg-accent/20 text-accent-foreground border-accent/30 gap-1"
+                      >
                         <CalendarClock className="w-3 h-3" />
                         Próximamente
                       </Badge>

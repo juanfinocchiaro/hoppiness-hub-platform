@@ -26,8 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar, Clock, Users, Send, Building2, AlertTriangle } from 'lucide-react';
-import { useConveneMeeting, useNetworkMembers, useCheckMeetingConflicts, type MeetingConflict } from '@/hooks/useMeetings';
+import { Clock, Users, Send, Building2, AlertTriangle } from 'lucide-react';
+import {
+  useConveneMeeting,
+  useNetworkMembers,
+  useCheckMeetingConflicts,
+  type MeetingConflict,
+} from '@/hooks/useMeetings';
 import { MEETING_AREAS, type MeetingArea, type MeetingConveneData } from '@/types/meeting';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
@@ -56,7 +61,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [conflicts, setConflicts] = useState<MeetingConflict[]>([]);
   const [checkingConflicts, setCheckingConflicts] = useState(false);
-  
+
   const conveneMeeting = useConveneMeeting();
   const checkConflicts = useCheckMeetingConflicts();
   const { data: networkMembers = [], isLoading: loadingMembers } = useNetworkMembers();
@@ -67,7 +72,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
       setConflicts([]);
       return;
     }
-    
+
     const checkForConflicts = async () => {
       setCheckingConflicts(true);
       try {
@@ -83,7 +88,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
         setCheckingConflicts(false);
       }
     };
-    
+
     // Debounce the check
     const timeout = setTimeout(checkForConflicts, 500);
     return () => clearTimeout(timeout);
@@ -92,7 +97,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
   // Get unique branches for filter
   const branches = useMemo(() => {
     const branchMap = new Map<string, string>();
-    networkMembers.forEach(m => {
+    networkMembers.forEach((m) => {
       if (m.branch_id && m.branch_name) {
         branchMap.set(m.branch_id, m.branch_name);
       }
@@ -103,31 +108,31 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
   // Get unique user IDs (a user can appear in multiple branches)
   const filteredMembers = useMemo(() => {
     let members = networkMembers;
-    
+
     if (roleFilter !== 'all') {
-      members = members.filter(m => m.local_role === roleFilter);
+      members = members.filter((m) => m.local_role === roleFilter);
     }
-    
+
     if (branchFilter !== 'all') {
-      members = members.filter(m => m.branch_id === branchFilter);
+      members = members.filter((m) => m.branch_id === branchFilter);
     }
-    
+
     // Group by user to show each user once with their branches
-    const userMap = new Map<string, typeof networkMembers[0] & { branches: string[] }>();
-    members.forEach(m => {
+    const userMap = new Map<string, (typeof networkMembers)[0] & { branches: string[] }>();
+    members.forEach((m) => {
       const existing = userMap.get(m.id);
       if (existing) {
         if (m.branch_name && !existing.branches.includes(m.branch_name)) {
           existing.branches.push(m.branch_name);
         }
       } else {
-        userMap.set(m.id, { 
-          ...m, 
-          branches: m.branch_name ? [m.branch_name] : [] 
+        userMap.set(m.id, {
+          ...m,
+          branches: m.branch_name ? [m.branch_name] : [],
         });
       }
     });
-    
+
     return Array.from(userMap.values());
   }, [networkMembers, roleFilter, branchFilter]);
 
@@ -144,21 +149,19 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
   };
 
   const toggleMember = (userId: string) => {
-    setSelectedIds(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    setSelectedIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
   const selectAll = () => {
-    const visibleIds = filteredMembers.map(m => m.id);
-    const allSelected = visibleIds.every(id => selectedIds.includes(id));
-    
+    const visibleIds = filteredMembers.map((m) => m.id);
+    const allSelected = visibleIds.every((id) => selectedIds.includes(id));
+
     if (allSelected) {
-      setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
     } else {
-      setSelectedIds(prev => [...new Set([...prev, ...visibleIds])]);
+      setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])]);
     }
   };
 
@@ -166,7 +169,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    
+
     try {
       const data: MeetingConveneData = {
         title: title.trim(),
@@ -176,7 +179,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
         participantIds: selectedIds,
         branchId: null, // Network meeting - no specific branch
       };
-      
+
       await conveneMeeting.mutateAsync(data);
       toast.success('Reunión de red convocada exitosamente');
       handleClose();
@@ -211,12 +214,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="date">Fecha</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
+              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="time">Hora</Label>
@@ -241,7 +239,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MEETING_AREAS.map(a => (
+                {MEETING_AREAS.map((a) => (
                   <SelectItem key={a.value} value={a.value}>
                     {a.label}
                   </SelectItem>
@@ -256,7 +254,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
               <Users className="w-4 h-4" />
               Participantes ({selectedIds.length} seleccionados)
             </Label>
-            
+
             <div className="flex gap-2">
               <Select value={branchFilter} onValueChange={setBranchFilter}>
                 <SelectTrigger className="flex-1">
@@ -264,14 +262,14 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las sucursales</SelectItem>
-                  {branches.map(b => (
+                  {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Rol" />
@@ -286,25 +284,20 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
               </Select>
             </div>
           </div>
-          
+
           {/* Lista de participantes */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 {filteredMembers.length} personas disponibles
               </span>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm"
-                onClick={selectAll}
-              >
-                {filteredMembers.every(m => selectedIds.includes(m.id)) 
-                  ? 'Deseleccionar' 
+              <Button type="button" variant="ghost" size="sm" onClick={selectAll}>
+                {filteredMembers.every((m) => selectedIds.includes(m.id))
+                  ? 'Deseleccionar'
                   : 'Seleccionar todos'}
               </Button>
             </div>
-            
+
             <ScrollArea className="h-52 border rounded-md p-2">
               {loadingMembers ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -316,13 +309,13 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredMembers.map(member => (
+                  {filteredMembers.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
                       onClick={() => toggleMember(member.id)}
                     >
-                      <Checkbox 
+                      <Checkbox
                         checked={selectedIds.includes(member.id)}
                         onCheckedChange={() => toggleMember(member.id)}
                       />
@@ -340,7 +333,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
                               {ROLE_LABELS[member.local_role] || member.local_role}
                             </Badge>
                           )}
-                          {member.branches.slice(0, 2).map(b => (
+                          {member.branches.slice(0, 2).map((b) => (
                             <Badge key={b} variant="secondary" className="text-[10px] px-1">
                               {b}
                             </Badge>
@@ -358,7 +351,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
               )}
             </ScrollArea>
           </div>
-          
+
           {/* Conflict Warning */}
           {conflicts.length > 0 && (
             <Alert variant="destructive" className="bg-warning/10 border-warning/30 text-warning">
@@ -366,7 +359,7 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
               <AlertDescription className="text-sm">
                 <strong>Conflictos de horario detectados:</strong>
                 <ul className="mt-1 ml-4 list-disc text-xs">
-                  {conflicts.map(c => (
+                  {conflicts.map((c) => (
                     <li key={c.userId}>
                       <strong>{c.userName}</strong> ya tiene "{c.meetingTitle}" a las{' '}
                       {format(parseISO(c.meetingTime), 'HH:mm', { locale: es })}
@@ -382,12 +375,16 @@ export function BrandMeetingConveneModal({ open, onOpenChange }: BrandMeetingCon
           <Button variant="ghost" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={!canSubmit || conveneMeeting.isPending || checkingConflicts}
           >
             <Send className="w-4 h-4 mr-1" />
-            {conveneMeeting.isPending ? 'Convocando...' : conflicts.length > 0 ? 'Convocar de todos modos' : 'Convocar'}
+            {conveneMeeting.isPending
+              ? 'Convocando...'
+              : conflicts.length > 0
+                ? 'Convocar de todos modos'
+                : 'Convocar'}
           </Button>
         </DialogFooter>
       </DialogContent>

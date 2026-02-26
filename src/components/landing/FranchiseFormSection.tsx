@@ -4,7 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, CheckCircle, Rocket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -25,7 +31,12 @@ export function FranchiseFormSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.city.trim()) {
+    if (
+      !formData.name.trim() ||
+      !formData.email.trim() ||
+      !formData.phone.trim() ||
+      !formData.city.trim()
+    ) {
       toast.error('Completá todos los campos obligatorios');
       return;
     }
@@ -45,7 +56,8 @@ export function FranchiseFormSection() {
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         subject: 'franquicia',
-        message: formData.message.trim() || `Experiencia: ${formData.hasExperience || 'No especificado'}`,
+        message:
+          formData.message.trim() || `Experiencia: ${formData.hasExperience || 'No especificado'}`,
         franchise_has_zone: formData.city.trim(),
         franchise_investment_capital: formData.investmentRange || null,
       });
@@ -72,7 +84,8 @@ export function FranchiseFormSection() {
             </div>
             <h3 className="text-2xl font-bold mb-4 text-primary">¡Mensaje enviado!</h3>
             <p className="text-muted-foreground">
-              Un asesor se comunicará con vos en menos de 24 horas para brindarte toda la información sobre franquicias.
+              Un asesor se comunicará con vos en menos de 24 horas para brindarte toda la
+              información sobre franquicias.
             </p>
           </div>
         </div>
@@ -84,15 +97,16 @@ export function FranchiseFormSection() {
     <section id="formulario-franquicia" className="py-20 px-4 bg-primary">
       <div className="container mx-auto max-w-2xl">
         <div className="text-center text-white mb-10">
-          <h2 className="text-4xl font-black mb-4 font-brand">
-            ¿QUERÉS TU PROPIA FRANQUICIA?
-          </h2>
+          <h2 className="text-4xl font-black mb-4 font-brand">¿QUERÉS TU PROPIA FRANQUICIA?</h2>
           <p className="text-xl text-white/90">
             Completá el formulario y un asesor se comunicará en menos de 24hs.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 shadow-elevated space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-2xl p-8 shadow-elevated space-y-6"
+        >
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="franchise-name">Nombre completo *</Label>
@@ -171,19 +185,27 @@ export function FranchiseFormSection() {
             >
               <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-secondary/50">
                 <RadioGroupItem value="menos_40k" id="inv1" />
-                <Label htmlFor="inv1" className="cursor-pointer text-sm">Menos de USD 40.000</Label>
+                <Label htmlFor="inv1" className="cursor-pointer text-sm">
+                  Menos de USD 40.000
+                </Label>
               </div>
               <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-secondary/50">
                 <RadioGroupItem value="40k_60k" id="inv2" />
-                <Label htmlFor="inv2" className="cursor-pointer text-sm">USD 40.000 - 60.000</Label>
+                <Label htmlFor="inv2" className="cursor-pointer text-sm">
+                  USD 40.000 - 60.000
+                </Label>
               </div>
               <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-secondary/50">
                 <RadioGroupItem value="60k_80k" id="inv3" />
-                <Label htmlFor="inv3" className="cursor-pointer text-sm">USD 60.000 - 80.000</Label>
+                <Label htmlFor="inv3" className="cursor-pointer text-sm">
+                  USD 60.000 - 80.000
+                </Label>
               </div>
               <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-secondary/50">
                 <RadioGroupItem value="mas_80k" id="inv4" />
-                <Label htmlFor="inv4" className="cursor-pointer text-sm">Más de USD 80.000</Label>
+                <Label htmlFor="inv4" className="cursor-pointer text-sm">
+                  Más de USD 80.000
+                </Label>
               </div>
             </RadioGroup>
           </div>
@@ -215,7 +237,8 @@ export function FranchiseFormSection() {
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
-            Al enviar este formulario aceptás que nos comuniquemos con vos para brindarte información sobre franquicias.
+            Al enviar este formulario aceptás que nos comuniquemos con vos para brindarte
+            información sobre franquicias.
           </p>
         </form>
       </div>

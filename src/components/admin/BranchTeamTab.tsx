@@ -21,17 +21,23 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
-import { Search, UserPlus, Users, Home, Briefcase, UsersRound, ChevronDown, ChevronUp, UserMinus } from 'lucide-react';
+import {
+  Search,
+  UserPlus,
+  Users,
+  Home,
+  Briefcase,
+  UsersRound,
+  ChevronDown,
+  ChevronUp,
+  UserMinus,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { handleError } from '@/lib/errorHandler';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { type LocalRole } from '@/hooks/usePermissionsV2';
+import { type LocalRole } from '@/hooks/usePermissions';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -61,14 +67,18 @@ const AVAILABLE_ROLES: { value: LocalRole; label: string }[] = [
 ];
 
 const getRoleLabel = (role: string): string => {
-  return AVAILABLE_ROLES.find(r => r.value === role)?.label || role;
+  return AVAILABLE_ROLES.find((r) => r.value === role)?.label || role;
 };
 
 export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabProps) {
   const queryClient = useQueryClient();
   const [searchEmail, setSearchEmail] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<{ user_id: string; full_name: string; email: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{
+    user_id: string;
+    full_name: string;
+    email: string;
+  } | null>(null);
   const [selectedRole, setSelectedRole] = useState<LocalRole>('empleado');
   const [selectedPosition, setSelectedPosition] = useState<string>('none');
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
@@ -90,25 +100,27 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (teamError) throw teamError;
       if (!teamRoles?.length) return [];
 
-      const userIds = teamRoles.map(t => t.user_id);
+      const userIds = teamRoles.map((t) => t.user_id);
 
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, email, avatar_url')
         .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-      return teamRoles.map(t => ({
+      return teamRoles.map((t) => ({
         user_id: t.user_id,
         local_role: t.local_role,
         default_position: t.default_position as WorkPositionType | null,
-        profile: profileMap.get(t.user_id) ? {
-          id: profileMap.get(t.user_id)!.id,
-          full_name: profileMap.get(t.user_id)!.full_name,
-          email: profileMap.get(t.user_id)!.email,
-          avatar_url: profileMap.get(t.user_id)!.avatar_url,
-        } : null,
+        profile: profileMap.get(t.user_id)
+          ? {
+              id: profileMap.get(t.user_id)!.id,
+              full_name: profileMap.get(t.user_id)!.full_name,
+              email: profileMap.get(t.user_id)!.email,
+              avatar_url: profileMap.get(t.user_id)!.avatar_url,
+            }
+          : null,
       })) as TeamMember[];
     },
     enabled: !!branchId,
@@ -116,9 +128,9 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
   // Group team by role
   const grouped = {
-    propietarios: team.filter(m => m.local_role === 'franquiciado'),
-    encargados: team.filter(m => m.local_role === 'encargado'),
-    staff: team.filter(m => ['cajero', 'empleado', 'contador_local'].includes(m.local_role)),
+    propietarios: team.filter((m) => m.local_role === 'franquiciado'),
+    encargados: team.filter((m) => m.local_role === 'encargado'),
+    staff: team.filter((m) => ['cajero', 'empleado', 'contador_local'].includes(m.local_role)),
   };
 
   // Search for users to add
@@ -135,8 +147,8 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
       if (error) throw error;
 
-      const existingUserIds = new Set(team.map(t => t.user_id));
-      return (data || []).filter(u => !existingUserIds.has(u.id));
+      const existingUserIds = new Set(team.map((t) => t.user_id));
+      return (data || []).filter((u) => !existingUserIds.has(u.id));
     },
     enabled: searchEmail.length >= 3,
   });
@@ -157,7 +169,11 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       toast.success('Rol actualizado');
       setExpandedMember(null);
     },
-    onError: (error) => handleError(error, { userMessage: 'Error al actualizar rol', context: 'BranchTeamTab.updateRole' }),
+    onError: (error) =>
+      handleError(error, {
+        userMessage: 'Error al actualizar rol',
+        context: 'BranchTeamTab.updateRole',
+      }),
   });
 
   const updatePositionMutation = useMutation({
@@ -174,20 +190,30 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       queryClient.invalidateQueries({ queryKey: ['branch-team', branchId] });
       toast.success('Posición actualizada');
     },
-    onError: (error) => handleError(error, { userMessage: 'Error al actualizar posición', context: 'BranchTeamTab.updatePosition' }),
+    onError: (error) =>
+      handleError(error, {
+        userMessage: 'Error al actualizar posición',
+        context: 'BranchTeamTab.updatePosition',
+      }),
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: async ({ userId, role, position }: { userId: string; role: LocalRole; position: string | null }) => {
-      const { error } = await supabase
-        .from('user_branch_roles')
-        .insert({
-          user_id: userId,
-          branch_id: branchId,
-          local_role: role,
-          default_position: position as any,
-          is_active: true,
-        } as any);
+    mutationFn: async ({
+      userId,
+      role,
+      position,
+    }: {
+      userId: string;
+      role: LocalRole;
+      position: string | null;
+    }) => {
+      const { error } = await supabase.from('user_branch_roles').insert({
+        user_id: userId,
+        branch_id: branchId,
+        local_role: role,
+        default_position: position as any,
+        is_active: true,
+      } as any);
 
       if (error) throw error;
     },
@@ -203,7 +229,10 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       if (error.message?.includes('duplicate')) {
         toast.error('Este usuario ya está en el equipo');
       } else {
-        handleError(error, { userMessage: 'Error al agregar miembro', context: 'BranchTeamTab.addMember' });
+        handleError(error, {
+          userMessage: 'Error al agregar miembro',
+          context: 'BranchTeamTab.addMember',
+        });
       }
     },
   });
@@ -223,10 +252,14 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
       toast.success('Miembro dado de baja');
       setMemberToRemove(null);
     },
-    onError: (error) => handleError(error, { userMessage: 'Error al dar de baja', context: 'BranchTeamTab.removeMember' }),
+    onError: (error) =>
+      handleError(error, {
+        userMessage: 'Error al dar de baja',
+        context: 'BranchTeamTab.removeMember',
+      }),
   });
 
-  const handleSelectUser = (user: typeof searchResults[0]) => {
+  const handleSelectUser = (user: (typeof searchResults)[0]) => {
     setSelectedUser({ user_id: user.id, full_name: user.full_name, email: user.email });
     setShowAddModal(true);
   };
@@ -243,7 +276,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
   const getPositionLabel = (key: string | null) => {
     if (!key) return 'Sin definir';
-    return workPositions.find(p => p.key === key)?.label || key;
+    return workPositions.find((p) => p.key === key)?.label || key;
   };
 
   // Member row component for staff
@@ -257,17 +290,17 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
         updateRoleMutation.mutate({ userId: member.user_id, newRole: editRole });
       }
       if ((editPosition === 'none' ? null : editPosition) !== member.default_position) {
-        updatePositionMutation.mutate({ 
-          userId: member.user_id, 
-          position: editPosition === 'none' ? null : editPosition 
+        updatePositionMutation.mutate({
+          userId: member.user_id,
+          position: editPosition === 'none' ? null : editPosition,
         });
       }
       setExpandedMember(null);
     };
 
     return (
-      <Collapsible 
-        open={isExpanded} 
+      <Collapsible
+        open={isExpanded}
         onOpenChange={(open) => setExpandedMember(open ? member.user_id : null)}
       >
         <div className="rounded-lg border bg-card overflow-hidden">
@@ -286,7 +319,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{getRoleLabel(member.local_role)}</Badge>
-              
+
               {member.default_position && (
                 <Badge variant="outline" className="hidden sm:flex">
                   {getPositionLabel(member.default_position)}
@@ -318,7 +351,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {AVAILABLE_ROLES.filter(r => r.value !== 'franquiciado').map((role) => (
+                      {AVAILABLE_ROLES.filter((r) => r.value !== 'franquiciado').map((role) => (
                         <SelectItem key={role.value} value={role.value!}>
                           {role.label}
                         </SelectItem>
@@ -346,21 +379,17 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
               </div>
 
               <div className="flex justify-between">
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => setMemberToRemove(member)}
-                >
+                <Button variant="destructive" size="sm" onClick={() => setMemberToRemove(member)}>
                   <UserMinus className="h-4 w-4 mr-1" />
                   Dar de baja
                 </Button>
-                
+
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setExpandedMember(null)}>
                     Cancelar
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleSave}
                     disabled={updateRoleMutation.isPending || updatePositionMutation.isPending}
                   >
@@ -385,7 +414,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-16" />
           ))}
         </CardContent>
@@ -468,7 +497,9 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{member.profile?.full_name || 'Usuario'}</p>
-                    <p className="text-sm text-muted-foreground truncate">{member.profile?.email}</p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {member.profile?.email}
+                    </p>
                   </div>
 
                   <Badge variant="secondary">Franquiciado/a</Badge>
@@ -492,9 +523,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                 No hay encargados asignados
               </p>
             ) : (
-              grouped.encargados.map((member) => (
-                <MemberRow key={member.user_id} member={member} />
-              ))
+              grouped.encargados.map((member) => <MemberRow key={member.user_id} member={member} />)
             )}
           </CardContent>
         </Card>
@@ -513,9 +542,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
                 No hay empleados asignados
               </p>
             ) : (
-              grouped.staff.map((member) => (
-                <MemberRow key={member.user_id} member={member} />
-              ))
+              grouped.staff.map((member) => <MemberRow key={member.user_id} member={member} />)
             )}
           </CardContent>
         </Card>
@@ -556,10 +583,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
 
               <div className="space-y-2">
                 <Label>Posición habitual</Label>
-                <Select
-                  value={selectedPosition}
-                  onValueChange={(v) => setSelectedPosition(v)}
-                >
+                <Select value={selectedPosition} onValueChange={(v) => setSelectedPosition(v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -583,10 +607,7 @@ export default function BranchTeamTab({ branchId, branchName }: BranchTeamTabPro
             <Button variant="outline" onClick={() => setShowAddModal(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleConfirmAdd}
-              disabled={addMemberMutation.isPending}
-            >
+            <Button onClick={handleConfirmAdd} disabled={addMemberMutation.isPending}>
               <UserPlus className="h-4 w-4 mr-2" />
               Agregar
             </Button>

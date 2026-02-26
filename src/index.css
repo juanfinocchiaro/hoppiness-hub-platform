@@ -11,7 +11,8 @@
 }
 
 /* Prevent iOS overscroll bounce on full-page views */
-html, body {
+html,
+body {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -108,7 +109,7 @@ html, body {
     --gradient-primary: linear-gradient(135deg, hsl(234, 100%, 30%) 0%, hsl(234, 100%, 40%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(234, 100%, 30%) 0%, hsl(234, 100%, 15%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(17, 100%, 56%) 0%, hsl(48, 100%, 56%) 100%);
-    
+
     /* Shadows */
     --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.06);
     --shadow-card: 0 4px 12px -4px rgba(0, 0, 0, 0.08);
@@ -173,12 +174,20 @@ html, body {
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
     overscroll-behavior-y: contain;
   }
 
   /* Global micro-transition for interactive elements */
-  button, a, input, select, textarea, [role="button"], [tabindex] {
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role='button'],
+  [tabindex] {
     transition-property: color, background-color, border-color, opacity, box-shadow, transform;
     transition-duration: 150ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -258,7 +267,7 @@ html, body {
   }
 
   .bg-hoppiness-celeste {
-    background-color: #1FB4FF;
+    background-color: #1fb4ff;
   }
 
   .text-hoppiness-blue {
@@ -271,18 +280,23 @@ html, body {
 
   /* Hoppiness Loader Animations */
   @keyframes hoppiness-rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   @keyframes hoppiness-pulse {
-    0%, 100% { 
-      transform: scale(1); 
-      opacity: 0.3; 
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.3;
     }
-    50% { 
-      transform: scale(1.15); 
-      opacity: 0; 
+    50% {
+      transform: scale(1.15);
+      opacity: 0;
     }
   }
 

@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Minus, Plus, ShoppingCart, AlertCircle } from 'lucide-react';
-import { useWebappItemExtras, useWebappItemRemovables, useWebappItemOptionalGroups } from '@/hooks/useWebappMenu';
+import {
+  useWebappItemExtras,
+  useWebappItemRemovables,
+  useWebappItemOptionalGroups,
+} from '@/hooks/useWebappMenu';
 import type { WebappMenuItem, CartItem, CartItemModifier } from '@/types/webapp';
 
 interface Props {
@@ -30,7 +34,14 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; onAdd: Props['onAdd']; onClose: () => void }) {
+function ProductDetailContent({
+  item,
+  onAdd,
+}: {
+  item: WebappMenuItem;
+  onAdd: Props['onAdd'];
+  onClose: () => void;
+}) {
   const [cantidad, setCantidad] = useState(1);
   const [extraQty, setExtraQty] = useState<Record<string, number>>({});
   const [removidos, setRemovidos] = useState<string[]>([]);
@@ -55,7 +66,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
 
   useEffect(() => {
     if (freeQtyMap.size > 0) {
-      setExtraQty(prev => {
+      setExtraQty((prev) => {
         const next = { ...prev };
         for (const [id, qty] of freeQtyMap) {
           if (!(id in next)) next[id] = qty;
@@ -79,35 +90,44 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
     return total + groupExtras.reduce((s, e) => s + e.precio, 0);
   }, [extraQty, extrasList, freeQtyMap, groupExtras]);
 
-  const effectivePrice = (item.precio_promo != null && item.precio_promo < item.precio_base) ? item.precio_promo : item.precio_base;
+  const effectivePrice =
+    item.precio_promo != null && item.precio_promo < item.precio_base
+      ? item.precio_promo
+      : item.precio_base;
   const total = (effectivePrice + extrasTotal) * cantidad;
 
-  const missingRequired = (optionalGroups || [])
-    .filter(g => g.es_obligatorio && !(groupSelections[g.id]?.length > 0));
+  const missingRequired = (optionalGroups || []).filter(
+    (g) => g.es_obligatorio && !(groupSelections[g.id]?.length > 0),
+  );
   const canAdd = missingRequired.length === 0;
 
-  const incrExtra = (id: string) => setExtraQty(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
-  const decrExtra = (id: string) => setExtraQty(prev => {
-    const cur = prev[id] ?? 0;
-    if (cur <= 0) return prev;
-    const next = { ...prev, [id]: cur - 1 };
-    if (next[id] === 0) delete next[id];
-    return next;
-  });
+  const incrExtra = (id: string) => setExtraQty((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+  const decrExtra = (id: string) =>
+    setExtraQty((prev) => {
+      const cur = prev[id] ?? 0;
+      if (cur <= 0) return prev;
+      const next = { ...prev, [id]: cur - 1 };
+      if (next[id] === 0) delete next[id];
+      return next;
+    });
 
   const toggleRemovido = (nombre: string) => {
-    setRemovidos(prev =>
-      prev.includes(nombre) ? prev.filter(r => r !== nombre) : [...prev, nombre]
+    setRemovidos((prev) =>
+      prev.includes(nombre) ? prev.filter((r) => r !== nombre) : [...prev, nombre],
     );
   };
 
-  const handleGroupSelect = (groupId: string, option: CartItemModifier, maxSelections: number | null) => {
-    setGroupSelections(prev => {
+  const handleGroupSelect = (
+    groupId: string,
+    option: CartItemModifier,
+    maxSelections: number | null,
+  ) => {
+    setGroupSelections((prev) => {
       const current = prev[groupId] || [];
-      const exists = current.find(e => e.id === option.id);
+      const exists = current.find((e) => e.id === option.id);
 
       if (exists) {
-        return { ...prev, [groupId]: current.filter(e => e.id !== option.id) };
+        return { ...prev, [groupId]: current.filter((e) => e.id !== option.id) };
       }
 
       if (maxSelections === 1) {
@@ -129,7 +149,13 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
       const free = freeQtyMap.get(id) ?? 0;
       const chargeableQty = Math.max(0, qty - free);
       if (chargeableQty > 0) {
-        chargedExtras.push({ id, nombre: extra.nombre, precio: extra.precio, tipo: 'extra', cantidad: chargeableQty });
+        chargedExtras.push({
+          id,
+          nombre: extra.nombre,
+          precio: extra.precio,
+          tipo: 'extra',
+          cantidad: chargeableQty,
+        });
       }
     }
     const allExtras = [...chargedExtras, ...groupExtras];
@@ -178,14 +204,23 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           )}
           {(item.promo_included_modifiers?.length ?? 0) > 0 && (
             <p className="text-xs text-accent font-semibold mt-1">
-              Incluye: {item.promo_included_modifiers!.map((m) => `${m.cantidad > 1 ? `${m.cantidad}x ` : ''}${m.nombre}`).join(', ')}
+              Incluye:{' '}
+              {item
+                .promo_included_modifiers!.map(
+                  (m) => `${m.cantidad > 1 ? `${m.cantidad}x ` : ''}${m.nombre}`,
+                )
+                .join(', ')}
             </p>
           )}
           <div className="mt-2">
             {item.precio_promo != null && item.precio_promo < item.precio_base ? (
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-accent">{formatPrice(item.precio_promo)}</span>
-                <span className="text-sm text-muted-foreground line-through">{formatPrice(item.precio_base)}</span>
+                <span className="text-lg font-bold text-accent">
+                  {formatPrice(item.precio_promo)}
+                </span>
+                <span className="text-sm text-muted-foreground line-through">
+                  {formatPrice(item.precio_base)}
+                </span>
               </div>
             ) : (
               <p className="text-lg font-bold text-primary">{formatPrice(item.precio_base)}</p>
@@ -194,62 +229,80 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
         </div>
 
         {/* Optional groups (e.g. "Bebida a elección") */}
-        {optionalGroups && optionalGroups.length > 0 && optionalGroups.map(group => {
-          const effectiveMax = group.max_selecciones ?? 1;
-          const isRadio = effectiveMax === 1;
-          const currentSelections = groupSelections[group.id] || [];
-          const isMissing = group.es_obligatorio && currentSelections.length === 0;
+        {optionalGroups &&
+          optionalGroups.length > 0 &&
+          optionalGroups.map((group) => {
+            const effectiveMax = group.max_selecciones ?? 1;
+            const isRadio = effectiveMax === 1;
+            const currentSelections = groupSelections[group.id] || [];
+            const isMissing = group.es_obligatorio && currentSelections.length === 0;
 
-          return (
-            <div key={group.id}>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-foreground">{group.nombre}</h3>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                  group.es_obligatorio
-                    ? isMissing ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {group.es_obligatorio ? 'Obligatorio' : 'Opcional'}
-                  {effectiveMax === 1 ? ' · Elegí 1' : ` · Hasta ${effectiveMax}`}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                {group.opciones.map(option => {
-                  const isSelected = currentSelections.some(s => s.id === option.id);
-                  return (
-                    <button
-                      key={option.id}
-                      onClick={() => handleGroupSelect(
-                        group.id,
-                        { id: option.id, nombre: option.nombre, precio: option.precio_extra, tipo: 'extra' },
-                        effectiveMax
-                      )}
-                      className={`
+            return (
+              <div key={group.id}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-bold text-foreground">{group.nombre}</h3>
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                      group.es_obligatorio
+                        ? isMissing
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {group.es_obligatorio ? 'Obligatorio' : 'Opcional'}
+                    {effectiveMax === 1 ? ' · Elegí 1' : ` · Hasta ${effectiveMax}`}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {group.opciones.map((option) => {
+                    const isSelected = currentSelections.some((s) => s.id === option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() =>
+                          handleGroupSelect(
+                            group.id,
+                            {
+                              id: option.id,
+                              nombre: option.nombre,
+                              precio: option.precio_extra,
+                              tipo: 'extra',
+                            },
+                            effectiveMax,
+                          )
+                        }
+                        className={`
                         w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors
                         ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}
                       `}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-5 h-5 ${isRadio ? 'rounded-full' : 'rounded'} border-2 flex items-center justify-center transition-colors
-                          ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}>
-                          {isSelected && (
-                            isRadio
-                              ? <span className="w-2 h-2 rounded-full bg-primary-foreground" />
-                              : <span className="text-primary-foreground text-xs">✓</span>
-                          )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-5 h-5 ${isRadio ? 'rounded-full' : 'rounded'} border-2 flex items-center justify-center transition-colors
+                          ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}
+                          >
+                            {isSelected &&
+                              (isRadio ? (
+                                <span className="w-2 h-2 rounded-full bg-primary-foreground" />
+                              ) : (
+                                <span className="text-primary-foreground text-xs">✓</span>
+                              ))}
+                          </div>
+                          <span className="text-sm">{option.nombre}</span>
                         </div>
-                        <span className="text-sm">{option.nombre}</span>
-                      </div>
-                      {option.precio_extra > 0 && (
-                        <span className="text-xs text-muted-foreground">+{formatPrice(option.precio_extra)}</span>
-                      )}
-                    </button>
-                  );
-                })}
+                        {option.precio_extra > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{formatPrice(option.precio_extra)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
 
         {/* Extras - flat list from item_extra_asignaciones */}
         {extrasList && extrasList.length > 0 && (
@@ -269,11 +322,14 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
                     <div className="min-w-0">
                       <span className="text-sm">{extra.nombre}</span>
                       {extra.precio > 0 && (
-                        <span className="text-xs text-muted-foreground ml-1">+{formatPrice(extra.precio)}</span>
+                        <span className="text-xs text-muted-foreground ml-1">
+                          +{formatPrice(extra.precio)}
+                        </span>
                       )}
                       {freeQty > 0 && qty > 0 && (
                         <div className="text-[11px] text-green-600 mt-0.5">
-                          {Math.min(freeQty, qty)} gratis{chargeableQty > 0 ? ` · ${chargeableQty} extra` : ''}
+                          {Math.min(freeQty, qty)} gratis
+                          {chargeableQty > 0 ? ` · ${chargeableQty} extra` : ''}
                         </div>
                       )}
                     </div>
@@ -318,13 +374,12 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
                       isRemoved ? 'border-destructive/30 bg-destructive/5' : 'border-border'
                     }`}
                   >
-                    <span className={`text-sm ${isRemoved ? 'line-through text-muted-foreground' : ''}`}>
+                    <span
+                      className={`text-sm ${isRemoved ? 'line-through text-muted-foreground' : ''}`}
+                    >
                       {nombre}
                     </span>
-                    <Switch
-                      checked={!isRemoved}
-                      onCheckedChange={() => toggleRemovido(nombre)}
-                    />
+                    <Switch checked={!isRemoved} onCheckedChange={() => toggleRemovido(nombre)} />
                   </div>
                 );
               })}
@@ -337,7 +392,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
           <h3 className="text-sm font-bold text-foreground mb-2">Notas</h3>
           <Textarea
             value={notas}
-            onChange={e => setNotas(e.target.value)}
+            onChange={(e) => setNotas(e.target.value)}
             placeholder="¿Algún pedido especial?"
             className="resize-none h-20 text-sm"
             maxLength={200}
@@ -353,20 +408,25 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
               <span>Base</span>
               <span>{formatPrice(effectivePrice)}</span>
             </div>
-            {Object.entries(extraQty).filter(([, q]) => q > 0).map(([id, qty]) => {
-              const extra = (extrasList as any[] | undefined)?.find((e: any) => e.id === id);
-              if (!extra) return null;
-              const free = freeQtyMap.get(id) ?? 0;
-              const chargeable = Math.max(0, qty - free);
-              if (chargeable === 0) return null;
-              return (
-                <div key={id} className="flex justify-between">
-                  <span>+ {chargeable > 1 ? `${chargeable}× ` : ''}{extra.nombre}</span>
-                  <span>{formatPrice(extra.precio * chargeable)}</span>
-                </div>
-              );
-            })}
-            {groupExtras.map(e => (
+            {Object.entries(extraQty)
+              .filter(([, q]) => q > 0)
+              .map(([id, qty]) => {
+                const extra = (extrasList as any[] | undefined)?.find((e: any) => e.id === id);
+                if (!extra) return null;
+                const free = freeQtyMap.get(id) ?? 0;
+                const chargeable = Math.max(0, qty - free);
+                if (chargeable === 0) return null;
+                return (
+                  <div key={id} className="flex justify-between">
+                    <span>
+                      + {chargeable > 1 ? `${chargeable}× ` : ''}
+                      {extra.nombre}
+                    </span>
+                    <span>{formatPrice(extra.precio * chargeable)}</span>
+                  </div>
+                );
+              })}
+            {groupExtras.map((e) => (
               <div key={e.id} className="flex justify-between">
                 <span>+ {e.nombre}</span>
                 <span>{formatPrice(e.precio)}</span>
@@ -383,7 +443,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCantidad(q => Math.max(1, q - 1))}
+              onClick={() => setCantidad((q) => Math.max(1, q - 1))}
               className="w-9 h-9 rounded-full bg-muted flex items-center justify-center active:scale-95"
               aria-label="Quitar uno"
             >
@@ -391,7 +451,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
             </button>
             <span className="w-8 text-center font-bold text-lg">{cantidad}</span>
             <button
-              onClick={() => setCantidad(q => q + 1)}
+              onClick={() => setCantidad((q) => q + 1)}
               className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95"
               aria-label="Agregar uno"
             >
@@ -402,7 +462,7 @@ function ProductDetailContent({ item, onAdd, onClose }: { item: WebappMenuItem; 
         {!canAdd && missingRequired.length > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-destructive mb-2">
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>Seleccioná: {missingRequired.map(g => g.nombre).join(', ')}</span>
+            <span>Seleccioná: {missingRequired.map((g) => g.nombre).join(', ')}</span>
           </div>
         )}
         <Button

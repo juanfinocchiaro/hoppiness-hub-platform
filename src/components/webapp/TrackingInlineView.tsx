@@ -3,7 +3,13 @@
  * Fetches order status via edge function, shows timeline, items, and chat.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, Send, XCircle, ShoppingBag } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  Package,
+  XCircle,
+  ShoppingBag,
+} from 'lucide-react';
 import { SpinnerLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +50,10 @@ function getEstadoConfig(estado: string, tipo: string | null) {
     pendiente: { label: 'Enviado', color: 'text-blue-500' },
     confirmado: { label: 'Aceptado', color: 'text-blue-600' },
     en_preparacion: { label: 'Preparando', color: 'text-orange-500' },
-    listo: { label: isDelivery ? 'Listo para enviar' : 'Listo para retirar', color: 'text-green-500' },
+    listo: {
+      label: isDelivery ? 'Listo para enviar' : 'Listo para retirar',
+      color: 'text-green-500',
+    },
     en_camino: { label: 'En camino', color: 'text-purple-500' },
     entregado: { label: 'Entregado', color: 'text-green-600' },
     cancelado: { label: 'Cancelado', color: 'text-destructive' },
@@ -75,9 +84,12 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
     try {
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
       const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const res = await fetch(`${baseUrl}/functions/v1/webapp-order-tracking?code=${trackingCode}`, {
-        headers: { apikey: apiKey },
-      });
+      const res = await fetch(
+        `${baseUrl}/functions/v1/webapp-order-tracking?code=${trackingCode}`,
+        {
+          headers: { apikey: apiKey },
+        },
+      );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Pedido no encontrado');
@@ -91,19 +103,29 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
     }
   }, [trackingCode]);
 
-  useEffect(() => { fetchTracking(); }, [fetchTracking]);
+  useEffect(() => {
+    fetchTracking();
+  }, [fetchTracking]);
 
   // Realtime updates
   useEffect(() => {
     if (!trackingCode) return;
     const channel = supabase
       .channel(`tracking-inline-${trackingCode}`)
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'pedidos',
-        filter: `webapp_tracking_code=eq.${trackingCode}`,
-      }, () => fetchTracking())
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pedidos',
+          filter: `webapp_tracking_code=eq.${trackingCode}`,
+        },
+        () => fetchTracking(),
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [trackingCode, fetchTracking]);
 
   if (loading) {
@@ -120,7 +142,9 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
         <div className="text-center space-y-2">
           <XCircle className="w-8 h-8 text-muted-foreground mx-auto" />
           <p className="text-sm text-muted-foreground">{error || 'No encontrado'}</p>
-          <Button size="sm" variant="outline" onClick={onNewOrder}>Pedir algo más</Button>
+          <Button size="sm" variant="outline" onClick={onNewOrder}>
+            Pedir algo más
+          </Button>
         </div>
       </div>
     );
@@ -149,16 +173,20 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
         {/* Timeline */}
         <div className="space-y-0">
           {estadoOrder.map((estado, i) => {
-            const timelineEntry = timeline.find(t => t.estado === estado);
-            const isPast = timeline.some(t => t.estado === estado);
+            const timelineEntry = timeline.find((t) => t.estado === estado);
+            const isPast = timeline.some((t) => t.estado === estado);
             const isCurrent = pedido.estado === estado;
 
             return (
               <div key={estado} className="flex items-start gap-2.5">
                 <div className="flex flex-col items-center">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                    isPast ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                  } ${isCurrent ? 'ring-2 ring-primary ring-offset-1' : ''}`}>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                      isPast
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    } ${isCurrent ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                  >
                     {isPast ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                   </div>
                   {i < estadoOrder.length - 1 && (
@@ -166,11 +194,15 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
                   )}
                 </div>
                 <div className="pt-0.5">
-                  <p className={`text-xs font-medium ${isPast ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  <p
+                    className={`text-xs font-medium ${isPast ? 'text-foreground' : 'text-muted-foreground'}`}
+                  >
                     {getEstadoConfig(estado, pedido.tipo_servicio).label}
                   </p>
                   {timelineEntry?.timestamp && (
-                    <p className="text-[10px] text-muted-foreground">{formatTime(timelineEntry.timestamp)}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatTime(timelineEntry.timestamp)}
+                    </p>
                   )}
                 </div>
               </div>
@@ -217,12 +249,7 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
 
       {/* Footer */}
       <div className="border-t px-4 py-3 space-y-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={onNewOrder}
-        >
+        <Button variant="outline" size="sm" className="w-full" onClick={onNewOrder}>
           <ShoppingBag className="w-4 h-4 mr-1" />
           Pedir algo más
         </Button>

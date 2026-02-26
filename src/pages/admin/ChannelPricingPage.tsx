@@ -6,25 +6,28 @@
  * Export PDF de lista de precios.
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import {
-  FileText, Save, Search, Pencil, RotateCcw, ChevronDown, ChevronUp,
-} from 'lucide-react';
+import { FileText, Save, Search, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/ui/page-header';
 import { toast } from 'sonner';
@@ -50,7 +53,9 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 const fmtCurrency = (v: number) =>
   new Intl.NumberFormat('es-AR', {
-    style: 'currency', currency: 'ARS', minimumFractionDigits: 0,
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
   }).format(v);
 
 const fmtPct = (base: number, final: number) => {
@@ -61,7 +66,7 @@ const fmtPct = (base: number, final: number) => {
 };
 
 // Only show app channels in the unified table
-const TABLE_CHANNELS = CHANNELS.filter(ch => APP_CHANNELS.includes(ch.value));
+const TABLE_CHANNELS = CHANNELS.filter((ch) => APP_CHANNELS.includes(ch.value));
 
 export default function ChannelPricingPage() {
   const { data: priceLists, isLoading: loadingLists } = usePriceLists();
@@ -74,10 +79,7 @@ export default function ChannelPricingPage() {
     }
   }, [loadingLists, priceLists]);
 
-  const priceListIds = useMemo(
-    () => (priceLists || []).map(l => l.id),
-    [priceLists],
-  );
+  const priceListIds = useMemo(() => (priceLists || []).map((l) => l.id), [priceLists]);
   const { data: allOverrides, isLoading: loadingPrices } = useAllPriceListItems(priceListIds);
 
   const isLoading = loadingLists || loadingMenu || loadingPrices;
@@ -93,9 +95,10 @@ export default function ChannelPricingPage() {
     const q = debouncedSearch.toLowerCase();
     const items = !debouncedSearch
       ? menuItems
-      : menuItems.filter(i =>
-          i.nombre.toLowerCase().includes(q) ||
-          (i as any).menu_categorias?.nombre?.toLowerCase().includes(q),
+      : menuItems.filter(
+          (i) =>
+            i.nombre.toLowerCase().includes(q) ||
+            (i as any).menu_categorias?.nombre?.toLowerCase().includes(q),
         );
     return [...items].sort((a, b) => {
       const catA = (a as any).menu_categorias?.orden ?? 999;
@@ -122,10 +125,14 @@ export default function ChannelPricingPage() {
   );
 
   const getChannelPrice = useCallback(
-    (itemId: string, basePrice: number, channel: Channel): { price: number; isOverride: boolean } => {
+    (
+      itemId: string,
+      basePrice: number,
+      channel: Channel,
+    ): { price: number; isOverride: boolean } => {
       if (!priceLists) return { price: basePrice, isOverride: false };
       const { mode, value } = resolveChannelMode(channel, priceLists);
-      const list = priceLists.find(l => l.channel === channel);
+      const list = priceLists.find((l) => l.channel === channel);
       const override = list && allOverrides?.[list.id]?.[itemId];
       const price = computeChannelPrice(basePrice, mode, value, override);
       return { price, isOverride: override !== undefined };
@@ -141,7 +148,7 @@ export default function ChannelPricingPage() {
       toast.error('Precio inválido');
       return;
     }
-    const list = priceLists?.find(l => l.channel === channel);
+    const list = priceLists?.find((l) => l.channel === channel);
     if (!list) return;
     bulkUpdate.mutate(
       { price_list_id: list.id, items: [{ item_carta_id: itemId, precio: num }] },
@@ -155,7 +162,9 @@ export default function ChannelPricingPage() {
     const doc = new jsPDF('p', 'mm', 'a4');
     const now = new Date();
     const dateStr = now.toLocaleDateString('es-AR', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     });
 
     doc.setFontSize(18);
@@ -165,11 +174,17 @@ export default function ChannelPricingPage() {
     doc.text(`Actualizada al ${dateStr}`, 14, 27);
     doc.setTextColor(0);
 
-    const headers = ['Producto', 'Base', ...TABLE_CHANNELS.map(ch => ch.label)];
+    const headers = ['Producto', 'Base', ...TABLE_CHANNELS.map((ch) => ch.label)];
     const body: (string | number)[][] = [];
 
     for (const cat of cats) {
-      body.push([{ content: cat, colSpan: headers.length, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } } as any]);
+      body.push([
+        {
+          content: cat,
+          colSpan: headers.length,
+          styles: { fontStyle: 'bold', fillColor: [240, 240, 240] },
+        } as any,
+      ]);
       for (const item of byCategory[cat].items) {
         const row: (string | number)[] = [item.nombre, fmtCurrency(item.precio_base)];
         for (const ch of TABLE_CHANNELS) {
@@ -190,7 +205,7 @@ export default function ChannelPricingPage() {
       columnStyles: {
         0: { cellWidth: 60 },
       },
-      didDrawPage: (data: any) => {
+      didDrawPage: (_data: any) => {
         doc.setFontSize(8);
         doc.setTextColor(150);
         doc.text(
@@ -210,10 +225,7 @@ export default function ChannelPricingPage() {
       <PageHeader
         title="Precios por Canal"
         subtitle="Gestioná los precios de venta por canal desde un solo lugar"
-        breadcrumb={[
-          { label: 'Mi Marca', href: '/mimarca' },
-          { label: 'Precios por Canal' },
-        ]}
+        breadcrumb={[{ label: 'Mi Marca', href: '/mimarca' }, { label: 'Precios por Canal' }]}
         actions={
           <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isLoading}>
             <FileText className="h-4 w-4 mr-2" />
@@ -229,7 +241,7 @@ export default function ChannelPricingPage() {
           <ChannelRulesPanel
             priceLists={priceLists || []}
             open={rulesOpen}
-            onToggle={() => setRulesOpen(v => !v)}
+            onToggle={() => setRulesOpen((v) => !v)}
           />
 
           <Card>
@@ -256,10 +268,10 @@ export default function ChannelPricingPage() {
                       <TableHead className="sticky top-0 bg-background z-10 text-right w-28">
                         Base
                       </TableHead>
-                      {TABLE_CHANNELS.map(ch => {
-                        const list = priceLists?.find(l => l.channel === ch.value);
+                      {TABLE_CHANNELS.map((ch) => {
+                        const list = priceLists?.find((l) => l.channel === ch.value);
                         const modeLabel = list
-                          ? PRICING_MODES.find(m => m.value === list.pricing_mode)?.label ?? ''
+                          ? (PRICING_MODES.find((m) => m.value === list.pricing_mode)?.label ?? '')
                           : '';
                         return (
                           <TableHead
@@ -275,7 +287,7 @@ export default function ChannelPricingPage() {
                                     : list?.pricing_mode === 'fixed_amount'
                                       ? `+${fmtCurrency(list.pricing_value)}`
                                       : list?.pricing_mode === 'mirror'
-                                        ? `= ${CHANNELS.find(c => c.value === list.mirror_channel)?.label ?? ''}`
+                                        ? `= ${CHANNELS.find((c) => c.value === list.mirror_channel)?.label ?? ''}`
                                         : modeLabel}
                                 </span>
                               )}
@@ -306,19 +318,18 @@ export default function ChannelPricingPage() {
                               <TableCell className="text-right tabular-nums text-sm py-1.5 text-muted-foreground">
                                 {fmtCurrency(item.precio_base)}
                               </TableCell>
-                              {TABLE_CHANNELS.map(ch => {
+                              {TABLE_CHANNELS.map((ch) => {
                                 const { price, isOverride } = getChannelPrice(
-                                  item.id, item.precio_base, ch.value,
+                                  item.id,
+                                  item.precio_base,
+                                  ch.value,
                                 );
                                 const diffLabel = fmtPct(item.precio_base, price);
                                 const isEditing =
                                   editCell?.itemId === item.id && editCell?.channel === ch.value;
 
                                 return (
-                                  <TableCell
-                                    key={ch.value}
-                                    className="text-right py-1.5 pr-3"
-                                  >
+                                  <TableCell key={ch.value} className="text-right py-1.5 pr-3">
                                     {isEditing ? (
                                       <div className="flex items-center gap-1 justify-end">
                                         <Input
@@ -330,7 +341,8 @@ export default function ChannelPricingPage() {
                                           step={10}
                                           autoFocus
                                           onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleSaveOverride(item.id, ch.value);
+                                            if (e.key === 'Enter')
+                                              handleSaveOverride(item.id, ch.value);
                                             if (e.key === 'Escape') setEditCell(null);
                                           }}
                                         />
@@ -354,7 +366,11 @@ export default function ChannelPricingPage() {
                                                 setEditValue(String(price));
                                               }}
                                             >
-                                              <span className={isOverride ? 'font-semibold text-primary' : ''}>
+                                              <span
+                                                className={
+                                                  isOverride ? 'font-semibold text-primary' : ''
+                                                }
+                                              >
                                                 {fmtCurrency(price)}
                                               </span>
                                               {isOverride && (
@@ -402,7 +418,9 @@ export default function ChannelPricingPage() {
                 <span className="inline-flex items-center gap-1">
                   <span className="text-primary">●</span> Precio con override manual
                 </span>
-                <span>Los precios sin indicador se calculan automáticamente según la regla del canal</span>
+                <span>
+                  Los precios sin indicador se calculan automáticamente según la regla del canal
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -480,8 +498,8 @@ function ChannelRulesPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {CHANNELS.map(ch => {
-                  const list = priceLists.find(l => l.channel === ch.value);
+                {CHANNELS.map((ch) => {
+                  const list = priceLists.find((l) => l.channel === ch.value);
                   if (!list) return null;
                   const isBase = ch.value === 'mostrador' || ch.value === 'webapp';
 
@@ -490,7 +508,9 @@ function ChannelRulesPanel({
                       <TableCell className="font-medium text-sm">{ch.label}</TableCell>
                       <TableCell>
                         {isBase ? (
-                          <Badge variant="secondary" className="text-xs">Precio base</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Precio base
+                          </Badge>
                         ) : (
                           <Select
                             value={list.pricing_mode}
@@ -500,11 +520,13 @@ function ChannelRulesPanel({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {PRICING_MODES.filter(m => m.value !== 'base').map(m => (
+                              {PRICING_MODES.filter((m) => m.value !== 'base').map((m) => (
                                 <SelectItem key={m.value} value={m.value}>
                                   <div>
                                     <div className="font-medium">{m.label}</div>
-                                    <div className="text-[10px] text-muted-foreground">{m.description}</div>
+                                    <div className="text-[10px] text-muted-foreground">
+                                      {m.description}
+                                    </div>
                                   </div>
                                 </SelectItem>
                               ))}
@@ -550,8 +572,11 @@ function ChannelRulesPanel({
                             </SelectTrigger>
                             <SelectContent>
                               {CHANNELS.filter(
-                                c => c.value !== ch.value && c.value !== 'mostrador' && c.value !== 'webapp',
-                              ).map(c => (
+                                (c) =>
+                                  c.value !== ch.value &&
+                                  c.value !== 'mostrador' &&
+                                  c.value !== 'webapp',
+                              ).map((c) => (
                                 <SelectItem key={c.value} value={c.value}>
                                   {c.label}
                                 </SelectItem>
@@ -559,9 +584,7 @@ function ChannelRulesPanel({
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            Editar en la tabla
-                          </span>
+                          <span className="text-xs text-muted-foreground">Editar en la tabla</span>
                         )}
                       </TableCell>
                       <TableCell>

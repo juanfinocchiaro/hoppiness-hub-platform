@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, Store, CheckCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,21 +41,23 @@ export function FranquiciasModal({ open, onOpenChange }: FranquiciasModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || !formData.phone || !formData.city) {
       toast.error('Completá todos los campos obligatorios');
       return;
     }
 
     setLoading(true);
-    
+
     try {
       const { error } = await supabase.from('contact_messages').insert({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         subject: 'franquicia',
-        message: formData.message || `Ciudad: ${formData.city}. Experiencia en gastronomía: ${formData.hasExperience || 'No especificado'}`,
+        message:
+          formData.message ||
+          `Ciudad: ${formData.city}. Experiencia en gastronomía: ${formData.hasExperience || 'No especificado'}`,
         franchise_has_zone: formData.city,
       });
 
@@ -75,9 +89,7 @@ export function FranquiciasModal({ open, onOpenChange }: FranquiciasModalProps) 
             </div>
             <div>
               <DialogTitle>Franquicias Hoppiness</DialogTitle>
-              <DialogDescription>
-                Abrí tu propio Hoppiness Club
-              </DialogDescription>
+              <DialogDescription>Abrí tu propio Hoppiness Club</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -164,7 +176,7 @@ export function FranquiciasModal({ open, onOpenChange }: FranquiciasModalProps) 
 
               <div className="space-y-2">
                 <Label htmlFor="experience">¿Tenés experiencia en gastronomía?</Label>
-                <Select 
+                <Select
                   value={formData.hasExperience}
                   onValueChange={(value) => setFormData({ ...formData, hasExperience: value })}
                 >

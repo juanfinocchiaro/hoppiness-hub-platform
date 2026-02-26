@@ -1,6 +1,12 @@
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface UsersFiltersProps {
   search: string;
@@ -30,7 +36,7 @@ export function UsersFilters({
           className="pl-10"
         />
       </div>
-      
+
       <div className="flex flex-wrap items-center gap-3">
         <Select value={roleFilter} onValueChange={onRoleFilterChange}>
           <SelectTrigger className="w-[160px]">
@@ -38,18 +44,26 @@ export function UsersFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los roles</SelectItem>
-            
+
             {/* Roles de Marca */}
-            <SelectItem disabled value="__brand_header" className="text-xs font-semibold text-muted-foreground py-1">
+            <SelectItem
+              disabled
+              value="__brand_header"
+              className="text-xs font-semibold text-muted-foreground py-1"
+            >
               ── Marca ──
             </SelectItem>
             <SelectItem value="superadmin">Superadmin</SelectItem>
             <SelectItem value="coordinador">Coordinador</SelectItem>
             <SelectItem value="informes">Informes</SelectItem>
             <SelectItem value="contador_marca">Contador Marca</SelectItem>
-            
+
             {/* Roles Locales */}
-            <SelectItem disabled value="__local_header" className="text-xs font-semibold text-muted-foreground py-1">
+            <SelectItem
+              disabled
+              value="__local_header"
+              className="text-xs font-semibold text-muted-foreground py-1"
+            >
               ── Locales ──
             </SelectItem>
             <SelectItem value="franquiciado">Franquiciado</SelectItem>
@@ -57,7 +71,7 @@ export function UsersFilters({
             <SelectItem value="contador_local">Contador Local</SelectItem>
             <SelectItem value="cajero">Cajero</SelectItem>
             <SelectItem value="empleado">Empleado</SelectItem>
-            
+
             <SelectItem value="sin_rol">Sin rol asignado</SelectItem>
           </SelectContent>
         </Select>

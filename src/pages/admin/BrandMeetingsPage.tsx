@@ -1,6 +1,6 @@
 /**
  * BrandMeetingsPage - Vista consolidada de reuniones de toda la red v2.0
- * 
+ *
  * Permite a Superadmins y Coordinadores:
  * - Ver todas las reuniones de todas las sucursales
  * - Filtrar por sucursal, área, estado y fecha
@@ -11,13 +11,29 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, Users, CheckCircle, AlertTriangle, MapPin, ChevronRight, Filter, Plus, Building2 } from 'lucide-react';
+import {
+  Calendar,
+  Users,
+  CheckCircle,
+  AlertTriangle,
+  MapPin,
+  ChevronRight,
+  Filter,
+  Plus,
+  Building2,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useBrandMeetings, useBrandMeetingsStats, useMeetingDetail } from '@/hooks/useMeetings';
 import { MeetingDetail, MeetingStatusBadge } from '@/components/meetings';
 import { BrandMeetingConveneModal } from '@/components/meetings/BrandMeetingConveneModal';
@@ -33,7 +49,7 @@ function BrandMeetingsPageContent() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const [showConveneModal, setShowConveneModal] = useState(false);
-  
+
   // Fetch branches for filter
   const { data: branches } = useQuery({
     queryKey: ['branches-for-filter'],
@@ -46,16 +62,16 @@ function BrandMeetingsPageContent() {
       return data || [];
     },
   });
-  
+
   const { data: meetings, isLoading: loadingMeetings } = useBrandMeetings();
   const { data: stats, isLoading: loadingStats } = useBrandMeetingsStats();
   const { data: meetingDetail } = useMeetingDetail(selectedMeetingId || undefined);
-  
+
   // Filter meetings
   const filteredMeetings = useMemo(() => {
     if (!meetings) return [];
-    
-    return meetings.filter(meeting => {
+
+    return meetings.filter((meeting) => {
       if (selectedBranch !== 'all') {
         if (selectedBranch === 'network') {
           if (meeting.branch_id !== null) return false;
@@ -72,19 +88,19 @@ function BrandMeetingsPageContent() {
       return true;
     });
   }, [meetings, selectedBranch, selectedArea, selectedStatus]);
-  
+
   // Group meetings by date for display
   const groupedMeetings = useMemo(() => {
     const groups: Record<string, typeof filteredMeetings> = {};
-    
-    filteredMeetings.forEach(meeting => {
+
+    filteredMeetings.forEach((meeting) => {
       const dateKey = format(parseISO(meeting.scheduled_at || meeting.date), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
       groups[dateKey].push(meeting);
     });
-    
+
     return Object.entries(groups)
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, items]) => ({
@@ -106,7 +122,7 @@ function BrandMeetingsPageContent() {
           Nueva Reunión de Red
         </Button>
       </div>
-      
+
       {/* Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -124,7 +140,7 @@ function BrandMeetingsPageContent() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -148,7 +164,7 @@ function BrandMeetingsPageContent() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -157,19 +173,25 @@ function BrandMeetingsPageContent() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {loadingStats ? <Skeleton className="h-8 w-12" /> : `${stats?.readPercentage || 0}%`}
+                  {loadingStats ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    `${stats?.readPercentage || 0}%`
+                  )}
                 </p>
                 <p className="text-sm text-muted-foreground">lectura confirmada</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${stats?.alertCount ? 'bg-warning/10' : 'bg-muted'}`}>
-                <AlertTriangle className={`w-5 h-5 ${stats?.alertCount ? 'text-warning' : 'text-muted-foreground'}`} />
+                <AlertTriangle
+                  className={`w-5 h-5 ${stats?.alertCount ? 'text-warning' : 'text-muted-foreground'}`}
+                />
               </div>
               <div>
                 <p className="text-2xl font-bold">
@@ -183,7 +205,7 @@ function BrandMeetingsPageContent() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Filters */}
       <Card>
         <CardContent className="pt-4">
@@ -192,7 +214,7 @@ function BrandMeetingsPageContent() {
               <Filter className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium">Filtros:</span>
             </div>
-            
+
             <Select value={selectedBranch} onValueChange={setSelectedBranch}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sucursal" />
@@ -205,14 +227,14 @@ function BrandMeetingsPageContent() {
                     Reuniones de Red
                   </div>
                 </SelectItem>
-                {branches?.map(branch => (
+                {branches?.map((branch) => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            
+
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Estado" />
@@ -225,21 +247,21 @@ function BrandMeetingsPageContent() {
                 <SelectItem value="cancelada">Cancelada</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={selectedArea} onValueChange={setSelectedArea}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Área" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las áreas</SelectItem>
-                {MEETING_AREAS.map(area => (
+                {MEETING_AREAS.map((area) => (
                   <SelectItem key={area.value} value={area.value}>
                     {area.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            
+
             {(selectedBranch !== 'all' || selectedArea !== 'all' || selectedStatus !== 'all') && (
               <Button
                 variant="ghost"
@@ -256,12 +278,12 @@ function BrandMeetingsPageContent() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Meetings List */}
       <div className="space-y-6">
         {loadingMeetings ? (
           <div className="space-y-4">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <Card key={i}>
                 <CardContent className="pt-6">
                   <Skeleton className="h-20 w-full" />
@@ -277,21 +299,25 @@ function BrandMeetingsPageContent() {
             </CardContent>
           </Card>
         ) : (
-          groupedMeetings.map(group => (
+          groupedMeetings.map((group) => (
             <div key={group.date} className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground capitalize">
                 {group.dateLabel}
               </h3>
-              
-              {group.meetings.map(meeting => {
+
+              {group.meetings.map((meeting) => {
                 const participants = meeting.participants || [];
                 const presentCount = participants.filter((p: any) => p.was_present === true).length;
                 const readCount = participants.filter((p: any) => p.read_at).length;
                 const pendingCount = participants.length - readCount;
-                const branch = meeting.branches as { id: string; name: string; slug: string } | null;
+                const branch = meeting.branches as {
+                  id: string;
+                  name: string;
+                  slug: string;
+                } | null;
                 const isNetworkMeeting = !meeting.branch_id;
                 const status = (meeting.status || 'cerrada') as MeetingStatus;
-                
+
                 return (
                   <Card
                     key={meeting.id}
@@ -316,14 +342,16 @@ function BrandMeetingsPageContent() {
                             <span>•</span>
                             <span className="capitalize">{meeting.area}</span>
                             <span>•</span>
-                            <span>{format(parseISO(meeting.scheduled_at || meeting.date), 'HH:mm')}</span>
+                            <span>
+                              {format(parseISO(meeting.scheduled_at || meeting.date), 'HH:mm')}
+                            </span>
                           </div>
-                          
+
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-medium truncate">{meeting.title}</h4>
                             <MeetingStatusBadge status={status} />
                           </div>
-                          
+
                           <div className="flex items-center gap-4 text-sm">
                             {status === 'cerrada' && (
                               <>
@@ -342,27 +370,30 @@ function BrandMeetingsPageContent() {
                               </span>
                             )}
                             {status === 'en_curso' && (
-                              <span className="text-blue-600">
-                                Reunión en progreso
-                              </span>
+                              <span className="text-blue-600">Reunión en progreso</span>
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
-                          {status === 'cerrada' && (
-                            pendingCount > 0 ? (
-                              <Badge variant="outline" className="text-warning border-warning/30 bg-warning/10">
+                          {status === 'cerrada' &&
+                            (pendingCount > 0 ? (
+                              <Badge
+                                variant="outline"
+                                className="text-warning border-warning/30 bg-warning/10"
+                              >
                                 <AlertTriangle className="w-3 h-3 mr-1" />
                                 {pendingCount} pendientes
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                              <Badge
+                                variant="outline"
+                                className="text-success border-success/30 bg-success/10"
+                              >
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Todos leyeron
                               </Badge>
-                            )
-                          )}
+                            ))}
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </div>
                       </div>
@@ -374,18 +405,21 @@ function BrandMeetingsPageContent() {
           ))
         )}
       </div>
-      
+
       {/* Meeting Detail Sheet */}
-      <Sheet open={!!selectedMeetingId} onOpenChange={(open) => !open && setSelectedMeetingId(null)}>
+      <Sheet
+        open={!!selectedMeetingId}
+        onOpenChange={(open) => !open && setSelectedMeetingId(null)}
+      >
         <SheetContent className="sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Detalle de Reunión</SheetTitle>
           </SheetHeader>
           {meetingDetail && (
             <div className="mt-6">
-              <MeetingDetail 
-                meeting={meetingDetail} 
-                onBack={() => setSelectedMeetingId(null)} 
+              <MeetingDetail
+                meeting={meetingDetail}
+                onBack={() => setSelectedMeetingId(null)}
                 canTrackReads={true}
                 canManage={true}
               />
@@ -393,12 +427,9 @@ function BrandMeetingsPageContent() {
           )}
         </SheetContent>
       </Sheet>
-      
+
       {/* Convene Modal */}
-      <BrandMeetingConveneModal 
-        open={showConveneModal} 
-        onOpenChange={setShowConveneModal} 
-      />
+      <BrandMeetingConveneModal open={showConveneModal} onOpenChange={setShowConveneModal} />
     </div>
   );
 }

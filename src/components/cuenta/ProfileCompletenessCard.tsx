@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Circle, UserCog } from 'lucide-react';
+import { Circle, UserCog } from 'lucide-react';
 
 interface ProfileCompletenessCardProps {
   userId: string;
@@ -20,7 +20,9 @@ export function ProfileCompletenessCard({ userId }: ProfileCompletenessCardProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('phone, dni, birth_date, cbu, emergency_contact_name, emergency_contact_phone, avatar_url')
+        .select(
+          'phone, dni, birth_date, cbu, emergency_contact_name, emergency_contact_phone, avatar_url',
+        )
         .eq('id', userId)
         .maybeSingle();
       if (error) throw error;
@@ -34,7 +36,9 @@ export function ProfileCompletenessCard({ userId }: ProfileCompletenessCardProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from('employee_data')
-        .select('dni, birth_date, personal_address, emergency_contact, emergency_phone, bank_name, cbu, cuil, hire_date')
+        .select(
+          'dni, birth_date, personal_address, emergency_contact, emergency_phone, bank_name, cbu, cuil, hire_date',
+        )
         .eq('user_id', userId)
         .limit(1);
       if (error) throw error;
@@ -50,14 +54,26 @@ export function ProfileCompletenessCard({ userId }: ProfileCompletenessCardProps
   const fields: CompletionField[] = [
     { key: 'phone', label: 'Teléfono', filled: !!profile.phone },
     { key: 'dni', label: 'DNI', filled: !!(profile.dni || ed?.dni) },
-    { key: 'birth_date', label: 'Fecha de nacimiento', filled: !!(profile.birth_date || ed?.birth_date) },
-    { key: 'emergency', label: 'Contacto de emergencia', filled: !!(profile.emergency_contact_name || ed?.emergency_contact) },
-    { key: 'emergency_phone', label: 'Teléfono de emergencia', filled: !!(profile.emergency_contact_phone || ed?.emergency_phone) },
+    {
+      key: 'birth_date',
+      label: 'Fecha de nacimiento',
+      filled: !!(profile.birth_date || ed?.birth_date),
+    },
+    {
+      key: 'emergency',
+      label: 'Contacto de emergencia',
+      filled: !!(profile.emergency_contact_name || ed?.emergency_contact),
+    },
+    {
+      key: 'emergency_phone',
+      label: 'Teléfono de emergencia',
+      filled: !!(profile.emergency_contact_phone || ed?.emergency_phone),
+    },
     { key: 'banking', label: 'Datos bancarios (CBU)', filled: !!(profile.cbu || ed?.cbu) },
     { key: 'cuil', label: 'CUIL', filled: !!ed?.cuil },
   ];
 
-  const filledCount = fields.filter(f => f.filled).length;
+  const filledCount = fields.filter((f) => f.filled).length;
   const percentage = Math.round((filledCount / fields.length) * 100);
 
   if (percentage === 100) return null;
@@ -74,12 +90,14 @@ export function ProfileCompletenessCard({ userId }: ProfileCompletenessCardProps
       <CardContent className="space-y-3">
         <Progress value={percentage} className="h-2" />
         <div className="grid gap-1">
-          {fields.filter(f => !f.filled).map(f => (
-            <div key={f.key} className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Circle className="w-3.5 h-3.5 shrink-0" />
-              {f.label}
-            </div>
-          ))}
+          {fields
+            .filter((f) => !f.filled)
+            .map((f) => (
+              <div key={f.key} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Circle className="w-3.5 h-3.5 shrink-0" />
+                {f.label}
+              </div>
+            ))}
         </div>
         <p className="text-xs text-muted-foreground">
           Pedile a tu encargado que cargue los datos faltantes en la ficha de tu local.

@@ -5,8 +5,6 @@
  * en la sección Configuración > Turnos del local.
  */
 import { useMemo } from 'react';
-import { format, parseISO, isWithinInterval, setHours, setMinutes, startOfDay, addDays } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { BarChart3, Clock, TrendingUp, DollarSign, ShoppingBag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +14,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const fmtCurrency = (v: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(v);
 
 interface BranchShift {
   id: string;
@@ -52,7 +54,10 @@ function isInShift(orderTime: Date, shift: BranchShift): boolean {
   return orderMin >= startMin || orderMin < endMin;
 }
 
-export function ShiftSalesAnalysis({ branchId, daysBack = 7 }: {
+export function ShiftSalesAnalysis({
+  branchId,
+  daysBack = 7,
+}: {
   branchId: string;
   daysBack?: number;
 }) {
@@ -92,10 +97,8 @@ export function ShiftSalesAnalysis({ branchId, daysBack = 7 }: {
 
     const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
 
-    return shifts.map(shift => {
-      const shiftOrders = orders.filter(o =>
-        isInShift(new Date(o.created_at), shift)
-      );
+    return shifts.map((shift) => {
+      const shiftOrders = orders.filter((o) => isInShift(new Date(o.created_at), shift));
       const revenue = shiftOrders.reduce((s, o) => s + Number(o.total), 0);
       return {
         shift,
@@ -109,7 +112,7 @@ export function ShiftSalesAnalysis({ branchId, daysBack = 7 }: {
 
   const totalRevenue = metrics.reduce((s, m) => s + m.revenue, 0);
   const totalOrders = metrics.reduce((s, m) => s + m.orders, 0);
-  const maxRevenue = Math.max(...metrics.map(m => m.revenue), 1);
+  const maxRevenue = Math.max(...metrics.map((m) => m.revenue), 1);
 
   const isLoading = loadingShifts || loadingOrders;
 
@@ -121,7 +124,9 @@ export function ShiftSalesAnalysis({ branchId, daysBack = 7 }: {
         <CardContent className="py-8 text-center text-muted-foreground">
           <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
           <p>No hay turnos configurados.</p>
-          <p className="text-xs mt-1">Configurá turnos en Configuración → Turnos para ver el análisis automático.</p>
+          <p className="text-xs mt-1">
+            Configurá turnos en Configuración → Turnos para ver el análisis automático.
+          </p>
         </CardContent>
       </Card>
     );
@@ -151,12 +156,14 @@ export function ShiftSalesAnalysis({ branchId, daysBack = 7 }: {
           </div>
           <div className="flex items-center gap-1.5">
             <TrendingUp className="w-4 h-4 text-muted-foreground" />
-            <span>Ticket prom: {fmtCurrency(totalOrders > 0 ? totalRevenue / totalOrders : 0)}</span>
+            <span>
+              Ticket prom: {fmtCurrency(totalOrders > 0 ? totalRevenue / totalOrders : 0)}
+            </span>
           </div>
         </div>
 
         {/* Shift breakdown */}
-        {metrics.map(m => (
+        {metrics.map((m) => (
           <div key={m.shift.id} className="space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

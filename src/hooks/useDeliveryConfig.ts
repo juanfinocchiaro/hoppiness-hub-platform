@@ -86,7 +86,10 @@ export function useAllBranchDeliveryConfigs() {
 export function useUpdateBranchDeliveryConfig() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ branchId, values }: {
+    mutationFn: async ({
+      branchId,
+      values,
+    }: {
       branchId: string;
       values: {
         default_radius_km?: number;
@@ -117,10 +120,7 @@ export function useCityNeighborhoods() {
   return useQuery({
     queryKey: ['city-neighborhoods'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('city_neighborhoods')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('city_neighborhoods').select('*').order('name');
       if (error) throw error;
       return data ?? [];
     },
@@ -146,7 +146,11 @@ export function useBranchNeighborhoods(branchId: string | undefined) {
 export function useUpdateNeighborhoodStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status, blockReason }: {
+    mutationFn: async ({
+      id,
+      status,
+      blockReason,
+    }: {
       id: string;
       status: 'enabled' | 'blocked_security';
       blockReason?: string;
@@ -173,7 +177,12 @@ export function useUpdateNeighborhoodStatus() {
 export function useRegenerateBranchNeighborhoods() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ branchId, branchLat, branchLng, radiusKm }: {
+    mutationFn: async ({
+      branchId,
+      branchLat,
+      branchLng,
+      radiusKm,
+    }: {
       branchId: string;
       branchLat: number;
       branchLng: number;
@@ -189,18 +198,35 @@ export function useRegenerateBranchNeighborhoods() {
       if (!neighborhoods) return { added: 0, updated: 0 };
 
       const withinRadius = neighborhoods.filter((n) => {
-        const dist = haversineDistance(branchLat, branchLng, Number(n.centroid_lat), Number(n.centroid_lng));
+        const dist = haversineDistance(
+          branchLat,
+          branchLng,
+          Number(n.centroid_lat),
+          Number(n.centroid_lng),
+        );
         return dist <= radiusKm;
       });
 
       const existingByNeighborhood = new Map((existing ?? []).map((r) => [r.neighborhood_id, r]));
-      const toInsert: Array<{ branch_id: string; neighborhood_id: string; status: 'enabled'; distance_km: number; decided_by: 'auto' }> = [];
+      const toInsert: Array<{
+        branch_id: string;
+        neighborhood_id: string;
+        status: 'enabled';
+        distance_km: number;
+        decided_by: 'auto';
+      }> = [];
       const toUpdateDistance: Array<{ id: string; distance_km: number }> = [];
 
       for (const n of withinRadius) {
-        const distance_km = Math.round(
-          haversineDistance(branchLat, branchLng, Number(n.centroid_lat), Number(n.centroid_lng)) * 100
-        ) / 100;
+        const distance_km =
+          Math.round(
+            haversineDistance(
+              branchLat,
+              branchLng,
+              Number(n.centroid_lat),
+              Number(n.centroid_lng),
+            ) * 100,
+          ) / 100;
         const row = existingByNeighborhood.get(n.id);
         if (!row) {
           toInsert.push({
@@ -216,9 +242,7 @@ export function useRegenerateBranchNeighborhoods() {
       }
 
       if (toInsert.length > 0) {
-        const { error } = await supabase
-          .from('branch_delivery_neighborhoods')
-          .insert(toInsert);
+        const { error } = await supabase.from('branch_delivery_neighborhoods').insert(toInsert);
         if (error) throw error;
       }
 
@@ -255,17 +279,23 @@ export function useDeliveryRadiusOverride() {
   const updateConfig = useUpdateBranchDeliveryConfig();
 
   return useMutation({
-    mutationFn: async ({ branchId, newRadiusKm, previousKm, action }: {
+    mutationFn: async ({
+      branchId,
+      newRadiusKm,
+      previousKm,
+      action,
+    }: {
       branchId: string;
       newRadiusKm: number | null;
       previousKm: number | null;
       action: 'reduce' | 'restore';
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      const overrideUntil = newRadiusKm != null
-        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        : null;
+      const overrideUntil =
+        newRadiusKm != null ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null;
 
       await updateConfig.mutateAsync({
         branchId,
@@ -300,7 +330,10 @@ export interface DynamicPrepTime {
   base_prep_time: number;
 }
 
-export function useDynamicPrepTime(branchId: string | undefined, tipoServicio: 'delivery' | 'retiro') {
+export function useDynamicPrepTime(
+  branchId: string | undefined,
+  tipoServicio: 'delivery' | 'retiro',
+) {
   return useQuery<DynamicPrepTime>({
     queryKey: ['dynamic-prep-time', branchId, tipoServicio],
     queryFn: async () => {
@@ -310,11 +343,13 @@ export function useDynamicPrepTime(branchId: string | undefined, tipoServicio: '
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      return row ?? {
-        prep_time_min: tipoServicio === 'delivery' ? 40 : 15,
-        active_orders: 0,
-        base_prep_time: tipoServicio === 'delivery' ? 40 : 15,
-      };
+      return (
+        row ?? {
+          prep_time_min: tipoServicio === 'delivery' ? 40 : 15,
+          active_orders: 0,
+          base_prep_time: tipoServicio === 'delivery' ? 40 : 15,
+        }
+      );
     },
     enabled: !!branchId,
     refetchInterval: 30_000,
@@ -343,7 +378,12 @@ export function useCalculateDelivery() {
         duration_min: number | null;
         estimated_delivery_min: number | null;
         disclaimer: string | null;
-        reason?: 'out_of_radius' | 'blocked_zone' | 'delivery_disabled' | 'assigned_other_branch' | 'not_assigned';
+        reason?:
+          | 'out_of_radius'
+          | 'blocked_zone'
+          | 'delivery_disabled'
+          | 'assigned_other_branch'
+          | 'not_assigned';
         suggested_branch?: { id: string; name: string; slug: string } | null;
       };
     },
@@ -371,17 +411,13 @@ export function useNeighborhoodAssignments(neighborhoodIds: string[]) {
 
 // ─── Helpers ────────────────────────────────────────────────
 
-function haversineDistance(
-  lat1: number, lng1: number,
-  lat2: number, lng2: number
-): number {
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 

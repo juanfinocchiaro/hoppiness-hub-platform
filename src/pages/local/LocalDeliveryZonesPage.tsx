@@ -27,11 +27,14 @@ export default function LocalDeliveryZonesPage() {
 
   const enabledNeighborhoods = useMemo(
     () => neighborhoods.filter((n: any) => n.status === 'enabled'),
-    [neighborhoods]
+    [neighborhoods],
   );
   const blockedNeighborhoods = useMemo(
-    () => neighborhoods.filter((n: any) => typeof n.status === 'string' && n.status.startsWith('blocked')),
-    [neighborhoods]
+    () =>
+      neighborhoods.filter(
+        (n: any) => typeof n.status === 'string' && n.status.startsWith('blocked'),
+      ),
+    [neighborhoods],
   );
 
   const filteredList = useMemo(() => {
@@ -53,8 +56,8 @@ export default function LocalDeliveryZonesPage() {
   }
 
   const effectiveRadius = config
-    ? (config.radius_override_km != null &&
-       (!config.radius_override_until || new Date(config.radius_override_until) > new Date()))
+    ? config.radius_override_km != null &&
+      (!config.radius_override_until || new Date(config.radius_override_until) > new Date())
       ? config.radius_override_km
       : config.default_radius_km
     : null;
@@ -92,9 +95,7 @@ export default function LocalDeliveryZonesPage() {
               </div>
               <div className="rounded-lg bg-muted/50 p-3 text-center">
                 <p className="text-xs text-muted-foreground mb-0.5">Radio</p>
-                <p className="text-sm font-semibold">
-                  {effectiveRadius ?? '—'} km
-                </p>
+                <p className="text-sm font-semibold">{effectiveRadius ?? '—'} km</p>
               </div>
             </div>
           </CardContent>
@@ -113,7 +114,9 @@ export default function LocalDeliveryZonesPage() {
           <Tabs value={tab} onValueChange={setTab}>
             <div className="flex items-center gap-3 flex-wrap">
               <TabsList>
-                <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
+                <TabsTrigger value="all" className="text-xs">
+                  Todos
+                </TabsTrigger>
                 <TabsTrigger value="enabled" className="text-xs">
                   <CheckCircle2 className="mr-1 h-3 w-3" />
                   Habilitados ({enabledNeighborhoods.length})
@@ -143,7 +146,8 @@ export default function LocalDeliveryZonesPage() {
                     </p>
                   ) : (
                     filteredList.map((n: any) => {
-                      const isBlocked = typeof n.status === 'string' && n.status.startsWith('blocked');
+                      const isBlocked =
+                        typeof n.status === 'string' && n.status.startsWith('blocked');
                       return (
                         <div key={n.id} className="flex items-center gap-3 px-3 py-2">
                           {isBlocked ? (
@@ -151,12 +155,19 @@ export default function LocalDeliveryZonesPage() {
                           ) : (
                             <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
                           )}
-                          <span className="text-sm truncate flex-1">{n.city_neighborhoods?.name ?? '—'}</span>
+                          <span className="text-sm truncate flex-1">
+                            {n.city_neighborhoods?.name ?? '—'}
+                          </span>
                           {n.distance_km != null && (
-                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">{n.distance_km} km</span>
+                            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                              {n.distance_km} km
+                            </span>
                           )}
                           {isBlocked && n.block_reason && (
-                            <Badge variant="outline" className="text-xs border-destructive/30 text-destructive shrink-0">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-destructive/30 text-destructive shrink-0"
+                            >
                               {n.block_reason}
                             </Badge>
                           )}
@@ -174,9 +185,7 @@ export default function LocalDeliveryZonesPage() {
       {/* Info */}
       <div className="flex items-start gap-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-4 text-sm text-blue-800 dark:text-blue-300">
         <Info className="h-5 w-5 shrink-0 mt-0.5" />
-        <p>
-          Para modificar zonas, precios o el radio de cobertura, contactá a la marca.
-        </p>
+        <p>Para modificar zonas, precios o el radio de cobertura, contactá a la marca.</p>
       </div>
     </div>
   );

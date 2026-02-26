@@ -18,11 +18,13 @@ export function useItemsCarta(branchId?: string) {
 
         const { data, error } = await supabase
           .from('items_carta')
-          .select(`
+          .select(
+            `
             *,
             menu_categorias:categoria_carta_id(id, nombre, orden),
             rdo_categories:rdo_category_code(code, name)
-          `)
+          `,
+          )
           .eq('activo', true)
           .is('deleted_at', null)
           .order('orden');
@@ -42,11 +44,13 @@ export function useItemsCarta(branchId?: string) {
 
       const { data, error } = await supabase
         .from('items_carta')
-        .select(`
+        .select(
+          `
           *,
           menu_categorias:categoria_carta_id(id, nombre, orden),
           rdo_categories:rdo_category_code(code, name)
-        `)
+        `,
+        )
         .eq('activo', true)
         .is('deleted_at', null)
         .order('orden');
@@ -63,11 +67,13 @@ export function useItemCartaComposicion(itemId: string | undefined) {
       if (!itemId) return [];
       const { data, error } = await supabase
         .from('item_carta_composicion')
-        .select(`
+        .select(
+          `
           *,
           preparaciones(id, nombre, costo_calculado, tipo),
           insumos(id, nombre, costo_por_unidad_base, unidad_base)
-        `)
+        `,
+        )
         .eq('item_carta_id', itemId)
         .order('orden');
       if (error) throw error;
@@ -155,22 +161,25 @@ export function useItemCartaMutations() {
   });
 
   const saveComposicion = useMutation({
-    mutationFn: async ({ item_carta_id, items }: {
+    mutationFn: async ({
+      item_carta_id,
+      items,
+    }: {
       item_carta_id: string;
       items: { preparacion_id?: string; insumo_id?: string; cantidad: number }[];
     }) => {
       await supabase.from('item_carta_composicion').delete().eq('item_carta_id', item_carta_id);
 
       if (items.length > 0) {
-        const { error } = await supabase
-          .from('item_carta_composicion')
-          .insert(items.map((item, index) => ({
+        const { error } = await supabase.from('item_carta_composicion').insert(
+          items.map((item, index) => ({
             item_carta_id,
             preparacion_id: item.preparacion_id || null,
             insumo_id: item.insumo_id || null,
             cantidad: item.cantidad,
             orden: index,
-          })) as any);
+          })) as any,
+        );
         if (error) throw error;
       }
 
@@ -187,7 +196,13 @@ export function useItemCartaMutations() {
   });
 
   const cambiarPrecio = useMutation({
-    mutationFn: async ({ itemId, precioAnterior, precioNuevo, motivo, userId }: {
+    mutationFn: async ({
+      itemId,
+      precioAnterior,
+      precioNuevo,
+      motivo,
+      userId,
+    }: {
       itemId: string;
       precioAnterior: number;
       precioNuevo: number;
@@ -200,15 +215,13 @@ export function useItemCartaMutations() {
         .eq('id', itemId);
       if (errUpdate) throw errUpdate;
 
-      const { error: errHist } = await supabase
-        .from('item_carta_precios_historial')
-        .insert({
-          item_carta_id: itemId,
-          precio_anterior: precioAnterior,
-          precio_nuevo: precioNuevo,
-          motivo: motivo || null,
-          usuario_id: userId || null,
-        } as any);
+      const { error: errHist } = await supabase.from('item_carta_precios_historial').insert({
+        item_carta_id: itemId,
+        precio_anterior: precioAnterior,
+        precio_nuevo: precioNuevo,
+        motivo: motivo || null,
+        usuario_id: userId || null,
+      } as any);
       if (errHist) throw errHist;
 
       // Recalculate FC

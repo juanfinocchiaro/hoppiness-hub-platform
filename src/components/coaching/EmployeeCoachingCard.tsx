@@ -8,7 +8,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScoreEvolutionChart, calculateTrend } from './ScoreEvolutionChart';
 import { useEmployeeCoachings } from '@/hooks/useCoachings';
 import { useEmployeeScoreHistory } from '@/hooks/useCoachingStats';
-import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, Minus, Eye, Calendar, User } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Eye,
+  User,
+} from 'lucide-react';
 
 interface EmployeeCoachingCardProps {
   employee: {
@@ -20,39 +28,78 @@ interface EmployeeCoachingCardProps {
   onViewDetail: (coachingId: string) => void;
 }
 
-const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MONTH_LABELS = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
 
-export function EmployeeCoachingCard({ employee, branchId, onViewDetail }: EmployeeCoachingCardProps) {
+export function EmployeeCoachingCard({
+  employee,
+  branchId,
+  onViewDetail,
+}: EmployeeCoachingCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { data: coachings, isLoading: loadingCoachings } = useEmployeeCoachings(employee.id, branchId);
-  const { data: scoreHistory, isLoading: loadingHistory } = useEmployeeScoreHistory(employee.id, branchId, 12);
+  const { data: coachings, isLoading: loadingCoachings } = useEmployeeCoachings(
+    employee.id,
+    branchId,
+  );
+  const { data: scoreHistory, isLoading: loadingHistory } = useEmployeeScoreHistory(
+    employee.id,
+    branchId,
+    12,
+  );
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   // Calcular promedio histórico
-  const averageScore = coachings && coachings.length > 0
-    ? coachings.reduce((sum, c) => sum + (c.overall_score || 0), 0) / coachings.filter(c => c.overall_score).length
-    : null;
+  const averageScore =
+    coachings && coachings.length > 0
+      ? coachings.reduce((sum, c) => sum + (c.overall_score || 0), 0) /
+        coachings.filter((c) => c.overall_score).length
+      : null;
 
   const trend = scoreHistory ? calculateTrend(scoreHistory) : null;
 
   const getTrendIcon = () => {
     switch (trend) {
-      case 'up': return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'down': return <TrendingDown className="h-4 w-4 text-red-600" />;
-      case 'stable': return <Minus className="h-4 w-4 text-amber-600" />;
-      default: return null;
+      case 'up':
+        return <TrendingUp className="h-4 w-4 text-green-600" />;
+      case 'down':
+        return <TrendingDown className="h-4 w-4 text-red-600" />;
+      case 'stable':
+        return <Minus className="h-4 w-4 text-amber-600" />;
+      default:
+        return null;
     }
   };
 
   const getTrendLabel = () => {
     switch (trend) {
-      case 'up': return 'Mejorando';
-      case 'down': return 'Bajando';
-      case 'stable': return 'Estable';
-      default: return null;
+      case 'up':
+        return 'Mejorando';
+      case 'down':
+        return 'Bajando';
+      case 'stable':
+        return 'Estable';
+      default:
+        return null;
     }
   };
 
@@ -104,7 +151,8 @@ export function EmployeeCoachingCard({ employee, branchId, onViewDetail }: Emplo
                 <div>
                   <p className="font-medium">{employee.full_name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {coachings.length} coaching{coachings.length !== 1 ? 's' : ''} registrado{coachings.length !== 1 ? 's' : ''}
+                    {coachings.length} coaching{coachings.length !== 1 ? 's' : ''} registrado
+                    {coachings.length !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
@@ -150,7 +198,7 @@ export function EmployeeCoachingCard({ employee, branchId, onViewDetail }: Emplo
             {/* Lista de coachings */}
             <div className="space-y-2">
               <p className="text-sm font-medium">Historial de Evaluaciones</p>
-              {coachings.map(coaching => (
+              {coachings.map((coaching) => (
                 <div
                   key={coaching.id}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
@@ -173,18 +221,18 @@ export function EmployeeCoachingCard({ employee, branchId, onViewDetail }: Emplo
                         {coaching.evaluator.full_name}
                       </div>
                     )}
-                    
+
                     {coaching.acknowledged_at ? (
-                      <Badge variant="secondary" className="text-xs">Confirmado</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Confirmado
+                      </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs">Pendiente</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Pendiente
+                      </Badge>
                     )}
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onViewDetail(coaching.id)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onViewDetail(coaching.id)}>
                       <Eye className="h-4 w-4 mr-1" />
                       Ver
                     </Button>

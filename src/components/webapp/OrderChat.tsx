@@ -29,7 +29,13 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, chatActive }: OrderChatProps) {
+export function OrderChat({
+  trackingCode,
+  pedidoId,
+  branchName,
+  clienteNombre,
+  chatActive,
+}: OrderChatProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -42,14 +48,15 @@ export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, c
 
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${baseUrl}/functions/v1/webapp-pedido-chat?code=${trackingCode}`,
-        { headers: { apikey: apiKey } },
-      );
+      const res = await fetch(`${baseUrl}/functions/v1/webapp-pedido-chat?code=${trackingCode}`, {
+        headers: { apikey: apiKey },
+      });
       if (!res.ok) return;
       const data = await res.json();
       setMessages(data.messages ?? []);
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }, [trackingCode, baseUrl, apiKey]);
 
   // Initial load
@@ -62,24 +69,30 @@ export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, c
     if (!pedidoId) return;
     const channel = supabase
       .channel(`chat-${pedidoId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'webapp_pedido_mensajes',
-        filter: `pedido_id=eq.${pedidoId}`,
-      }, (payload) => {
-        const newMsg = payload.new as ChatMessage;
-        setMessages(prev => {
-          if (prev.some(m => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
-        });
-        if (newMsg.sender_type === 'local' && !open) {
-          setUnread(prev => prev + 1);
-        }
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'webapp_pedido_mensajes',
+          filter: `pedido_id=eq.${pedidoId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as ChatMessage;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          if (newMsg.sender_type === 'local' && !open) {
+            setUnread((prev) => prev + 1);
+          }
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [pedidoId, open]);
 
   // Auto-scroll
@@ -114,17 +127,22 @@ export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, c
       if (res.ok) {
         const data = await res.json();
         // Optimistic add
-        setMessages(prev => [...prev, {
-          id: data.id,
-          sender_type: 'cliente',
-          sender_nombre: clienteNombre || 'Cliente',
-          mensaje: text,
-          leido: false,
-          created_at: data.created_at,
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            sender_type: 'cliente',
+            sender_nombre: clienteNombre || 'Cliente',
+            mensaje: text,
+            leido: false,
+            created_at: data.created_at,
+          },
+        ]);
         setInput('');
       }
-    } catch { /* silent */ } finally {
+    } catch {
+      /* silent */
+    } finally {
       setSending(false);
     }
   };
@@ -135,11 +153,7 @@ export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, c
     <div className="space-y-2">
       {/* Toggle button */}
       {!open && (
-        <Button
-          variant="outline"
-          className="w-full gap-2 relative"
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="outline" className="w-full gap-2 relative" onClick={() => setOpen(true)}>
           <MessageCircle className="w-4 h-4" />
           Chatear con {branchName}
           {unread > 0 && (
@@ -171,20 +185,24 @@ export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, c
                 Escribí tu consulta al local
               </p>
             )}
-            {messages.map(msg => (
+            {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.sender_type === 'cliente' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[80%] rounded-xl px-3 py-2 ${
-                  msg.sender_type === 'cliente'
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'bg-card border rounded-bl-sm'
-                }`}>
+                <div
+                  className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                    msg.sender_type === 'cliente'
+                      ? 'bg-primary text-primary-foreground rounded-br-sm'
+                      : 'bg-card border rounded-bl-sm'
+                  }`}
+                >
                   <p className="text-sm break-words">{msg.mensaje}</p>
-                  <p className={`text-[10px] mt-0.5 ${
-                    msg.sender_type === 'cliente' ? 'opacity-70' : 'text-muted-foreground'
-                  }`}>
+                  <p
+                    className={`text-[10px] mt-0.5 ${
+                      msg.sender_type === 'cliente' ? 'opacity-70' : 'text-muted-foreground'
+                    }`}
+                  >
                     {formatTime(msg.created_at)}
                   </p>
                 </div>
@@ -196,18 +214,26 @@ export function OrderChat({ trackingCode, pedidoId, branchName, clienteNombre, c
           {/* Input */}
           {chatActive ? (
             <form
-              onSubmit={e => { e.preventDefault(); sendMessage(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
               className="flex gap-2 p-2 border-t bg-background"
             >
               <Input
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={(e) => setInput(e.target.value)}
                 placeholder="Escribí tu mensaje..."
                 maxLength={500}
                 className="text-sm h-9"
                 disabled={sending}
               />
-              <Button type="submit" size="sm" className="h-9 px-3" disabled={!input.trim() || sending}>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-9 px-3"
+                disabled={!input.trim() || sending}
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </form>

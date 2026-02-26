@@ -1,7 +1,7 @@
 /**
  * useNetworkCoachingStats - Estadísticas consolidadas de coaching de toda la red
- * 
- * Usado en Mi Marca > Coaching > Red para ver métricas globales de 
+ *
+ * Usado en Mi Marca > Coaching > Red para ver métricas globales de
  * todos los coachings de empleados hechos por encargados.
  */
 import { useQuery } from '@tanstack/react-query';
@@ -71,8 +71,8 @@ export function useNetworkCoachingStats() {
         };
       }
 
-      const branchIds = branches.map(b => b.id);
-      const branchMap = new Map(branches.map(b => [b.id, b.name]));
+      const branchIds = branches.map((b) => b.id);
+      const branchMap = new Map(branches.map((b) => [b.id, b.name]));
 
       // 2. Obtener empleados y cajeros por sucursal
       const { data: staffRoles, error: staffErr } = await supabase
@@ -85,7 +85,7 @@ export function useNetworkCoachingStats() {
       if (staffErr) throw staffErr;
 
       const staffByBranch = new Map<string, string[]>();
-      staffRoles?.forEach(r => {
+      staffRoles?.forEach((r) => {
         const list = staffByBranch.get(r.branch_id) || [];
         list.push(r.user_id);
         staffByBranch.set(r.branch_id, list);
@@ -102,7 +102,7 @@ export function useNetworkCoachingStats() {
       if (coachingsErr) throw coachingsErr;
 
       // 4. Obtener perfiles para top/low performers
-      const coachingUserIds = [...new Set(thisMonthCoachings?.map(c => c.user_id) ?? [])];
+      const coachingUserIds = [...new Set(thisMonthCoachings?.map((c) => c.user_id) ?? [])];
       const { data: profiles, error: profilesErr } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -110,27 +110,28 @@ export function useNetworkCoachingStats() {
 
       if (profilesErr) throw profilesErr;
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p.full_name]) ?? []);
 
       // 5. Calcular stats por sucursal
-      const branchStats: BranchCoachingStats[] = branches.map(branch => {
+      const branchStats: BranchCoachingStats[] = branches.map((branch) => {
         const staffList = staffByBranch.get(branch.id) || [];
-        const branchCoachings = thisMonthCoachings?.filter(c => c.branch_id === branch.id) || [];
-        const evaluatedUserIds = new Set(branchCoachings.map(c => c.user_id));
-        
-        const scores = branchCoachings.filter(c => c.overall_score !== null).map(c => c.overall_score!);
-        const avgScore = scores.length > 0 
-          ? scores.reduce((sum, s) => sum + s, 0) / scores.length 
-          : null;
+        const branchCoachings = thisMonthCoachings?.filter((c) => c.branch_id === branch.id) || [];
+        const evaluatedUserIds = new Set(branchCoachings.map((c) => c.user_id));
+
+        const scores = branchCoachings
+          .filter((c) => c.overall_score !== null)
+          .map((c) => c.overall_score!);
+        const avgScore =
+          scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
 
         return {
           branchId: branch.id,
           branchName: branch.name,
           totalEmployees: staffList.length,
           coachingsThisMonth: branchCoachings.length,
-          pendingCoachings: staffList.filter(id => !evaluatedUserIds.has(id)).length,
+          pendingCoachings: staffList.filter((id) => !evaluatedUserIds.has(id)).length,
           averageScore: avgScore,
-          pendingAcknowledgments: branchCoachings.filter(c => !c.acknowledged_at).length,
+          pendingAcknowledgments: branchCoachings.filter((c) => !c.acknowledged_at).length,
         };
       });
 
@@ -138,35 +139,41 @@ export function useNetworkCoachingStats() {
       const totalEmployees = branchStats.reduce((sum, b) => sum + b.totalEmployees, 0);
       const totalCoachingsThisMonth = branchStats.reduce((sum, b) => sum + b.coachingsThisMonth, 0);
       const totalPending = branchStats.reduce((sum, b) => sum + b.pendingCoachings, 0);
-      const totalPendingAcknowledgments = branchStats.reduce((sum, b) => sum + b.pendingAcknowledgments, 0);
+      const totalPendingAcknowledgments = branchStats.reduce(
+        (sum, b) => sum + b.pendingAcknowledgments,
+        0,
+      );
 
-      const allScores = thisMonthCoachings?.filter(c => c.overall_score !== null).map(c => c.overall_score!) || [];
-      const networkAverageScore = allScores.length > 0
-        ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
-        : null;
+      const allScores =
+        thisMonthCoachings?.filter((c) => c.overall_score !== null).map((c) => c.overall_score!) ||
+        [];
+      const networkAverageScore =
+        allScores.length > 0 ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length : null;
 
       // 7. Top y low performers
-      const scoredCoachings = thisMonthCoachings
-        ?.filter(c => c.overall_score !== null)
-        .map(c => ({
-          userId: c.user_id,
-          fullName: profileMap.get(c.user_id) || 'Sin nombre',
-          branchName: branchMap.get(c.branch_id) || 'Sin sucursal',
-          score: c.overall_score!,
-        })) || [];
+      const scoredCoachings =
+        thisMonthCoachings
+          ?.filter((c) => c.overall_score !== null)
+          .map((c) => ({
+            userId: c.user_id,
+            fullName: profileMap.get(c.user_id) || 'Sin nombre',
+            branchName: branchMap.get(c.branch_id) || 'Sin sucursal',
+            score: c.overall_score!,
+          })) || [];
 
       const sortedByScore = [...scoredCoachings].sort((a, b) => b.score - a.score);
       const topPerformers = sortedByScore.slice(0, 5);
       const lowPerformers = sortedByScore.slice(-5).reverse();
 
       // 8. Tendencia mensual (últimos 6 meses)
-      const monthlyTrend: Array<{ month: string; averageScore: number; totalCoachings: number }> = [];
-      
+      const monthlyTrend: Array<{ month: string; averageScore: number; totalCoachings: number }> =
+        [];
+
       for (let i = 5; i >= 0; i--) {
         const targetDate = new Date(currentYear, currentMonth - 1 - i, 1);
         const targetMonth = targetDate.getMonth() + 1;
         const targetYear = targetDate.getFullYear();
-        
+
         const { data: monthData, error: monthErr } = await supabase
           .from('coachings')
           .select('overall_score')
@@ -176,10 +183,12 @@ export function useNetworkCoachingStats() {
 
         if (monthErr) throw monthErr;
 
-        const monthScores = monthData?.filter(c => c.overall_score !== null).map(c => c.overall_score!) || [];
-        const monthAvg = monthScores.length > 0
-          ? monthScores.reduce((sum, s) => sum + s, 0) / monthScores.length
-          : 0;
+        const monthScores =
+          monthData?.filter((c) => c.overall_score !== null).map((c) => c.overall_score!) || [];
+        const monthAvg =
+          monthScores.length > 0
+            ? monthScores.reduce((sum, s) => sum + s, 0) / monthScores.length
+            : 0;
 
         monthlyTrend.push({
           month: targetDate.toLocaleString('es-AR', { month: 'short' }),

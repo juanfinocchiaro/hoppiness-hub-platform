@@ -47,7 +47,11 @@ export default function DeliveryPage() {
     mutationFn: async ({ pedidoId, cadeteId }: { pedidoId: string; cadeteId: string }) => {
       const { error } = await supabase
         .from('pedidos')
-        .update({ cadete_id: cadeteId, estado: 'en_camino', tiempo_en_camino: new Date().toISOString() } as any)
+        .update({
+          cadete_id: cadeteId,
+          estado: 'en_camino',
+          tiempo_en_camino: new Date().toISOString(),
+        } as any)
         .eq('id', pedidoId);
       if (error) throw error;
     },
@@ -64,7 +68,11 @@ export default function DeliveryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Entrega" subtitle="Pedidos para delivery" icon={<Truck className="w-5 h-5" />} />
+      <PageHeader
+        title="Entrega"
+        subtitle="Pedidos para delivery"
+        icon={<Truck className="w-5 h-5" />}
+      />
 
       {listos.length > 0 && (
         <div>
@@ -96,7 +104,9 @@ export default function DeliveryPage() {
                             key={c.id}
                             variant="outline"
                             className="cursor-pointer"
-                            onClick={() => asignarCadete.mutate({ pedidoId: p.id, cadeteId: c.user_id })}
+                            onClick={() =>
+                              asignarCadete.mutate({ pedidoId: p.id, cadeteId: c.user_id })
+                            }
                           >
                             {c.nombre}
                           </Badge>

@@ -17,18 +17,19 @@ interface MeetingPendingCardProps {
 }
 
 export function MeetingPendingCard({ branchId, onCreateMeeting }: MeetingPendingCardProps) {
-  const { data: stats, isLoading: loadingStats } = useUnreadMeetingsCount(branchId);
+  const { data: _stats, isLoading: loadingStats } = useUnreadMeetingsCount(branchId);
   const { data: meetings, isLoading: loadingMeetings } = useBranchMeetings(branchId);
 
-  const activeMeetings = meetings?.filter(m => m.status !== 'cancelada');
+  const activeMeetings = meetings?.filter((m) => m.status !== 'cancelada');
   const lastMeeting = activeMeetings?.[0];
   const isLoading = loadingStats || loadingMeetings;
 
   // Count unread participants across active meetings only
-  const pendingReads = activeMeetings?.reduce((acc, m) => {
-    const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
-    return acc + unread;
-  }, 0) || 0;
+  const pendingReads =
+    activeMeetings?.reduce((acc, m) => {
+      const unread = m.participants?.filter((p: any) => !p.read_at).length || 0;
+      return acc + unread;
+    }, 0) || 0;
 
   return (
     <Card>
@@ -55,7 +56,8 @@ export function MeetingPendingCard({ branchId, onCreateMeeting }: MeetingPending
                 <div className="flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5" />
                   <span>
-                    Última: {format(new Date(lastMeeting.date), "d MMM", { locale: es })} - {lastMeeting.title}
+                    Última: {format(new Date(lastMeeting.date), 'd MMM', { locale: es })} -{' '}
+                    {lastMeeting.title}
                   </span>
                 </div>
               ) : (

@@ -58,15 +58,11 @@ export function useUploadProveedorDoc() {
       const ext = file.name.split('.').pop() || 'pdf';
       const storagePath = `${proveedorId}/${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(storagePath, file);
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(storagePath);
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
 
       const { data: doc, error: dbError } = await fromUntyped('proveedor_documentos')
         .insert({
@@ -115,13 +111,7 @@ export function useUploadFacturaPdf() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      facturaId,
-      file,
-    }: {
-      facturaId: string;
-      file: File;
-    }) => {
+    mutationFn: async ({ facturaId, file }: { facturaId: string; file: File }) => {
       if (file.type !== 'application/pdf') {
         throw new Error('Solo se permiten archivos PDF');
       }
@@ -131,15 +121,11 @@ export function useUploadFacturaPdf() {
 
       const storagePath = `facturas/${facturaId}/${Date.now()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(storagePath, file);
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(storagePath);
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
 
       const { error: dbError } = await fromUntyped('facturas_proveedores')
         .update({ factura_pdf_url: urlData.publicUrl })

@@ -92,7 +92,7 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
             public_key: values.public_key,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: 'branch_id' }
+          { onConflict: 'branch_id' },
         )
         .select()
         .single();
@@ -128,7 +128,9 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
-      toast.success('Conexión exitosa', { description: `Collector ID: ${data?.collector_id ?? 'N/A'}` });
+      toast.success('Conexión exitosa', {
+        description: `Collector ID: ${data?.collector_id ?? 'N/A'}`,
+      });
     },
     onError: (err: Error) => {
       const msg = err.message || 'Token inválido o sin permisos';
@@ -188,7 +190,8 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
       qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
       // Device was saved, only mode change failed — show actionable message
       toast.warning('Dispositivo guardado, pero no se pudo activar modo PDV', {
-        description: err.message || 'Activalo manualmente: Más opciones → Ajustes → Modo de vinculación.',
+        description:
+          err.message || 'Activalo manualmente: Más opciones → Ajustes → Modo de vinculación.',
       });
     },
   });
@@ -211,14 +214,12 @@ export function useMercadoPagoConfigMutations(branchId: string | undefined) {
     },
     onSuccess: (mode) => {
       qc.invalidateQueries({ queryKey: ['mp-config', branchId] });
-      toast.success(
-        mode === 'PDV' ? 'Modo PDV activado' : 'Modo Standalone activado',
-        {
-          description: mode === 'PDV'
+      toast.success(mode === 'PDV' ? 'Modo PDV activado' : 'Modo Standalone activado', {
+        description:
+          mode === 'PDV'
             ? 'El dispositivo está listo para integrarse con el POS.'
             : 'El dispositivo volvió al modo independiente.',
-        },
-      );
+      });
     },
     onError: (err: Error) => {
       toast.error('Error al cambiar modo', { description: err.message });

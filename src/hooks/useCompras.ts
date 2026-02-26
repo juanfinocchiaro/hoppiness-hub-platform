@@ -12,7 +12,9 @@ export function useFacturas(branchId: string, periodo?: string) {
     queryFn: async () => {
       let q = supabase
         .from('facturas_proveedores')
-        .select('*, proveedores(razon_social), items_factura(*, insumos(nombre), conceptos_servicio(nombre))')
+        .select(
+          '*, proveedores(razon_social), items_factura(*, insumos(nombre), conceptos_servicio(nombre))',
+        )
         .eq('branch_id', branchId)
         .is('deleted_at', null)
         .order('factura_fecha', { ascending: false });
@@ -50,20 +52,25 @@ export function useFacturaMutations() {
   const { user } = useAuth();
 
   const create = useMutation({
-    mutationFn: async (data: FacturaFormData & {
-      subtotal_bruto?: number;
-      total_descuentos?: number;
-      subtotal_neto?: number;
-      imp_internos?: number;
-      iva_21?: number;
-      iva_105?: number;
-      perc_iva?: number;
-      perc_provincial?: number;
-      perc_municipal?: number;
-      total_factura?: number;
-    }) => {
+    mutationFn: async (
+      data: FacturaFormData & {
+        subtotal_bruto?: number;
+        total_descuentos?: number;
+        subtotal_neto?: number;
+        imp_internos?: number;
+        iva_21?: number;
+        iva_105?: number;
+        perc_iva?: number;
+        perc_provincial?: number;
+        perc_municipal?: number;
+        total_factura?: number;
+      },
+    ) => {
       const subtotalItems = data.items.reduce((s, i) => s + i.subtotal, 0);
-      const total = (data.total_factura != null) ? data.total_factura : subtotalItems + (data.iva || 0) + (data.otros_impuestos || 0);
+      const total =
+        data.total_factura != null
+          ? data.total_factura
+          : subtotalItems + (data.iva || 0) + (data.otros_impuestos || 0);
       const estadoPago = data.condicion_pago === 'contado' ? 'pagado' : 'pendiente';
 
       // Build factura JSON for the transactional RPC
@@ -100,10 +107,10 @@ export function useFacturaMutations() {
 
       const itemsPayload = data.items.map((item: any) => ({
         tipo_item: item.tipo_item || 'insumo',
-        insumo_id: item.tipo_item === 'servicio' ? null : (item.insumo_id || null),
+        insumo_id: item.tipo_item === 'servicio' ? null : item.insumo_id || null,
         concepto_servicio_id: item.tipo_item === 'servicio' ? item.concepto_servicio_id : null,
         cantidad: item.tipo_item === 'servicio' ? 1 : item.cantidad,
-        unidad: item.tipo_item === 'servicio' ? null : (item.unidad || null),
+        unidad: item.tipo_item === 'servicio' ? null : item.unidad || null,
         precio_unitario: item.precio_unitario,
         subtotal: item.subtotal,
         afecta_costo_base: item.afecta_costo_base ?? true,
@@ -172,7 +179,7 @@ export function usePagosProveedor(facturaId: string) {
         return legacyData;
       }
 
-      return (data || []).map(row => ({
+      return (data || []).map((row) => ({
         ...row.pagos_proveedores,
         monto_aplicado: row.monto_aplicado,
       }));
@@ -207,15 +214,13 @@ export function usePagoProveedorMutations() {
 
       // 2. Link payment to invoices via pago_factura junction
       if (data.aplicaciones && data.aplicaciones.length > 0) {
-        const junctionRows = data.aplicaciones.map(app => ({
+        const junctionRows = data.aplicaciones.map((app) => ({
           pago_id: pago.id,
           factura_id: app.factura_id,
           monto_aplicado: app.monto_aplicado,
         }));
 
-        const { error: junctionErr } = await supabase
-          .from('pago_factura')
-          .insert(junctionRows);
+        const { error: junctionErr } = await supabase.from('pago_factura').insert(junctionRows);
         if (junctionErr) throw junctionErr;
 
         // 3. Update saldo_pendiente on each affected invoice

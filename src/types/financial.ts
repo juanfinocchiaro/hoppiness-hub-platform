@@ -102,5 +102,8 @@ export const TIPO_CATEGORIA_OPTIONS = [
 ] as const;
 
 export const MEDIOS_PAGO_PROVEEDOR = [
-  'efectivo', 'transferencia', 'cheque', 'cuenta_corriente',
+  'efectivo',
+  'transferencia',
+  'cheque',
+  'cuenta_corriente',
 ] as const;

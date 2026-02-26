@@ -21,11 +21,10 @@ interface ExistingExtra {
 
 async function findExistingExtra(
   tipo: 'preparacion' | 'insumo',
-  refId: string
+  refId: string,
 ): Promise<ExistingExtra | null> {
-  const field = tipo === 'preparacion'
-    ? 'composicion_ref_preparacion_id'
-    : 'composicion_ref_insumo_id';
+  const field =
+    tipo === 'preparacion' ? 'composicion_ref_preparacion_id' : 'composicion_ref_insumo_id';
   const { data, error } = await supabase
     .from('items_carta')
     .select('id, activo, deleted_at')
@@ -106,10 +105,7 @@ export function useToggleExtra() {
 
         // 2. Create/update composition row so RPC calculates cost correctly
         // Delete any existing composition for this extra first
-        await supabase
-          .from('item_carta_composicion')
-          .delete()
-          .eq('item_carta_id', extraId);
+        await supabase.from('item_carta_composicion').delete().eq('item_carta_id', extraId);
 
         const compRow: any = {
           item_carta_id: extraId,
@@ -118,24 +114,20 @@ export function useToggleExtra() {
           cantidad: cantidad,
           orden: 0,
         };
-        const { error: compError } = await supabase
-          .from('item_carta_composicion')
-          .insert(compRow);
+        const { error: compError } = await supabase.from('item_carta_composicion').insert(compRow);
         if (compError) throw compError;
 
         // Recalculate cost via RPC (now uses standard path with composition)
-        const { error: rpcErr } = await supabase.rpc('recalcular_costo_item_carta', { _item_id: extraId });
+        const { error: rpcErr } = await supabase.rpc('recalcular_costo_item_carta', {
+          _item_id: extraId,
+        });
         if (rpcErr) throw rpcErr;
 
         // 3. Create assignment
         const { error: asigError } = await supabase
           .from('item_extra_asignaciones' as any)
-          .upsert(
-            { item_carta_id, extra_id: extraId },
-            { onConflict: 'item_carta_id,extra_id' }
-          );
+          .upsert({ item_carta_id, extra_id: extraId }, { onConflict: 'item_carta_id,extra_id' });
         if (asigError) throw asigError;
-
       } else {
         // Deactivate: remove assignment and soft-delete if orphaned
         const existing = await findExistingExtra(tipo, ref_id);
@@ -155,10 +147,7 @@ export function useToggleExtra() {
           // Soft-delete the extra item if no other product uses it
           if ((count ?? 0) === 0) {
             // Remove composition rows
-            await supabase
-              .from('item_carta_composicion')
-              .delete()
-              .eq('item_carta_id', existing.id);
+            await supabase.from('item_carta_composicion').delete().eq('item_carta_id', existing.id);
 
             await supabase
               .from('items_carta')
@@ -196,10 +185,7 @@ export function useToggleExtraAssignment() {
       if (activo) {
         const { error } = await supabase
           .from('item_extra_asignaciones' as any)
-          .upsert(
-            { item_carta_id, extra_id },
-            { onConflict: 'item_carta_id,extra_id' }
-          );
+          .upsert({ item_carta_id, extra_id }, { onConflict: 'item_carta_id,extra_id' });
         if (error) throw error;
       } else {
         await supabase

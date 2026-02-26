@@ -16,11 +16,16 @@ export default function AuthPopup() {
   useEffect(() => {
     // Check if we already have a session (returning from Google redirect)
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         // Notify the opener window
         if (window.opener) {
-          window.opener.postMessage({ type: 'AUTH_COMPLETE', success: true }, window.location.origin);
+          window.opener.postMessage(
+            { type: 'AUTH_COMPLETE', success: true },
+            window.location.origin,
+          );
         }
         window.close();
         return;
@@ -35,13 +40,19 @@ export default function AuthPopup() {
           });
           if (result.error) {
             if (window.opener) {
-              window.opener.postMessage({ type: 'AUTH_COMPLETE', success: false }, window.location.origin);
+              window.opener.postMessage(
+                { type: 'AUTH_COMPLETE', success: false },
+                window.location.origin,
+              );
             }
             window.close();
           }
         } catch {
           if (window.opener) {
-            window.opener.postMessage({ type: 'AUTH_COMPLETE', success: false }, window.location.origin);
+            window.opener.postMessage(
+              { type: 'AUTH_COMPLETE', success: false },
+              window.location.origin,
+            );
           }
           window.close();
         }
@@ -53,10 +64,15 @@ export default function AuthPopup() {
 
   // Also listen for auth state changes (covers the callback case)
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
         if (window.opener) {
-          window.opener.postMessage({ type: 'AUTH_COMPLETE', success: true }, window.location.origin);
+          window.opener.postMessage(
+            { type: 'AUTH_COMPLETE', success: true },
+            window.location.origin,
+          );
         }
         window.close();
       }

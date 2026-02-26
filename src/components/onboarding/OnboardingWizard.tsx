@@ -31,7 +31,11 @@ interface OnboardingStep {
   description: string;
 }
 
-function getStepsForRole(isOperational: boolean, isFranquiciado: boolean, hasMultipleBranches: boolean): OnboardingStep[] {
+function getStepsForRole(
+  isOperational: boolean,
+  isFranquiciado: boolean,
+  hasMultipleBranches: boolean,
+): OnboardingStep[] {
   const common: OnboardingStep[] = [
     {
       icon: <Rocket className="w-12 h-12 text-primary" />,
@@ -46,22 +50,26 @@ function getStepsForRole(isOperational: boolean, isFranquiciado: boolean, hasMul
       {
         icon: <Clock className="w-12 h-12 text-blue-500" />,
         title: 'Fichajes',
-        description: 'Escaneá el QR de tu local para fichar entrada y salida. Tu PIN de fichaje lo podés ver en la pantalla de inicio.',
+        description:
+          'Escaneá el QR de tu local para fichar entrada y salida. Tu PIN de fichaje lo podés ver en la pantalla de inicio.',
       },
       {
         icon: <Calendar className="w-12 h-12 text-green-500" />,
         title: 'Horarios y Solicitudes',
-        description: 'Consultá tu horario semanal y pedí días libres o cambios desde la sección "Solicitudes".',
+        description:
+          'Consultá tu horario semanal y pedí días libres o cambios desde la sección "Solicitudes".',
       },
       {
         icon: <DollarSign className="w-12 h-12 text-amber-500" />,
         title: 'Adelantos',
-        description: 'Podés solicitar un adelanto de sueldo desde "Solicitudes > Adelantos". Tu encargado lo aprobará.',
+        description:
+          'Podés solicitar un adelanto de sueldo desde "Solicitudes > Adelantos". Tu encargado lo aprobará.',
       },
       {
         icon: <MessageSquare className="w-12 h-12 text-purple-500" />,
         title: 'Comunicados',
-        description: 'Revisá los comunicados con frecuencia. Los urgentes aparecerán como alerta cuando inicies sesión.',
+        description:
+          'Revisá los comunicados con frecuencia. Los urgentes aparecerán como alerta cuando inicies sesión.',
       },
     ];
   }
@@ -72,12 +80,14 @@ function getStepsForRole(isOperational: boolean, isFranquiciado: boolean, hasMul
       {
         icon: <Store className="w-12 h-12 text-blue-500" />,
         title: 'Tus Locales',
-        description: 'Desde la pantalla de inicio podés acceder a cada local para ver ventas, equipo, gastos y más.',
+        description:
+          'Desde la pantalla de inicio podés acceder a cada local para ver ventas, equipo, gastos y más.',
       },
       {
         icon: <Users className="w-12 h-12 text-green-500" />,
         title: 'Gestión de Equipo',
-        description: 'En cada local, la sección "Equipo" te permite ver fichajes, horarios, apercibimientos y adelantos.',
+        description:
+          'En cada local, la sección "Equipo" te permite ver fichajes, horarios, apercibimientos y adelantos.',
       },
     ];
 
@@ -85,7 +95,8 @@ function getStepsForRole(isOperational: boolean, isFranquiciado: boolean, hasMul
       steps.push({
         icon: <BarChart3 className="w-12 h-12 text-amber-500" />,
         title: 'Comparativo',
-        description: 'Usá la sección "Comparativo" para ver el rendimiento de tus locales lado a lado.',
+        description:
+          'Usá la sección "Comparativo" para ver el rendimiento de tus locales lado a lado.',
       });
     }
 
@@ -100,8 +111,8 @@ export function OnboardingWizard() {
   const queryClient = useQueryClient();
   const { branchRoles } = usePermissionsWithImpersonation();
 
-  const isOnlyFranquiciado = branchRoles.length > 0 &&
-    branchRoles.every(r => r.local_role === 'franquiciado');
+  const isOnlyFranquiciado =
+    branchRoles.length > 0 && branchRoles.every((r) => r.local_role === 'franquiciado');
   const isOperational = branchRoles.length > 0 && !isOnlyFranquiciado;
   const hasMultipleBranches = branchRoles.length >= 2;
 
@@ -139,7 +150,8 @@ export function OnboardingWizard() {
 
   const steps = getStepsForRole(isOperational, isOnlyFranquiciado, hasMultipleBranches);
 
-  const shouldShow = !isLoading && profile && !profile.onboarding_completed_at && branchRoles.length > 0;
+  const shouldShow =
+    !isLoading && profile && !profile.onboarding_completed_at && branchRoles.length > 0;
 
   if (!shouldShow) return null;
 
@@ -151,7 +163,7 @@ export function OnboardingWizard() {
     if (isLastStep) {
       completeMutation.mutate();
     } else {
-      setCurrentStep(s => s + 1);
+      setCurrentStep((s) => s + 1);
     }
   };
 
@@ -160,7 +172,12 @@ export function OnboardingWizard() {
   };
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) handleSkip(); }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) handleSkip();
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="sr-only">Onboarding</DialogTitle>

@@ -1,6 +1,12 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -12,7 +18,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, Circle, Edit2, Info, Save, Loader2 } from 'lucide-react';
 import { getCurrentPeriodo } from '@/types/compra';
 import { useRdoCategories } from '@/hooks/useRdoCategories';
-import { useRdoMovimientos, useRdoMovimientoMutations, type RdoMovimientoFormData } from '@/hooks/useRdoMovimientos';
+import {
+  useRdoMovimientos,
+  useRdoMovimientoMutations,
+  type RdoMovimientoFormData,
+} from '@/hooks/useRdoMovimientos';
 import type { RdoCategory } from '@/types/rdo';
 
 // Section definitions matching the document
@@ -51,7 +61,8 @@ const LOADER_SECTIONS = [
     title: 'Estructura Operativa',
     parentCode: 'estructura_operativa',
     origen: 'compra_directa',
-    instructions: 'Estos costos vienen de facturas de proveedores. Solo cargá lo que no tenga factura.',
+    instructions:
+      'Estos costos vienen de facturas de proveedores. Solo cargá lo que no tenga factura.',
   },
   {
     key: 'laborales',
@@ -86,7 +97,7 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
   const [editingSection, setEditingSection] = useState<string | null>(null);
 
   const { data: allCategories = [] } = useRdoCategories();
-  const { data: movimientos = [], isLoading } = useRdoMovimientos(branchId, periodo);
+  const { data: movimientos = [] } = useRdoMovimientos(branchId, periodo);
   const { upsertManual } = useRdoMovimientoMutations();
 
   const periodos = Array.from({ length: 12 }, (_, i) => {
@@ -120,9 +131,9 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
 
   // Calculate progress
   const totalSections = LOADER_SECTIONS.length;
-  const loadedSections = LOADER_SECTIONS.filter(section => {
+  const loadedSections = LOADER_SECTIONS.filter((section) => {
     const cats = categoriesByParent.get(section.parentCode) || [];
-    return cats.some(c => (loadedByCategory.get(c.code) || 0) > 0);
+    return cats.some((c) => (loadedByCategory.get(c.code) || 0) > 0);
   }).length;
   const progressPct = totalSections > 0 ? (loadedSections / totalSections) * 100 : 0;
 
@@ -136,9 +147,15 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
           </p>
         </div>
         <Select value={periodo} onValueChange={setPeriodo}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
-            {periodos.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            {periodos.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -158,9 +175,12 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
 
       {/* Sections */}
       <div className="grid gap-4">
-        {LOADER_SECTIONS.map(section => {
+        {LOADER_SECTIONS.map((section) => {
           const cats = categoriesByParent.get(section.parentCode) || [];
-          const sectionTotal = cats.reduce((sum, c) => sum + (loadedByCategory.get(c.code) || 0), 0);
+          const sectionTotal = cats.reduce(
+            (sum, c) => sum + (loadedByCategory.get(c.code) || 0),
+            0,
+          );
           const hasData = sectionTotal > 0;
 
           return (
@@ -199,12 +219,14 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
               {cats.length > 0 && (
                 <CardContent className="pt-0">
                   <div className="space-y-1">
-                    {cats.map(cat => {
+                    {cats.map((cat) => {
                       const val = loadedByCategory.get(cat.code) || 0;
                       return (
                         <div key={cat.code} className="flex justify-between text-sm">
                           <span className="text-muted-foreground">{cat.name}</span>
-                          <span className={`font-mono ${val > 0 ? '' : 'text-muted-foreground/50'}`}>
+                          <span
+                            className={`font-mono ${val > 0 ? '' : 'text-muted-foreground/50'}`}
+                          >
                             $ {val.toLocaleString('es-AR')}
                           </span>
                         </div>
@@ -221,8 +243,12 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
       {/* Edit Modal */}
       {editingSection && (
         <SectionEditModal
-          section={LOADER_SECTIONS.find(s => s.key === editingSection)!}
-          categories={categoriesByParent.get(LOADER_SECTIONS.find(s => s.key === editingSection)!.parentCode) || []}
+          section={LOADER_SECTIONS.find((s) => s.key === editingSection)!}
+          categories={
+            categoriesByParent.get(
+              LOADER_SECTIONS.find((s) => s.key === editingSection)!.parentCode,
+            ) || []
+          }
           loadedByCategory={loadedByCategory}
           branchId={branchId}
           periodo={periodo}
@@ -235,7 +261,7 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
 }
 
 interface SectionEditModalProps {
-  section: typeof LOADER_SECTIONS[0];
+  section: (typeof LOADER_SECTIONS)[0];
   categories: RdoCategory[];
   loadedByCategory: Map<string, number>;
   branchId: string;
@@ -244,9 +270,17 @@ interface SectionEditModalProps {
   onSave: ReturnType<typeof useRdoMovimientoMutations>['upsertManual'];
 }
 
-function SectionEditModal({ section, categories, loadedByCategory, branchId, periodo, onClose, onSave }: SectionEditModalProps) {
+function SectionEditModal({
+  section,
+  categories,
+  loadedByCategory,
+  branchId,
+  periodo,
+  onClose,
+  onSave,
+}: SectionEditModalProps) {
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(categories.map(c => [c.code, String(loadedByCategory.get(c.code) || '')]))
+    Object.fromEntries(categories.map((c) => [c.code, String(loadedByCategory.get(c.code) || '')])),
   );
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -285,11 +319,13 @@ function SectionEditModal({ section, categories, loadedByCategory, branchId, per
         </div>
 
         <div className="space-y-3">
-          {categories.map(cat => (
+          {categories.map((cat) => (
             <div key={cat.code} className="flex items-center gap-3">
               <Label className="flex-1 text-sm">{cat.name}</Label>
               <div className="relative w-40">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  $
+                </span>
                 <Input
                   type="number"
                   min="0"
@@ -318,14 +354,24 @@ function SectionEditModal({ section, categories, loadedByCategory, branchId, per
 
         <div className="flex justify-between items-center mt-4">
           <div className="text-sm font-medium">
-            Total: <span className="font-mono">
-              $ {Object.values(values).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toLocaleString('es-AR')}
+            Total:{' '}
+            <span className="font-mono">
+              ${' '}
+              {Object.values(values)
+                .reduce((sum, v) => sum + (parseFloat(v) || 0), 0)
+                .toLocaleString('es-AR')}
             </span>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
               Guardar
             </Button>
           </div>

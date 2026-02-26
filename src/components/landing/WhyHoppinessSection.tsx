@@ -5,12 +5,14 @@ const reasons = [
   {
     icon: Factory,
     title: 'Recetas y fábricas propias',
-    description: 'Todas las recetas son nuestras. Trabajamos con fábricas propias para panes, salsas y medallones estandarizados.',
+    description:
+      'Todas las recetas son nuestras. Trabajamos con fábricas propias para panes, salsas y medallones estandarizados.',
   },
   {
     icon: Palette,
     title: 'Diseño de marca reconocido',
-    description: 'Locales diseñados por Estudio Montevideo, con presencia en Argentina y España. Publicados en medios internacionales.',
+    description:
+      'Locales diseñados por Estudio Montevideo, con presencia en Argentina y España. Publicados en medios internacionales.',
   },
   {
     icon: Handshake,
@@ -20,7 +22,8 @@ const reasons = [
   {
     icon: Monitor,
     title: 'Sistema de gestión',
-    description: 'Software propio para control de stock, equipo y reportes. Desarrollando POS propio.',
+    description:
+      'Software propio para control de stock, equipo y reportes. Desarrollando POS propio.',
   },
   {
     icon: GraduationCap,
@@ -47,7 +50,10 @@ export function WhyHoppinessSection() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {reasons.map((reason, i) => (
-            <Card key={i} className="shadow-card hover:shadow-elevated transition-all hover:-translate-y-1">
+            <Card
+              key={i}
+              className="shadow-card hover:shadow-elevated transition-all hover:-translate-y-1"
+            >
               <CardContent className="p-6">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                   <reason.icon className="w-6 h-6 text-primary" />

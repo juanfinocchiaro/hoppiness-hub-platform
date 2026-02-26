@@ -8,7 +8,13 @@ import { subDays, startOfDay, format } from 'date-fns';
 
 export type OrderFilterCanalVenta = 'todos' | 'mostrador' | 'apps';
 export type OrderFilterTipoServicio = 'todos' | 'takeaway' | 'comer_aca' | 'delivery';
-export type OrderFilterMetodoPago = 'todos' | 'efectivo' | 'tarjeta_debito' | 'tarjeta_credito' | 'mercadopago_qr' | 'transferencia';
+export type OrderFilterMetodoPago =
+  | 'todos'
+  | 'efectivo'
+  | 'tarjeta_debito'
+  | 'tarjeta_credito'
+  | 'mercadopago_qr'
+  | 'transferencia';
 export type OrderFilterEstado = 'todos' | 'entregado' | 'listo' | 'cancelado';
 
 export interface OrderFilters {
@@ -94,7 +100,9 @@ export function usePosOrderHistory(
       if (!branchId) return [];
       const { data, error } = await supabase
         .from('pedidos')
-        .select('id, numero_pedido, numero_llamador, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)')
+        .select(
+          'id, numero_pedido, numero_llamador, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, pedido_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), pedido_pagos(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)',
+        )
         .eq('branch_id', branchId)
         .gte('created_at', fromDate)
         .order('created_at', { ascending: false });
@@ -106,16 +114,17 @@ export function usePosOrderHistory(
 
   const orders = useMemo(() => {
     if (!rawOrders) return [];
-    return rawOrders.filter(order => {
+    return rawOrders.filter((order) => {
       // Canal
       if (filters.canalVenta !== 'todos' && order.canal_venta !== filters.canalVenta) return false;
       // Tipo servicio
-      if (filters.tipoServicio !== 'todos' && order.tipo_servicio !== filters.tipoServicio) return false;
+      if (filters.tipoServicio !== 'todos' && order.tipo_servicio !== filters.tipoServicio)
+        return false;
       // Estado
       if (filters.estado !== 'todos' && order.estado !== filters.estado) return false;
       // Metodo de pago (client-side: order has at least one payment with that method)
       if (filters.metodoPago !== 'todos') {
-        const hasMethod = order.pedido_pagos?.some(p => p.metodo === filters.metodoPago);
+        const hasMethod = order.pedido_pagos?.some((p) => p.metodo === filters.metodoPago);
         if (!hasMethod) return false;
       }
       // Search
@@ -127,7 +136,14 @@ export function usePosOrderHistory(
       }
       return true;
     });
-  }, [rawOrders, filters.canalVenta, filters.tipoServicio, filters.metodoPago, filters.estado, filters.searchQuery]);
+  }, [
+    rawOrders,
+    filters.canalVenta,
+    filters.tipoServicio,
+    filters.metodoPago,
+    filters.estado,
+    filters.searchQuery,
+  ]);
 
   const totals = useMemo(() => {
     const totalVendido = orders.reduce((s, o) => s + (o.total || 0), 0);

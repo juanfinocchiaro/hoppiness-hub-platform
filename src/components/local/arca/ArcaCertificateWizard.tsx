@@ -6,7 +6,16 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { DangerConfirmDialog } from '@/components/ui/danger-confirm-dialog';
-import { Shield, Download, Upload, ExternalLink, CheckCircle, AlertCircle, RefreshCw, Info } from 'lucide-react';
+import {
+  Shield,
+  Download,
+  Upload,
+  ExternalLink,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  Info,
+} from 'lucide-react';
 import { generateArcaCertificate, downloadCSR } from '@/lib/arca-cert-generator';
 import type { AfipConfig } from '@/hooks/useAfipConfig';
 import { toast } from 'sonner';
@@ -16,7 +25,11 @@ interface ArcaCertificateWizardProps {
   branchId: string;
   cuit: string;
   razonSocial: string;
-  onSaveKeyAndCSR: (data: { branch_id: string; privateKeyPem: string; csrPem: string }) => Promise<void>;
+  onSaveKeyAndCSR: (data: {
+    branch_id: string;
+    privateKeyPem: string;
+    csrPem: string;
+  }) => Promise<void>;
   onSaveCertificate: (data: { branch_id: string; certificado_crt: string }) => Promise<void>;
   onTestConnection: () => void;
   isSavingKey: boolean;
@@ -102,11 +115,15 @@ export function ArcaCertificateWizard({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">CUIT</Label>
-              <p className="text-sm font-medium">{cuit || <span className="text-destructive">No configurado</span>}</p>
+              <p className="text-sm font-medium">
+                {cuit || <span className="text-destructive">No configurado</span>}
+              </p>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Razón Social</Label>
-              <p className="text-sm font-medium">{razonSocial || <span className="text-destructive">No configurada</span>}</p>
+              <p className="text-sm font-medium">
+                {razonSocial || <span className="text-destructive">No configurada</span>}
+              </p>
             </div>
           </div>
 
@@ -156,25 +173,51 @@ export function ArcaCertificateWizard({
           {/* Paso 2: Instrucciones */}
           <div className="space-y-3">
             <h4 className="font-medium text-sm flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                1
+              </span>
               Subí el archivo .csr al portal de ARCA
             </h4>
             <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1.5 ml-8">
-              <li>Ingresá a <a href="https://auth.afip.gob.ar" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-1">ARCA con Clave Fiscal <ExternalLink className="h-3 w-3" /></a></li>
-              <li>Buscá el servicio <strong>"Administración de Certificados Digitales"</strong></li>
-              <li>Seleccioná tu alias y elegí <strong>"Agregar Certificado"</strong></li>
-              <li>Subí el archivo <code className="bg-muted px-1 rounded">.csr</code> que se descargó</li>
-              <li>ARCA te devolverá un archivo <code className="bg-muted px-1 rounded">.crt</code></li>
+              <li>
+                Ingresá a{' '}
+                <a
+                  href="https://auth.afip.gob.ar"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline inline-flex items-center gap-1"
+                >
+                  ARCA con Clave Fiscal <ExternalLink className="h-3 w-3" />
+                </a>
+              </li>
+              <li>
+                Buscá el servicio <strong>"Administración de Certificados Digitales"</strong>
+              </li>
+              <li>
+                Seleccioná tu alias y elegí <strong>"Agregar Certificado"</strong>
+              </li>
+              <li>
+                Subí el archivo <code className="bg-muted px-1 rounded">.csr</code> que se descargó
+              </li>
+              <li>
+                ARCA te devolverá un archivo <code className="bg-muted px-1 rounded">.crt</code>
+              </li>
             </ol>
 
             <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 dark:border-sky-900/50 dark:bg-sky-900/10">
               <Info className="h-4 w-4 text-sky-600 mt-0.5 shrink-0" />
               <p className="text-sm text-sky-700 dark:text-sky-400">
-                Si tu contador maneja la clave fiscal, mandále el archivo .csr y pedile que te devuelva el .crt.
+                Si tu contador maneja la clave fiscal, mandále el archivo .csr y pedile que te
+                devuelva el .crt.
               </p>
             </div>
 
-            <Button variant="outline" size="sm" onClick={handleRedownloadCSR} disabled={!config?.csr_pem}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRedownloadCSR}
+              disabled={!config?.csr_pem}
+            >
               <Download className="mr-2 h-4 w-4" />
               Re-descargar .csr
             </Button>
@@ -183,7 +226,9 @@ export function ArcaCertificateWizard({
           {/* Paso 3: Upload .crt */}
           <div className="space-y-3">
             <h4 className="font-medium text-sm flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                2
+              </span>
               Cargá el certificado (.crt) que te dio ARCA
             </h4>
 
@@ -220,7 +265,7 @@ export function ArcaCertificateWizard({
 
   // Estado: conectado o error → Completado
   const hasError = config?.estado_conexion === 'error' || !!config?.ultimo_error;
-  const isConnected = (config?.estado_conexion === 'conectado') && !hasError;
+  const isConnected = config?.estado_conexion === 'conectado' && !hasError;
 
   return (
     <>
@@ -255,8 +300,15 @@ export function ArcaCertificateWizard({
           )}
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={onTestConnection} disabled={isTestingConnection}>
-              {isTestingConnection ? 'Probando...' : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onTestConnection}
+              disabled={isTestingConnection}
+            >
+              {isTestingConnection ? (
+                'Probando...'
+              ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Probar conexión

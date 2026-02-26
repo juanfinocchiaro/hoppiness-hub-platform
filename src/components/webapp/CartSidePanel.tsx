@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Minus, Plus, Trash2, ShoppingBag, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CheckoutInlineView } from './CheckoutInlineView';
@@ -9,7 +9,6 @@ import type { useWebappCart } from '@/hooks/useWebappCart';
 import type { WebappMenuItem } from '@/types/webapp';
 
 const TERMINAL_STATES = ['entregado', 'cancelado'];
-const ACTIVE_STATES = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'listo_retiro', 'listo_mesa', 'listo_envio', 'en_camino'];
 
 /** Simple fade+slide transition wrapper */
 function StepTransition({ children, stepKey }: { children: React.ReactNode; stepKey: string }) {
@@ -53,7 +52,17 @@ function formatPrice(n: number) {
   return `$${n.toLocaleString('es-AR')}`;
 }
 
-export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnabled, suggestedItems, onAddSuggested, externalTrackingCode, trackingTrigger }: Props) {
+export function CartSidePanel({
+  cart,
+  costoEnvio,
+  branchId,
+  branchName,
+  mpEnabled,
+  suggestedItems,
+  onAddSuggested,
+  externalTrackingCode,
+  trackingTrigger,
+}: Props) {
   // Multi-order tab system
   const [activeOrders, setActiveOrders] = useState<string[]>(() => {
     const saved = localStorage.getItem('hoppiness_last_tracking');
@@ -81,17 +90,22 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
   useEffect(() => {
     if (!orderStatuses || orderStatuses.length === 0) return;
     const terminalCodes = orderStatuses
-      .filter(o => TERMINAL_STATES.includes(o.estado))
-      .map(o => o.webapp_tracking_code)
+      .filter((o) => TERMINAL_STATES.includes(o.estado))
+      .map((o) => o.webapp_tracking_code)
       .filter(Boolean) as string[];
-    
+
     if (terminalCodes.length > 0) {
-      setActiveOrders(prev => {
-        const next = prev.filter(c => !terminalCodes.includes(c));
+      setActiveOrders((prev) => {
+        const next = prev.filter((c) => !terminalCodes.includes(c));
         return next;
       });
       // If selected tab was a terminal order, go to cart
-      if (typeof selectedTab === 'string' && selectedTab !== 'cart' && selectedTab !== 'checkout' && terminalCodes.includes(selectedTab)) {
+      if (
+        typeof selectedTab === 'string' &&
+        selectedTab !== 'cart' &&
+        selectedTab !== 'checkout' &&
+        terminalCodes.includes(selectedTab)
+      ) {
         setSelectedTab('cart');
       }
     }
@@ -106,7 +120,9 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
   useEffect(() => {
     if (externalTrackingCode) {
       // Add to active orders if not already there
-      setActiveOrders(prev => prev.includes(externalTrackingCode) ? prev : [...prev, externalTrackingCode]);
+      setActiveOrders((prev) =>
+        prev.includes(externalTrackingCode) ? prev : [...prev, externalTrackingCode],
+      );
       setSelectedTab(externalTrackingCode);
     }
   }, [externalTrackingCode, trackingTrigger]);
@@ -115,16 +131,20 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
 
   const UPSELL_CATEGORIES = ['ACOMPAÑAMIENTOS', 'BEBIDAS'];
 
-  const allSuggestions = (suggestedItems || [])
-    .filter(item =>
-      !cart.items.some(ci => ci.itemId === item.id) &&
+  const allSuggestions = (suggestedItems || []).filter(
+    (item) =>
+      !cart.items.some((ci) => ci.itemId === item.id) &&
       item.tipo !== 'extra' &&
       item.categoria_nombre &&
-      UPSELL_CATEGORIES.includes(item.categoria_nombre.toUpperCase())
-    );
+      UPSELL_CATEGORIES.includes(item.categoria_nombre.toUpperCase()),
+  );
 
-  const acompSuggestions = allSuggestions.filter(i => i.categoria_nombre?.toUpperCase() === 'ACOMPAÑAMIENTOS').slice(0, 2);
-  const bebidaSuggestions = allSuggestions.filter(i => i.categoria_nombre?.toUpperCase() === 'BEBIDAS').slice(0, 2);
+  const acompSuggestions = allSuggestions
+    .filter((i) => i.categoria_nombre?.toUpperCase() === 'ACOMPAÑAMIENTOS')
+    .slice(0, 2);
+  const bebidaSuggestions = allSuggestions
+    .filter((i) => i.categoria_nombre?.toUpperCase() === 'BEBIDAS')
+    .slice(0, 2);
   const hasSuggestions = acompSuggestions.length > 0 || bebidaSuggestions.length > 0;
 
   const handleNewOrder = () => {
@@ -133,14 +153,14 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
   };
 
   const handleOrderConfirmed = (code: string) => {
-    setActiveOrders(prev => prev.includes(code) ? prev : [...prev, code]);
+    setActiveOrders((prev) => (prev.includes(code) ? prev : [...prev, code]));
     localStorage.setItem('hoppiness_last_tracking', code);
     setSelectedTab(code);
   };
 
   // Build tab label from order statuses
   const getOrderTabLabel = (code: string) => {
-    const status = orderStatuses?.find(o => o.webapp_tracking_code === code);
+    const status = orderStatuses?.find((o) => o.webapp_tracking_code === code);
     if (!status) return code.slice(0, 6);
     return `#${status.numero_pedido}`;
   };
@@ -165,7 +185,7 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
             <ShoppingBag className="w-3 h-3" />
             Carrito{cart.totalItems > 0 ? ` (${cart.totalItems})` : ''}
           </button>
-          {activeOrders.map(code => (
+          {activeOrders.map((code) => (
             <button
               key={code}
               onClick={() => setSelectedTab(code)}
@@ -202,27 +222,35 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
                 </div>
               )}
 
-              {cart.items.map(item => {
+              {cart.items.map((item) => {
                 const extrasTotal = item.extras.reduce((s, e) => s + e.precio, 0);
                 const lineTotal = (item.precioUnitario + extrasTotal) * item.cantidad;
 
                 return (
                   <div key={item.cartId} className="flex items-start gap-3">
                     {item.imagen_url ? (
-                      <img src={item.imagen_url} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                      <img
+                        src={item.imagen_url}
+                        alt=""
+                        className="w-12 h-12 rounded-lg object-cover shrink-0"
+                      />
                     ) : (
-                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 text-lg">🍔</div>
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 text-lg">
+                        🍔
+                      </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-xs truncate text-foreground">{item.nombre}</p>
+                      <p className="font-semibold text-xs truncate text-foreground">
+                        {item.nombre}
+                      </p>
                       {item.extras.length > 0 && (
                         <p className="text-[11px] text-muted-foreground truncate">
-                          {item.extras.map(e => `+ ${e.nombre}`).join(', ')}
+                          {item.extras.map((e) => `+ ${e.nombre}`).join(', ')}
                         </p>
                       )}
                       {item.removidos.length > 0 && (
                         <p className="text-[11px] text-destructive truncate">
-                          {item.removidos.map(r => `Sin ${r}`).join(', ')}
+                          {item.removidos.map((r) => `Sin ${r}`).join(', ')}
                         </p>
                       )}
                       <div className="flex items-center justify-between mt-1.5">
@@ -234,7 +262,11 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
                             }}
                             className="w-6 h-6 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
                           >
-                            {item.cantidad === 1 ? <Trash2 className="w-3 h-3 text-destructive" /> : <Minus className="w-3 h-3" />}
+                            {item.cantidad === 1 ? (
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            ) : (
+                              <Minus className="w-3 h-3" />
+                            )}
                           </button>
                           <span className="w-5 text-center text-xs font-bold">{item.cantidad}</span>
                           <button
@@ -258,33 +290,45 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
                   {[
                     { label: 'Acompañamientos', items: acompSuggestions },
                     { label: 'Bebidas', items: bebidaSuggestions },
-                  ].filter(g => g.items.length > 0).map(group => (
-                    <div key={group.label}>
-                      <p className="text-[11px] text-muted-foreground font-medium mb-1.5">{group.label}</p>
-                      <div className="space-y-1.5">
-                        {group.items.map(item => (
-                          <button
-                            key={item.id}
-                            onClick={() => onAddSuggested(item)}
-                            className="w-full flex items-center gap-2.5 p-2 rounded-lg border hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
-                          >
-                            {item.imagen_url ? (
-                              <img src={item.imagen_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-sm">🍟</div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold truncate">{item.nombre}</p>
-                              <p className="text-xs text-accent font-bold">{formatPrice(item.precio_base)}</p>
-                            </div>
-                            <div className="w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center shrink-0">
-                              <Plus className="w-3 h-3" />
-                            </div>
-                          </button>
-                        ))}
+                  ]
+                    .filter((g) => g.items.length > 0)
+                    .map((group) => (
+                      <div key={group.label}>
+                        <p className="text-[11px] text-muted-foreground font-medium mb-1.5">
+                          {group.label}
+                        </p>
+                        <div className="space-y-1.5">
+                          {group.items.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => onAddSuggested(item)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-lg border hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
+                            >
+                              {item.imagen_url ? (
+                                <img
+                                  src={item.imagen_url}
+                                  alt=""
+                                  className="w-10 h-10 rounded-lg object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-sm">
+                                  🍟
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold truncate">{item.nombre}</p>
+                                <p className="text-xs text-accent font-bold">
+                                  {formatPrice(item.precio_base)}
+                                </p>
+                              </div>
+                              <div className="w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+                                <Plus className="w-3 h-3" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>
@@ -331,10 +375,7 @@ export function CartSidePanel({ cart, costoEnvio, branchId, branchName, mpEnable
         )}
 
         {effectiveStep === 'tracking' && isTrackingTab && (
-          <TrackingInlineView
-            trackingCode={selectedTab}
-            onNewOrder={handleNewOrder}
-          />
+          <TrackingInlineView trackingCode={selectedTab} onNewOrder={handleNewOrder} />
         )}
       </StepTransition>
     </aside>

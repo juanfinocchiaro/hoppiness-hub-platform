@@ -107,7 +107,9 @@ export function usePagosCanonFromProveedores(branchId: string, periodo: string) 
 
       const { data: pagos, error } = await supabase
         .from('pagos_proveedores')
-        .select('id, fecha_pago, monto, medio_pago, referencia, observaciones, verificado, verificado_por, verificado_at, verificado_notas, created_at')
+        .select(
+          'id, fecha_pago, monto, medio_pago, referencia, observaciones, verificado, verificado_por, verificado_at, verificado_notas, created_at',
+        )
         .eq('factura_id', factura.id)
         .is('deleted_at', null)
         .order('fecha_pago', { ascending: false });

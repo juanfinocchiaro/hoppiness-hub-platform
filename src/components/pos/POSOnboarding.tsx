@@ -49,7 +49,10 @@ export function POSOnboarding() {
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={dismiss}>
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      onClick={dismiss}
+    >
       <div
         className="bg-card rounded-xl shadow-elevated max-w-sm w-full p-6 space-y-4 animate-fade-in"
         onClick={(e) => e.stopPropagation()}
@@ -84,7 +87,7 @@ export function POSOnboarding() {
               ¡Empezar!
             </Button>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setCurrentStep(s => s + 1)}>
+            <Button size="sm" variant="ghost" onClick={() => setCurrentStep((s) => s + 1)}>
               Siguiente <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           )}

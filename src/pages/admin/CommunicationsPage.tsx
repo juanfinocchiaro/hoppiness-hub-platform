@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,9 +21,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Send,
   Bell,
   AlertTriangle,
@@ -52,9 +52,19 @@ const TAGS = [
 
 const TYPES = [
   { value: 'info', label: 'Información', icon: Info, color: 'bg-blue-500/10 text-blue-600' },
-  { value: 'warning', label: 'Aviso', icon: AlertTriangle, color: 'bg-yellow-500/10 text-yellow-600' },
+  {
+    value: 'warning',
+    label: 'Aviso',
+    icon: AlertTriangle,
+    color: 'bg-yellow-500/10 text-yellow-600',
+  },
   { value: 'urgent', label: 'Urgente', icon: Bell, color: 'bg-red-500/10 text-red-600' },
-  { value: 'celebration', label: 'Celebración', icon: PartyPopper, color: 'bg-green-500/10 text-green-600' },
+  {
+    value: 'celebration',
+    label: 'Celebración',
+    icon: PartyPopper,
+    color: 'bg-green-500/10 text-green-600',
+  },
 ];
 
 const TARGET_ROLE_OPTIONS = [
@@ -69,7 +79,12 @@ function CommunicationsPageContent() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [readersModal, setReadersModal] = useState<{ open: boolean; id: string | null; title: string; requiresConfirmation: boolean }>({
+  const [readersModal, setReadersModal] = useState<{
+    open: boolean;
+    id: string | null;
+    title: string;
+    requiresConfirmation: boolean;
+  }>({
     open: false,
     id: null,
     title: '',
@@ -104,7 +119,7 @@ function CommunicationsPageContent() {
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('No autenticado');
-      
+
       // Build target_roles array based on checkboxes
       let targetRoles: string[] | null = null;
       if (!formData.target_all) {
@@ -159,7 +174,7 @@ function CommunicationsPageContent() {
     },
   });
 
-  const getTypeInfo = (type: string) => TYPES.find(t => t.value === type) || TYPES[0];
+  const getTypeInfo = (type: string) => TYPES.find((t) => t.value === type) || TYPES[0];
 
   return (
     <div className="space-y-6">
@@ -173,7 +188,7 @@ function CommunicationsPageContent() {
             Envía comunicados a toda la red o a roles específicos
           </p>
         </div>
-        
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -190,7 +205,7 @@ function CommunicationsPageContent() {
                 <Label>Título</Label>
                 <Input
                   value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="Título del comunicado"
                 />
               </div>
@@ -199,7 +214,7 @@ function CommunicationsPageContent() {
                 <Label>Mensaje</Label>
                 <Textarea
                   value={formData.body}
-                  onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, body: e.target.value }))}
                   placeholder="Escribe el contenido del comunicado..."
                   rows={4}
                 />
@@ -210,13 +225,15 @@ function CommunicationsPageContent() {
                   <Label>Tipo</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, type: v as typeof formData.type }))}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({ ...prev, type: v as typeof formData.type }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {TYPES.map(t => (
+                      {TYPES.map((t) => (
                         <SelectItem key={t.value} value={t.value}>
                           <div className="flex items-center gap-2">
                             <t.icon className="w-4 h-4" />
@@ -232,14 +249,16 @@ function CommunicationsPageContent() {
                   <Label>Categoría</Label>
                   <Select
                     value={formData.tag}
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, tag: v }))}
+                    onValueChange={(v) => setFormData((prev) => ({ ...prev, tag: v }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {TAGS.map(t => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      {TAGS.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -250,7 +269,9 @@ function CommunicationsPageContent() {
                 <Label>Etiqueta personalizada (opcional)</Label>
                 <Input
                   value={formData.custom_label}
-                  onChange={(e) => setFormData(prev => ({ ...prev, custom_label: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, custom_label: e.target.value }))
+                  }
                   placeholder="Ej: Importante, Nuevo, etc."
                 />
               </div>
@@ -264,14 +285,14 @@ function CommunicationsPageContent() {
                       checked={formData.target_all}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setFormData(prev => ({
+                          setFormData((prev) => ({
                             ...prev,
                             target_all: true,
                             target_franquiciado: false,
                             target_encargado: false,
                           }));
                         } else {
-                          setFormData(prev => ({ ...prev, target_all: false }));
+                          setFormData((prev) => ({ ...prev, target_all: false }));
                         }
                       }}
                     />
@@ -279,23 +300,25 @@ function CommunicationsPageContent() {
                       Todos
                     </Label>
                   </div>
-                  
+
                   <div className="pl-6 space-y-2 border-l-2 border-muted ml-2">
-                    {TARGET_ROLE_OPTIONS.map(role => (
+                    {TARGET_ROLE_OPTIONS.map((role) => (
                       <div key={role.value} className="flex items-center gap-2">
                         <Checkbox
                           id={`target-${role.value}`}
-                          checked={formData[`target_${role.value}` as keyof typeof formData] as boolean}
+                          checked={
+                            formData[`target_${role.value}` as keyof typeof formData] as boolean
+                          }
                           disabled={formData.target_all}
                           onCheckedChange={(checked) => {
-                            setFormData(prev => ({
+                            setFormData((prev) => ({
                               ...prev,
                               [`target_${role.value}`]: checked === true,
                             }));
                           }}
                         />
-                        <Label 
-                          htmlFor={`target-${role.value}`} 
+                        <Label
+                          htmlFor={`target-${role.value}`}
                           className={`text-sm cursor-pointer ${formData.target_all ? 'text-muted-foreground' : ''}`}
                         >
                           {role.label}
@@ -303,12 +326,14 @@ function CommunicationsPageContent() {
                       </div>
                     ))}
                   </div>
-                  
-                  {!formData.target_all && !formData.target_franquiciado && !formData.target_encargado && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      Seleccioná al menos un destinatario o marcá "Todos"
-                    </p>
-                  )}
+
+                  {!formData.target_all &&
+                    !formData.target_franquiciado &&
+                    !formData.target_encargado && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Seleccioná al menos un destinatario o marcá "Todos"
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -316,8 +341,8 @@ function CommunicationsPageContent() {
                 <Checkbox
                   id="requires-confirmation"
                   checked={formData.requires_confirmation}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, requires_confirmation: checked === true }))
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, requires_confirmation: checked === true }))
                   }
                 />
                 <Label htmlFor="requires-confirmation" className="text-sm cursor-pointer">
@@ -325,8 +350,8 @@ function CommunicationsPageContent() {
                 </Label>
               </div>
 
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 onClick={() => createMutation.mutate()}
                 disabled={!formData.title || !formData.body || createMutation.isPending}
               >
@@ -340,15 +365,18 @@ function CommunicationsPageContent() {
 
       {isLoading ? (
         <div className="space-y-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
         </div>
       ) : communications && communications.length > 0 ? (
         <div className="space-y-4">
-          {communications.map(comm => {
+          {communications.map((comm) => {
             const typeInfo = getTypeInfo(comm.type);
             const TypeIcon = typeInfo.icon;
             const readCount = comm.communication_reads?.length || 0;
-            const confirmedCount = comm.communication_reads?.filter((r: any) => r.confirmed_at).length || 0;
+            const confirmedCount =
+              comm.communication_reads?.filter((r: any) => r.confirmed_at).length || 0;
 
             return (
               <Card key={comm.id}>
@@ -360,10 +388,10 @@ function CommunicationsPageContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold truncate">{comm.title}</h3>
-                        <Badge variant="secondary">{TAGS.find(t => t.value === comm.tag)?.label || comm.tag}</Badge>
-                        {comm.custom_label && (
-                          <Badge variant="outline">{comm.custom_label}</Badge>
-                        )}
+                        <Badge variant="secondary">
+                          {TAGS.find((t) => t.value === comm.tag)?.label || comm.tag}
+                        </Badge>
+                        {comm.custom_label && <Badge variant="outline">{comm.custom_label}</Badge>}
                         {comm.requires_confirmation && (
                           <Badge variant="default" className="bg-primary/80">
                             <CheckCircle className="w-3 h-3 mr-1" />
@@ -373,17 +401,21 @@ function CommunicationsPageContent() {
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">{comm.body}</p>
                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>{format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}</span>
+                        <span>
+                          {format(new Date(comm.published_at), 'd MMM yyyy HH:mm', { locale: es })}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-auto p-0 text-xs hover:text-foreground"
-                          onClick={() => setReadersModal({
-                            open: true,
-                            id: comm.id,
-                            title: comm.title,
-                            requiresConfirmation: comm.requires_confirmation || false,
-                          })}
+                          onClick={() =>
+                            setReadersModal({
+                              open: true,
+                              id: comm.id,
+                              title: comm.title,
+                              requiresConfirmation: comm.requires_confirmation || false,
+                            })
+                          }
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           {readCount} lecturas
@@ -394,11 +426,7 @@ function CommunicationsPageContent() {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteId(comm.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(comm.id)}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
@@ -418,7 +446,7 @@ function CommunicationsPageContent() {
 
       <ReadersModal
         open={readersModal.open}
-        onOpenChange={(open) => setReadersModal(prev => ({ ...prev, open }))}
+        onOpenChange={(open) => setReadersModal((prev) => ({ ...prev, open }))}
         communicationId={readersModal.id}
         communicationTitle={readersModal.title}
         requiresConfirmation={readersModal.requiresConfirmation}

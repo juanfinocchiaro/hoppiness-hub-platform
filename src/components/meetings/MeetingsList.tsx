@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Search, Plus, Calendar } from 'lucide-react';
 import { MeetingCard } from './MeetingCard';
-import { MEETING_AREAS, type Meeting, type MeetingStatus } from '@/types/meeting';
+import { MEETING_AREAS, type Meeting } from '@/types/meeting';
 import { EmptyState } from '@/components/ui/states';
 
 interface MeetingsListProps {
@@ -41,7 +41,7 @@ export function MeetingsList({
   const [areaFilter, setAreaFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const filtered = meetings.filter(m => {
+  const filtered = meetings.filter((m) => {
     const matchesSearch = m.title.toLowerCase().includes(search.toLowerCase());
     const matchesArea = areaFilter === 'all' || m.area === areaFilter;
     const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
@@ -58,7 +58,7 @@ export function MeetingsList({
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
         ))}
       </div>
@@ -78,7 +78,7 @@ export function MeetingsList({
             className="pl-9"
           />
         </div>
-        
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[130px]">
             <SelectValue placeholder="Estado" />
@@ -90,14 +90,14 @@ export function MeetingsList({
             <SelectItem value="cerrada">Cerrada</SelectItem>
           </SelectContent>
         </Select>
-        
+
         <Select value={areaFilter} onValueChange={setAreaFilter}>
           <SelectTrigger className="w-[130px]">
             <SelectValue placeholder="Área" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
-            {MEETING_AREAS.map(area => (
+            {MEETING_AREAS.map((area) => (
               <SelectItem key={area.value} value={area.value}>
                 {area.label}
               </SelectItem>
@@ -118,13 +118,15 @@ export function MeetingsList({
         <EmptyState
           icon={Calendar}
           title="Sin reuniones"
-          description={search || areaFilter !== 'all' || statusFilter !== 'all'
-            ? 'No hay reuniones que coincidan con los filtros'
-            : 'Aún no hay reuniones registradas'}
+          description={
+            search || areaFilter !== 'all' || statusFilter !== 'all'
+              ? 'No hay reuniones que coincidan con los filtros'
+              : 'Aún no hay reuniones registradas'
+          }
         />
       ) : (
         <div className="space-y-3">
-          {filtered.map(meeting => (
+          {filtered.map((meeting) => (
             <MeetingCard
               key={meeting.id}
               meeting={meeting}

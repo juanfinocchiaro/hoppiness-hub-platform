@@ -39,9 +39,7 @@ export function MenuShowcaseSection() {
     <section className="py-20 px-4 bg-foreground">
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-black mb-3 font-display text-accent">
-            NUESTRO MENÚ
-          </h2>
+          <h2 className="text-4xl font-black mb-3 font-display text-accent">NUESTRO MENÚ</h2>
           <p className="text-background/70 text-lg">
             +15 creaciones de autor. Recetas propias que no vas a encontrar en otro lado.
           </p>
@@ -63,12 +61,8 @@ export function MenuShowcaseSection() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-white font-black text-lg font-brand mb-1">
-                  {cat.name}
-                </h3>
-                <p className="text-white/70 text-xs leading-tight">
-                  {cat.description}
-                </p>
+                <h3 className="text-white font-black text-lg font-brand mb-1">{cat.name}</h3>
+                <p className="text-white/70 text-xs leading-tight">{cat.description}</p>
               </div>
             </Link>
           ))}

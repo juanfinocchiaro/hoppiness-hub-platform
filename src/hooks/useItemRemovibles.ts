@@ -23,8 +23,16 @@ export function useItemRemoviblesMutations() {
   const qc = useQueryClient();
 
   const toggleInsumo = useMutation({
-    mutationFn: async ({ item_carta_id, insumo_id, activo, nombre_display }: {
-      item_carta_id: string; insumo_id: string; activo: boolean; nombre_display?: string;
+    mutationFn: async ({
+      item_carta_id,
+      insumo_id,
+      activo,
+      nombre_display,
+    }: {
+      item_carta_id: string;
+      insumo_id: string;
+      activo: boolean;
+      nombre_display?: string;
     }) => {
       if (activo) {
         // Check if record already exists (avoid upsert with partial indexes)
@@ -43,7 +51,13 @@ export function useItemRemoviblesMutations() {
         } else {
           const { error } = await supabase
             .from('item_removibles' as any)
-            .insert({ item_carta_id, insumo_id, preparacion_id: null, activo: true, nombre_display: nombre_display || null });
+            .insert({
+              item_carta_id,
+              insumo_id,
+              preparacion_id: null,
+              activo: true,
+              nombre_display: nombre_display || null,
+            });
           if (error) throw error;
         }
       } else {
@@ -61,8 +75,16 @@ export function useItemRemoviblesMutations() {
   });
 
   const togglePreparacion = useMutation({
-    mutationFn: async ({ item_carta_id, preparacion_id, activo, nombre_display }: {
-      item_carta_id: string; preparacion_id: string; activo: boolean; nombre_display?: string;
+    mutationFn: async ({
+      item_carta_id,
+      preparacion_id,
+      activo,
+      nombre_display,
+    }: {
+      item_carta_id: string;
+      preparacion_id: string;
+      activo: boolean;
+      nombre_display?: string;
     }) => {
       if (activo) {
         const { data: existing } = await supabase
@@ -80,7 +102,13 @@ export function useItemRemoviblesMutations() {
         } else {
           const { error } = await supabase
             .from('item_removibles' as any)
-            .insert({ item_carta_id, preparacion_id, insumo_id: null, activo: true, nombre_display: nombre_display || null });
+            .insert({
+              item_carta_id,
+              preparacion_id,
+              insumo_id: null,
+              activo: true,
+              nombre_display: nombre_display || null,
+            });
           if (error) throw error;
         }
       } else {

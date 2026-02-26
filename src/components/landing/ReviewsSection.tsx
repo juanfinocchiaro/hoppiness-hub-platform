@@ -6,49 +6,49 @@ import { Star, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 // Reseñas reales de Google Maps de diferentes locales
 const reviews = [
   {
-    name: "Oriana Massaro",
-    location: "Nueva Córdoba",
-    text: "10/10. Inmejorable. La atención super eficiente y amable, la rapidez y lo más importante: el sabor. Muy ricas hamburguesas!",
+    name: 'Oriana Massaro',
+    location: 'Nueva Córdoba',
+    text: '10/10. Inmejorable. La atención super eficiente y amable, la rapidez y lo más importante: el sabor. Muy ricas hamburguesas!',
   },
   {
-    name: "Java Pez",
-    location: "General Paz",
-    text: "Sin lugar a dudas de las mejores hamburguesas de Córdoba. El sabor es increíble y los productos son de primer nivel.",
+    name: 'Java Pez',
+    location: 'General Paz',
+    text: 'Sin lugar a dudas de las mejores hamburguesas de Córdoba. El sabor es increíble y los productos son de primer nivel.',
   },
   {
-    name: "Lautaro Dominguez",
-    location: "Manantiales",
-    text: "Las mejores burgers de Córdoba. Perfecta desde donde se la mire, tiene un sabor especial. Te saca una sonrisa.",
+    name: 'Lautaro Dominguez',
+    location: 'Manantiales',
+    text: 'Las mejores burgers de Córdoba. Perfecta desde donde se la mire, tiene un sabor especial. Te saca una sonrisa.',
   },
   {
-    name: "Valentina Ruiz",
-    location: "Villa Allende",
-    text: "Espectacular! El pan es increíble, la carne jugosa y las salsas son un 10. Siempre que voy a Villa Allende paso por acá.",
+    name: 'Valentina Ruiz',
+    location: 'Villa Allende',
+    text: 'Espectacular! El pan es increíble, la carne jugosa y las salsas son un 10. Siempre que voy a Villa Allende paso por acá.',
   },
   {
-    name: "Martín Gómez",
-    location: "Nueva Córdoba",
-    text: "La mejor hamburguesería de Córdoba, lejos. El medallón tiene un sabor único y el lugar tiene muy buena onda.",
+    name: 'Martín Gómez',
+    location: 'Nueva Córdoba',
+    text: 'La mejor hamburguesería de Córdoba, lejos. El medallón tiene un sabor único y el lugar tiene muy buena onda.',
   },
   {
-    name: "Florencia Peralta",
-    location: "General Paz",
-    text: "Probé la Wesley y me voló la cabeza. Las papas son de las mejores que comí. Vuelvo siempre!",
+    name: 'Florencia Peralta',
+    location: 'General Paz',
+    text: 'Probé la Wesley y me voló la cabeza. Las papas son de las mejores que comí. Vuelvo siempre!',
   },
   {
-    name: "Nicolás Torres",
-    location: "Villa Carlos Paz",
-    text: "Encontré mi lugar favorito en Carlos Paz. Las hamburguesas son enormes y súper sabrosas. 100% recomendado.",
+    name: 'Nicolás Torres',
+    location: 'Villa Carlos Paz',
+    text: 'Encontré mi lugar favorito en Carlos Paz. Las hamburguesas son enormes y súper sabrosas. 100% recomendado.',
   },
   {
-    name: "Camila Sánchez",
-    location: "Manantiales",
-    text: "La Royal es increíble. La atención muy buena y el ambiente re lindo. Ya fui como 10 veces jaja.",
+    name: 'Camila Sánchez',
+    location: 'Manantiales',
+    text: 'La Royal es increíble. La atención muy buena y el ambiente re lindo. Ya fui como 10 veces jaja.',
   },
   {
-    name: "Federico Aguirre",
-    location: "Nueva Córdoba",
-    text: "Lejos la mejor hamburguesa que probé. El pan casero marca la diferencia. Un must de Córdoba.",
+    name: 'Federico Aguirre',
+    location: 'Nueva Córdoba',
+    text: 'Lejos la mejor hamburguesa que probé. El pan casero marca la diferencia. Un must de Córdoba.',
   },
 ];
 
@@ -75,11 +75,9 @@ export function ReviewsSection() {
               <CardContent className="p-5 flex gap-4">
                 {/* Avatar placeholder */}
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-lg font-bold text-primary">
-                    {review.name.charAt(0)}
-                  </span>
+                  <span className="text-lg font-bold text-primary">{review.name.charAt(0)}</span>
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   {/* Header con nombre, estrellas y ubicación */}
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -94,11 +92,9 @@ export function ReviewsSection() {
                       {review.location}
                     </span>
                   </div>
-                  
+
                   {/* Texto de la reseña */}
-                  <p className="text-muted-foreground text-sm">
-                    "{review.text}"
-                  </p>
+                  <p className="text-muted-foreground text-sm">"{review.text}"</p>
                 </div>
               </CardContent>
             </Card>
@@ -110,7 +106,7 @@ export function ReviewsSection() {
             <Button
               variant="ghost"
               className="text-primary"
-              onClick={() => setShowAll(prev => !prev)}
+              onClick={() => setShowAll((prev) => !prev)}
             >
               {showAll ? (
                 <>

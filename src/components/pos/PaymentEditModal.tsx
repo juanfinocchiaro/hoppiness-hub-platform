@@ -4,13 +4,25 @@
  */
 import { useState, useEffect } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Banknote, CreditCard, QrCode, ArrowRightLeft, Plus, Trash2, Smartphone } from 'lucide-react';
+import {
+  Banknote,
+  CreditCard,
+  QrCode,
+  ArrowRightLeft,
+  Plus,
+  Trash2,
+  Smartphone,
+} from 'lucide-react';
 import { DotsLoader } from '@/components/ui/loaders';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,7 +32,11 @@ import type { MetodoPago } from '@/types/pos';
 import { useMercadoPagoConfig } from '@/hooks/useMercadoPagoConfig';
 import { PointPaymentModal } from './PointPaymentModal';
 
-const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const METODOS: {
+  value: MetodoPago;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { value: 'efectivo', label: 'Efectivo', icon: Banknote },
   { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
   { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
@@ -44,7 +60,14 @@ interface Props {
   currentPayments: { id: string; metodo: string; monto: number }[];
 }
 
-export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, branchId, currentPayments }: Props) {
+export function PaymentEditModal({
+  open,
+  onOpenChange,
+  pedidoId,
+  pedidoTotal,
+  branchId,
+  currentPayments,
+}: Props) {
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [motivo, setMotivo] = useState('');
   const [saving, setSaving] = useState(false);
@@ -59,11 +82,13 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
   // Initialize rows from current payments when opening
   useEffect(() => {
     if (open) {
-      setRows(currentPayments.map(p => ({
-        id: p.id,
-        metodo: p.metodo as MetodoPago,
-        monto: p.monto,
-      })));
+      setRows(
+        currentPayments.map((p) => ({
+          id: p.id,
+          metodo: p.metodo as MetodoPago,
+          monto: p.monto,
+        })),
+      );
       setMotivo('');
     }
   }, [open, currentPayments]);
@@ -74,7 +99,7 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
   const canSave = isBalanced && motivo.trim().length > 0 && rows.length > 0;
 
   const updateRow = (idx: number, field: 'metodo' | 'monto', value: any) => {
-    setRows(prev => {
+    setRows((prev) => {
       const copy = [...prev];
       if (field === 'monto') {
         copy[idx] = { ...copy[idx], monto: parseFloat(value) || 0 };
@@ -87,31 +112,40 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
 
   const addRow = () => {
     const remaining = pedidoTotal - totalPaid;
-    setRows(prev => [...prev, {
-      id: crypto.randomUUID(),
-      metodo: 'efectivo',
-      monto: Math.max(0, remaining),
-      isNew: true,
-    }]);
+    setRows((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        metodo: 'efectivo',
+        monto: Math.max(0, remaining),
+        isNew: true,
+      },
+    ]);
   };
 
   const removeRow = (idx: number) => {
-    setRows(prev => prev.filter((_, i) => i !== idx));
+    setRows((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
 
-      const pagosBefore = currentPayments.map(p => ({ metodo: p.metodo, monto: p.monto }));
-      const pagosAfter = rows.map(r => ({ metodo: r.metodo, monto: r.monto }));
+      const pagosBefore = currentPayments.map((p) => ({ metodo: p.metodo, monto: p.monto }));
+      const pagosAfter = rows.map((r) => ({ metodo: r.metodo, monto: r.monto }));
 
       // Calculate cash delta for cash register adjustment
-      const cashBefore = currentPayments.filter(p => p.metodo === 'efectivo').reduce((s, p) => s + p.monto, 0);
-      const cashAfter = rows.filter(r => r.metodo === 'efectivo').reduce((s, r) => s + r.monto, 0);
+      const cashBefore = currentPayments
+        .filter((p) => p.metodo === 'efectivo')
+        .reduce((s, p) => s + p.monto, 0);
+      const cashAfter = rows
+        .filter((r) => r.metodo === 'efectivo')
+        .reduce((s, r) => s + r.monto, 0);
       const cashDelta = cashAfter - cashBefore;
 
       // Delete old payments and insert new ones (batch)
@@ -121,7 +155,7 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
         .eq('pedido_id', pedidoId);
       if (delErr) throw delErr;
 
-      const insertRows = rows.map(row => ({
+      const insertRows = rows.map((row) => ({
         pedido_id: pedidoId,
         metodo: row.metodo,
         monto: row.monto,
@@ -129,21 +163,17 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
         vuelto: 0,
         created_by: user.id,
       }));
-      const { error: insErr } = await supabase
-        .from('pedido_pagos')
-        .insert(insertRows);
+      const { error: insErr } = await supabase.from('pedido_pagos').insert(insertRows);
       if (insErr) throw insErr;
 
       // Audit record
-      const { error: auditErr } = await supabase
-        .from('pedido_payment_edits' as any)
-        .insert({
-          pedido_id: pedidoId,
-          pagos_antes: pagosBefore,
-          pagos_despues: pagosAfter,
-          motivo: motivo.trim(),
-          editado_por: user.id,
-        });
+      const { error: auditErr } = await supabase.from('pedido_payment_edits' as any).insert({
+        pedido_id: pedidoId,
+        pagos_antes: pagosBefore,
+        pagos_despues: pagosAfter,
+        motivo: motivo.trim(),
+        editado_por: user.id,
+      });
       if (auditErr) throw auditErr;
 
       // Cash register adjustment if cash amount changed
@@ -188,7 +218,10 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="text-sm text-muted-foreground">
-            Total del pedido: <span className="font-bold text-foreground">$ {pedidoTotal.toLocaleString('es-AR')}</span>
+            Total del pedido:{' '}
+            <span className="font-bold text-foreground">
+              $ {pedidoTotal.toLocaleString('es-AR')}
+            </span>
           </div>
 
           {/* Payment rows */}
@@ -208,7 +241,7 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
                           'p-2 rounded border transition-colors',
                           row.metodo === m.value
                             ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            : 'border-transparent text-muted-foreground hover:text-foreground',
                         )}
                         title={m.label}
                       >
@@ -218,7 +251,9 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
                   })}
                 </div>
                 <div className="relative flex-1">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                    $
+                  </span>
                   <Input
                     type="number"
                     value={row.monto || ''}
@@ -227,7 +262,12 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
                   />
                 </div>
                 {rows.length > 1 && (
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeRow(idx)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive"
+                    onClick={() => removeRow(idx)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
@@ -275,7 +315,9 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
               <p className="text-sm font-semibold text-blue-800">
                 Cobrar $ {(pedidoTotal - totalPaid).toLocaleString('es-AR')} con Point Smart
               </p>
-              <p className="text-xs text-blue-600">Tarjeta, QR o contactless con conciliación automática</p>
+              <p className="text-xs text-blue-600">
+                Tarjeta, QR o contactless con conciliación automática
+              </p>
             </div>
           </button>
         )}
@@ -298,7 +340,7 @@ export function PaymentEditModal({ open, onOpenChange, pedidoId, pedidoTotal, br
         pedidoId={pedidoId}
         branchId={branchId}
         amount={pointAmount}
-        onConfirmed={(payment) => {
+        onConfirmed={(_payment) => {
           // Payment was inserted by webhook, just close and refresh
           toast.success('Pago conciliado automáticamente');
           qc.invalidateQueries({ queryKey: ['pos-order-history'] });

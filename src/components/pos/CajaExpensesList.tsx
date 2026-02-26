@@ -42,7 +42,12 @@ interface CajaExpensesListProps {
   canApprove: boolean;
 }
 
-export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove }: CajaExpensesListProps) {
+export function CajaExpensesList({
+  shiftId,
+  branchId: _branchId,
+  registerLabel,
+  canApprove,
+}: CajaExpensesListProps) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [expenses, setExpenses] = useState<ExpenseMovement[]>([]);
@@ -86,11 +91,13 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
     return expenses.filter(
       (e) =>
         e.concept.toLowerCase().includes(s) ||
-        (e.categoria_gasto && getCategoriaLabel(e.categoria_gasto).toLowerCase().includes(s))
+        (e.categoria_gasto && getCategoriaLabel(e.categoria_gasto).toLowerCase().includes(s)),
     );
   }, [expenses, debouncedSearch]);
 
-  const pendingCount = expenses.filter((e) => e.estado_aprobacion === 'pendiente_aprobacion').length;
+  const pendingCount = expenses.filter(
+    (e) => e.estado_aprobacion === 'pendiente_aprobacion',
+  ).length;
 
   const handleApprove = async (id: string) => {
     const { error } = await supabase
@@ -102,7 +109,9 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
       return;
     }
     toast.success('Gasto aprobado');
-    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, estado_aprobacion: 'aprobado' } : e)));
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, estado_aprobacion: 'aprobado' } : e)),
+    );
     queryClient.invalidateQueries({ queryKey: cashRegisterKeys.all });
   };
 
@@ -116,7 +125,9 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
       return;
     }
     toast.success('Gasto rechazado');
-    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, estado_aprobacion: 'rechazado' } : e)));
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, estado_aprobacion: 'rechazado' } : e)),
+    );
     queryClient.invalidateQueries({ queryKey: cashRegisterKeys.all });
   };
 
@@ -139,7 +150,11 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
   const getEstadoBadge = (estado: string | null | undefined) => {
     switch (estado) {
       case 'pendiente_aprobacion':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pendiente</Badge>;
+        return (
+          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+            Pendiente
+          </Badge>
+        );
       case 'rechazado':
         return <Badge variant="destructive">Rechazado</Badge>;
       default:
@@ -168,7 +183,12 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
                     className="pl-8 h-9"
                   />
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExport} disabled={filtered.length === 0}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExport}
+                  disabled={filtered.length === 0}
+                >
                   <Download className="h-4 w-4 mr-1" /> Excel
                 </Button>
               </div>
@@ -177,7 +197,9 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
           <CardContent>
             {loading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => <div key={i} className="h-10 rounded bg-muted animate-pulse" />)}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-10 rounded bg-muted animate-pulse" />
+                ))}
               </div>
             ) : filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin egresos registrados</p>
@@ -203,7 +225,9 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
                         <TableCell className="text-sm">
                           {e.concept}
                           {e.observaciones && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{e.observaciones}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {e.observaciones}
+                            </p>
                           )}
                         </TableCell>
                         <TableCell className="text-right font-medium">
@@ -217,10 +241,20 @@ export function CajaExpensesList({ shiftId, branchId, registerLabel, canApprove 
                           <TableCell>
                             {e.estado_aprobacion === 'pendiente_aprobacion' && (
                               <div className="flex gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => handleApprove(e.id)} title="Aprobar">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleApprove(e.id)}
+                                  title="Aprobar"
+                                >
                                   <CheckCircle className="h-4 w-4 text-green-600" />
                                 </Button>
-                                <Button size="icon" variant="ghost" onClick={() => handleReject(e.id)} title="Rechazar">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleReject(e.id)}
+                                  title="Rechazar"
+                                >
                                   <XCircle className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>

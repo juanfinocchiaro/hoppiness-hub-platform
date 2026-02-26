@@ -14,7 +14,7 @@ interface ExternalLinkProps {
  */
 export const ExternalLink = ({ to, children, className, onClick }: ExternalLinkProps) => {
   const { isEmbedded } = useEmbedMode();
-  
+
   if (isEmbedded) {
     return (
       <a href={to} target="_top" className={className} onClick={onClick}>
@@ -22,7 +22,7 @@ export const ExternalLink = ({ to, children, className, onClick }: ExternalLinkP
       </a>
     );
   }
-  
+
   return (
     <Link to={to} className={className} onClick={onClick}>
       {children}

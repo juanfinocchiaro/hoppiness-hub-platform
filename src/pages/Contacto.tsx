@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
+import {
   Send,
   CalendarIcon,
   MessageCircle,
@@ -35,7 +35,7 @@ import {
   Handshake,
   Upload,
   FileText,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { PublicFooter } from '@/components/layout/PublicFooter';
@@ -96,35 +96,35 @@ const initialFormData: FormData = {
 };
 
 const subjectOptions = [
-  { 
-    value: 'consulta' as SubjectType, 
-    label: 'Consulta general', 
+  {
+    value: 'consulta' as SubjectType,
+    label: 'Consulta general',
     icon: MessageCircle,
-    description: 'Preguntas, sugerencias o comentarios'
+    description: 'Preguntas, sugerencias o comentarios',
   },
-  { 
-    value: 'franquicia' as SubjectType, 
-    label: 'Franquicias', 
+  {
+    value: 'franquicia' as SubjectType,
+    label: 'Franquicias',
     icon: Store,
-    description: 'Quiero abrir mi propio Hoppiness'
+    description: 'Quiero abrir mi propio Hoppiness',
   },
-  { 
-    value: 'empleo' as SubjectType, 
-    label: 'Trabajá con nosotros', 
+  {
+    value: 'empleo' as SubjectType,
+    label: 'Trabajá con nosotros',
     icon: Users,
-    description: 'Quiero ser parte del equipo'
+    description: 'Quiero ser parte del equipo',
   },
-  { 
-    value: 'pedidos' as SubjectType, 
-    label: 'Problema con pedido', 
+  {
+    value: 'pedidos' as SubjectType,
+    label: 'Problema con pedido',
     icon: ShoppingBag,
-    description: 'Reportar un inconveniente'
+    description: 'Reportar un inconveniente',
   },
-  { 
-    value: 'proveedor' as SubjectType, 
-    label: 'Proveedores', 
+  {
+    value: 'proveedor' as SubjectType,
+    label: 'Proveedores',
     icon: Handshake,
-    description: 'Quiero ser proveedor'
+    description: 'Quiero ser proveedor',
   },
 ];
 
@@ -135,7 +135,6 @@ export default function Contacto() {
   const [submitted, setSubmitted] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | undefined>(undefined);
-  
 
   // Fetch branches for dropdowns
   const { data: branches } = useQuery({
@@ -147,14 +146,17 @@ export default function Contacto() {
         .order('name');
       if (error) throw error;
       return data as { id: string; name: string; public_status: BranchPublicStatus }[];
-    }
+    },
   });
 
   // Detect URL params
   useEffect(() => {
     const asuntoParam = searchParams.get('asunto');
-    if (asuntoParam && ['consulta', 'franquicia', 'empleo', 'pedidos', 'proveedor'].includes(asuntoParam)) {
-      setFormData(prev => ({ ...prev, subject: asuntoParam as SubjectType }));
+    if (
+      asuntoParam &&
+      ['consulta', 'franquicia', 'empleo', 'pedidos', 'proveedor'].includes(asuntoParam)
+    ) {
+      setFormData((prev) => ({ ...prev, subject: asuntoParam as SubjectType }));
       setOpenAccordion(asuntoParam);
     }
   }, [searchParams]);
@@ -163,14 +165,14 @@ export default function Contacto() {
     { value: 'tengo_ubicacion', label: 'Sí, ya tengo ubicación' },
     { value: 'algunas_opciones', label: 'Tengo algunas opciones' },
     { value: 'buscando', label: 'No, estoy buscando' },
-    { value: 'asesoren', label: 'Prefiero que me asesoren' }
+    { value: 'asesoren', label: 'Prefiero que me asesoren' },
   ];
 
   const franchiseLocationOptions = [
     { value: 'local_propio', label: 'Sí, tengo local propio' },
     { value: 'local_alquilado', label: 'Sí, tengo local alquilado' },
     { value: 'buscando', label: 'No, pero estoy buscando' },
-    { value: 'necesito_ayuda', label: 'No, necesito ayuda para encontrar' }
+    { value: 'necesito_ayuda', label: 'No, necesito ayuda para encontrar' },
   ];
 
   const franchiseCapitalOptions = [
@@ -178,7 +180,7 @@ export default function Contacto() {
     { value: '30k_50k', label: '$30.000 - $50.000 USD' },
     { value: '50k_80k', label: '$50.000 - $80.000 USD' },
     { value: 'mas_80k', label: 'Más de $80.000 USD' },
-    { value: 'no_decir', label: 'Prefiero no decir' }
+    { value: 'no_decir', label: 'Prefiero no decir' },
   ];
 
   const employmentPositionOptions = [
@@ -186,7 +188,7 @@ export default function Contacto() {
     { value: 'caja', label: 'Caja / Atención' },
     { value: 'delivery', label: 'Delivery' },
     { value: 'encargado', label: 'Encargado' },
-    { value: 'otro', label: 'Otro' }
+    { value: 'otro', label: 'Otro' },
   ];
 
   const getSuccessMessage = (subject: SubjectType) => {
@@ -194,27 +196,31 @@ export default function Contacto() {
       case 'franquicia':
         return {
           title: '¡Excelente decisión!',
-          description: 'Un asesor comercial te contactará en menos de 48 horas para coordinar una reunión.'
+          description:
+            'Un asesor comercial te contactará en menos de 48 horas para coordinar una reunión.',
         };
       case 'empleo':
         return {
           title: '¡Gracias por querer ser parte del equipo!',
-          description: 'Revisaremos tu postulación y te contactaremos si hay una vacante que coincida con tu perfil.'
+          description:
+            'Revisaremos tu postulación y te contactaremos si hay una vacante que coincida con tu perfil.',
         };
       case 'pedidos':
         return {
           title: 'Lamentamos el inconveniente',
-          description: 'Nuestro equipo revisará tu caso y te contactará a la brevedad para solucionarlo.'
+          description:
+            'Nuestro equipo revisará tu caso y te contactará a la brevedad para solucionarlo.',
         };
       case 'proveedor':
         return {
           title: '¡Propuesta recibida!',
-          description: 'Nuestro equipo de compras evaluará tu propuesta y te contactará si hay interés.'
+          description:
+            'Nuestro equipo de compras evaluará tu propuesta y te contactará si hay interés.',
         };
       default:
         return {
           title: '¡Mensaje enviado!',
-          description: 'Te responderemos en menos de 24 horas.'
+          description: 'Te responderemos en menos de 24 horas.',
         };
     }
   };
@@ -222,7 +228,11 @@ export default function Contacto() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ];
       if (!validTypes.includes(file.type)) {
         toast.error('Formato no válido — Solo se permiten archivos PDF, DOC o DOCX');
         return;
@@ -238,7 +248,7 @@ export default function Contacto() {
   const handleAccordionChange = (value: string | undefined) => {
     setOpenAccordion(value);
     if (value) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...initialFormData,
         name: prev.name,
         email: prev.email,
@@ -246,7 +256,7 @@ export default function Contacto() {
         subject: value as SubjectType,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...initialFormData,
         name: prev.name,
         email: prev.email,
@@ -274,17 +284,17 @@ export default function Contacto() {
       toast.error('Ingresá un teléfono válido');
       return;
     }
-    
+
     setLoading(true);
 
     try {
       let cvUrl = '';
-      
+
       // Upload CV if exists
       if (cvFile && formData.subject === 'empleo') {
         const fileExt = cvFile.name.split('.').pop();
         const fileName = `${Date.now()}-${formData.email.replace('@', '_at_')}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('cv-uploads')
           .upload(fileName, cvFile);
@@ -294,9 +304,7 @@ export default function Contacto() {
           setLoading(false);
           return;
         }
-        const { data: urlData } = supabase.storage
-          .from('cv-uploads')
-          .getPublicUrl(fileName);
+        const { data: urlData } = supabase.storage.from('cv-uploads').getPublicUrl(fileName);
         cvUrl = urlData?.publicUrl || fileName;
       }
 
@@ -327,7 +335,9 @@ export default function Contacto() {
         case 'pedidos':
           insertData.order_branch_id = formData.order_branch_id || null;
           insertData.order_number = formData.order_number || null;
-          insertData.order_date = formData.order_date ? format(formData.order_date, 'yyyy-MM-dd') : null;
+          insertData.order_date = formData.order_date
+            ? format(formData.order_date, 'yyyy-MM-dd')
+            : null;
           insertData.order_issue = formData.order_issue;
           break;
         case 'proveedor':
@@ -354,7 +364,7 @@ ${formData.message || 'Sin mensaje adicional'}
       // Send email notification (fire and forget)
       try {
         await supabase.functions.invoke('contact-notification', {
-          body: data
+          body: data,
         });
       } catch (emailErr) {
         console.warn('Email notification failed:', emailErr);
@@ -362,7 +372,7 @@ ${formData.message || 'Sin mensaje adicional'}
 
       const successMsg = getSuccessMessage(formData.subject);
       toast.success(successMsg.title, { description: successMsg.description });
-      
+
       setSubmitted(true);
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error sending message:', error);
@@ -432,8 +442,8 @@ ${formData.message || 'Sin mensaje adicional'}
           <>
             <div className="space-y-2">
               <Label>¿Ya tenés una zona en mente?</Label>
-              <Select 
-                value={formData.franchise_has_zone} 
+              <Select
+                value={formData.franchise_has_zone}
                 onValueChange={(value) => setFormData({ ...formData, franchise_has_zone: value })}
               >
                 <SelectTrigger>
@@ -441,7 +451,9 @@ ${formData.message || 'Sin mensaje adicional'}
                 </SelectTrigger>
                 <SelectContent>
                   {franchiseZoneOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -449,16 +461,20 @@ ${formData.message || 'Sin mensaje adicional'}
 
             <div className="space-y-2">
               <Label>¿Tenés local disponible?</Label>
-              <Select 
-                value={formData.franchise_has_location} 
-                onValueChange={(value) => setFormData({ ...formData, franchise_has_location: value })}
+              <Select
+                value={formData.franchise_has_location}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, franchise_has_location: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccioná una opción" />
                 </SelectTrigger>
                 <SelectContent>
                   {franchiseLocationOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -466,16 +482,20 @@ ${formData.message || 'Sin mensaje adicional'}
 
             <div className="space-y-2">
               <Label>¿Cuál es tu capital disponible para invertir?</Label>
-              <Select 
-                value={formData.franchise_investment_capital} 
-                onValueChange={(value) => setFormData({ ...formData, franchise_investment_capital: value })}
+              <Select
+                value={formData.franchise_investment_capital}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, franchise_investment_capital: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccioná una opción" />
                 </SelectTrigger>
                 <SelectContent>
                   {franchiseCapitalOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -498,8 +518,8 @@ ${formData.message || 'Sin mensaje adicional'}
           <>
             <div className="space-y-2">
               <Label>¿En qué local te gustaría trabajar? *</Label>
-              <Select 
-                value={formData.employment_branch_id} 
+              <Select
+                value={formData.employment_branch_id}
                 onValueChange={(value) => setFormData({ ...formData, employment_branch_id: value })}
               >
                 <SelectTrigger>
@@ -518,8 +538,8 @@ ${formData.message || 'Sin mensaje adicional'}
 
             <div className="space-y-2">
               <Label>¿Qué puesto te interesa?</Label>
-              <Select 
-                value={formData.employment_position} 
+              <Select
+                value={formData.employment_position}
                 onValueChange={(value) => setFormData({ ...formData, employment_position: value })}
               >
                 <SelectTrigger>
@@ -527,7 +547,9 @@ ${formData.message || 'Sin mensaje adicional'}
                 </SelectTrigger>
                 <SelectContent>
                   {employmentPositionOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -578,7 +600,9 @@ ${formData.message || 'Sin mensaje adicional'}
               <Textarea
                 id="motivation"
                 value={formData.employment_motivation}
-                onChange={(e) => setFormData({ ...formData, employment_motivation: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, employment_motivation: e.target.value })
+                }
                 placeholder="Contanos un poco sobre vos..."
                 rows={3}
               />
@@ -590,8 +614,8 @@ ${formData.message || 'Sin mensaje adicional'}
           <>
             <div className="space-y-2">
               <Label>¿En qué local hiciste el pedido?</Label>
-              <Select 
-                value={formData.order_branch_id} 
+              <Select
+                value={formData.order_branch_id}
                 onValueChange={(value) => setFormData({ ...formData, order_branch_id: value })}
               >
                 <SelectTrigger>
@@ -625,13 +649,13 @@ ${formData.message || 'Sin mensaje adicional'}
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.order_date && "text-muted-foreground"
+                        'w-full justify-start text-left font-normal',
+                        !formData.order_date && 'text-muted-foreground',
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.order_date ? (
-                        format(formData.order_date, "PPP", { locale: es })
+                        format(formData.order_date, 'PPP', { locale: es })
                       ) : (
                         <span>Seleccioná fecha</span>
                       )}
@@ -755,13 +779,16 @@ ${formData.message || 'Sin mensaje adicional'}
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
               <Send className="w-10 h-10 text-primary" />
             </div>
-            <h1 className="text-3xl font-black mb-4 font-brand text-primary">
-              {successMsg.title}
-            </h1>
-            <p className="text-lg text-muted-foreground mb-8">
-              {successMsg.description}
-            </p>
-            <Button onClick={() => { setFormData(initialFormData); setCvFile(null); setSubmitted(false); setOpenAccordion(undefined); }}>
+            <h1 className="text-3xl font-black mb-4 font-brand text-primary">{successMsg.title}</h1>
+            <p className="text-lg text-muted-foreground mb-8">{successMsg.description}</p>
+            <Button
+              onClick={() => {
+                setFormData(initialFormData);
+                setCvFile(null);
+                setSubmitted(false);
+                setOpenAccordion(undefined);
+              }}
+            >
               Enviar otro mensaje
             </Button>
           </div>
@@ -811,31 +838,41 @@ ${formData.message || 'Sin mensaje adicional'}
             <div>
               <Card className="shadow-elevated">
                 <CardContent className="p-6">
-                  <Accordion 
-                    type="single" 
-                    collapsible 
+                  <Accordion
+                    type="single"
+                    collapsible
                     value={openAccordion}
                     onValueChange={handleAccordionChange}
                   >
                     {subjectOptions.map((option) => {
                       const Icon = option.icon;
                       return (
-                        <AccordionItem key={option.value} value={option.value} className="border-b last:border-0">
+                        <AccordionItem
+                          key={option.value}
+                          value={option.value}
+                          className="border-b last:border-0"
+                        >
                           <AccordionTrigger className="hover:no-underline py-4">
                             <div className="flex items-center gap-4">
-                              <div className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                                openAccordion === option.value 
-                                  ? "bg-primary text-primary-foreground" 
-                                  : "bg-muted text-muted-foreground"
-                              )}>
+                              <div
+                                className={cn(
+                                  'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                                  openAccordion === option.value
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted text-muted-foreground',
+                                )}
+                              >
                                 <Icon className="w-5 h-5" />
                               </div>
                               <div className="text-left">
-                                <p className={cn(
-                                  "font-semibold",
-                                  openAccordion === option.value ? "text-primary" : "text-foreground"
-                                )}>
+                                <p
+                                  className={cn(
+                                    'font-semibold',
+                                    openAccordion === option.value
+                                      ? 'text-primary'
+                                      : 'text-foreground',
+                                  )}
+                                >
                                   {option.label}
                                 </p>
                                 <p className="text-sm text-muted-foreground font-normal">

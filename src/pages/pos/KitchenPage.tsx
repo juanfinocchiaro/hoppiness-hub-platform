@@ -13,8 +13,16 @@
  */
 import { useParams } from 'react-router-dom';
 import {
-  ChefHat, Maximize2, Minimize2, Check, Clock, UtensilsCrossed,
-  ShoppingBag, Truck, Volume2, VolumeX,
+  ChefHat,
+  Maximize2,
+  Minimize2,
+  Check,
+  Clock,
+  UtensilsCrossed,
+  ShoppingBag,
+  Truck,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,10 +41,13 @@ import { cn } from '@/lib/utils';
 import { usePrintConfig } from '@/hooks/usePrintConfig';
 import { useBranchPrinters } from '@/hooks/useBranchPrinters';
 import { useAfipConfig } from '@/hooks/useAfipConfig';
-import { printReadyTicketByPedidoId, printDeliveryTicketByPedidoId, extractErrorMessage } from '@/lib/ready-ticket';
+import {
+  printReadyTicketByPedidoId,
+  printDeliveryTicketByPedidoId,
+  extractErrorMessage,
+} from '@/lib/ready-ticket';
 
 // ─── Constants ──────────────────────────────────────────────
-const FADE_AFTER_MS = 3 * 60 * 1000;   // 3 minutes
 const REMOVE_AFTER_MS = 5 * 60 * 1000; // 5 minutes
 const OVERDUE_MINUTES = 10;
 
@@ -63,7 +74,7 @@ function KdsTimer({ createdAt, isKds }: { createdAt: string; isKds: boolean }) {
         isKds ? 'text-base' : 'text-xs',
         urgency === 'ok' && 'bg-emerald-500/20 text-emerald-400',
         urgency === 'warn' && 'bg-amber-500/20 text-amber-400',
-        urgency === 'urgent' && 'bg-red-500/20 text-red-400 animate-pulse'
+        urgency === 'urgent' && 'bg-red-500/20 text-red-400 animate-pulse',
       )}
     >
       <Clock className={isKds ? 'w-4 h-4' : 'w-3 h-3'} />
@@ -75,51 +86,39 @@ function KdsTimer({ createdAt, isKds }: { createdAt: string; isKds: boolean }) {
 // ─── Service Icon ───────────────────────────────────────────
 function ServiceIcon({ tipo }: { tipo: string | null }) {
   switch (tipo) {
-    case 'comer_aca': return <UtensilsCrossed className="w-4 h-4" />;
-    case 'delivery': return <Truck className="w-4 h-4" />;
-    default: return <ShoppingBag className="w-4 h-4" />;
+    case 'comer_aca':
+      return <UtensilsCrossed className="w-4 h-4" />;
+    case 'delivery':
+      return <Truck className="w-4 h-4" />;
+    default:
+      return <ShoppingBag className="w-4 h-4" />;
   }
 }
 
 function serviceLabel(tipo: string | null) {
   switch (tipo) {
-    case 'comer_aca': return 'Salón';
-    case 'delivery': return 'Delivery';
-    default: return 'Takeaway';
+    case 'comer_aca':
+      return 'Salón';
+    case 'delivery':
+      return 'Delivery';
+    default:
+      return 'Takeaway';
   }
 }
 
 // ─── Modifier styling ───────────────────────────────────────
 function ModifierLine({ tipo, descripcion }: { tipo: string; descripcion: string }) {
   if (tipo === 'sin') {
-    return (
-      <div className="text-red-400 font-bold uppercase text-sm">
-        🚫 SIN {descripcion}
-      </div>
-    );
+    return <div className="text-red-400 font-bold uppercase text-sm">🚫 SIN {descripcion}</div>;
   }
   if (tipo === 'extra') {
-    return (
-      <div className="text-orange-400 font-semibold text-sm">
-        ➕ {descripcion}
-      </div>
-    );
+    return <div className="text-orange-400 font-semibold text-sm">➕ {descripcion}</div>;
   }
-  return (
-    <div className="text-blue-400 text-sm">
-      🔄 {descripcion}
-    </div>
-  );
+  return <div className="text-blue-400 text-sm">🔄 {descripcion}</div>;
 }
 
 // ─── Item Row (display only, no individual interaction) ─────
-function KdsItemRow({
-  item,
-  isKds,
-}: {
-  item: KitchenItem;
-  isKds: boolean;
-}) {
+function KdsItemRow({ item, isKds }: { item: KitchenItem; isKds: boolean }) {
   return (
     <div
       className={cn(
@@ -129,10 +128,7 @@ function KdsItemRow({
       )}
     >
       <div className="flex-1 min-w-0">
-        <div className={cn(
-          'font-bold text-zinc-100',
-          isKds ? 'text-lg' : 'text-base',
-        )}>
+        <div className={cn('font-bold text-zinc-100', isKds ? 'text-lg' : 'text-base')}>
           {item.cantidad}× {item.nombre || 'Producto'}
         </div>
 
@@ -172,9 +168,11 @@ function KdsOrderCard({
 
   const elapsed = Math.floor((Date.now() - new Date(pedido.created_at).getTime()) / 1000 / 60);
   const urgencyBorder =
-    elapsed < 5 ? 'border-emerald-600' :
-    elapsed < OVERDUE_MINUTES ? 'border-amber-600' :
-    'border-red-600';
+    elapsed < 5
+      ? 'border-emerald-600'
+      : elapsed < OVERDUE_MINUTES
+        ? 'border-amber-600'
+        : 'border-red-600';
 
   return (
     <div
@@ -182,7 +180,7 @@ function KdsOrderCard({
         'rounded-xl border-2 overflow-hidden bg-zinc-900 transition-opacity duration-1000',
         urgencyBorder,
         fadingOut && 'opacity-30',
-        isListo && 'opacity-50'
+        isListo && 'opacity-50',
       )}
     >
       {/* Header */}
@@ -268,9 +266,13 @@ function KdsColumn({
 }) {
   return (
     <div className="flex flex-col min-h-0">
-      <div className={cn('rounded-lg px-3 py-2 mb-3 flex items-center justify-between', colorClass)}>
+      <div
+        className={cn('rounded-lg px-3 py-2 mb-3 flex items-center justify-between', colorClass)}
+      >
         <span className="font-bold text-sm">{title}</span>
-        <Badge variant="secondary" className="text-xs bg-zinc-800 text-zinc-200 border-0">{count}</Badge>
+        <Badge variant="secondary" className="text-xs bg-zinc-800 text-zinc-200 border-0">
+          {count}
+        </Badge>
       </div>
       <div className="space-y-3 overflow-y-auto flex-1 pb-4 scrollbar-thin">
         {pedidos.map((p) => (
@@ -295,17 +297,23 @@ function MetricsBar({ pedidos }: { pedidos: KitchenPedido[] }) {
   const activos = pedidos.filter((p) => p.estado !== 'listo' && p.estado !== 'entregado');
   const now = Date.now();
 
-  const avgMinutes = activos.length > 0
-    ? Math.round(activos.reduce((sum, p) => sum + (now - new Date(p.created_at).getTime()) / 60000, 0) / activos.length)
-    : 0;
+  const avgMinutes =
+    activos.length > 0
+      ? Math.round(
+          activos.reduce((sum, p) => sum + (now - new Date(p.created_at).getTime()) / 60000, 0) /
+            activos.length,
+        )
+      : 0;
 
   const overdue = activos.filter(
-    (p) => (now - new Date(p.created_at).getTime()) / 60000 > OVERDUE_MINUTES
+    (p) => (now - new Date(p.created_at).getTime()) / 60000 > OVERDUE_MINUTES,
   ).length;
 
   return (
     <div className="flex items-center gap-4 text-xs text-zinc-400">
-      <span className="font-semibold text-zinc-200">{activos.length} activo{activos.length !== 1 ? 's' : ''}</span>
+      <span className="font-semibold text-zinc-200">
+        {activos.length} activo{activos.length !== 1 ? 's' : ''}
+      </span>
       <span>⏱ Prom: {avgMinutes}min</span>
       {overdue > 0 && (
         <span className="text-red-400 font-semibold animate-pulse">
@@ -322,7 +330,7 @@ export default function KitchenPage() {
   const qc = useQueryClient();
   const isMobile = useIsMobile();
   const { data: pedidos, isLoading, consumeNewOrderAlert } = useKitchen(branchId!);
-  const { data: stations } = useKitchenStations(branchId!);
+  const { data: _stations } = useKitchenStations(branchId!);
   const { data: printConfig } = usePrintConfig(branchId!);
   const { data: printersData } = useBranchPrinters(branchId!);
   const { data: afipConfig } = useAfipConfig(branchId);
@@ -406,7 +414,9 @@ export default function KitchenPage() {
             toast.success('Ticket delivery impreso');
           } catch (err) {
             console.error('[KitchenPage] delivery ticket error:', err);
-            toast.error('Error al imprimir ticket delivery', { description: extractErrorMessage(err) });
+            toast.error('Error al imprimir ticket delivery', {
+              description: extractErrorMessage(err),
+            });
           }
         }
 
@@ -419,12 +429,21 @@ export default function KitchenPage() {
               branchName: branchInfo?.name || 'Hoppiness',
               printConfig,
               printers: allPrinters,
-              afipConfig: afipConfig as unknown as { razon_social?: string | null; cuit?: string | null; direccion_fiscal?: string | null; inicio_actividades?: string | null; iibb?: string | null; condicion_iva?: string | null } | null,
+              afipConfig: afipConfig as unknown as {
+                razon_social?: string | null;
+                cuit?: string | null;
+                direccion_fiscal?: string | null;
+                inicio_actividades?: string | null;
+                iibb?: string | null;
+                condicion_iva?: string | null;
+              } | null,
             });
             toast.success('Ticket impreso al marcar listo');
           } catch (err) {
             console.error('[KitchenPage] on_ready ticket error:', err);
-            toast.error('Error al imprimir ticket on_ready', { description: extractErrorMessage(err) });
+            toast.error('Error al imprimir ticket on_ready', {
+              description: extractErrorMessage(err),
+            });
           }
         }
       }
@@ -435,13 +454,13 @@ export default function KitchenPage() {
     (pedidoId: string, action: string) => {
       updatePedidoEstado.mutate({ pedidoId, estado: action });
     },
-    [updatePedidoEstado]
+    [updatePedidoEstado],
   );
 
   // Tick every 30s so that listo auto-expire and urgency borders update
   const [_tick, setTick] = useState(0);
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 30_000);
+    const iv = setInterval(() => setTick((t) => t + 1), 30_000);
     return () => clearInterval(iv);
   }, []);
 
@@ -451,7 +470,7 @@ export default function KitchenPage() {
     return pedidos.filter((p) => {
       if (p.estado === 'listo' && p.tiempo_listo) {
         const listoTime = new Date(p.tiempo_listo).getTime();
-        return (now - listoTime) < REMOVE_AFTER_MS;
+        return now - listoTime < REMOVE_AFTER_MS;
       }
       if (p.estado === 'entregado') return false;
       return true;
@@ -459,11 +478,14 @@ export default function KitchenPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidos, _tick]);
 
-  const { pendientes, enPreparacion, listos } = useMemo(() => ({
-    pendientes: visiblePedidos.filter((p) => p.estado === 'pendiente'),
-    enPreparacion: visiblePedidos.filter((p) => p.estado === 'en_preparacion'),
-    listos: visiblePedidos.filter((p) => p.estado === 'listo'),
-  }), [visiblePedidos]);
+  const { pendientes, enPreparacion, listos } = useMemo(
+    () => ({
+      pendientes: visiblePedidos.filter((p) => p.estado === 'pendiente'),
+      enPreparacion: visiblePedidos.filter((p) => p.estado === 'en_preparacion'),
+      listos: visiblePedidos.filter((p) => p.estado === 'listo'),
+    }),
+    [visiblePedidos],
+  );
 
   if (isLoading) {
     return (
@@ -482,10 +504,9 @@ export default function KitchenPage() {
 
   // KDS fullscreen wrapper
   const content = (
-    <div className={cn(
-      'flex flex-col h-full',
-      isKdsMode && 'fixed inset-0 z-[100] bg-[#1C1C1E] p-4'
-    )}>
+    <div
+      className={cn('flex flex-col h-full', isKdsMode && 'fixed inset-0 z-[100] bg-[#1C1C1E] p-4')}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -527,33 +548,66 @@ export default function KitchenPage() {
       ) : isMobile && !isKdsMode ? (
         <Tabs defaultValue="pendientes" className="flex-1 flex flex-col min-h-0">
           <TabsList className="w-full grid grid-cols-3 bg-zinc-800">
-            <TabsTrigger value="pendientes" className="data-[state=active]:bg-red-900/40 data-[state=active]:text-red-300">
+            <TabsTrigger
+              value="pendientes"
+              className="data-[state=active]:bg-red-900/40 data-[state=active]:text-red-300"
+            >
               Pendientes {pendientes.length > 0 && `(${pendientes.length})`}
             </TabsTrigger>
-            <TabsTrigger value="preparacion" className="data-[state=active]:bg-amber-900/40 data-[state=active]:text-amber-300">
+            <TabsTrigger
+              value="preparacion"
+              className="data-[state=active]:bg-amber-900/40 data-[state=active]:text-amber-300"
+            >
               Prep {enPreparacion.length > 0 && `(${enPreparacion.length})`}
             </TabsTrigger>
-            <TabsTrigger value="listos" className="data-[state=active]:bg-emerald-900/40 data-[state=active]:text-emerald-300">
+            <TabsTrigger
+              value="listos"
+              className="data-[state=active]:bg-emerald-900/40 data-[state=active]:text-emerald-300"
+            >
               Listos {listos.length > 0 && `(${listos.length})`}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="pendientes" className="flex-1 overflow-y-auto space-y-3 mt-3">
             {pendientes.map((p) => (
-              <KdsOrderCard key={p.id} pedido={p} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
+              <KdsOrderCard
+                key={p.id}
+                pedido={p}
+                onPedidoAction={handlePedidoAction}
+                isKds={isKdsMode}
+                fadingOut={false}
+              />
             ))}
-            {pendientes.length === 0 && <p className="text-center text-zinc-500 py-8">Sin pendientes</p>}
+            {pendientes.length === 0 && (
+              <p className="text-center text-zinc-500 py-8">Sin pendientes</p>
+            )}
           </TabsContent>
           <TabsContent value="preparacion" className="flex-1 overflow-y-auto space-y-3 mt-3">
             {enPreparacion.map((p) => (
-              <KdsOrderCard key={p.id} pedido={p} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
+              <KdsOrderCard
+                key={p.id}
+                pedido={p}
+                onPedidoAction={handlePedidoAction}
+                isKds={isKdsMode}
+                fadingOut={false}
+              />
             ))}
-            {enPreparacion.length === 0 && <p className="text-center text-zinc-500 py-8">Nada en preparación</p>}
+            {enPreparacion.length === 0 && (
+              <p className="text-center text-zinc-500 py-8">Nada en preparación</p>
+            )}
           </TabsContent>
           <TabsContent value="listos" className="flex-1 overflow-y-auto space-y-3 mt-3">
             {listos.map((p) => (
-              <KdsOrderCard key={p.id} pedido={p} onPedidoAction={handlePedidoAction} isKds={isKdsMode} fadingOut={false} />
+              <KdsOrderCard
+                key={p.id}
+                pedido={p}
+                onPedidoAction={handlePedidoAction}
+                isKds={isKdsMode}
+                fadingOut={false}
+              />
             ))}
-            {listos.length === 0 && <p className="text-center text-zinc-500 py-8">Sin pedidos listos</p>}
+            {listos.length === 0 && (
+              <p className="text-center text-zinc-500 py-8">Sin pedidos listos</p>
+            )}
           </TabsContent>
         </Tabs>
       ) : (
@@ -589,10 +643,7 @@ export default function KitchenPage() {
 
   // When NOT in KDS mode, wrap with dark background inline
   return (
-    <div className={cn(
-      'h-full rounded-lg',
-      !isKdsMode && 'bg-[#1C1C1E] text-zinc-100 p-2'
-    )}>
+    <div className={cn('h-full rounded-lg', !isKdsMode && 'bg-[#1C1C1E] text-zinc-100 p-2')}>
       {content}
     </div>
   );

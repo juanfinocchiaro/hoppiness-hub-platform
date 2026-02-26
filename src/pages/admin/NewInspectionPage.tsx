@@ -9,7 +9,13 @@ import { ArrowLeft, MapPin, ClipboardList, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { PageHeader } from '@/components/ui/page-header';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
 import { useCreateInspection } from '@/hooks/useInspections';
@@ -77,9 +83,7 @@ export default function NewInspectionPage() {
               <MapPin className="w-5 h-5" />
               Sucursal
             </CardTitle>
-            <CardDescription>
-              ¿En qué sucursal estás realizando la visita?
-            </CardDescription>
+            <CardDescription>¿En qué sucursal estás realizando la visita?</CardDescription>
           </CardHeader>
           <CardContent>
             <Select value={branchId} onValueChange={setBranchId}>
@@ -87,7 +91,7 @@ export default function NewInspectionPage() {
                 <SelectValue placeholder="Seleccionar sucursal..." />
               </SelectTrigger>
               <SelectContent>
-                {branches?.map(branch => (
+                {branches?.map((branch) => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}
                   </SelectItem>
@@ -104,15 +108,13 @@ export default function NewInspectionPage() {
               <ClipboardList className="w-5 h-5" />
               Tipo de Visita
             </CardTitle>
-            <CardDescription>
-              ¿Qué área vas a supervisar?
-            </CardDescription>
+            <CardDescription>¿Qué área vas a supervisar?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div 
+            <div
               className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                inspectionType === 'boh' 
-                  ? 'border-primary bg-primary/5' 
+                inspectionType === 'boh'
+                  ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/50'
               }`}
               onClick={() => setInspectionType('boh')}
@@ -122,11 +124,11 @@ export default function NewInspectionPage() {
                 Heladeras, depósito, cocina, seguridad (17 ítems)
               </div>
             </div>
-            
-            <div 
+
+            <div
               className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                inspectionType === 'foh' 
-                  ? 'border-primary bg-primary/5' 
+                inspectionType === 'foh'
+                  ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/50'
               }`}
               onClick={() => setInspectionType('foh')}
@@ -137,10 +139,10 @@ export default function NewInspectionPage() {
               </div>
             </div>
 
-            <div 
+            <div
               className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                inspectionType === 'ultrasmash' 
-                  ? 'border-primary bg-primary/5' 
+                inspectionType === 'ultrasmash'
+                  ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/50'
               }`}
               onClick={() => setInspectionType('ultrasmash')}
@@ -154,7 +156,7 @@ export default function NewInspectionPage() {
         </Card>
 
         {/* Start Button */}
-        <Button 
+        <Button
           className="w-full h-12 text-lg"
           disabled={!canStart || createInspection.isPending}
           onClick={handleStart}

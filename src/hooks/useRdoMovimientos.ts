@@ -33,7 +33,11 @@ export function useRdoMovimientos(branchId: string, periodo: string) {
   });
 }
 
-export function useRdoMovimientosByCategory(branchId: string, periodo: string, categoryCode: string) {
+export function useRdoMovimientosByCategory(
+  branchId: string,
+  periodo: string,
+  categoryCode: string,
+) {
   const { user } = useAuth();
 
   return useQuery({
@@ -75,16 +79,18 @@ export function useRdoMovimientoMutations() {
 
       const { data: result, error } = await supabase
         .from('rdo_movimientos')
-        .insert([{
-          branch_id: data.branch_id,
-          periodo: data.periodo,
-          rdo_category_code: data.rdo_category_code,
-          origen: data.origen,
-          monto: data.monto,
-          descripcion: data.descripcion,
-          datos_extra: data.datos_extra as any,
-          created_by: user?.id,
-        }])
+        .insert([
+          {
+            branch_id: data.branch_id,
+            periodo: data.periodo,
+            rdo_category_code: data.rdo_category_code,
+            origen: data.origen,
+            monto: data.monto,
+            descripcion: data.descripcion,
+            datos_extra: data.datos_extra as any,
+            created_by: user?.id,
+          },
+        ])
         .select()
         .single();
       if (error) throw error;

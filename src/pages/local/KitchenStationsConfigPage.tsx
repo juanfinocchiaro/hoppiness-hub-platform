@@ -11,8 +11,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/states/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKitchenStations, type KitchenStation } from '@/hooks/useKitchenStations';
@@ -72,11 +84,14 @@ export default function KitchenStationsConfigPage() {
     if (editing) {
       update.mutate({ id: editing.id, ...form }, { onSuccess: () => setModalOpen(false) });
     } else {
-      create.mutate({ branch_id: branchId!, ...form } as any, { onSuccess: () => setModalOpen(false) });
+      create.mutate({ branch_id: branchId!, ...form } as any, {
+        onSuccess: () => setModalOpen(false),
+      });
     }
   };
 
-  const iconEmoji = (icon: string) => ICONS.find((i) => i.value === icon)?.label?.split(' ')[0] || '🔥';
+  const iconEmoji = (icon: string) =>
+    ICONS.find((i) => i.value === icon)?.label?.split(' ')[0] || '🔥';
 
   if (isLoading) {
     return (
@@ -131,7 +146,11 @@ export default function KitchenStationsConfigPage() {
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {s.printer_id && (
-                    <p>Imprime: {s.print_on === 'on_receive' ? 'Al recibir pedido' : 'Al iniciar preparación'} ({s.print_copies} copia{s.print_copies > 1 ? 's' : ''})</p>
+                    <p>
+                      Imprime:{' '}
+                      {s.print_on === 'on_receive' ? 'Al recibir pedido' : 'Al iniciar preparación'}{' '}
+                      ({s.print_copies} copia{s.print_copies > 1 ? 's' : ''})
+                    </p>
                   )}
                   <p>Orden: {s.sort_order}</p>
                 </div>
@@ -171,11 +190,18 @@ export default function KitchenStationsConfigPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Icono</Label>
-                <Select value={form.icon} onValueChange={(v) => setForm((f) => ({ ...f, icon: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.icon}
+                  onValueChange={(v) => setForm((f) => ({ ...f, icon: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {ICONS.map((i) => (
-                      <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>
+                      <SelectItem key={i.value} value={i.value}>
+                        {i.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -185,7 +211,9 @@ export default function KitchenStationsConfigPage() {
                 <Input
                   type="number"
                   value={form.sort_order}
-                  onChange={(e) => setForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, sort_order: parseInt(e.target.value) || 0 }))
+                  }
                 />
               </div>
             </div>
@@ -203,13 +231,19 @@ export default function KitchenStationsConfigPage() {
                 <Label>Impresora asignada</Label>
                 <Select
                   value={form.printer_id || 'none'}
-                  onValueChange={(v) => setForm((f) => ({ ...f, printer_id: v === 'none' ? null : v }))}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, printer_id: v === 'none' ? null : v }))
+                  }
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin impresora</SelectItem>
                     {printers?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} ({p.ip_address})</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} ({p.ip_address})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -218,8 +252,13 @@ export default function KitchenStationsConfigPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Imprimir</Label>
-                    <Select value={form.print_on} onValueChange={(v) => setForm((f) => ({ ...f, print_on: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={form.print_on}
+                      onValueChange={(v) => setForm((f) => ({ ...f, print_on: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="on_receive">Al recibir</SelectItem>
                         <SelectItem value="on_prep">Al preparar</SelectItem>
@@ -233,7 +272,9 @@ export default function KitchenStationsConfigPage() {
                       min={1}
                       max={5}
                       value={form.print_copies}
-                      onChange={(e) => setForm((f) => ({ ...f, print_copies: parseInt(e.target.value) || 1 }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, print_copies: parseInt(e.target.value) || 1 }))
+                      }
                     />
                   </div>
                 </div>
@@ -241,7 +282,9 @@ export default function KitchenStationsConfigPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={!form.name}>
               {editing ? 'Guardar' : 'Crear'}
             </Button>

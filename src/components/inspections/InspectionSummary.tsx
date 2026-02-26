@@ -21,14 +21,12 @@ interface InspectionSummaryProps {
 export function InspectionSummary({ inspection, items = [] }: InspectionSummaryProps) {
   // Calculate stats
   const stats = useMemo(() => {
-    const applicable = items.filter(i => i.complies !== null);
-    const compliant = applicable.filter(i => i.complies === true).length;
-    const nonCompliant = applicable.filter(i => i.complies === false).length;
-    const pending = items.filter(i => i.complies === null).length;
+    const applicable = items.filter((i) => i.complies !== null);
+    const compliant = applicable.filter((i) => i.complies === true).length;
+    const nonCompliant = applicable.filter((i) => i.complies === false).length;
+    const pending = items.filter((i) => i.complies === null).length;
     const total = items.length;
-    const score = applicable.length > 0
-      ? Math.round((compliant / applicable.length) * 100)
-      : 0;
+    const score = applicable.length > 0 ? Math.round((compliant / applicable.length) * 100) : 0;
 
     return { total, applicable: applicable.length, compliant, nonCompliant, pending, score };
   }, [items]);
@@ -36,8 +34,8 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
   // Calculate category breakdown
   const categoryBreakdown = useMemo(() => {
     const breakdown: Record<string, { compliant: number; total: number }> = {};
-    
-    items.forEach(item => {
+
+    items.forEach((item) => {
       if (!breakdown[item.category]) {
         breakdown[item.category] = { compliant: 0, total: 0 };
       }
@@ -54,11 +52,12 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
 
   // Non-compliant items for critical findings
   const nonCompliantItems = useMemo(() => {
-    return items.filter(i => i.complies === false);
+    return items.filter((i) => i.complies === false);
   }, [items]);
 
   const score = inspection.score_total ?? stats.score;
-  const scoreColor = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-destructive';
+  const scoreColor =
+    score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-destructive';
 
   return (
     <div className="space-y-4">
@@ -73,15 +72,20 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
               </div>
               <CardTitle className="text-xl flex items-center gap-2">
                 Visita {TYPE_SHORT_LABELS[inspection.inspection_type]}
-                <Badge variant={
-                  inspection.status === 'completada' ? 'default' :
-                  inspection.status === 'en_curso' ? 'secondary' : 'outline'
-                }>
+                <Badge
+                  variant={
+                    inspection.status === 'completada'
+                      ? 'default'
+                      : inspection.status === 'en_curso'
+                        ? 'secondary'
+                        : 'outline'
+                  }
+                >
                   {STATUS_LABELS[inspection.status]}
                 </Badge>
               </CardTitle>
             </div>
-            <div className={cn("text-4xl font-bold", scoreColor)}>
+            <div className={cn('text-4xl font-bold', scoreColor)}>
               {score}
               <span className="text-lg text-muted-foreground">/100</span>
             </div>
@@ -113,7 +117,7 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
         </CardHeader>
         <CardContent className="space-y-4">
           <Progress value={score} className="h-3" />
-          
+
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-1 text-green-600">
@@ -151,15 +155,25 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
               const pct = data.total > 0 ? Math.round((data.compliant / data.total) * 100) : 0;
               return (
                 <div key={category} className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{CATEGORY_LABELS[category] || category}</span>
+                  <span className="text-muted-foreground">
+                    {CATEGORY_LABELS[category] || category}
+                  </span>
                   <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "font-medium",
-                      pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-yellow-600' : 'text-destructive'
-                    )}>
+                    <span
+                      className={cn(
+                        'font-medium',
+                        pct >= 80
+                          ? 'text-green-600'
+                          : pct >= 60
+                            ? 'text-yellow-600'
+                            : 'text-destructive',
+                      )}
+                    >
                       {pct}%
                     </span>
-                    <span className="text-muted-foreground">({data.compliant}/{data.total})</span>
+                    <span className="text-muted-foreground">
+                      ({data.compliant}/{data.total})
+                    </span>
                   </div>
                 </div>
               );
@@ -176,7 +190,7 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
           </CardHeader>
           <CardContent>
             <ul className="space-y-3 text-sm">
-              {nonCompliantItems.map(item => (
+              {nonCompliantItems.map((item) => (
                 <li key={item.id} className="space-y-1">
                   <div className="flex items-start gap-2">
                     <XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
@@ -191,9 +205,9 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
                     <div className="ml-6 flex flex-wrap gap-2 mt-1">
                       {item.photo_urls.map((url, idx) => (
                         <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
-                          <img 
-                            src={url} 
-                            alt={`Evidencia ${idx + 1}`} 
+                          <img
+                            src={url}
+                            alt={`Evidencia ${idx + 1}`}
                             className="h-16 w-16 object-cover rounded border border-border hover:opacity-80 transition-opacity"
                           />
                         </a>
@@ -228,7 +242,10 @@ export function InspectionSummary({ inspection, items = [] }: InspectionSummaryP
           <CardContent>
             <ul className="space-y-2 text-sm">
               {inspection.action_items.map((action, idx) => (
-                <li key={action.id || idx} className="flex items-start gap-2 p-2 bg-muted/50 rounded">
+                <li
+                  key={action.id || idx}
+                  className="flex items-start gap-2 p-2 bg-muted/50 rounded"
+                >
                   <span className="font-medium shrink-0">{idx + 1}.</span>
                   <div className="flex-1">
                     <p>{action.description}</p>

@@ -41,20 +41,18 @@ export function CoachingStationSection({
   const [expandedStations, setExpandedStations] = useState<string[]>([]);
 
   const toggleExpanded = (stationId: string) => {
-    setExpandedStations(prev => 
-      prev.includes(stationId) 
-        ? prev.filter(id => id !== stationId)
-        : [...prev, stationId]
+    setExpandedStations((prev) =>
+      prev.includes(stationId) ? prev.filter((id) => id !== stationId) : [...prev, stationId],
     );
   };
 
   const getStationScore = (stationId: string) => {
-    return stationScores.find(s => s.stationId === stationId);
+    return stationScores.find((s) => s.stationId === stationId);
   };
 
   const getCompetencyScore = (stationId: string, competencyId: string) => {
     const stationData = getStationScore(stationId);
-    return stationData?.competencyScores.find(c => c.competencyId === competencyId)?.score ?? 0;
+    return stationData?.competencyScores.find((c) => c.competencyId === competencyId)?.score ?? 0;
   };
 
   return (
@@ -70,7 +68,7 @@ export function CoachingStationSection({
       <ScoreLegend />
 
       <div className="grid gap-3">
-        {stations.map(station => {
+        {stations.map((station) => {
           const isSelected = selectedStations.includes(station.id);
           const isExpanded = expandedStations.includes(station.id);
           const competencies = competenciesByStation[station.id] || [];
@@ -80,7 +78,7 @@ export function CoachingStationSection({
             <Card key={station.id} className={isSelected ? 'border-primary' : ''}>
               <CardHeader className="p-3 pb-2">
                 <div className="flex items-center justify-between">
-                  <div 
+                  <div
                     className="flex items-center gap-2 cursor-pointer flex-1"
                     onClick={() => {
                       if (!isSelected) {
@@ -91,7 +89,9 @@ export function CoachingStationSection({
                       }
                     }}
                   >
-                    <div className={`p-1.5 rounded ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    <div
+                      className={`p-1.5 rounded ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                    >
                       {stationIcons[station.key] || <Package className="h-4 w-4" />}
                     </div>
                     <CardTitle className="text-sm font-medium">{station.name}</CardTitle>
@@ -101,7 +101,7 @@ export function CoachingStationSection({
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -110,7 +110,7 @@ export function CoachingStationSection({
                       className="h-4 w-4 rounded border-gray-300"
                     />
                     {isSelected && (
-                      <ChevronDown 
+                      <ChevronDown
                         className={`h-4 w-4 transition-transform cursor-pointer ${isExpanded ? 'rotate-180' : ''}`}
                         onClick={() => toggleExpanded(station.id)}
                       />
@@ -133,15 +133,20 @@ export function CoachingStationSection({
                         onValueChange={(value) => onScoreChange(station.id, parseInt(value))}
                         className="flex gap-2"
                       >
-                        {SCORE_LABELS.map(score => (
+                        {SCORE_LABELS.map((score) => (
                           <div key={score.value} className="flex items-center">
-                            <RadioGroupItem value={score.value.toString()} id={`${station.id}-${score.value}`} className="sr-only" />
+                            <RadioGroupItem
+                              value={score.value.toString()}
+                              id={`${station.id}-${score.value}`}
+                              className="sr-only"
+                            />
                             <Label
                               htmlFor={`${station.id}-${score.value}`}
                               className={`px-3 py-1.5 text-xs rounded cursor-pointer border transition-colors
-                                ${stationData?.score === score.value 
-                                  ? `${score.bgColor} ${score.color} border-current` 
-                                  : 'bg-muted hover:bg-muted/80 border-transparent'
+                                ${
+                                  stationData?.score === score.value
+                                    ? `${score.bgColor} ${score.color} border-current`
+                                    : 'bg-muted hover:bg-muted/80 border-transparent'
                                 }`}
                             >
                               {score.value}
@@ -157,7 +162,7 @@ export function CoachingStationSection({
                     <Label className="text-xs font-medium text-muted-foreground">
                       Competencias Específicas
                     </Label>
-                    {competencies.map(comp => (
+                    {competencies.map((comp) => (
                       <div key={comp.id} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs">{comp.name}</span>
@@ -165,21 +170,28 @@ export function CoachingStationSection({
                           <div onClick={(e) => e.stopPropagation()}>
                             <RadioGroup
                               value={getCompetencyScore(station.id, comp.id).toString() || '0'}
-                              onValueChange={(value) => onCompetencyScoreChange(station.id, comp.id, parseInt(value))}
+                              onValueChange={(value) =>
+                                onCompetencyScoreChange(station.id, comp.id, parseInt(value))
+                              }
                               className="flex gap-1"
                             >
-                              {[1, 2, 3, 4, 5].map(value => {
+                              {[1, 2, 3, 4, 5].map((value) => {
                                 const currentScore = getCompetencyScore(station.id, comp.id);
-                                const scoreConfig = SCORE_LABELS.find(s => s.value === value);
+                                const scoreConfig = SCORE_LABELS.find((s) => s.value === value);
                                 return (
                                   <div key={value}>
-                                    <RadioGroupItem value={value.toString()} id={`${comp.id}-${value}`} className="sr-only" />
+                                    <RadioGroupItem
+                                      value={value.toString()}
+                                      id={`${comp.id}-${value}`}
+                                      className="sr-only"
+                                    />
                                     <Label
                                       htmlFor={`${comp.id}-${value}`}
                                       className={`w-6 h-6 flex items-center justify-center text-xs rounded cursor-pointer border
-                                        ${currentScore === value 
-                                          ? `${scoreConfig?.bgColor} ${scoreConfig?.color} border-current` 
-                                          : 'bg-muted hover:bg-muted/80 border-transparent'
+                                        ${
+                                          currentScore === value
+                                            ? `${scoreConfig?.bgColor} ${scoreConfig?.color} border-current`
+                                            : 'bg-muted hover:bg-muted/80 border-transparent'
                                         }`}
                                     >
                                       {value}

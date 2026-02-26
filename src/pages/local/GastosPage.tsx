@@ -6,25 +6,46 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  Plus, Receipt, DollarSign, Search, Download, Trash2, Pencil,
-  Building2, Wallet, CreditCard, ArrowDownUp,
+  Plus,
+  Receipt,
+  Search,
+  Download,
+  Trash2,
+  Pencil,
+  Building2,
+  Wallet,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +58,11 @@ import { exportToExcel } from '@/lib/exportExcel';
 import { toast } from 'sonner';
 
 const fmtCurrency = (v: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(v);
 
 const CATEGORIAS_GASTO = [
   { value: 'comision_mp_point', label: 'Comisión MP Point', rdo: 'costos_variables' },
@@ -87,7 +112,7 @@ interface Gasto {
 
 export default function GastosPage() {
   const { branchId } = useParams<{ branchId: string }>();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
@@ -120,13 +145,13 @@ export default function GastosPage() {
     if (!gastos) return [];
     let filtered = gastos;
     if (filterCategoria !== 'all') {
-      filtered = filtered.filter(g => g.categoria_principal === filterCategoria);
+      filtered = filtered.filter((g) => g.categoria_principal === filterCategoria);
     }
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
-      filtered = filtered.filter(g =>
-        g.concepto.toLowerCase().includes(q) ||
-        g.categoria_principal.toLowerCase().includes(q)
+      filtered = filtered.filter(
+        (g) =>
+          g.concepto.toLowerCase().includes(q) || g.categoria_principal.toLowerCase().includes(q),
       );
     }
     return filtered;
@@ -134,11 +159,14 @@ export default function GastosPage() {
 
   const totals = useMemo(() => {
     if (!filteredGastos.length) return { total: 0, efectivo: 0, transferencia: 0 };
-    return filteredGastos.reduce((acc, g) => ({
-      total: acc.total + Number(g.monto) + Number(g.costo_transferencia || 0),
-      efectivo: acc.efectivo + (g.afecta_caja ? Number(g.monto) : 0),
-      transferencia: acc.transferencia + (!g.afecta_caja ? Number(g.monto) : 0),
-    }), { total: 0, efectivo: 0, transferencia: 0 });
+    return filteredGastos.reduce(
+      (acc, g) => ({
+        total: acc.total + Number(g.monto) + Number(g.costo_transferencia || 0),
+        efectivo: acc.efectivo + (g.afecta_caja ? Number(g.monto) : 0),
+        transferencia: acc.transferencia + (!g.afecta_caja ? Number(g.monto) : 0),
+      }),
+      { total: 0, efectivo: 0, transferencia: 0 },
+    );
   }, [filteredGastos]);
 
   const deleteGasto = useMutation({
@@ -158,16 +186,27 @@ export default function GastosPage() {
   const handleExport = () => {
     if (!filteredGastos.length) return;
     exportToExcel(
-      filteredGastos.map(g => ({
+      filteredGastos.map((g) => ({
         fecha: g.fecha,
-        categoria: CATEGORIAS_GASTO.find(c => c.value === g.categoria_principal)?.label || g.categoria_principal,
+        categoria:
+          CATEGORIAS_GASTO.find((c) => c.value === g.categoria_principal)?.label ||
+          g.categoria_principal,
         concepto: g.concepto,
         monto: g.monto,
         costo_transferencia: g.costo_transferencia || 0,
-        medio_pago: MEDIOS_PAGO_GASTO.find(m => m.value === g.tipo_pago)?.label || g.tipo_pago || '',
+        medio_pago:
+          MEDIOS_PAGO_GASTO.find((m) => m.value === g.tipo_pago)?.label || g.tipo_pago || '',
         afecta_caja: g.afecta_caja ? 'Sí' : 'No',
       })),
-      { fecha: 'Fecha', categoria: 'Categoría', concepto: 'Concepto', monto: 'Monto', costo_transferencia: 'Costo transf.', medio_pago: 'Medio', afecta_caja: 'Afecta caja' },
+      {
+        fecha: 'Fecha',
+        categoria: 'Categoría',
+        concepto: 'Concepto',
+        monto: 'Monto',
+        costo_transferencia: 'Costo transf.',
+        medio_pago: 'Medio',
+        afecta_caja: 'Afecta caja',
+      },
       { filename: `gastos-${periodo}` },
     );
   };
@@ -177,12 +216,14 @@ export default function GastosPage() {
       <PageHeader
         title="Gastos"
         subtitle="Registro y seguimiento de gastos del local"
-        breadcrumb={[
-          { label: 'Dashboard', href: `/milocal/${branchId}` },
-          { label: 'Gastos' },
-        ]}
+        breadcrumb={[{ label: 'Dashboard', href: `/milocal/${branchId}` }, { label: 'Gastos' }]}
         actions={
-          <Button onClick={() => { setEditingGasto(null); setShowForm(true); }}>
+          <Button
+            onClick={() => {
+              setEditingGasto(null);
+              setShowForm(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" /> Registrar gasto
           </Button>
         }
@@ -239,8 +280,10 @@ export default function GastosPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las categorías</SelectItem>
-            {CATEGORIAS_GASTO.map(c => (
-              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            {CATEGORIAS_GASTO.map((c) => (
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -253,7 +296,12 @@ export default function GastosPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" size="sm" onClick={handleExport} disabled={!filteredGastos.length}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          disabled={!filteredGastos.length}
+        >
           <Download className="w-4 h-4 mr-1" /> Excel
         </Button>
       </div>
@@ -263,7 +311,9 @@ export default function GastosPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4 space-y-3">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-12" />)}
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-12" />
+              ))}
             </div>
           ) : filteredGastos.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -284,14 +334,15 @@ export default function GastosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGastos.map(g => (
+                {filteredGastos.map((g) => (
                   <TableRow key={g.id}>
                     <TableCell className="text-sm">
                       {format(new Date(g.fecha + 'T12:00:00'), 'dd/MM', { locale: es })}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
-                        {CATEGORIAS_GASTO.find(c => c.value === g.categoria_principal)?.label || g.categoria_principal}
+                        {CATEGORIAS_GASTO.find((c) => c.value === g.categoria_principal)?.label ||
+                          g.categoria_principal}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px] truncate">{g.concepto}</TableCell>
@@ -304,7 +355,9 @@ export default function GastosPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs">
-                      {MEDIOS_PAGO_GASTO.find(m => m.value === g.tipo_pago)?.label || g.medio_pago || '-'}
+                      {MEDIOS_PAGO_GASTO.find((m) => m.value === g.tipo_pago)?.label ||
+                        g.medio_pago ||
+                        '-'}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={g.afecta_caja ? 'default' : 'secondary'} className="text-xs">
@@ -317,7 +370,10 @@ export default function GastosPage() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => { setEditingGasto(g); setShowForm(true); }}
+                          onClick={() => {
+                            setEditingGasto(g);
+                            setShowForm(true);
+                          }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -349,7 +405,12 @@ export default function GastosPage() {
   );
 }
 
-function GastoFormModal({ open, onOpenChange, branchId, editing }: {
+function GastoFormModal({
+  open,
+  onOpenChange,
+  branchId,
+  editing,
+}: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   branchId: string;
@@ -394,7 +455,7 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
     }
   }, [editing]);
 
-  const set = (p: Partial<typeof form>) => setForm(prev => ({ ...prev, ...p }));
+  const set = (p: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...p }));
 
   const save = useMutation({
     mutationFn: async () => {
@@ -410,21 +471,17 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
         afecta_caja: form.afecta_caja,
         costo_transferencia: form.costo_transferencia ? parseFloat(form.costo_transferencia) : 0,
         observaciones: form.observaciones || null,
-        rdo_section: CATEGORIAS_GASTO.find(c => c.value === form.categoria_principal)?.rdo || 'costos_fijos',
+        rdo_section:
+          CATEGORIAS_GASTO.find((c) => c.value === form.categoria_principal)?.rdo || 'costos_fijos',
         created_by: user?.id,
         estado: 'pagado',
       };
 
       if (editing) {
-        const { error } = await supabase
-          .from('gastos')
-          .update(payload)
-          .eq('id', editing.id);
+        const { error } = await supabase.from('gastos').update(payload).eq('id', editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('gastos')
-          .insert(payload);
+        const { error } = await supabase.from('gastos').insert(payload);
         if (error) throw error;
       }
     },
@@ -451,7 +508,9 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
         <DialogHeader>
           <DialogTitle>{editing ? 'Editar gasto' : 'Registrar gasto'}</DialogTitle>
           <DialogDescription>
-            {editing ? 'Modificá los datos del gasto' : 'Cargá un nuevo gasto. Si salió de caja, se registra como movimiento.'}
+            {editing
+              ? 'Modificá los datos del gasto'
+              : 'Cargá un nuevo gasto. Si salió de caja, se registra como movimiento.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -459,15 +518,26 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Fecha</Label>
-              <Input type="date" value={form.fecha} onChange={(e) => set({ fecha: e.target.value })} />
+              <Input
+                type="date"
+                value={form.fecha}
+                onChange={(e) => set({ fecha: e.target.value })}
+              />
             </div>
             <div>
               <Label>Categoría</Label>
-              <Select value={form.categoria_principal} onValueChange={(v) => set({ categoria_principal: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+              <Select
+                value={form.categoria_principal}
+                onValueChange={(v) => set({ categoria_principal: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar" />
+                </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIAS_GASTO.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  {CATEGORIAS_GASTO.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -487,7 +557,9 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
             <div>
               <Label>Monto</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
                 <Input
                   type="number"
                   placeholder="0"
@@ -500,10 +572,14 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
             <div>
               <Label>Medio de pago</Label>
               <Select value={form.tipo_pago} onValueChange={handleTipoPagoChange}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {MEDIOS_PAGO_GASTO.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  {MEDIOS_PAGO_GASTO.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -514,7 +590,9 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
             <div>
               <Label>Costo de transferencia</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
                 <Input
                   type="number"
                   placeholder="0"
@@ -523,7 +601,9 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
                   className="pl-7"
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Si la transferencia tuvo un costo asociado</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Si la transferencia tuvo un costo asociado
+              </p>
             </div>
           )}
 
@@ -531,13 +611,12 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
             <div>
               <Label>¿Afecta caja?</Label>
               <p className="text-xs text-muted-foreground">
-                {form.afecta_caja ? 'La plata salió de la caja del local' : 'No salió plata de la caja (transferencia, etc.)'}
+                {form.afecta_caja
+                  ? 'La plata salió de la caja del local'
+                  : 'No salió plata de la caja (transferencia, etc.)'}
               </p>
             </div>
-            <Switch
-              checked={form.afecta_caja}
-              onCheckedChange={(v) => set({ afecta_caja: v })}
-            />
+            <Switch checked={form.afecta_caja} onCheckedChange={(v) => set({ afecta_caja: v })} />
           </div>
 
           <div>
@@ -552,7 +631,9 @@ function GastoFormModal({ open, onOpenChange, branchId, editing }: {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button
             onClick={() => save.mutate()}
             disabled={save.isPending || !form.categoria_principal || !form.concepto || !form.monto}

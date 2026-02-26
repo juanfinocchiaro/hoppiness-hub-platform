@@ -19,12 +19,6 @@ interface ClockEntry {
   branch?: { name: string };
 }
 
-/** Get local date string (YYYY-MM-DD) from a UTC timestamp, avoiding the new Date('YYYY-MM-DD') UTC parsing bug */
-function toLocalDateKey(utcTimestamp: string): string {
-  const d = new Date(utcTimestamp);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 interface ShiftPair {
   date: Date;
   clockIn: ClockEntry | null;
@@ -34,7 +28,7 @@ interface ShiftPair {
 /** Pair clock_in/clock_out entries into shifts, handling overnight spans */
 function pairShifts(entries: ClockEntry[]): ShiftPair[] {
   const sorted = [...entries].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
   const shifts: ShiftPair[] = [];
@@ -71,20 +65,20 @@ function pairShifts(entries: ClockEntry[]): ShiftPair[] {
 export default function MyClockInsCard() {
   const { id: userId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
-  
-  const isOperationalEmployee = branchRoles.some(r => 
-    r.local_role && r.local_role !== 'franquiciado'
+
+  const isOperationalEmployee = branchRoles.some(
+    (r) => r.local_role && r.local_role !== 'franquiciado',
   );
 
   const { data: clockEntries, isLoading } = useQuery({
     queryKey: ['my-clock-entries', userId],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const now = new Date();
       const monthStart = startOfMonth(now);
       const monthEnd = endOfMonth(now);
-      
+
       const { data, error } = await supabase
         .from('clock_entries')
         .select('id, entry_type, created_at, branch_id, branches:branch_id(name)')
@@ -93,7 +87,7 @@ export default function MyClockInsCard() {
         .lte('created_at', monthEnd.toISOString())
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data as ClockEntry[];
     },
@@ -109,7 +103,7 @@ export default function MyClockInsCard() {
       if (shift.clockIn && shift.clockOut) {
         totalMinutes += differenceInMinutes(
           new Date(shift.clockOut.created_at),
-          new Date(shift.clockIn.created_at)
+          new Date(shift.clockIn.created_at),
         );
       } else if (shift.clockIn && !shift.clockOut) {
         // Currently working
@@ -132,8 +126,12 @@ export default function MyClockInsCard() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
-        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-5 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
       </Card>
     );
   }
@@ -174,7 +172,7 @@ export default function MyClockInsCard() {
                 if (shift.clockIn && shift.clockOut) {
                   const mins = differenceInMinutes(
                     new Date(shift.clockOut.created_at),
-                    new Date(shift.clockIn.created_at)
+                    new Date(shift.clockIn.created_at),
                   );
                   duration = { hours: Math.floor(mins / 60), mins: mins % 60 };
                 }
@@ -186,7 +184,7 @@ export default function MyClockInsCard() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-muted-foreground w-20">
-                        {format(shift.date, "EEE d", { locale: es })}
+                        {format(shift.date, 'EEE d', { locale: es })}
                       </span>
                       <div className="flex items-center gap-2 text-xs">
                         {shift.clockIn && (
@@ -202,7 +200,9 @@ export default function MyClockInsCard() {
                           </span>
                         )}
                         {shift.clockIn && !shift.clockOut && (
-                          <Badge variant="outline" className="text-xs animate-pulse">En curso</Badge>
+                          <Badge variant="outline" className="text-xs animate-pulse">
+                            En curso
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -223,17 +223,19 @@ export default function MyClockInsCard() {
                 onClick={() => setShowAll(!showAll)}
               >
                 {showAll ? (
-                  <><ChevronUp className="w-4 h-4 mr-1" /> Ver menos</>
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" /> Ver menos
+                  </>
                 ) : (
-                  <><ChevronDown className="w-4 h-4 mr-1" /> Ver todos ({shifts.length})</>
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" /> Ver todos ({shifts.length})
+                  </>
                 )}
               </Button>
             )}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No hay fichajes este mes
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-4">No hay fichajes este mes</p>
         )}
       </CardContent>
     </Card>

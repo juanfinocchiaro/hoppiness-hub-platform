@@ -1,27 +1,27 @@
-import { BRAND } from "./brand-tokens";
+import { BRAND } from './brand-tokens';
 
 export function TopBarLoader() {
   return (
     <>
       <div
         style={{
-          position: "fixed",
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          height: "3px",
+          height: '3px',
           zIndex: 9998,
-          overflow: "hidden",
-          background: "rgba(0,19,155,0.08)",
+          overflow: 'hidden',
+          background: 'rgba(0,19,155,0.08)',
         }}
       >
         <div
           style={{
-            height: "100%",
+            height: '100%',
             background: `linear-gradient(90deg, ${BRAND.azul}, ${BRAND.naranja}, ${BRAND.amarillo}, ${BRAND.azul})`,
-            backgroundSize: "300% 100%",
-            animation: "hoppTopBarSlide 1.8s ease-in-out infinite",
-            borderRadius: "0 2px 2px 0",
+            backgroundSize: '300% 100%',
+            animation: 'hoppTopBarSlide 1.8s ease-in-out infinite',
+            borderRadius: '0 2px 2px 0',
           }}
         />
       </div>

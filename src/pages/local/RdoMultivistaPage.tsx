@@ -67,7 +67,9 @@ export default function RdoMultivistaPage() {
   const [categoriaSearch, setCategoriaSearch] = useState('');
   const [productoSearch, setProductoSearch] = useState('');
   const [filtros, setFiltros] = useState<FiltrosRdo>(() => ({
-    fechaDesde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+    fechaDesde: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      .toISOString()
+      .slice(0, 10),
     fechaHasta: new Date().toISOString().slice(0, 10),
     canales: CANALES_DEFAULT.map((c) => c.id),
     mediosPago: MEDIOS_DEFAULT.map((m) => m.id),
@@ -95,9 +97,10 @@ export default function RdoMultivistaPage() {
     const base = data?.opciones_filtros.productos || [];
     const query = productoSearch.trim().toLowerCase();
     if (!query) return base;
-    return base.filter((p) =>
-      p.nombre.toLowerCase().includes(query) ||
-      (p.categoria_nombre || '').toLowerCase().includes(query)
+    return base.filter(
+      (p) =>
+        p.nombre.toLowerCase().includes(query) ||
+        (p.categoria_nombre || '').toLowerCase().includes(query),
     );
   }, [data?.opciones_filtros.productos, productoSearch]);
 
@@ -133,7 +136,7 @@ export default function RdoMultivistaPage() {
         porcentaje: '%',
         ticket_promedio: 'Ticket Prom',
       },
-      { filename: `rdo-canal-${fileDateTag()}` }
+      { filename: `rdo-canal-${fileDateTag()}` },
     );
   };
 
@@ -154,7 +157,7 @@ export default function RdoMultivistaPage() {
         porcentaje: '%',
         facturado: 'Facturado',
       },
-      { filename: `rdo-medio-${fileDateTag()}` }
+      { filename: `rdo-medio-${fileDateTag()}` },
     );
   };
 
@@ -177,7 +180,7 @@ export default function RdoMultivistaPage() {
         costo_total: 'Costo',
         food_cost: 'Food Cost',
       },
-      { filename: `rdo-categoria-${fileDateTag()}` }
+      { filename: `rdo-categoria-${fileDateTag()}` },
     );
   };
 
@@ -200,12 +203,14 @@ export default function RdoMultivistaPage() {
         porcentaje: '%',
         food_cost: 'FC',
       },
-      { filename: `rdo-producto-${fileDateTag()}` }
+      { filename: `rdo-producto-${fileDateTag()}` },
     );
   };
 
   if (!branchId) {
-    return <div className="p-6 text-sm text-muted-foreground">No se encontró el ID de sucursal.</div>;
+    return (
+      <div className="p-6 text-sm text-muted-foreground">No se encontró el ID de sucursal.</div>
+    );
   }
 
   if (isLoading) {
@@ -254,11 +259,15 @@ export default function RdoMultivistaPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Ticket Promedio</p>
-              <p className="text-xl font-semibold">{formatCurrency(totales?.ticket_promedio || 0)}</p>
+              <p className="text-xl font-semibold">
+                {formatCurrency(totales?.ticket_promedio || 0)}
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Facturado</p>
-              <p className="text-xl font-semibold">{formatCurrency(totales?.total_facturado || 0)}</p>
+              <p className="text-xl font-semibold">
+                {formatCurrency(totales?.total_facturado || 0)}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -279,7 +288,10 @@ export default function RdoMultivistaPage() {
                     <Checkbox
                       checked={checked}
                       onCheckedChange={() =>
-                        setFiltros((prev) => ({ ...prev, canales: toggleInArray(prev.canales, canal.id) }))
+                        setFiltros((prev) => ({
+                          ...prev,
+                          canales: toggleInArray(prev.canales, canal.id),
+                        }))
                       }
                     />
                     <span>{canal.label}</span>
@@ -299,7 +311,10 @@ export default function RdoMultivistaPage() {
                     <Checkbox
                       checked={checked}
                       onCheckedChange={() =>
-                        setFiltros((prev) => ({ ...prev, mediosPago: toggleInArray(prev.mediosPago, medio.id) }))
+                        setFiltros((prev) => ({
+                          ...prev,
+                          mediosPago: toggleInArray(prev.mediosPago, medio.id),
+                        }))
                       }
                     />
                     <span>{medio.label}</span>
@@ -326,7 +341,10 @@ export default function RdoMultivistaPage() {
                       <Checkbox
                         checked={checked}
                         onCheckedChange={() =>
-                          setFiltros((prev) => ({ ...prev, categorias: toggleInArray(prev.categorias, cat.id) }))
+                          setFiltros((prev) => ({
+                            ...prev,
+                            categorias: toggleInArray(prev.categorias, cat.id),
+                          }))
                         }
                       />
                       <span>{cat.nombre}</span>
@@ -354,11 +372,16 @@ export default function RdoMultivistaPage() {
                       <Checkbox
                         checked={checked}
                         onCheckedChange={() =>
-                          setFiltros((prev) => ({ ...prev, productos: toggleInArray(prev.productos, prod.id) }))
+                          setFiltros((prev) => ({
+                            ...prev,
+                            productos: toggleInArray(prev.productos, prod.id),
+                          }))
                         }
                       />
                       <span>{prod.nombre}</span>
-                      {prod.categoria_nombre && <Badge variant="outline">{prod.categoria_nombre}</Badge>}
+                      {prod.categoria_nombre && (
+                        <Badge variant="outline">{prod.categoria_nombre}</Badge>
+                      )}
                     </label>
                   );
                 })}
@@ -406,25 +429,39 @@ export default function RdoMultivistaPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(!data?.por_canal || data.por_canal.length === 0) ? (
+                  {!data?.por_canal || data.por_canal.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aún no hay ventas registradas en este período</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        Aún no hay ventas registradas en este período
+                      </TableCell>
                     </TableRow>
-                  ) : data.por_canal.map((row) => (
-                    <TableRow key={row.canal}>
-                      <TableCell>{row.canal}</TableCell>
-                      <TableCell className="text-right">{row.pedidos}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(row.ventas)}</TableCell>
-                      <TableCell className="text-right">{formatPercent(row.porcentaje)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.ticket_promedio)}</TableCell>
-                    </TableRow>
-                  ))}
+                  ) : (
+                    data.por_canal.map((row) => (
+                      <TableRow key={row.canal}>
+                        <TableCell>{row.canal}</TableCell>
+                        <TableCell className="text-right">{row.pedidos}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(row.ventas)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatPercent(row.porcentaje)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.ticket_promedio)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                   <TableRow className="font-bold bg-muted/40">
                     <TableCell>TOTAL</TableCell>
                     <TableCell className="text-right">{totales?.total_pedidos || 0}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totales?.total_ventas || 0)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(totales?.total_ventas || 0)}
+                    </TableCell>
                     <TableCell className="text-right">100.0%</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totales?.ticket_promedio || 0)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(totales?.ticket_promedio || 0)}
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -453,19 +490,29 @@ export default function RdoMultivistaPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(!data?.por_medio_pago || data.por_medio_pago.length === 0) ? (
+                  {!data?.por_medio_pago || data.por_medio_pago.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aún no hay ventas registradas en este período</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        Aún no hay ventas registradas en este período
+                      </TableCell>
                     </TableRow>
-                  ) : data.por_medio_pago.map((row) => (
-                    <TableRow key={row.medio_pago}>
-                      <TableCell>{row.medio_pago}</TableCell>
-                      <TableCell className="text-right">{row.pedidos}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(row.ventas)}</TableCell>
-                      <TableCell className="text-right">{formatPercent(row.porcentaje)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.facturado)}</TableCell>
-                    </TableRow>
-                  ))}
+                  ) : (
+                    data.por_medio_pago.map((row) => (
+                      <TableRow key={row.medio_pago}>
+                        <TableCell>{row.medio_pago}</TableCell>
+                        <TableCell className="text-right">{row.pedidos}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(row.ventas)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatPercent(row.porcentaje)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.facturado)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -494,20 +541,30 @@ export default function RdoMultivistaPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(!data?.por_categoria || data.por_categoria.length === 0) ? (
+                  {!data?.por_categoria || data.por_categoria.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin datos para este período. Probá con otro rango de fechas.</TableCell>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Sin datos para este período. Probá con otro rango de fechas.
+                      </TableCell>
                     </TableRow>
-                  ) : data.por_categoria.map((row, idx) => (
-                    <TableRow key={row.categoria_id || `cat-${idx}`}>
-                      <TableCell>{row.categoria_nombre}</TableCell>
-                      <TableCell className="text-right">{row.cantidad}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(row.ventas)}</TableCell>
-                      <TableCell className="text-right">{formatPercent(row.porcentaje)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.costo_total)}</TableCell>
-                      <TableCell className="text-right">{formatPercent(row.food_cost)}</TableCell>
-                    </TableRow>
-                  ))}
+                  ) : (
+                    data.por_categoria.map((row, idx) => (
+                      <TableRow key={row.categoria_id || `cat-${idx}`}>
+                        <TableCell>{row.categoria_nombre}</TableCell>
+                        <TableCell className="text-right">{row.cantidad}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(row.ventas)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatPercent(row.porcentaje)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.costo_total)}
+                        </TableCell>
+                        <TableCell className="text-right">{formatPercent(row.food_cost)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -538,23 +595,30 @@ export default function RdoMultivistaPage() {
                 <TableBody>
                   {productoRowsTabla.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Sin datos para este período. Probá con otro rango de fechas.</TableCell>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Sin datos para este período. Probá con otro rango de fechas.
+                      </TableCell>
                     </TableRow>
-                  ) : productoRowsTabla.map((row, idx) => (
-                    <TableRow key={row.producto_id || `prod-${idx}`}>
-                      <TableCell>{row.producto_nombre}</TableCell>
-                      <TableCell>{row.categoria_nombre}</TableCell>
-                      <TableCell className="text-right">{row.cantidad}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.ventas)}</TableCell>
-                      <TableCell className="text-right">{formatPercent(row.porcentaje)}</TableCell>
-                      <TableCell className="text-right">{formatPercent(row.food_cost)}</TableCell>
-                    </TableRow>
-                  ))}
+                  ) : (
+                    productoRowsTabla.map((row, idx) => (
+                      <TableRow key={row.producto_id || `prod-${idx}`}>
+                        <TableCell>{row.producto_nombre}</TableCell>
+                        <TableCell>{row.categoria_nombre}</TableCell>
+                        <TableCell className="text-right">{row.cantidad}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(row.ventas)}</TableCell>
+                        <TableCell className="text-right">
+                          {formatPercent(row.porcentaje)}
+                        </TableCell>
+                        <TableCell className="text-right">{formatPercent(row.food_cost)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
               {(data?.por_producto.length || 0) > 200 && (
                 <p className="text-xs text-muted-foreground mt-3">
-                  Mostrando 200 productos en pantalla para mantener rendimiento. Exportá a Excel para ver el total.
+                  Mostrando 200 productos en pantalla para mantener rendimiento. Exportá a Excel
+                  para ver el total.
                 </p>
               )}
             </CardContent>

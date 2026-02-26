@@ -10,13 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { handleError, devWarn } from '@/lib/errorHandler';
-import { 
-  Loader2, 
-  User, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  CreditCard, 
+import {
+  Loader2,
+  User,
+  Phone,
+  CreditCard,
   Upload,
   Shield,
   AlertCircle,
@@ -79,8 +77,9 @@ export default function RegistroStaff() {
 
       try {
         // Use secure RPC function instead of direct table query
-        const { data, error: fetchError } = await supabase
-          .rpc('validate_invitation_token', { _token: token });
+        const { data, error: fetchError } = await supabase.rpc('validate_invitation_token', {
+          _token: token,
+        });
 
         if (fetchError || !data || data.length === 0) {
           setError('Invitación no encontrada o inválida');
@@ -126,23 +125,23 @@ export default function RegistroStaff() {
   const uploadFile = async (file: File, userId: string, type: 'front' | 'back') => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/dni-${type}.${fileExt}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from('staff-documents')
       .upload(fileName, file, { upsert: true });
 
     if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('staff-documents')
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('staff-documents').getPublicUrl(fileName);
 
     return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!invitation) return;
 
     // Validation
@@ -200,7 +199,7 @@ export default function RegistroStaff() {
       // 2. Upload DNI photos
       let dniFrontUrl = '';
       let dniBackUrl = '';
-      
+
       try {
         dniFrontUrl = await uploadFile(dniFront, userId, 'front');
         dniBackUrl = await uploadFile(dniBack, userId, 'back');
@@ -235,22 +234,25 @@ export default function RegistroStaff() {
 
       // 4. Assign role using user_roles_v2 (V2 system)
       // Map old role names to new local_role values
-      const localRoleMap: Record<string, 'encargado' | 'cajero' | 'empleado' | 'contador_local' | 'franquiciado'> = {
+      const localRoleMap: Record<
+        string,
+        'encargado' | 'cajero' | 'empleado' | 'contador_local' | 'franquiciado'
+      > = {
         encargado: 'encargado',
         cajero: 'cajero',
         kds: 'empleado',
         empleado: 'empleado',
       };
-      
+
       const localRole = localRoleMap[invitation.role] || 'empleado';
-      
+
       // Check if role exists, then update or insert
       const { data: existingRole } = await supabase
         .from('user_roles_v2')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle();
-      
+
       let roleError;
       if (existingRole) {
         const { error } = await supabase
@@ -263,14 +265,12 @@ export default function RegistroStaff() {
           .eq('user_id', userId);
         roleError = error;
       } else {
-        const { error } = await supabase
-          .from('user_roles_v2')
-          .insert({
-            user_id: userId,
-            local_role: localRole,
-            branch_ids: [invitation.branch_id],
-            is_active: true,
-          });
+        const { error } = await supabase.from('user_roles_v2').insert({
+          user_id: userId,
+          local_role: localRole,
+          branch_ids: [invitation.branch_id],
+          is_active: true,
+        });
         roleError = error;
       }
 
@@ -290,9 +290,11 @@ export default function RegistroStaff() {
 
       toast.success('¡Registro completado! Revisá tu email para confirmar la cuenta.');
       navigate('/ingresar?registered=true');
-
     } catch (error: any) {
-      handleError(error, { userMessage: error.message || 'Error al completar el registro', context: 'RegistroStaff.handleSubmit' });
+      handleError(error, {
+        userMessage: error.message || 'Error al completar el registro',
+        context: 'RegistroStaff.handleSubmit',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -336,10 +338,7 @@ export default function RegistroStaff() {
             <CardTitle className="text-2xl">Completá tu Registro</CardTitle>
             <CardDescription>
               Te invitaron a unirte al equipo de{' '}
-              <span className="font-semibold text-foreground">
-                {invitation?.branch_name}
-              </span>{' '}
-              como{' '}
+              <span className="font-semibold text-foreground">{invitation?.branch_name}</span> como{' '}
               <Badge variant="secondary">
                 {roleLabels[invitation?.role || ''] || invitation?.role}
               </Badge>
@@ -354,7 +353,7 @@ export default function RegistroStaff() {
                   <Shield className="h-4 w-4" />
                   Datos de Cuenta
                 </h3>
-                
+
                 <div className="grid gap-4">
                   <div>
                     <Label htmlFor="email">Email</Label>
@@ -366,26 +365,30 @@ export default function RegistroStaff() {
                       className="bg-muted"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="password">Contraseña *</Label>
                     <Input
                       id="password"
                       type="password"
                       value={formData.password}
-                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, password: e.target.value }))
+                      }
                       required
                       minLength={6}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="confirmPassword">Confirmar Contraseña *</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
                       value={formData.confirmPassword}
-                      onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                      }
                       required
                     />
                   </div>
@@ -400,69 +403,75 @@ export default function RegistroStaff() {
                   <User className="h-4 w-4" />
                   Datos Personales
                 </h3>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <Label htmlFor="full_name">Nombre Completo *</Label>
                     <Input
                       id="full_name"
                       value={formData.full_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, full_name: e.target.value }))
+                      }
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="dni">DNI *</Label>
                     <Input
                       id="dni"
                       value={formData.dni}
-                      onChange={(e) => setFormData(prev => ({ ...prev, dni: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, dni: e.target.value }))}
                       required
                       placeholder="12345678"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="birth_date">Fecha de Nacimiento *</Label>
                     <Input
                       id="birth_date"
                       type="date"
                       value={formData.birth_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, birth_date: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, birth_date: e.target.value }))
+                      }
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="phone">Teléfono *</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                       required
                       placeholder="+54 11 1234-5678"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="cuit">CUIL/CUIT *</Label>
                     <Input
                       id="cuit"
                       value={formData.cuit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cuit: e.target.value }))}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, cuit: e.target.value }))}
                       required
                       placeholder="20-12345678-9"
                     />
                   </div>
-                  
+
                   <div className="sm:col-span-2">
                     <Label htmlFor="address">Dirección Completa *</Label>
                     <Input
                       id="address"
                       value={formData.address}
-                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, address: e.target.value }))
+                      }
                       required
                       placeholder="Calle 123, Ciudad, Provincia"
                     />
@@ -478,13 +487,13 @@ export default function RegistroStaff() {
                   <CreditCard className="h-4 w-4" />
                   Datos Bancarios
                 </h3>
-                
+
                 <div>
                   <Label htmlFor="cbu">CBU/Alias (para cobrar tu sueldo) *</Label>
                   <Input
                     id="cbu"
                     value={formData.cbu}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cbu: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cbu: e.target.value }))}
                     required
                     placeholder="CBU o Alias de MercadoPago/Banco"
                   />
@@ -499,25 +508,32 @@ export default function RegistroStaff() {
                   <Phone className="h-4 w-4" />
                   Contacto de Emergencia
                 </h3>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="emergency_contact_name">Nombre *</Label>
                     <Input
                       id="emergency_contact_name"
                       value={formData.emergency_contact_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, emergency_contact_name: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, emergency_contact_name: e.target.value }))
+                      }
                       required
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="emergency_contact_phone">Teléfono *</Label>
                     <Input
                       id="emergency_contact_phone"
                       type="tel"
                       value={formData.emergency_contact_phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, emergency_contact_phone: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          emergency_contact_phone: e.target.value,
+                        }))
+                      }
                       required
                     />
                   </div>
@@ -532,7 +548,7 @@ export default function RegistroStaff() {
                   <Upload className="h-4 w-4" />
                   Foto del DNI
                 </h3>
-                
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label>Frente del DNI *</Label>
@@ -542,9 +558,11 @@ export default function RegistroStaff() {
                       onChange={(e) => handleFileChange('front', e.target.files?.[0] || null)}
                       className="cursor-pointer"
                     />
-                    {dniFront && <p className="text-xs text-muted-foreground mt-1">{dniFront.name}</p>}
+                    {dniFront && (
+                      <p className="text-xs text-muted-foreground mt-1">{dniFront.name}</p>
+                    )}
                   </div>
-                  
+
                   <div>
                     <Label>Dorso del DNI *</Label>
                     <Input
@@ -553,7 +571,9 @@ export default function RegistroStaff() {
                       onChange={(e) => handleFileChange('back', e.target.files?.[0] || null)}
                       className="cursor-pointer"
                     />
-                    {dniBack && <p className="text-xs text-muted-foreground mt-1">{dniBack.name}</p>}
+                    {dniBack && (
+                      <p className="text-xs text-muted-foreground mt-1">{dniBack.name}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -568,16 +588,12 @@ export default function RegistroStaff() {
                   onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
                 />
                 <label htmlFor="terms" className="text-sm leading-5 cursor-pointer">
-                  Acepto los términos y condiciones de trabajo, y autorizo el tratamiento de mis datos personales según la política de privacidad.
+                  Acepto los términos y condiciones de trabajo, y autorizo el tratamiento de mis
+                  datos personales según la política de privacidad.
                 </label>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                size="lg"
-                disabled={submitting}
-              >
+              <Button type="submit" className="w-full" size="lg" disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

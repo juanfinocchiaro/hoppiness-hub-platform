@@ -19,7 +19,16 @@ interface CajaFuerteCardProps {
   expensesList?: React.ReactNode;
 }
 
-export function CajaFuerteCard({ register, shift, movements, localRole, isSuperadmin, onRetiroClick, onExpenseClick, expensesList }: CajaFuerteCardProps) {
+export function CajaFuerteCard({
+  register: _register,
+  shift,
+  movements,
+  localRole,
+  isSuperadmin,
+  onRetiroClick,
+  onExpenseClick,
+  expensesList,
+}: CajaFuerteCardProps) {
   const canRetire = isSuperadmin || localRole === 'franquiciado';
 
   const balance = useMemo(() => {
@@ -38,7 +47,9 @@ export function CajaFuerteCard({ register, shift, movements, localRole, isSupera
         <CardTitle className="flex items-center gap-2 text-base">
           <ShieldCheck className="h-5 w-5 text-muted-foreground" />
           Caja Fuerte
-          <Badge variant="outline" className="ml-auto">Acumulador</Badge>
+          <Badge variant="outline" className="ml-auto">
+            Acumulador
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -67,16 +78,19 @@ export function CajaFuerteCard({ register, shift, movements, localRole, isSupera
             <div className="pt-2 border-t">
               <p className="text-sm font-medium mb-2">Últimos movimientos</p>
               <ul className="text-sm space-y-1 text-muted-foreground">
-                {movements.slice(0, 10).map(m => (
+                {movements.slice(0, 10).map((m) => (
                   <li key={m.id}>
-                    {m.type === 'deposit' ? '+' : '-'} $ {Number(m.amount).toLocaleString('es-AR')} — {m.concept}
-                    <span className="text-xs ml-2">{new Date(m.created_at).toLocaleDateString('es-AR')}</span>
+                    {m.type === 'deposit' ? '+' : '-'} $ {Number(m.amount).toLocaleString('es-AR')}{' '}
+                    — {m.concept}
+                    <span className="text-xs ml-2">
+                      {new Date(m.created_at).toLocaleDateString('es-AR')}
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-        {expensesList}
+          {expensesList}
         </div>
       </CardContent>
     </Card>

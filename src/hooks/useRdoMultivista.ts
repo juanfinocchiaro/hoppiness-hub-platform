@@ -165,7 +165,16 @@ function normalizePayload(payload: any): RdoMultivistaData {
 
 export function useRdoMultivista(branchId: string | undefined, filtros: FiltrosRdo) {
   return useQuery({
-    queryKey: ['rdo-multivista', branchId, filtros.fechaDesde, filtros.fechaHasta, filtros.canales, filtros.mediosPago, filtros.categorias, filtros.productos],
+    queryKey: [
+      'rdo-multivista',
+      branchId,
+      filtros.fechaDesde,
+      filtros.fechaHasta,
+      filtros.canales,
+      filtros.mediosPago,
+      filtros.categorias,
+      filtros.productos,
+    ],
     queryFn: async (): Promise<RdoMultivistaData> => {
       if (!branchId) {
         throw new Error('Branch ID requerido');

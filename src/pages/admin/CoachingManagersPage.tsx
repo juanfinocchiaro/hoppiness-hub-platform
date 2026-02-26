@@ -1,6 +1,6 @@
 /**
  * CoachingManagersPage - Coaching a Encargados de toda la red
- * 
+ *
  * Permite a Superadmin/Coordinador evaluar encargados de cualquier sucursal
  * desde un solo lugar, sin necesidad de navegar a cada local.
  */
@@ -13,21 +13,27 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { EmptyState } from '@/components/ui/states';
 import { CoachingManagerForm } from '@/components/coaching';
-import { 
-  Users, 
-  CheckCircle, 
-  Clock, 
-  ChevronRight, 
+import {
+  Users,
+  CheckCircle,
+  Clock,
+  ChevronRight,
   ChevronDown,
   MapPin,
   TrendingUp,
   TrendingDown,
   Minus,
-  X
+  X,
 } from 'lucide-react';
 
 import { RequireBrandPermission } from '@/components/guards';
@@ -50,14 +56,23 @@ function CoachingManagersPageContent() {
   });
 
   // Obtener lista de encargados
-  const { data: managers, isLoading, refetch } = useManagersCoachingList({
+  const {
+    data: managers,
+    isLoading,
+    refetch,
+  } = useManagersCoachingList({
     branchId: branchFilter !== 'all' ? branchFilter : undefined,
   });
 
   const currentMonth = new Date().toLocaleString('es-AR', { month: 'long' });
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const getScoreColor = (score: number | null) => {
@@ -81,7 +96,7 @@ function CoachingManagersPageContent() {
 
   // Stats
   const totalManagers = managers?.length || 0;
-  const completedCount = managers?.filter(m => m.hasCoachingThisMonth).length || 0;
+  const completedCount = managers?.filter((m) => m.hasCoachingThisMonth).length || 0;
   const pendingCount = totalManagers - completedCount;
 
   if (isLoading) {
@@ -107,9 +122,7 @@ function CoachingManagersPageContent() {
             <Users className="h-6 w-6" />
             Coaching de Encargados
           </h1>
-          <p className="text-muted-foreground capitalize">
-            Evaluaciones de {currentMonth}
-          </p>
+          <p className="text-muted-foreground capitalize">Evaluaciones de {currentMonth}</p>
         </div>
 
         {/* Filtro por sucursal */}
@@ -119,8 +132,10 @@ function CoachingManagersPageContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las sucursales</SelectItem>
-            {branches?.map(b => (
-              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+            {branches?.map((b) => (
+              <SelectItem key={b.id} value={b.id}>
+                {b.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -188,7 +203,7 @@ function CoachingManagersPageContent() {
             />
           ) : (
             <div className="space-y-2">
-              {managers.map(manager => {
+              {managers.map((manager) => {
                 const isExpanded = expandedManagerId === `${manager.userId}-${manager.branchId}`;
                 const managerId = `${manager.userId}-${manager.branchId}`;
 
@@ -196,11 +211,18 @@ function CoachingManagersPageContent() {
                   <Collapsible
                     key={managerId}
                     open={isExpanded}
-                    onOpenChange={() => !manager.hasCoachingThisMonth && setExpandedManagerId(isExpanded ? null : managerId)}
+                    onOpenChange={() =>
+                      !manager.hasCoachingThisMonth &&
+                      setExpandedManagerId(isExpanded ? null : managerId)
+                    }
                   >
-                    <div className={`border rounded-lg transition-colors ${isExpanded ? 'border-primary bg-muted/50' : ''}`}>
+                    <div
+                      className={`border rounded-lg transition-colors ${isExpanded ? 'border-primary bg-muted/50' : ''}`}
+                    >
                       <CollapsibleTrigger asChild disabled={manager.hasCoachingThisMonth}>
-                        <div className={`flex items-center justify-between p-4 ${!manager.hasCoachingThisMonth ? 'cursor-pointer hover:bg-muted/30' : ''}`}>
+                        <div
+                          className={`flex items-center justify-between p-4 ${!manager.hasCoachingThisMonth ? 'cursor-pointer hover:bg-muted/30' : ''}`}
+                        >
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarImage src={manager.avatarUrl || undefined} />
@@ -219,13 +241,18 @@ function CoachingManagersPageContent() {
                             {manager.hasCoachingThisMonth && manager.latestCoaching ? (
                               <div className="flex items-center gap-2">
                                 <div className="text-right">
-                                <span className={`font-semibold ${getScoreColor(manager.latestCoaching.overallScore)}`}>
+                                  <span
+                                    className={`font-semibold ${getScoreColor(manager.latestCoaching.overallScore)}`}
+                                  >
                                     {manager.latestCoaching.overallScore?.toFixed(1) || '-'}
                                   </span>
                                   <span className="text-xs text-muted-foreground">/5</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  {getTrendIcon(manager.latestCoaching.overallScore, manager.previousScore)}
+                                  {getTrendIcon(
+                                    manager.latestCoaching.overallScore,
+                                    manager.previousScore,
+                                  )}
                                 </div>
                                 <Badge variant="secondary" className="gap-1">
                                   <CheckCircle className="h-3 w-3" />

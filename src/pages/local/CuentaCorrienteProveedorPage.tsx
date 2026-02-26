@@ -4,13 +4,32 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Building2, Phone, Mail, CreditCard, AlertTriangle,
-  TrendingUp, Calendar, ArrowLeft, Pencil, Trash2, Plus,
-  Clock, Receipt, ShieldCheck, BadgeDollarSign, Download
+import {
+  Building2,
+  Phone,
+  Mail,
+  CreditCard,
+  AlertTriangle,
+  Calendar,
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  Plus,
+  Clock,
+  Receipt,
+  ShieldCheck,
+  BadgeDollarSign,
+  Download,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
 import { useResumenProveedor, useMovimientosProveedor } from '@/hooks/useCuentaCorrienteProveedor';
@@ -22,7 +41,20 @@ import { ProveedorDocumentos } from '@/components/finanzas/ProveedorDocumentos';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 
-const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MONTHS_SHORT = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
 
 /** Format YYYY-MM-DD as "1 Feb 2026" */
 function formatLocalDate(dateStr: string) {
@@ -35,15 +67,19 @@ function parseLocalDate(dateStr: string) {
   return new Date(y, m - 1, d);
 }
 
-const fmt = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmt = (n: number) =>
+  Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 export default function CuentaCorrienteProveedorPage() {
   const { branchId, proveedorId } = useParams<{ branchId: string; proveedorId: string }>();
   const navigate = useNavigate();
   const { data: proveedores } = useProveedores(branchId);
-  const proveedor = proveedores?.find(p => p.id === proveedorId);
+  const proveedor = proveedores?.find((p) => p.id === proveedorId);
   const { data: resumen, isLoading: loadingResumen } = useResumenProveedor(branchId, proveedorId);
-  const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(branchId, proveedorId);
+  const { data: movimientos, isLoading: loadingMov } = useMovimientosProveedor(
+    branchId,
+    proveedorId,
+  );
   const { softDeletePago } = usePagoProveedorMutations();
   const [payingFacturaId, setPayingFacturaId] = useState<string | null>(null);
   const [payingAccountLevel, setPayingAccountLevel] = useState(false);
@@ -51,13 +87,22 @@ export default function CuentaCorrienteProveedorPage() {
   const [deletingPagoId, setDeletingPagoId] = useState<string | null>(null);
   const { data: facturaData } = useFacturaById(payingFacturaId);
 
-  const saldoAFavor = resumen ? (resumen.saldo_a_favor_facturas > 0 ? resumen.saldo_a_favor_facturas : (resumen.saldo_actual < 0 ? Math.abs(resumen.saldo_actual) : 0)) : 0;
+  const saldoAFavor = resumen
+    ? resumen.saldo_a_favor_facturas > 0
+      ? resumen.saldo_a_favor_facturas
+      : resumen.saldo_actual < 0
+        ? Math.abs(resumen.saldo_actual)
+        : 0
+    : 0;
 
-  const payingFactura = payingFacturaId && facturaData && proveedorId && branchId ? {
-    ...facturaData,
-    proveedor_id: proveedorId,
-    branch_id: branchId,
-  } : null;
+  const payingFactura =
+    payingFacturaId && facturaData && proveedorId && branchId
+      ? {
+          ...facturaData,
+          proveedor_id: proveedorId,
+          branch_id: branchId,
+        }
+      : null;
 
   return (
     <div className="space-y-6">
@@ -67,24 +112,40 @@ export default function CuentaCorrienteProveedorPage() {
         actions={
           <div className="flex gap-2">
             {movimientos && movimientos.length > 0 && (
-              <Button variant="outline" size="sm" onClick={() => exportToExcel(
-                movimientos.map((m: any) => ({
-                  fecha: m.fecha ? formatLocalDate(m.fecha) : '-',
-                  tipo: m.tipo || '-',
-                  detalle: m.detalle || '-',
-                  importe: m.importe || 0,
-                  saldo: m.saldo_acumulado ?? '-',
-                })),
-                { fecha: 'Fecha', tipo: 'Tipo', detalle: 'Detalle', importe: 'Importe', saldo: 'Saldo' },
-                { filename: `cc-${proveedor?.razon_social || 'proveedor'}` }
-              )}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  exportToExcel(
+                    movimientos.map((m: any) => ({
+                      fecha: m.fecha ? formatLocalDate(m.fecha) : '-',
+                      tipo: m.tipo || '-',
+                      detalle: m.detalle || '-',
+                      importe: m.importe || 0,
+                      saldo: m.saldo_acumulado ?? '-',
+                    })),
+                    {
+                      fecha: 'Fecha',
+                      tipo: 'Tipo',
+                      detalle: 'Detalle',
+                      importe: 'Importe',
+                      saldo: 'Saldo',
+                    },
+                    { filename: `cc-${proveedor?.razon_social || 'proveedor'}` },
+                  )
+                }
+              >
                 <Download className="w-4 h-4 mr-1" /> Excel
               </Button>
             )}
             <Button variant="default" size="sm" onClick={() => setPayingAccountLevel(true)}>
               <Plus className="w-4 h-4 mr-1" /> Registrar Pago
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores`)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores`)}
+            >
               <ArrowLeft className="w-4 h-4 mr-1" /> Volver
             </Button>
           </div>
@@ -96,7 +157,8 @@ export default function CuentaCorrienteProveedorPage() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Tenés {resumen.facturas_vencidas} factura(s) vencida(s) por $ {fmt(resumen.monto_vencido)}
+            Tenés {resumen.facturas_vencidas} factura(s) vencida(s) por ${' '}
+            {fmt(resumen.monto_vencido)}
           </AlertDescription>
         </Alert>
       )}
@@ -105,7 +167,11 @@ export default function CuentaCorrienteProveedorPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {loadingResumen ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-12 w-full" /></CardContent></Card>
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <Skeleton className="h-12 w-full" />
+              </CardContent>
+            </Card>
           ))
         ) : resumen ? (
           <>
@@ -113,15 +179,25 @@ export default function CuentaCorrienteProveedorPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {resumen.saldo_actual > 0 ? 'Saldo Actual' : resumen.saldo_actual < 0 ? 'Saldo a Favor' : 'Saldo'}
+                  {resumen.saldo_actual > 0
+                    ? 'Saldo Actual'
+                    : resumen.saldo_actual < 0
+                      ? 'Saldo a Favor'
+                      : 'Saldo'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold font-mono ${resumen.saldo_actual < 0 ? 'text-green-600' : resumen.saldo_actual === 0 ? 'text-green-600' : ''}`}>
+                <div
+                  className={`text-2xl font-bold font-mono ${resumen.saldo_actual < 0 ? 'text-green-600' : resumen.saldo_actual === 0 ? 'text-green-600' : ''}`}
+                >
                   $ {fmt(Math.abs(resumen.saldo_actual))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {resumen.saldo_actual > 0 ? 'Deuda total' : resumen.saldo_actual < 0 ? 'Crédito disponible' : 'Sin deuda'}
+                  {resumen.saldo_actual > 0
+                    ? 'Deuda total'
+                    : resumen.saldo_actual < 0
+                      ? 'Crédito disponible'
+                      : 'Sin deuda'}
                 </p>
               </CardContent>
             </Card>
@@ -134,11 +210,15 @@ export default function CuentaCorrienteProveedorPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-lg font-semibold font-mono ${resumen.monto_vencido > 0 ? 'text-destructive' : ''}`}>
+                <div
+                  className={`text-lg font-semibold font-mono ${resumen.monto_vencido > 0 ? 'text-destructive' : ''}`}
+                >
                   $ {fmt(resumen.monto_vencido)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {resumen.facturas_vencidas > 0 ? `${resumen.facturas_vencidas} factura(s)` : 'Sin vencimientos'}
+                  {resumen.facturas_vencidas > 0
+                    ? `${resumen.facturas_vencidas} factura(s)`
+                    : 'Sin vencimientos'}
                 </p>
               </CardContent>
             </Card>
@@ -155,9 +235,9 @@ export default function CuentaCorrienteProveedorPage() {
                   $ {fmt(resumen.monto_por_vencer)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {resumen.todas_vencidas 
-                    ? 'Todas vencidas' 
-                    : resumen.proximo_vencimiento 
+                  {resumen.todas_vencidas
+                    ? 'Todas vencidas'
+                    : resumen.proximo_vencimiento
                       ? `Próx: ${formatLocalDate(resumen.proximo_vencimiento)}`
                       : 'Sin vencimientos'}
                 </p>
@@ -172,11 +252,13 @@ export default function CuentaCorrienteProveedorPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`text-lg font-semibold font-mono ${resumen.pagos_pendientes_verif > 0 ? 'text-amber-600' : ''}`}>
+                <div
+                  className={`text-lg font-semibold font-mono ${resumen.pagos_pendientes_verif > 0 ? 'text-amber-600' : ''}`}
+                >
                   $ {fmt(resumen.total_pagado_pendiente_verif)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {resumen.pagos_pendientes_verif > 0 
+                  {resumen.pagos_pendientes_verif > 0
                     ? `${resumen.pagos_pendientes_verif} pago(s) verificando`
                     : 'Todo verificado'}
                 </p>
@@ -199,19 +281,30 @@ export default function CuentaCorrienteProveedorPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-muted-foreground" />
-                <span><strong>Razón Social:</strong> {proveedor.razon_social}</span>
+                <span>
+                  <strong>Razón Social:</strong> {proveedor.razon_social}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-muted-foreground" />
-                <span><strong>Teléfono:</strong> {proveedor.telefono || '-'}</span>
+                <span>
+                  <strong>Teléfono:</strong> {proveedor.telefono || '-'}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-muted-foreground" />
-                <span><strong>Email:</strong> {proveedor.email || '-'}</span>
+                <span>
+                  <strong>Email:</strong> {proveedor.email || '-'}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-muted-foreground" />
-                <span><strong>Cuenta Corriente:</strong> {proveedor.permite_cuenta_corriente ? `Sí (${proveedor.dias_pago_habitual || '-'} días)` : 'No'}</span>
+                <span>
+                  <strong>Cuenta Corriente:</strong>{' '}
+                  {proveedor.permite_cuenta_corriente
+                    ? `Sí (${proveedor.dias_pago_habitual || '-'} días)`
+                    : 'No'}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -229,7 +322,9 @@ export default function CuentaCorrienteProveedorPage() {
 
       {/* Historial de Movimientos - Redesigned */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Historial de Cuenta Corriente</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Historial de Cuenta Corriente</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -248,27 +343,38 @@ export default function CuentaCorrienteProveedorPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell key={j}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : !movimientos?.length ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32">
-                    <EmptyState icon={CreditCard} title="Sin movimientos" description="No hay facturas ni pagos registrados" />
+                    <EmptyState
+                      icon={CreditCard}
+                      title="Sin movimientos"
+                      description="No hay facturas ni pagos registrados"
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
                 movimientos.map((mov) => {
                   const isFactura = mov.tipo === 'factura';
-                  const isOverdue = isFactura && mov.fecha_vencimiento && parseLocalDate(mov.fecha_vencimiento) < new Date();
+                  const isOverdue =
+                    isFactura &&
+                    mov.fecha_vencimiento &&
+                    parseLocalDate(mov.fecha_vencimiento) < new Date();
                   const isImputacion = !isFactura && mov.medio_pago === 'imputacion_saldo';
-                  
+
                   return (
                     <TableRow key={`${mov.tipo}-${mov.id}`}>
                       {/* Fecha */}
-                      <TableCell className="text-sm whitespace-nowrap">{formatLocalDate(mov.fecha)}</TableCell>
-                      
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {formatLocalDate(mov.fecha)}
+                      </TableCell>
+
                       {/* Tipo */}
                       <TableCell>
                         {isFactura ? (
@@ -288,14 +394,16 @@ export default function CuentaCorrienteProveedorPage() {
                           </div>
                         )}
                       </TableCell>
-                      
+
                       {/* Detalle */}
                       <TableCell>
                         {isFactura ? (
                           <div>
                             <p className="text-sm font-medium">{mov.factura_numero}</p>
                             {mov.fecha_vencimiento && (
-                              <p className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <p
+                                className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}
+                              >
                                 Venc: {formatLocalDate(mov.fecha_vencimiento)}
                               </p>
                             )}
@@ -303,16 +411,20 @@ export default function CuentaCorrienteProveedorPage() {
                         ) : isImputacion ? (
                           <div>
                             <p className="text-sm font-medium">Saldo a favor imputado</p>
-                            <p className="text-xs text-muted-foreground">Aplicado de mes anterior</p>
+                            <p className="text-xs text-muted-foreground">
+                              Aplicado de mes anterior
+                            </p>
                           </div>
                         ) : (
                           <div>
                             <p className="text-sm font-medium capitalize">{mov.medio_pago}</p>
-                            {mov.referencia && <p className="text-xs text-muted-foreground">{mov.referencia}</p>}
+                            {mov.referencia && (
+                              <p className="text-xs text-muted-foreground">{mov.referencia}</p>
+                            )}
                           </div>
                         )}
                       </TableCell>
-                      
+
                       {/* Importe (signed) */}
                       <TableCell className="text-right font-mono text-sm">
                         {isFactura ? (
@@ -321,29 +433,39 @@ export default function CuentaCorrienteProveedorPage() {
                           <span className="text-green-600">-$ {fmt(mov.monto)}</span>
                         )}
                       </TableCell>
-                      
+
                       {/* Saldo running */}
                       <TableCell className="text-right font-mono text-sm font-semibold">
                         {mov.saldo_acumulado < 0 ? (
-                          <span className="text-green-600">-$ {fmt(Math.abs(mov.saldo_acumulado))}</span>
+                          <span className="text-green-600">
+                            -$ {fmt(Math.abs(mov.saldo_acumulado))}
+                          </span>
                         ) : (
                           <span>$ {fmt(mov.saldo_acumulado)}</span>
                         )}
                       </TableCell>
-                      
+
                       {/* Estado */}
                       <TableCell>
-                        {isFactura && (
-                          mov.estado === 'pagado' ? (
-                            <Badge variant="default" className="text-xs">Pagado</Badge>
+                        {isFactura &&
+                          (mov.estado === 'pagado' ? (
+                            <Badge variant="default" className="text-xs">
+                              Pagado
+                            </Badge>
                           ) : isOverdue ? (
-                            <Badge variant="destructive" className="text-xs">Vencida</Badge>
+                            <Badge variant="destructive" className="text-xs">
+                              Vencida
+                            </Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-xs">Pendiente</Badge>
-                          )
-                        )}
+                            <Badge variant="secondary" className="text-xs">
+                              Pendiente
+                            </Badge>
+                          ))}
                         {!isFactura && mov.verificado === false && (
-                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 gap-1">
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-amber-600 border-amber-300 gap-1"
+                          >
                             <Clock className="w-3 h-3" />
                             Verificando
                           </Badge>
@@ -355,12 +477,17 @@ export default function CuentaCorrienteProveedorPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      
+
                       {/* Actions */}
                       <TableCell>
                         <div className="flex gap-1 justify-end items-center">
                           {isFactura && mov.estado !== 'pagado' && (
-                            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setPayingFacturaId(mov.id)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7"
+                              onClick={() => setPayingFacturaId(mov.id)}
+                            >
                               Registrar Pago
                             </Button>
                           )}

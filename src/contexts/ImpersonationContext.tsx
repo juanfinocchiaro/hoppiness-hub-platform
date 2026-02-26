@@ -1,6 +1,6 @@
 /**
  * ImpersonationContext - Sistema "Ver como..." para Superadmin
- * 
+ *
  * Permite a superadmins visualizar la aplicación desde la perspectiva de otro usuario
  * SIN afectar operaciones reales de base de datos (RLS sigue usando auth.uid() real).
  */
@@ -8,7 +8,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables } from '@/integrations/supabase/types';
-import type { BrandRole, LocalRole, UserBranchRole } from '@/hooks/usePermissionsV2';
+import type { BrandRole, LocalRole, UserBranchRole } from '@/hooks/usePermissions';
 
 type Branch = Tables<'branches'>;
 
@@ -28,11 +28,11 @@ interface ImpersonationContextType {
   isImpersonating: boolean;
   targetUser: ImpersonatedUser | null;
   loading: boolean;
-  
+
   // Acciones
   startImpersonating: (userId: string) => Promise<void>;
   stopImpersonating: () => void;
-  
+
   // Helper
   canImpersonate: boolean;
 }
@@ -56,8 +56,12 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   // Restore synchronously to avoid layout shifts (banner/offset toggling after first render)
-  const [targetUser, setTargetUser] = useState<ImpersonatedUser | null>(() => readStoredImpersonation());
-  const [isImpersonating, setIsImpersonating] = useState<boolean>(() => !!readStoredImpersonation());
+  const [targetUser, setTargetUser] = useState<ImpersonatedUser | null>(() =>
+    readStoredImpersonation(),
+  );
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(
+    () => !!readStoredImpersonation(),
+  );
   const [loading, setLoading] = useState(false);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
 
@@ -102,82 +106,85 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
     }
   }, [isSuperadmin]);
 
-  const startImpersonating = useCallback(async (userId: string) => {
-    if (!isSuperadmin) return;
-    
-    setLoading(true);
-    try {
-      // Fetch profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, avatar_url')
-        .eq('id', userId)
-        .single();
+  const startImpersonating = useCallback(
+    async (userId: string) => {
+      if (!isSuperadmin) return;
 
-      if (profileError || !profile) throw new Error('Usuario no encontrado');
+      setLoading(true);
+      try {
+        // Fetch profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, avatar_url')
+          .eq('id', userId)
+          .single();
 
-      // Fetch brand role
-      const { data: brandRoleData } = await supabase
-        .from('user_roles_v2')
-        .select('brand_role')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
+        if (profileError || !profile) throw new Error('Usuario no encontrado');
 
-      // Fetch branch roles
-      const { data: branchRolesData } = await supabase
-        .from('user_branch_roles')
-        .select('branch_id, local_role')
-        .eq('user_id', userId)
-        .eq('is_active', true);
-
-      const branchRoles: UserBranchRole[] = (branchRolesData || []).map(r => ({
-        branch_id: r.branch_id,
-        local_role: r.local_role as LocalRole,
-      }));
-
-      // Fetch accessible branches
-      let branches: Branch[] = [];
-      
-      if (brandRoleData?.brand_role === 'superadmin') {
-        const { data } = await supabase
-          .from('branches')
-          .select('*')
+        // Fetch brand role
+        const { data: brandRoleData } = await supabase
+          .from('user_roles_v2')
+          .select('brand_role')
+          .eq('user_id', userId)
           .eq('is_active', true)
-          .order('name');
-        branches = data || [];
-      } else if (branchRoles.length > 0) {
-        const branchIds = branchRoles.map(r => r.branch_id);
-        const { data } = await supabase
-          .from('branches')
-          .select('*')
-          .in('id', branchIds)
-          .eq('is_active', true)
-          .order('name');
-        branches = data || [];
+          .maybeSingle();
+
+        // Fetch branch roles
+        const { data: branchRolesData } = await supabase
+          .from('user_branch_roles')
+          .select('branch_id, local_role')
+          .eq('user_id', userId)
+          .eq('is_active', true);
+
+        const branchRoles: UserBranchRole[] = (branchRolesData || []).map((r) => ({
+          branch_id: r.branch_id,
+          local_role: r.local_role as LocalRole,
+        }));
+
+        // Fetch accessible branches
+        let branches: Branch[] = [];
+
+        if (brandRoleData?.brand_role === 'superadmin') {
+          const { data } = await supabase
+            .from('branches')
+            .select('*')
+            .eq('is_active', true)
+            .order('name');
+          branches = data || [];
+        } else if (branchRoles.length > 0) {
+          const branchIds = branchRoles.map((r) => r.branch_id);
+          const { data } = await supabase
+            .from('branches')
+            .select('*')
+            .in('id', branchIds)
+            .eq('is_active', true)
+            .order('name');
+          branches = data || [];
+        }
+
+        const impersonatedUser: ImpersonatedUser = {
+          id: profile.id,
+          full_name: profile.full_name,
+          email: profile.email,
+          avatar_url: profile.avatar_url,
+          brandRole: (brandRoleData?.brand_role as BrandRole) || null,
+          branchRoles,
+          accessibleBranches: branches,
+        };
+
+        setTargetUser(impersonatedUser);
+        setIsImpersonating(true);
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(impersonatedUser));
+      } catch (error) {
+        // Error logged in dev mode only, re-throw for caller handling
+        if (import.meta.env.DEV) console.error('Error starting impersonation:', error);
+        throw error;
+      } finally {
+        setLoading(false);
       }
-
-      const impersonatedUser: ImpersonatedUser = {
-        id: profile.id,
-        full_name: profile.full_name,
-        email: profile.email,
-        avatar_url: profile.avatar_url,
-        brandRole: (brandRoleData?.brand_role as BrandRole) || null,
-        branchRoles,
-        accessibleBranches: branches,
-      };
-
-      setTargetUser(impersonatedUser);
-      setIsImpersonating(true);
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(impersonatedUser));
-    } catch (error) {
-      // Error logged in dev mode only, re-throw for caller handling
-      if (import.meta.env.DEV) console.error('Error starting impersonation:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [isSuperadmin]);
+    },
+    [isSuperadmin],
+  );
 
   const stopImpersonating = useCallback(() => {
     setIsImpersonating(false);

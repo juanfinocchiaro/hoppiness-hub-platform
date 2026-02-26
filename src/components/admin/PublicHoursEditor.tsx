@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Clock } from 'lucide-react';
 
@@ -66,17 +65,17 @@ export default function PublicHoursEditor({ value, onChange }: PublicHoursEditor
         Horario Público por Día
         <span className="text-xs text-muted-foreground font-normal">(visible en la web)</span>
       </div>
-      
+
       <div className="border rounded-lg divide-y">
         {DAYS.map(({ key, label }) => {
           const dayData = hours[key] || DEFAULT_HOURS[key];
           const isClosed = dayData.closed || false;
-          
+
           return (
             <div key={key} className="flex items-center gap-3 p-3">
               {/* Día */}
               <div className="w-24 font-medium text-sm">{label}</div>
-              
+
               {/* Switch abierto/cerrado */}
               <div className="flex items-center gap-2">
                 <Switch
@@ -88,7 +87,7 @@ export default function PublicHoursEditor({ value, onChange }: PublicHoursEditor
                   {isClosed ? 'Cerrado' : 'Abierto'}
                 </span>
               </div>
-              
+
               {/* Horarios */}
               {!isClosed && (
                 <div className="flex items-center gap-2 flex-1">
@@ -107,17 +106,15 @@ export default function PublicHoursEditor({ value, onChange }: PublicHoursEditor
                   />
                 </div>
               )}
-              
+
               {isClosed && (
-                <div className="flex-1 text-sm text-muted-foreground italic">
-                  No abre este día
-                </div>
+                <div className="flex-1 text-sm text-muted-foreground italic">No abre este día</div>
               )}
             </div>
           );
         })}
       </div>
-      
+
       <p className="text-xs text-muted-foreground">
         Nota: Si el cierre es después de medianoche (ej: 00:30), indica la hora del día siguiente.
       </p>

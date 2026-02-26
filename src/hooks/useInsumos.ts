@@ -45,10 +45,7 @@ export function useCategoriaInsumoMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CategoriaInsumoFormData> }) => {
-      const { error } = await supabase
-        .from('categorias_insumo')
-        .update(data)
-        .eq('id', id);
+      const { error } = await supabase.from('categorias_insumo').update(data).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -85,7 +82,9 @@ export function useInsumos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('insumos')
-        .select('*, categorias_insumo(nombre, tipo), rdo_categories!insumos_rdo_category_code_fkey(code, name), proveedor_obligatorio:proveedores!insumos_proveedor_obligatorio_id_fkey(id, razon_social), proveedor_sugerido:proveedores!insumos_proveedor_sugerido_id_fkey(id, razon_social)')
+        .select(
+          '*, categorias_insumo(nombre, tipo), rdo_categories!insumos_rdo_category_code_fkey(code, name), proveedor_obligatorio:proveedores!insumos_proveedor_obligatorio_id_fkey(id, razon_social), proveedor_sugerido:proveedores!insumos_proveedor_sugerido_id_fkey(id, razon_social)',
+        )
         .is('deleted_at', null)
         .neq('activo', false)
         .order('nombre');
@@ -101,17 +100,18 @@ export function useInsumoMutations() {
 
   const create = useMutation({
     mutationFn: async (data: InsumoFormData) => {
-      const { data: result, error } = await supabase
-        .from('insumos')
-        .insert(data)
-        .select()
-        .single();
+      const { data: result, error } = await supabase.from('insumos').insert(data).select().single();
       if (error) throw error;
       return result;
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['insumos'] });
-      const label = variables.tipo_item === 'producto' ? 'Producto' : variables.tipo_item === 'ingrediente' ? 'Ingrediente' : 'Insumo';
+      const label =
+        variables.tipo_item === 'producto'
+          ? 'Producto'
+          : variables.tipo_item === 'ingrediente'
+            ? 'Ingrediente'
+            : 'Insumo';
       toast.success(`${label} creado`);
     },
     onError: (e) => toast.error(`Error: ${e.message}`),
@@ -119,17 +119,15 @@ export function useInsumoMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsumoFormData> }) => {
-      const { error } = await supabase
-        .from('insumos')
-        .update(data)
-        .eq('id', id);
+      const { error } = await supabase.from('insumos').update(data).eq('id', id);
       if (error) throw error;
       return data;
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['insumos'] });
       const tipo = variables.data.tipo_item;
-      const label = tipo === 'producto' ? 'Producto' : tipo === 'ingrediente' ? 'Ingrediente' : 'Insumo';
+      const label =
+        tipo === 'producto' ? 'Producto' : tipo === 'ingrediente' ? 'Ingrediente' : 'Insumo';
       toast.success(`${label} actualizado`);
     },
     onError: (e) => toast.error(`Error: ${e.message}`),

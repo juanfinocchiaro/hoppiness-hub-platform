@@ -15,7 +15,12 @@ interface StockUmbralesPopoverProps {
 }
 
 export function StockUmbralesPopover({
-  branchId, insumoId, insumoNombre, minActual, critActual, children,
+  branchId,
+  insumoId,
+  insumoNombre,
+  minActual,
+  critActual,
+  children,
 }: StockUmbralesPopoverProps) {
   const [open, setOpen] = useState(false);
   const [min, setMin] = useState(minActual?.toString() ?? '');
@@ -29,7 +34,7 @@ export function StockUmbralesPopover({
         stock_minimo_local: min ? parseFloat(min) : null,
         stock_critico_local: crit ? parseFloat(crit) : null,
       },
-      { onSuccess: () => setOpen(false) }
+      { onSuccess: () => setOpen(false) },
     );
   };
 
@@ -41,15 +46,33 @@ export function StockUmbralesPopover({
           <p className="text-sm font-medium">{insumoNombre}</p>
           <div>
             <Label className="text-xs">Stock mínimo</Label>
-            <Input type="number" min="0" step="0.01" value={min} onChange={e => setMin(e.target.value)} className="mt-1" />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={min}
+              onChange={(e) => setMin(e.target.value)}
+              className="mt-1"
+            />
           </div>
           <div>
             <Label className="text-xs">Stock crítico</Label>
-            <Input type="number" min="0" step="0.01" value={crit} onChange={e => setCrit(e.target.value)} className="mt-1" />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={crit}
+              onChange={(e) => setCrit(e.target.value)}
+              className="mt-1"
+            />
           </div>
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button size="sm" onClick={handleSave} disabled={update.isPending}>Guardar</Button>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={update.isPending}>
+              Guardar
+            </Button>
           </div>
         </div>
       </PopoverContent>

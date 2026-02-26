@@ -3,7 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormLayout, FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { Package, Shield, BarChart3 } from 'lucide-react';
@@ -48,7 +54,13 @@ const NIVEL_LABELS = {
   libre: { label: '🟢 Libre', desc: 'Sin restricciones, cualquier marca/proveedor' },
 };
 
-export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand', fixedType }: Props) {
+export function InsumoFormModal({
+  open,
+  onOpenChange,
+  insumo,
+  context = 'brand',
+  fixedType,
+}: Props) {
   const { create, update } = useInsumoMutations();
   const { data: proveedores } = useProveedores();
   const isEdit = !!insumo;
@@ -57,7 +69,11 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
 
   const defaultNivel = isBrand ? 'obligatorio' : 'libre';
 
-  const [form, setForm] = useState<ExtendedFormData>({ ...EMPTY, nivel_control: defaultNivel, tipo_item: fixedType || 'insumo' });
+  const [form, setForm] = useState<ExtendedFormData>({
+    ...EMPTY,
+    nivel_control: defaultNivel,
+    tipo_item: fixedType || 'insumo',
+  });
 
   useEffect(() => {
     if (insumo) {
@@ -102,20 +118,30 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
   };
 
   const costoUnidadBase = useMemo(() => {
-    if (form.unidad_compra_contenido && form.unidad_compra_contenido > 0 && form.unidad_compra_precio) {
+    if (
+      form.unidad_compra_contenido &&
+      form.unidad_compra_contenido > 0 &&
+      form.unidad_compra_precio
+    ) {
       return form.unidad_compra_precio / form.unidad_compra_contenido;
     }
     return null;
   }, [form.unidad_compra_contenido, form.unidad_compra_precio]);
 
   const costoConIva = useMemo(() => {
-    if (costoUnidadBase !== null && form.default_alicuota_iva != null && form.default_alicuota_iva > 0 && form.unidad_compra_precio) {
+    if (
+      costoUnidadBase !== null &&
+      form.default_alicuota_iva != null &&
+      form.default_alicuota_iva > 0 &&
+      form.unidad_compra_precio
+    ) {
       return form.unidad_compra_precio * (1 + form.default_alicuota_iva / 100);
     }
     return null;
   }, [costoUnidadBase, form.default_alicuota_iva, form.unidad_compra_precio]);
 
-  const unidadBaseLabel = UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
+  const unidadBaseLabel =
+    UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) return;
@@ -130,8 +156,10 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
       nivel_control: isBrand ? form.nivel_control : isLocal ? 'libre' : form.nivel_control,
       motivo_control: form.motivo_control || null,
       precio_maximo_sugerido: form.precio_maximo_sugerido || null,
-      proveedor_obligatorio_id: form.nivel_control === 'obligatorio' ? (form.proveedor_obligatorio_id || null) : null,
-      proveedor_sugerido_id: form.nivel_control === 'semi_libre' ? (form.proveedor_sugerido_id || null) : null,
+      proveedor_obligatorio_id:
+        form.nivel_control === 'obligatorio' ? form.proveedor_obligatorio_id || null : null,
+      proveedor_sugerido_id:
+        form.nivel_control === 'semi_libre' ? form.proveedor_sugerido_id || null : null,
       tipo_item: fixedType || form.tipo_item || 'insumo',
       rdo_category_code: form.rdo_category_code || null,
       tracks_stock: form.tracks_stock || false,
@@ -169,18 +197,29 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
 
           <div className="space-y-4">
             <FormRow label="Nombre" required>
-              <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Salsa Hoppiness" />
+              <Input
+                value={form.nombre}
+                onChange={(e) => set('nombre', e.target.value)}
+                placeholder="Ej: Salsa Hoppiness"
+              />
             </FormRow>
 
             {/* Presentación de compra + IVA */}
             <FormSection title="Presentación y precio" icon={Package}>
               <div className="grid grid-cols-3 gap-3">
                 <FormRow label="Presentación" required>
-                  <Select value={form.unidad_compra || 'kg'} onValueChange={handlePresentacionChange}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={form.unidad_compra || 'kg'}
+                    onValueChange={handlePresentacionChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {PRESENTACION_OPTIONS.map((p) => (
-                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -190,7 +229,12 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                     type="number"
                     step="1"
                     value={form.unidad_compra_contenido ?? ''}
-                    onChange={(e) => set('unidad_compra_contenido', e.target.value ? Number(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      set(
+                        'unidad_compra_contenido',
+                        e.target.value ? Number(e.target.value) : undefined,
+                      )
+                    }
                     placeholder="Ej: 4000"
                   />
                 </FormRow>
@@ -199,7 +243,12 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                     type="number"
                     step="0.01"
                     value={form.unidad_compra_precio ?? ''}
-                    onChange={(e) => set('unidad_compra_precio', e.target.value ? Number(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      set(
+                        'unidad_compra_precio',
+                        e.target.value ? Number(e.target.value) : undefined,
+                      )
+                    }
                     placeholder="Ej: 30000"
                   />
                 </FormRow>
@@ -231,32 +280,50 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
               </div>
 
               <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground">Unidad base:</span>
-                  <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
-                    <SelectTrigger className="h-7 w-auto text-xs px-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIDAD_BASE_OPTIONS.map((u) => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <span className="text-xs text-muted-foreground">Unidad base:</span>
+                <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
+                  <SelectTrigger className="h-7 w-auto text-xs px-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNIDAD_BASE_OPTIONS.map((u) => (
+                      <SelectItem key={u.value} value={u.value}>
+                        {u.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {costoUnidadBase !== null && (
                 <div className="mt-3 rounded-md border border-border bg-muted/40 p-3 space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Costo neto por {unidadBaseLabel}:</span>
-                    <span className="font-semibold text-primary">${costoUnidadBase.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                    <span className="font-semibold text-primary">
+                      $
+                      {costoUnidadBase.toLocaleString('es-AR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 4,
+                      })}
+                    </span>
                   </div>
                   {costoConIva !== null && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Precio con IVA ({form.default_alicuota_iva}%):</span>
-                      <span className="font-mono">${costoConIva.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-muted-foreground">
+                        Precio con IVA ({form.default_alicuota_iva}%):
+                      </span>
+                      <span className="font-mono">
+                        $
+                        {costoConIva.toLocaleString('es-AR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">💡 Las recetas y el FC% se calculan siempre con precio neto</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    💡 Las recetas y el FC% se calculan siempre con precio neto
+                  </p>
                 </div>
               )}
             </FormSection>
@@ -264,7 +331,11 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
             {/* Clasificación */}
             <div className="grid grid-cols-2 gap-3">
               <FormRow label="Categoría RDO" required>
-                <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType={fixedType || form.tipo_item} />
+                <RdoCategorySelector
+                  value={form.rdo_category_code}
+                  onChange={(code) => set('rdo_category_code', code)}
+                  itemType={fixedType || form.tipo_item}
+                />
               </FormRow>
 
               {/* Nivel de control */}
@@ -297,14 +368,18 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
             </div>
 
             <FormRow
-              label={form.nivel_control === 'obligatorio' ? 'Proveedor Obligatorio' : 'Proveedor Sugerido'}
+              label={
+                form.nivel_control === 'obligatorio'
+                  ? 'Proveedor Obligatorio'
+                  : 'Proveedor Sugerido'
+              }
               required={form.nivel_control === 'obligatorio'}
             >
               <Select
                 value={
                   form.nivel_control === 'obligatorio'
-                    ? (form.proveedor_obligatorio_id || '')
-                    : (form.proveedor_sugerido_id || 'none')
+                    ? form.proveedor_obligatorio_id || ''
+                    : form.proveedor_sugerido_id || 'none'
                 }
                 onValueChange={(v) => {
                   if (form.nivel_control === 'obligatorio') {
@@ -318,9 +393,13 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {form.nivel_control === 'semi_libre' && <SelectItem value="none">Ninguno</SelectItem>}
+                  {form.nivel_control === 'semi_libre' && (
+                    <SelectItem value="none">Ninguno</SelectItem>
+                  )}
                   {proveedores?.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.razon_social}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -336,7 +415,9 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
             </FormRow>
 
             <StickyActions>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
               <LoadingButton loading={isPending} onClick={handleSubmit}>
                 {isEdit ? 'Guardar' : `Crear ${typeLabel}`}
               </LoadingButton>
@@ -358,26 +439,41 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
 
           <div className="space-y-4">
             <FormRow label="Nombre" required>
-              <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Nombre del insumo" />
+              <Input
+                value={form.nombre}
+                onChange={(e) => set('nombre', e.target.value)}
+                placeholder="Nombre del insumo"
+              />
             </FormRow>
 
             <FormLayout columns={2}>
               <FormRow label="Tipo" required>
-                <Select value={form.tipo_item || 'insumo'} onValueChange={(v) => set('tipo_item', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.tipo_item || 'insumo'}
+                  onValueChange={(v) => set('tipo_item', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {TIPO_ITEM_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </FormRow>
               <FormRow label="Unidad base" required>
                 <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {UNIDAD_OPTIONS.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                      <SelectItem key={u.value} value={u.value}>
+                        {u.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -385,11 +481,18 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
             </FormLayout>
 
             <FormRow label="Descripción">
-              <Textarea value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} rows={2} placeholder="Opcional" />
+              <Textarea
+                value={form.descripcion || ''}
+                onChange={(e) => set('descripcion', e.target.value)}
+                rows={2}
+                placeholder="Opcional"
+              />
             </FormRow>
 
             <StickyActions>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
               <LoadingButton loading={isPending} onClick={handleSubmit}>
                 {isEdit ? 'Guardar' : 'Crear Insumo'}
               </LoadingButton>
@@ -412,25 +515,40 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
           <FormSection title="Datos del Insumo" icon={Package}>
             <FormLayout columns={1}>
               <FormRow label="Nombre" required>
-                <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Nombre del insumo" />
+                <Input
+                  value={form.nombre}
+                  onChange={(e) => set('nombre', e.target.value)}
+                  placeholder="Nombre del insumo"
+                />
               </FormRow>
               <FormLayout columns={2}>
                 <FormRow label="Tipo" required>
-                  <Select value={form.tipo_item || 'insumo'} onValueChange={(v) => set('tipo_item', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={form.tipo_item || 'insumo'}
+                    onValueChange={(v) => set('tipo_item', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {TIPO_ITEM_OPTIONS.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </FormRow>
                 <FormRow label="Unidad base" required>
                   <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {UNIDAD_OPTIONS.map((u) => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                        <SelectItem key={u.value} value={u.value}>
+                          {u.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -442,32 +560,54 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
           <FormSection title="Categoría" icon={BarChart3}>
             <FormLayout columns={1}>
               <FormRow label="Categoría" required hint="Para el Estado de Resultados">
-                <RdoCategorySelector value={form.rdo_category_code} onChange={(code) => set('rdo_category_code', code)} itemType={form.tipo_item} />
+                <RdoCategorySelector
+                  value={form.rdo_category_code}
+                  onChange={(code) => set('rdo_category_code', code)}
+                  itemType={form.tipo_item}
+                />
               </FormRow>
             </FormLayout>
           </FormSection>
 
           <FormSection title="Nivel de Control" icon={Shield}>
-            <RadioGroup value={form.nivel_control} onValueChange={(v) => set('nivel_control', v)} className="space-y-2">
-              {(Object.entries(NIVEL_LABELS) as [string, { label: string; desc: string }][]).map(([value, { label, desc }]) => (
-                <div key={value} className={`flex items-start gap-3 p-3 rounded-lg border ${form.nivel_control === value ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                  <RadioGroupItem value={value} id={`nivel-${value}`} className="mt-0.5" />
-                  <div>
-                    <Label htmlFor={`nivel-${value}`} className="font-medium cursor-pointer">{label}</Label>
-                    <p className="text-xs text-muted-foreground">{desc}</p>
+            <RadioGroup
+              value={form.nivel_control}
+              onValueChange={(v) => set('nivel_control', v)}
+              className="space-y-2"
+            >
+              {(Object.entries(NIVEL_LABELS) as [string, { label: string; desc: string }][]).map(
+                ([value, { label, desc }]) => (
+                  <div
+                    key={value}
+                    className={`flex items-start gap-3 p-3 rounded-lg border ${form.nivel_control === value ? 'border-primary bg-primary/5' : 'border-border'}`}
+                  >
+                    <RadioGroupItem value={value} id={`nivel-${value}`} className="mt-0.5" />
+                    <div>
+                      <Label htmlFor={`nivel-${value}`} className="font-medium cursor-pointer">
+                        {label}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">{desc}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </RadioGroup>
 
             {form.nivel_control === 'obligatorio' && (
               <div className="mt-3 space-y-3 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
                 <FormRow label="Proveedor Obligatorio" required>
-                  <Select value={form.proveedor_obligatorio_id || ''} onValueChange={(v) => set('proveedor_obligatorio_id', v)}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar proveedor fijo..." /></SelectTrigger>
+                  <Select
+                    value={form.proveedor_obligatorio_id || ''}
+                    onValueChange={(v) => set('proveedor_obligatorio_id', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar proveedor fijo..." />
+                    </SelectTrigger>
                     <SelectContent>
                       {proveedores?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.razon_social}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -478,12 +618,21 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
             {form.nivel_control === 'semi_libre' && (
               <div className="mt-3 space-y-3 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
                 <FormRow label="Proveedor Sugerido">
-                  <Select value={form.proveedor_sugerido_id || 'none'} onValueChange={(v) => set('proveedor_sugerido_id', v === 'none' ? undefined : v)}>
-                    <SelectTrigger><SelectValue placeholder="Ninguno" /></SelectTrigger>
+                  <Select
+                    value={form.proveedor_sugerido_id || 'none'}
+                    onValueChange={(v) =>
+                      set('proveedor_sugerido_id', v === 'none' ? undefined : v)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ninguno" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Ninguno</SelectItem>
                       {proveedores?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.razon_social}</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.razon_social}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -492,27 +641,54 @@ export function InsumoFormModal({ open, onOpenChange, insumo, context = 'brand',
             )}
 
             <FormRow label="Motivo del control" className="mt-3">
-              <Input value={form.motivo_control || ''} onChange={(e) => set('motivo_control', e.target.value)} placeholder="Por qué se controla este insumo" />
+              <Input
+                value={form.motivo_control || ''}
+                onChange={(e) => set('motivo_control', e.target.value)}
+                placeholder="Por qué se controla este insumo"
+              />
             </FormRow>
           </FormSection>
 
           <FormSection title="Precios">
             <FormLayout columns={2}>
               <FormRow label="Precio referencia ($)">
-                <Input type="number" step="0.01" value={form.precio_referencia ?? ''} onChange={(e) => set('precio_referencia', e.target.value ? Number(e.target.value) : undefined)} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.precio_referencia ?? ''}
+                  onChange={(e) =>
+                    set('precio_referencia', e.target.value ? Number(e.target.value) : undefined)
+                  }
+                />
               </FormRow>
               <FormRow label="Precio máximo sugerido ($)">
-                <Input type="number" step="0.01" value={form.precio_maximo_sugerido ?? ''} onChange={(e) => set('precio_maximo_sugerido', e.target.value ? Number(e.target.value) : undefined)} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.precio_maximo_sugerido ?? ''}
+                  onChange={(e) =>
+                    set(
+                      'precio_maximo_sugerido',
+                      e.target.value ? Number(e.target.value) : undefined,
+                    )
+                  }
+                />
               </FormRow>
             </FormLayout>
           </FormSection>
 
           <FormRow label="Descripción">
-            <Textarea value={form.descripcion || ''} onChange={(e) => set('descripcion', e.target.value)} rows={2} />
+            <Textarea
+              value={form.descripcion || ''}
+              onChange={(e) => set('descripcion', e.target.value)}
+              rows={2}
+            />
           </FormRow>
 
           <StickyActions>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <LoadingButton loading={isPending} onClick={handleSubmit}>
               {isEdit ? 'Guardar' : 'Crear Insumo'}
             </LoadingButton>

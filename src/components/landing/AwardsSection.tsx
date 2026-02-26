@@ -20,8 +20,8 @@ export function AwardsSection() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {awards.map((award, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className="bg-background rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all hover:-translate-y-1 text-center group"
             >
               <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-accent/30 transition-colors">

@@ -24,7 +24,7 @@ export function CoachingExportButton({ branchId, branchName }: CoachingExportBut
   const [exporting, setExporting] = useState(false);
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
-  
+
   const { data: coachings, isLoading } = useCoachings({ branchId });
 
   const handleExportCSV = async () => {
@@ -36,12 +36,12 @@ export function CoachingExportButton({ branchId, branchName }: CoachingExportBut
     setExporting(true);
     try {
       exportCoachingsToCSV(
-        coachings.map(c => ({
+        coachings.map((c) => ({
           ...c,
           employee: c.employee ? { full_name: c.employee.full_name || '' } : null,
           evaluator: c.evaluator ? { full_name: c.evaluator.full_name || '' } : null,
         })),
-        `coaching_${branchName.replace(/\s+/g, '_')}_${currentYear}.csv`
+        `coaching_${branchName.replace(/\s+/g, '_')}_${currentYear}.csv`,
       );
       toast.success('Archivo CSV descargado');
     } catch (error) {
@@ -58,18 +58,18 @@ export function CoachingExportButton({ branchId, branchName }: CoachingExportBut
     }
 
     const monthlyCoachings = coachings.filter(
-      c => c.coaching_month === currentMonth && c.coaching_year === currentYear
+      (c) => c.coaching_month === currentMonth && c.coaching_year === currentYear,
     );
 
     const report = generateMonthlyReport(
-      monthlyCoachings.map(c => ({
+      monthlyCoachings.map((c) => ({
         ...c,
         employee: c.employee ? { full_name: c.employee.full_name || '' } : null,
         evaluator: c.evaluator ? { full_name: c.evaluator.full_name || '' } : null,
       })),
       branchName,
       currentMonth,
-      currentYear
+      currentYear,
     );
 
     const success = await copyToClipboard(report);

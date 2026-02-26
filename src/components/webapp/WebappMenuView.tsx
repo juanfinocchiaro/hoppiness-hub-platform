@@ -28,7 +28,20 @@ interface Props {
   hasCartItems?: boolean;
 }
 
-export function WebappMenuView({ branch, config, items, loading, tipoServicio, cart, onProductClick, onBack, onServiceChange, onShowTracking, onOpenCart, hasCartItems }: Props) {
+export function WebappMenuView({
+  branch,
+  config,
+  items,
+  loading,
+  tipoServicio,
+  cart,
+  onProductClick,
+  onBack,
+  onServiceChange,
+  onShowTracking,
+  onOpenCart,
+  hasCartItems,
+}: Props) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -50,20 +63,23 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
   }, []);
 
   const promoItems = useMemo(() => {
-    return items.filter(i => i.promo_etiqueta || (i.precio_promo != null && i.precio_promo < i.precio_base));
+    return items.filter(
+      (i) => i.promo_etiqueta || (i.precio_promo != null && i.precio_promo < i.precio_base),
+    );
   }, [items]);
 
   const categories = useMemo(() => {
-    const nonPromoItems = debouncedSearch.trim() ? items : items.filter(i => !i.is_promo_article);
+    const nonPromoItems = debouncedSearch.trim() ? items : items.filter((i) => !i.is_promo_article);
     const filtered = debouncedSearch.trim()
-      ? items.filter(i =>
-          i.nombre.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-          i.descripcion?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      ? items.filter(
+          (i) =>
+            i.nombre.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            i.descripcion?.toLowerCase().includes(debouncedSearch.toLowerCase()),
         )
       : nonPromoItems;
 
     const grouped: Record<string, { nombre: string; orden: number; items: WebappMenuItem[] }> = {};
-    filtered.forEach(item => {
+    filtered.forEach((item) => {
       const cat = item.categoria_nombre || 'Otros';
       const orden = item.categoria_orden ?? 999;
       if (!grouped[cat]) grouped[cat] = { nombre: cat, orden, items: [] };
@@ -81,17 +97,17 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      entries => {
+      (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             setActiveCategory(entry.target.getAttribute('data-category'));
           }
         }
       },
-      { rootMargin: `-${headerH}px 0px -60% 0px`, threshold: 0 }
+      { rootMargin: `-${headerH}px 0px -60% 0px`, threshold: 0 },
     );
 
-    Object.values(categoryRefs.current).forEach(el => {
+    Object.values(categoryRefs.current).forEach((el) => {
       if (el) observer.observe(el);
     });
 
@@ -110,24 +126,47 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
   const currentEta = tipoServicio === 'delivery' ? deliveryEta : retiroEta;
 
   const servicioOptions = [
-    config.retiro_habilitado && { key: 'retiro' as TipoServicioWebapp, label: 'Retiro', icon: '🛒', tiempo: retiroEta?.prep_time_min ?? config.tiempo_estimado_retiro_min },
-    config.delivery_habilitado && { key: 'delivery' as TipoServicioWebapp, label: 'Delivery', icon: '🛵', tiempo: deliveryEta?.prep_time_min ?? config.tiempo_estimado_delivery_min },
-  ].filter(Boolean) as { key: TipoServicioWebapp; label: string; icon: string; tiempo: number | null }[];
+    config.retiro_habilitado && {
+      key: 'retiro' as TipoServicioWebapp,
+      label: 'Retiro',
+      icon: '🛒',
+      tiempo: retiroEta?.prep_time_min ?? config.tiempo_estimado_retiro_min,
+    },
+    config.delivery_habilitado && {
+      key: 'delivery' as TipoServicioWebapp,
+      label: 'Delivery',
+      icon: '🛵',
+      tiempo: deliveryEta?.prep_time_min ?? config.tiempo_estimado_delivery_min,
+    },
+  ].filter(Boolean) as {
+    key: TipoServicioWebapp;
+    label: string;
+    icon: string;
+    tiempo: number | null;
+  }[];
 
   const servicioLabel = tipoServicio === 'retiro' ? '🛒 Retiro en local' : '🛵 Delivery';
 
-  const tiempoEstimado = currentEta?.prep_time_min ??
-    (tipoServicio === 'delivery' ? config.tiempo_estimado_delivery_min : config.tiempo_estimado_retiro_min);
+  const tiempoEstimado =
+    currentEta?.prep_time_min ??
+    (tipoServicio === 'delivery'
+      ? config.tiempo_estimado_delivery_min
+      : config.tiempo_estimado_retiro_min);
   const highDemand = (currentEta?.active_orders ?? 0) >= 5;
 
   const headerSubtitle = [
     servicioLabel,
     tiempoEstimado ? `~${tiempoEstimado} min` : null,
     highDemand ? '(alta demanda)' : null,
-  ].filter(Boolean).join(' · ');
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const renderProductCard = (item: WebappMenuItem, layout: 'grid' | 'list' | 'desktop') => {
-    const price = (item.precio_promo != null && item.precio_promo < item.precio_base) ? item.precio_promo : item.precio_base;
+    const price =
+      item.precio_promo != null && item.precio_promo < item.precio_base
+        ? item.precio_promo
+        : item.precio_base;
     return (
       <ProductCard
         key={item.id}
@@ -135,22 +174,26 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
         qty={cart.getItemQty(item.id)}
         layout={layout}
         onTap={() => onProductClick(item)}
-        onQuickAdd={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
-          sourceItemId: item.source_item_id ?? item.id,
-          isPromoArticle: item.is_promo_article,
-          promocionId: item.promocion_id,
-          promocionItemId: item.promocion_item_id,
-          includedModifiers: item.promo_included_modifiers,
-        })}
-        onIncrement={() => cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
-          sourceItemId: item.source_item_id ?? item.id,
-          isPromoArticle: item.is_promo_article,
-          promocionId: item.promocion_id,
-          promocionItemId: item.promocion_item_id,
-          includedModifiers: item.promo_included_modifiers,
-        })}
+        onQuickAdd={() =>
+          cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
+            sourceItemId: item.source_item_id ?? item.id,
+            isPromoArticle: item.is_promo_article,
+            promocionId: item.promocion_id,
+            promocionItemId: item.promocion_item_id,
+            includedModifiers: item.promo_included_modifiers,
+          })
+        }
+        onIncrement={() =>
+          cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
+            sourceItemId: item.source_item_id ?? item.id,
+            isPromoArticle: item.is_promo_article,
+            promocionId: item.promocion_id,
+            promocionItemId: item.promocion_item_id,
+            includedModifiers: item.promo_included_modifiers,
+          })
+        }
         onDecrement={() => {
-          const entry = cart.items.find(i => i.itemId === item.id);
+          const entry = cart.items.find((i) => i.itemId === item.id);
           if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
         }}
       />
@@ -165,28 +208,34 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
         showBack
         onBack={onBack}
         showSearch
-        onSearchToggle={() => setSearchExpanded(v => !v)}
+        onSearchToggle={() => setSearchExpanded((v) => !v)}
         showCart={!!onOpenCart}
         cartCount={cart.totalItems}
         onCartClick={onOpenCart}
         extraActions={
           <button
-            onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')}
+            onClick={() => setViewMode((v) => (v === 'grid' ? 'list' : 'grid'))}
             className="p-1.5 hover:bg-muted rounded-lg transition-colors lg:hidden text-muted-foreground"
             title={viewMode === 'grid' ? 'Vista lista' : 'Vista grilla'}
           >
-            {viewMode === 'grid' ? <List className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+            {viewMode === 'grid' ? (
+              <List className="w-4 h-4" />
+            ) : (
+              <LayoutGrid className="w-4 h-4" />
+            )}
           </button>
         }
       >
         {/* Collapsible sub-header on mobile: hides on scroll-down, re-shows on scroll-up */}
-        <div className={`overflow-hidden transition-all duration-300 lg:max-h-none ${
-          scrollDir === 'down' ? 'max-h-0 lg:max-h-none' : 'max-h-60'
-        }`}>
+        <div
+          className={`overflow-hidden transition-all duration-300 lg:max-h-none ${
+            scrollDir === 'down' ? 'max-h-0 lg:max-h-none' : 'max-h-60'
+          }`}
+        >
           {/* Service toggle pills — only if multiple services available */}
           {servicioOptions.length > 1 && onServiceChange && (
             <div className="flex gap-1 px-4 pb-2">
-              {servicioOptions.map(opt => (
+              {servicioOptions.map((opt) => (
                 <button
                   key={opt.key}
                   onClick={() => onServiceChange(opt.key)}
@@ -209,13 +258,16 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar en el menú..."
                 className="pl-9 pr-8 bg-muted border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
                 autoFocus={searchExpanded}
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                >
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               )}
@@ -233,15 +285,16 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               ref={tabsRef}
               className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none xl:hidden"
             >
-              {categories.map(cat => (
+              {categories.map((cat) => (
                 <button
                   key={cat.nombre}
                   onClick={() => scrollToCategory(cat.nombre)}
                   className={`
                     whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
-                    ${activeCategory === cat.nombre
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    ${
+                      activeCategory === cat.nombre
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     }
                   `}
                 >
@@ -268,9 +321,10 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     onClick={() => scrollToCategory('__promos')}
                     className={`
                       w-full text-left px-4 py-2.5 text-sm rounded-lg transition-colors mb-0.5 flex items-center gap-1.5
-                      ${activeCategory === '__promos'
-                        ? 'bg-accent/10 text-accent font-bold'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ${
+                        activeCategory === '__promos'
+                          ? 'bg-accent/10 text-accent font-bold'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }
                     `}
                   >
@@ -278,15 +332,16 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     Promociones
                   </button>
                 )}
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <button
                     key={cat.nombre}
                     onClick={() => scrollToCategory(cat.nombre)}
                     className={`
                       w-full text-left px-4 py-2.5 text-sm rounded-lg transition-colors mb-0.5
-                      ${activeCategory === cat.nombre
-                        ? 'bg-primary/10 text-primary font-bold'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ${
+                        activeCategory === cat.nombre
+                          ? 'bg-primary/10 text-primary font-bold'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }
                     `}
                   >
@@ -297,29 +352,37 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
             </aside>
           )}
 
-      {/* Products area */}
+          {/* Products area */}
           <div className="flex-1 min-w-0">
             {/* Promo banner bar */}
             {!loading && !debouncedSearch && promoItems.length > 0 && (
               <div className="bg-accent/10 border-b border-accent/20">
                 <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
-                  {promoItems.map(item => (
+                  {promoItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => onProductClick(item)}
                       className="shrink-0 flex items-center gap-2 bg-card rounded-full border border-accent/30 px-3 py-1.5 hover:border-accent transition-colors"
                     >
                       {item.imagen_url && (
-                        <img src={item.imagen_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                        <img
+                          src={item.imagen_url}
+                          alt=""
+                          className="w-7 h-7 rounded-full object-cover"
+                        />
                       )}
-                      <span className="text-xs font-bold text-foreground whitespace-nowrap">{item.nombre_corto || item.nombre}</span>
+                      <span className="text-xs font-bold text-foreground whitespace-nowrap">
+                        {item.nombre_corto || item.nombre}
+                      </span>
                       {item.promo_etiqueta && (
                         <span className="bg-accent text-accent-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">
                           {item.promo_etiqueta}
                         </span>
                       )}
                       {item.precio_promo != null && item.precio_promo < item.precio_base && (
-                        <span className="text-xs font-bold text-accent">${item.precio_promo.toLocaleString('es-AR')}</span>
+                        <span className="text-xs font-bold text-accent">
+                          ${item.precio_promo.toLocaleString('es-AR')}
+                        </span>
                       )}
                     </button>
                   ))}
@@ -332,14 +395,18 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
               </div>
             ) : categories.length === 0 && !promoItems.length ? (
               <div className="text-center py-20 text-muted-foreground">
-                {debouncedSearch ? 'No encontramos productos con ese nombre. Probá con otra búsqueda.' : 'El menú se está preparando. Volvé en un ratito.'}
+                {debouncedSearch
+                  ? 'No encontramos productos con ese nombre. Probá con otra búsqueda.'
+                  : 'El menú se está preparando. Volvé en un ratito.'}
               </div>
             ) : (
               <>
                 {/* Popular / Featured section */}
                 {!debouncedSearch && promoItems.length > 0 && (
                   <div
-                    ref={el => { categoryRefs.current['__promos'] = el; }}
+                    ref={(el) => {
+                      categoryRefs.current['__promos'] = el;
+                    }}
                     data-category="__promos"
                     style={{ scrollMarginTop: headerH }}
                   >
@@ -355,7 +422,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     {/* Horizontal scroll on mobile, grid on desktop */}
                     <div className="lg:hidden">
                       <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-none">
-                        {promoItems.map(item => (
+                        {promoItems.map((item) => (
                           <div key={item.id} className="shrink-0 w-[160px]">
                             {renderProductCard(item, 'grid')}
                           </div>
@@ -364,17 +431,19 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     </div>
                     <div className="hidden lg:block px-4 py-3">
                       <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
-                        {promoItems.map(item => renderProductCard(item, 'desktop'))}
+                        {promoItems.map((item) => renderProductCard(item, 'desktop'))}
                       </div>
                     </div>
                   </div>
                 )}
 
                 {/* Regular categories */}
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <div
                     key={cat.nombre}
-                    ref={el => { categoryRefs.current[cat.nombre] = el; }}
+                    ref={(el) => {
+                      categoryRefs.current[cat.nombre] = el;
+                    }}
                     data-category={cat.nombre}
                     style={{ scrollMarginTop: headerH }}
                   >
@@ -394,11 +463,11 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     <div className="lg:hidden">
                       {viewMode === 'grid' ? (
                         <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {cat.items.map(item => renderProductCard(item, 'grid'))}
+                          {cat.items.map((item) => renderProductCard(item, 'grid'))}
                         </div>
                       ) : (
                         <div className="px-4 py-2 space-y-2">
-                          {cat.items.map(item => renderProductCard(item, 'list'))}
+                          {cat.items.map((item) => renderProductCard(item, 'list'))}
                         </div>
                       )}
                     </div>
@@ -406,7 +475,7 @@ export function WebappMenuView({ branch, config, items, loading, tipoServicio, c
                     {/* Desktop: horizontal cards */}
                     <div className="hidden lg:block px-4 py-3">
                       <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
-                        {cat.items.map(item => renderProductCard(item, 'desktop'))}
+                        {cat.items.map((item) => renderProductCard(item, 'desktop'))}
                       </div>
                     </div>
                   </div>

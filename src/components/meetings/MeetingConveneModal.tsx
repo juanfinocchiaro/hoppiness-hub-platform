@@ -40,7 +40,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
   const [time, setTime] = useState('10:00');
   const [area, setArea] = useState<MeetingArea>('general');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
+
   const conveneMeeting = useConveneMeeting();
   const { data: teamMembers = [], isLoading: loadingTeam } = useBranchTeamMembers(branchId);
 
@@ -54,10 +54,8 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
   };
 
   const toggleMember = (userId: string) => {
-    setSelectedIds(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    setSelectedIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
@@ -65,7 +63,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
     if (selectedIds.length === teamMembers.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(teamMembers.map(m => m.id));
+      setSelectedIds(teamMembers.map((m) => m.id));
     }
   };
 
@@ -73,7 +71,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    
+
     try {
       const data: MeetingConveneData = {
         title: title.trim(),
@@ -83,7 +81,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
         participantIds: selectedIds,
         branchId,
       };
-      
+
       await conveneMeeting.mutateAsync(data);
       toast.success('Reunión convocada exitosamente');
       handleClose();
@@ -118,12 +116,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="date">Fecha</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
+              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="time">Hora</Label>
@@ -148,7 +141,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MEETING_AREAS.map(a => (
+                {MEETING_AREAS.map((a) => (
                   <SelectItem key={a.value} value={a.value}>
                     {a.label}
                   </SelectItem>
@@ -164,16 +157,11 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
                 <Users className="w-4 h-4" />
                 Participantes ({selectedIds.length})
               </Label>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm"
-                onClick={selectAll}
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={selectAll}>
                 {selectedIds.length === teamMembers.length ? 'Ninguno' : 'Todos'}
               </Button>
             </div>
-            
+
             <ScrollArea className="h-48 border rounded-md p-2">
               {loadingTeam ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -185,13 +173,13 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {teamMembers.map(member => (
+                  {teamMembers.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
                       onClick={() => toggleMember(member.id)}
                     >
-                      <Checkbox 
+                      <Checkbox
                         checked={selectedIds.includes(member.id)}
                         onCheckedChange={() => toggleMember(member.id)}
                       />
@@ -221,10 +209,7 @@ export function MeetingConveneModal({ open, onOpenChange, branchId }: MeetingCon
           <Button variant="ghost" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={!canSubmit || conveneMeeting.isPending}
-          >
+          <Button onClick={handleSubmit} disabled={!canSubmit || conveneMeeting.isPending}>
             <Send className="w-4 h-4 mr-1" />
             {conveneMeeting.isPending ? 'Convocando...' : 'Convocar'}
           </Button>

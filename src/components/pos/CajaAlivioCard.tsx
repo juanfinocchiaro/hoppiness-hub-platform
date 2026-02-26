@@ -8,7 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownToLine, Vault, Receipt } from 'lucide-react';
-import { CashRegister, CashRegisterShift, CashRegisterMovement, canViewBalance, canViewMovements } from '@/hooks/useCashRegister';
+import {
+  CashRegister,
+  CashRegisterShift,
+  CashRegisterMovement,
+  canViewBalance,
+  canViewMovements,
+} from '@/hooks/useCashRegister';
 
 interface CajaAlivioCardProps {
   register: CashRegister;
@@ -21,13 +27,22 @@ interface CajaAlivioCardProps {
   expensesList?: React.ReactNode;
 }
 
-export function CajaAlivioCard({ register, shift, movements, localRole, isSuperadmin, onRetiroClick, onExpenseClick, expensesList }: CajaAlivioCardProps) {
+export function CajaAlivioCard({
+  register: _register,
+  shift,
+  movements,
+  localRole,
+  isSuperadmin,
+  onRetiroClick,
+  onExpenseClick,
+  expensesList,
+}: CajaAlivioCardProps) {
   const showBalance = canViewBalance('alivio', localRole, isSuperadmin);
   const showMovements = canViewMovements('alivio', localRole, isSuperadmin);
   const canRetire = isSuperadmin || ['franquiciado', 'contador_local'].includes(localRole ?? '');
 
-  const depositCount = movements.filter(m => m.type === 'deposit').length;
-  
+  const depositCount = movements.filter((m) => m.type === 'deposit').length;
+
   const balance = useMemo(() => {
     if (!shift) return 0;
     let amount = Number(shift.opening_amount);
@@ -44,7 +59,9 @@ export function CajaAlivioCard({ register, shift, movements, localRole, isSupera
         <CardTitle className="flex items-center gap-2 text-base">
           <ArrowDownToLine className="h-5 w-5 text-muted-foreground" />
           Caja de Alivio
-          <Badge variant="outline" className="ml-auto">Acumulador</Badge>
+          <Badge variant="outline" className="ml-auto">
+            Acumulador
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -53,9 +70,11 @@ export function CajaAlivioCard({ register, shift, movements, localRole, isSupera
             <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground">Saldo actual</p>
               <p className="text-2xl font-bold">$ {balance.toLocaleString('es-AR')}</p>
-              <p className="text-xs text-muted-foreground mt-1">{depositCount} depósito{depositCount !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {depositCount} depósito{depositCount !== 1 ? 's' : ''}
+              </p>
             </div>
-            
+
             {canRetire && balance > 0 && (
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={onRetiroClick}>
@@ -75,9 +94,10 @@ export function CajaAlivioCard({ register, shift, movements, localRole, isSupera
               <div className="pt-2 border-t">
                 <p className="text-sm font-medium mb-2">Últimos movimientos</p>
                 <ul className="text-sm space-y-1 text-muted-foreground">
-                  {movements.slice(0, 5).map(m => (
+                  {movements.slice(0, 5).map((m) => (
                     <li key={m.id}>
-                      {m.type === 'deposit' ? '+' : '-'} $ {Number(m.amount).toLocaleString('es-AR')} — {m.concept}
+                      {m.type === 'deposit' ? '+' : '-'} ${' '}
+                      {Number(m.amount).toLocaleString('es-AR')} — {m.concept}
                     </li>
                   ))}
                 </ul>
@@ -87,7 +107,9 @@ export function CajaAlivioCard({ register, shift, movements, localRole, isSupera
         ) : (
           <div className="p-4 bg-muted/50 rounded-lg text-center">
             <p className="text-3xl font-bold">{depositCount}</p>
-            <p className="text-sm text-muted-foreground mt-1">depósito{depositCount !== 1 ? 's' : ''} realizado{depositCount !== 1 ? 's' : ''}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              depósito{depositCount !== 1 ? 's' : ''} realizado{depositCount !== 1 ? 's' : ''}
+            </p>
           </div>
         )}
         {expensesList}

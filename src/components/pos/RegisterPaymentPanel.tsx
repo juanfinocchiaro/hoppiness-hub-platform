@@ -3,12 +3,7 @@
  * Reemplaza PaymentModal: permite pagos progresivos uno a uno.
  */
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,12 +14,42 @@ import { cn } from '@/lib/utils';
 import { useMercadoPagoConfig } from '@/hooks/useMercadoPagoConfig';
 import { useParams } from 'react-router-dom';
 
-const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }>; selectedStyle: string }[] = [
-  { value: 'efectivo', label: 'Efectivo', icon: Banknote, selectedStyle: 'border-emerald-500 bg-emerald-500/10 text-emerald-700' },
-  { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard, selectedStyle: 'border-blue-500 bg-blue-500/10 text-blue-700' },
-  { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard, selectedStyle: 'border-violet-500 bg-violet-500/10 text-violet-700' },
-  { value: 'mercadopago_qr', label: 'QR MP', icon: QrCode, selectedStyle: 'border-sky-500 bg-sky-500/10 text-sky-700' },
-  { value: 'transferencia', label: 'Transferencia', icon: ArrowRightLeft, selectedStyle: 'border-indigo-500 bg-indigo-500/10 text-indigo-700' },
+const METODOS: {
+  value: MetodoPago;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  selectedStyle: string;
+}[] = [
+  {
+    value: 'efectivo',
+    label: 'Efectivo',
+    icon: Banknote,
+    selectedStyle: 'border-emerald-500 bg-emerald-500/10 text-emerald-700',
+  },
+  {
+    value: 'tarjeta_debito',
+    label: 'Débito',
+    icon: CreditCard,
+    selectedStyle: 'border-blue-500 bg-blue-500/10 text-blue-700',
+  },
+  {
+    value: 'tarjeta_credito',
+    label: 'Crédito',
+    icon: CreditCard,
+    selectedStyle: 'border-violet-500 bg-violet-500/10 text-violet-700',
+  },
+  {
+    value: 'mercadopago_qr',
+    label: 'QR MP',
+    icon: QrCode,
+    selectedStyle: 'border-sky-500 bg-sky-500/10 text-sky-700',
+  },
+  {
+    value: 'transferencia',
+    label: 'Transferencia',
+    icon: ArrowRightLeft,
+    selectedStyle: 'border-indigo-500 bg-indigo-500/10 text-indigo-700',
+  },
 ];
 
 function getQuickAmounts(total: number): number[] {
@@ -51,7 +76,15 @@ interface Props {
   minDigitalRemaining?: number;
 }
 
-export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onRegister, onPointSmartPayment, minCashRemaining = 0, minDigitalRemaining = 0 }: Props) {
+export function RegisterPaymentPanel({
+  open,
+  onOpenChange,
+  saldoPendiente,
+  onRegister,
+  onPointSmartPayment,
+  minCashRemaining = 0,
+  minDigitalRemaining = 0,
+}: Props) {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: mpConfig } = useMercadoPagoConfig(branchId);
   const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
@@ -69,17 +102,22 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
   const maxNonCash = Math.max(0, saldoPendiente - minCashRemaining);
   const maxForMetodo = esEfectivo ? maxCash : maxNonCash;
 
-  const canConfirm = montoNum > 0
-    && montoNum <= saldoPendiente
-    && montoNum <= maxForMetodo
-    && (!esEfectivo || recibidoNum >= montoNum);
+  const canConfirm =
+    montoNum > 0 &&
+    montoNum <= saldoPendiente &&
+    montoNum <= maxForMetodo &&
+    (!esEfectivo || recibidoNum >= montoNum);
 
   // Sync state when dialog opens or saldoPendiente changes
   useEffect(() => {
     if (open) {
       const preferCash = maxNonCash <= 0 && maxCash > 0;
       const preferNonCash = maxCash <= 0 && maxNonCash > 0;
-      const defaultMetodo: MetodoPago = preferNonCash ? 'tarjeta_debito' : (preferCash ? 'efectivo' : 'efectivo');
+      const defaultMetodo: MetodoPago = preferNonCash
+        ? 'tarjeta_debito'
+        : preferCash
+          ? 'efectivo'
+          : 'efectivo';
       const defaultMax = defaultMetodo === 'efectivo' ? maxCash : maxNonCash;
       setMetodo(defaultMetodo);
       setMonto(String(defaultMax));
@@ -126,16 +164,30 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
           {/* Saldo pendiente */}
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Saldo pendiente</p>
-            <p className="text-2xl font-bold text-primary">$ {saldoPendiente.toLocaleString('es-AR')}</p>
+            <p className="text-2xl font-bold text-primary">
+              $ {saldoPendiente.toLocaleString('es-AR')}
+            </p>
           </div>
           {(minCashRemaining > 0 || minDigitalRemaining > 0) && (
             <div className="rounded-lg border bg-muted/10 p-3 text-xs text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground">Restricciones por promociones</p>
               {minCashRemaining > 0 && (
-                <p>Debe quedar mínimo <span className="font-bold text-green-700">$ {minCashRemaining.toLocaleString('es-AR')}</span> para pagar en <span className="font-medium">efectivo</span>.</p>
+                <p>
+                  Debe quedar mínimo{' '}
+                  <span className="font-bold text-green-700">
+                    $ {minCashRemaining.toLocaleString('es-AR')}
+                  </span>{' '}
+                  para pagar en <span className="font-medium">efectivo</span>.
+                </p>
               )}
               {minDigitalRemaining > 0 && (
-                <p>Debe quedar mínimo <span className="font-bold text-blue-700">$ {minDigitalRemaining.toLocaleString('es-AR')}</span> para pagar en <span className="font-medium">digital</span>.</p>
+                <p>
+                  Debe quedar mínimo{' '}
+                  <span className="font-bold text-blue-700">
+                    $ {minDigitalRemaining.toLocaleString('es-AR')}
+                  </span>{' '}
+                  para pagar en <span className="font-medium">digital</span>.
+                </p>
               )}
             </div>
           )}
@@ -160,8 +212,8 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
                       !allowed
                         ? 'opacity-40 cursor-not-allowed'
                         : isSelected
-                        ? m.selectedStyle
-                        : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                          ? m.selectedStyle
+                          : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -176,7 +228,9 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
           <div>
             <Label>Monto a cobrar</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                $
+              </span>
               <Input
                 type="number"
                 placeholder="0"
@@ -190,7 +244,8 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
             )}
             {montoNum > maxForMetodo && (
               <p className="text-xs text-destructive mt-1">
-                Con promociones, el máximo para este método es $ {maxForMetodo.toLocaleString('es-AR')}
+                Con promociones, el máximo para este método es ${' '}
+                {maxForMetodo.toLocaleString('es-AR')}
               </p>
             )}
           </div>
@@ -201,7 +256,9 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
               <div>
                 <Label>Monto recibido</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
                   <Input
                     type="number"
                     placeholder="0"
@@ -215,7 +272,10 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
               <div className="flex flex-wrap gap-2">
                 {[
                   { label: 'Exacto', value: montoNum },
-                  ...getQuickAmounts(montoNum).map((v) => ({ label: `$ ${v.toLocaleString('es-AR')}`, value: v })),
+                  ...getQuickAmounts(montoNum).map((v) => ({
+                    label: `$ ${v.toLocaleString('es-AR')}`,
+                    value: v,
+                  })),
                 ].map((btn) => (
                   <Button
                     key={btn.label}
@@ -247,8 +307,10 @@ export function RegisterPaymentPanel({ open, onOpenChange, saldoPendiente, onReg
               onPointSmartPayment(Math.min(saldoPendiente, maxNonCash));
             }}
             className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 transition-colors text-left",
-              maxNonCash <= 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-blue-100 hover:border-blue-400"
+              'w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 transition-colors text-left',
+              maxNonCash <= 0
+                ? 'opacity-40 cursor-not-allowed'
+                : 'hover:bg-blue-100 hover:border-blue-400',
             )}
           >
             <Smartphone className="h-8 w-8 text-blue-600 shrink-0" />

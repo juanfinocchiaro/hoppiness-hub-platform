@@ -1,16 +1,16 @@
 /**
  * HolidaysManager - CRUD for global holidays
- * 
+ *
  * Features:
  * - View holidays for current and next month
  * - Add individual holidays
  * - Import Argentina's national holidays
  * - Delete holidays
- * 
+ *
  * Permissions: Only superadmin/coordinador can manage
  */
 import { useState } from 'react';
-import { format, addMonths, startOfMonth, parse } from 'date-fns';
+import { format, addMonths, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { CalendarDays, Plus, Trash2, Download, Info, CalendarCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useHolidays, useCreateHoliday, useDeleteHoliday, useCreateHolidaysBulk, getArgentinaHolidays } from '@/hooks/useHolidays';
+import {
+  useHolidays,
+  useCreateHoliday,
+  useDeleteHoliday,
+  useCreateHolidaysBulk,
+  getArgentinaHolidays,
+} from '@/hooks/useHolidays';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 
 interface HolidaysManagerProps {
@@ -34,34 +58,40 @@ interface HolidaysManagerProps {
 export default function HolidaysManager({ className }: HolidaysManagerProps) {
   const { isSuperadmin, isCoordinador } = useDynamicPermissions();
   const canManage = isSuperadmin || isCoordinador;
-  
+
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
-  
+
   const nextMonth = addMonths(now, 1);
   const nextMonthNum = nextMonth.getMonth() + 1;
   const nextMonthYear = nextMonth.getFullYear();
-  
+
   // Fetch holidays for current and next month
-  const { data: currentHolidays = [], isLoading: loadingCurrent } = useHolidays(currentMonth, currentYear);
-  const { data: nextHolidays = [], isLoading: loadingNext } = useHolidays(nextMonthNum, nextMonthYear);
-  
+  const { data: currentHolidays = [], isLoading: loadingCurrent } = useHolidays(
+    currentMonth,
+    currentYear,
+  );
+  const { data: nextHolidays = [], isLoading: loadingNext } = useHolidays(
+    nextMonthNum,
+    nextMonthYear,
+  );
+
   const createHoliday = useCreateHoliday();
   const deleteHoliday = useDeleteHoliday();
   const createBulk = useCreateHolidaysBulk();
-  
+
   // Add holiday dialog state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [description, setDescription] = useState('');
-  
+
   const handleAddHoliday = async () => {
     if (!selectedDate || !description.trim()) {
       toast.error('Completá la fecha y descripción');
       return;
     }
-    
+
     try {
       await createHoliday.mutateAsync({
         day_date: format(selectedDate, 'yyyy-MM-dd'),
@@ -75,7 +105,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
       toast.error(e.message || 'Error al agregar feriado');
     }
   };
-  
+
   const handleDeleteHoliday = async (id: string) => {
     try {
       await deleteHoliday.mutateAsync(id);
@@ -84,7 +114,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
       toast.error(e.message || 'Error al eliminar');
     }
   };
-  
+
   const handleImportHolidays = async () => {
     const holidays = getArgentinaHolidays(currentYear);
     try {
@@ -94,14 +124,14 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
       toast.error(e.message || 'Error al importar');
     }
   };
-  
+
   const formatMonthName = (month: number, year: number) => {
     return format(new Date(year, month - 1, 1), 'MMMM yyyy', { locale: es });
   };
-  
+
   const renderHolidayCard = (holiday: { id: string; day_date: string; description: string }) => {
     const date = parse(holiday.day_date, 'yyyy-MM-dd', new Date());
-    
+
     return (
       <div
         key={holiday.id}
@@ -112,22 +142,22 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
             <span className="text-xs font-medium text-primary">
               {format(date, 'MMM', { locale: es }).toUpperCase()}
             </span>
-            <span className="text-lg font-bold text-primary">
-              {format(date, 'd')}
-            </span>
+            <span className="text-lg font-bold text-primary">{format(date, 'd')}</span>
           </div>
           <div>
             <p className="font-medium">{holiday.description}</p>
-            <p className="text-xs text-muted-foreground">
-              {format(date, 'EEEE', { locale: es })}
-            </p>
+            <p className="text-xs text-muted-foreground">{format(date, 'EEEE', { locale: es })}</p>
           </div>
         </div>
-        
+
         {canManage && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive"
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </AlertDialogTrigger>
@@ -135,7 +165,8 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Eliminar feriado?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Se eliminará "{holiday.description}" del {format(date, 'd \'de\' MMMM', { locale: es })}.
+                  Se eliminará "{holiday.description}" del{' '}
+                  {format(date, "d 'de' MMMM", { locale: es })}.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -150,20 +181,19 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
       </div>
     );
   };
-  
+
   const renderMonthSection = (
     monthName: string,
     holidays: typeof currentHolidays,
-    loading: boolean
+    loading: boolean,
   ) => (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg capitalize">{monthName}</CardTitle>
         <CardDescription>
-          {holidays.length === 0 
+          {holidays.length === 0
             ? 'Sin feriados configurados'
-            : `${holidays.length} feriado${holidays.length > 1 ? 's' : ''}`
-          }
+            : `${holidays.length} feriado${holidays.length > 1 ? 's' : ''}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -177,14 +207,12 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
             <p className="text-sm">No hay feriados</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {holidays.map(renderHolidayCard)}
-          </div>
+          <div className="space-y-2">{holidays.map(renderHolidayCard)}</div>
         )}
       </CardContent>
     </Card>
   );
-  
+
   return (
     <div className={cn('space-y-6', className)}>
       {/* Header */}
@@ -195,7 +223,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
             Los feriados son globales para todas las sucursales
           </Badge>
         </div>
-        
+
         {canManage && (
           <div className="flex gap-2">
             {/* Import Argentina holidays */}
@@ -210,22 +238,19 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Importar feriados de Argentina</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Se importarán los feriados nacionales oficiales de Argentina para el año {currentYear}.
-                    Si ya existen, no se duplicarán.
+                    Se importarán los feriados nacionales oficiales de Argentina para el año{' '}
+                    {currentYear}. Si ya existen, no se duplicarán.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleImportHolidays}
-                    disabled={createBulk.isPending}
-                  >
+                  <AlertDialogAction onClick={handleImportHolidays} disabled={createBulk.isPending}>
                     {createBulk.isPending ? 'Importando...' : 'Importar'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            
+
             {/* Add individual holiday */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
@@ -241,7 +266,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
                     Este feriado aplicará a todas las sucursales.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label>Fecha</Label>
@@ -251,14 +276,13 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
                           variant="outline"
                           className={cn(
                             'w-full justify-start text-left font-normal',
-                            !selectedDate && 'text-muted-foreground'
+                            !selectedDate && 'text-muted-foreground',
                           )}
                         >
                           <CalendarDays className="mr-2 h-4 w-4" />
-                          {selectedDate 
-                            ? format(selectedDate, 'd \'de\' MMMM yyyy', { locale: es })
-                            : 'Seleccionar fecha'
-                          }
+                          {selectedDate
+                            ? format(selectedDate, "d 'de' MMMM yyyy", { locale: es })
+                            : 'Seleccionar fecha'}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -272,7 +296,7 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label>Descripción</Label>
                     <Input
@@ -282,12 +306,12 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
                     />
                   </div>
                 </div>
-                
+
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsAddOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleAddHoliday}
                     disabled={createHoliday.isPending || !selectedDate || !description.trim()}
                   >
@@ -299,18 +323,18 @@ export default function HolidaysManager({ className }: HolidaysManagerProps) {
           </div>
         )}
       </div>
-      
+
       {/* Month cards */}
       <div className="grid md:grid-cols-2 gap-6">
         {renderMonthSection(
           formatMonthName(currentMonth, currentYear),
           currentHolidays,
-          loadingCurrent
+          loadingCurrent,
         )}
         {renderMonthSection(
           formatMonthName(nextMonthNum, nextMonthYear),
           nextHolidays,
-          loadingNext
+          loadingNext,
         )}
       </div>
     </div>

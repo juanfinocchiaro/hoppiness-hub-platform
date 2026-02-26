@@ -10,7 +10,21 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Store, Utensils, Bike, ShoppingCart, Hash, ChevronRight, Pencil, FileText, ChevronDown, Loader2, CheckCircle2, XCircle, User } from 'lucide-react';
+import {
+  Store,
+  Utensils,
+  Bike,
+  ShoppingCart,
+  Hash,
+  ChevronRight,
+  Pencil,
+  FileText,
+  ChevronDown,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  User,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AddressAutocomplete, type AddressResult } from '@/components/webapp/AddressAutocomplete';
 import { useCalculateDelivery } from '@/hooks/useDeliveryConfig';
@@ -43,8 +57,16 @@ const TIPO_FACTURA_OPTS: { value: TipoFactura; label: string; short: string }[] 
 ];
 
 const CANAL_LABELS: Record<CanalVenta, string> = { mostrador: 'Mostrador', apps: 'Apps' };
-const TIPO_LABELS: Record<TipoServicio, string> = { takeaway: 'Para llevar', comer_aca: 'Comer acá', delivery: 'Delivery' };
-const APP_LABELS: Record<CanalApp, string> = { rappi: 'Rappi', pedidos_ya: 'PedidosYa', mp_delivery: 'MP Delivery' };
+const TIPO_LABELS: Record<TipoServicio, string> = {
+  takeaway: 'Para llevar',
+  comer_aca: 'Comer acá',
+  delivery: 'Delivery',
+};
+const APP_LABELS: Record<CanalApp, string> = {
+  rappi: 'Rappi',
+  pedidos_ya: 'PedidosYa',
+  mp_delivery: 'MP Delivery',
+};
 
 const APP_REF_DIGITS: Record<CanalApp, { maxLength: number; placeholder: string } | null> = {
   rappi: { maxLength: 6, placeholder: '6 dígitos' },
@@ -105,9 +127,7 @@ function ConfigSummaryLine({ config }: { config: OrderConfig }) {
         ))}
       </span>
       {details.length > 0 && (
-        <span className="text-xs text-muted-foreground truncate">
-          {details.join(' · ')}
-        </span>
+        <span className="text-xs text-muted-foreground truncate">{details.join(' · ')}</span>
       )}
     </div>
   );
@@ -173,20 +193,27 @@ export function ConfigForm({
   useEffect(() => {
     if (!deliveryAddress || !branchId) return;
     setCalcLoading(true);
-    calculateDelivery.mutateAsync({
-      branch_id: branchId,
-      customer_lat: deliveryAddress.lat,
-      customer_lng: deliveryAddress.lng,
-      neighborhood_name: deliveryAddress.neighborhood_name,
-    }).then((result) => {
-      setDeliveryCalc(result);
-      onChange({ ...config, costoDelivery: result.available && result.cost != null ? result.cost : 0 });
-    }).catch(() => {
-      setDeliveryCalc(null);
-    }).finally(() => {
-      setCalcLoading(false);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    calculateDelivery
+      .mutateAsync({
+        branch_id: branchId,
+        customer_lat: deliveryAddress.lat,
+        customer_lng: deliveryAddress.lng,
+        neighborhood_name: deliveryAddress.neighborhood_name,
+      })
+      .then((result) => {
+        setDeliveryCalc(result);
+        onChange({
+          ...config,
+          costoDelivery: result.available && result.cost != null ? result.cost : 0,
+        });
+      })
+      .catch(() => {
+        setDeliveryCalc(null);
+      })
+      .finally(() => {
+        setCalcLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryAddress, branchId]);
 
   // Reset delivery state when switching away from delivery
@@ -199,7 +226,11 @@ export function ConfigForm({
 
   // ── Phone-based customer lookup ────────────────────────────────────────────
   const debouncedPhone = useDebounce(config.clienteTelefono, 600);
-  const [profileSuggestion, setProfileSuggestion] = useState<{ id: string; full_name: string; phone: string } | null>(null);
+  const [profileSuggestion, setProfileSuggestion] = useState<{
+    id: string;
+    full_name: string;
+    phone: string;
+  } | null>(null);
   const [lookingUpPhone, setLookingUpPhone] = useState(false);
 
   useEffect(() => {
@@ -219,7 +250,10 @@ export function ConfigForm({
       .then(({ data }) => {
         setProfileSuggestion(data ?? null);
       })
-      .then(() => {}, () => setProfileSuggestion(null))
+      .then(
+        () => {},
+        () => setProfileSuggestion(null),
+      )
       .then(() => setLookingUpPhone(false));
   }, [debouncedPhone]);
 
@@ -335,11 +369,16 @@ export function ConfigForm({
                 <Label className="text-xs text-muted-foreground">Nombre (opcional)</Label>
                 <Input
                   placeholder="Nombre del cliente"
-                  value={config.clienteNombre?.startsWith('Llamador #') ? '' : (config.clienteNombre ?? '')}
+                  value={
+                    config.clienteNombre?.startsWith('Llamador #')
+                      ? ''
+                      : (config.clienteNombre ?? '')
+                  }
                   onChange={(e) => {
                     const v = e.target.value;
                     set({
-                      clienteNombre: v || (config.numeroLlamador ? `Llamador #${config.numeroLlamador}` : ''),
+                      clienteNombre:
+                        v || (config.numeroLlamador ? `Llamador #${config.numeroLlamador}` : ''),
                     });
                   }}
                   className="h-9 mt-1"
@@ -372,7 +411,10 @@ export function ConfigForm({
                   <button
                     type="button"
                     onClick={() => {
-                      set({ clienteNombre: profileSuggestion.full_name, clienteUserId: profileSuggestion.id });
+                      set({
+                        clienteNombre: profileSuggestion.full_name,
+                        clienteUserId: profileSuggestion.id,
+                      });
                       setProfileSuggestion(null);
                     }}
                     className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline"
@@ -426,7 +468,9 @@ export function ConfigForm({
                 <div className="flex items-center gap-1.5 text-xs text-emerald-600">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   En zona · Envío ${(deliveryCalc.cost ?? 0).toLocaleString('es-AR')}
-                  {deliveryCalc.estimated_delivery_min ? ` · ~${deliveryCalc.estimated_delivery_min} min` : ''}
+                  {deliveryCalc.estimated_delivery_min
+                    ? ` · ~${deliveryCalc.estimated_delivery_min} min`
+                    : ''}
                 </div>
               )}
               {!calcLoading && deliveryCalc && !deliveryCalc.available && (
@@ -436,14 +480,13 @@ export function ConfigForm({
                   {deliveryCalc.reason === 'blocked_zone' && 'Zona bloqueada por seguridad'}
                   {deliveryCalc.reason === 'delivery_disabled' && 'Delivery no disponible ahora'}
                   {deliveryCalc.reason === 'outside_hours' && 'Fuera del horario de delivery'}
-                  {deliveryCalc.reason === 'assigned_other_branch' && 'Zona asignada a otra sucursal'}
+                  {deliveryCalc.reason === 'assigned_other_branch' &&
+                    'Zona asignada a otra sucursal'}
                   {!deliveryCalc.reason && 'No se puede hacer delivery a esta dirección'}
                 </div>
               )}
             </div>
           )}
-
-
         </>
       )}
 
@@ -453,21 +496,31 @@ export function ConfigForm({
             <Label className="text-xs">Plataforma</Label>
             <div className="flex gap-2 flex-wrap">
               {CANAL_APP_OPTS.map((opt) => (
-                <Button key={opt.value} type="button" variant={config.canalApp === opt.value ? 'default' : 'outline'} size="sm" onClick={() => set({ canalApp: opt.value })}>
+                <Button
+                  key={opt.value}
+                  type="button"
+                  variant={config.canalApp === opt.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => set({ canalApp: opt.value })}
+                >
                   {opt.label}
                 </Button>
               ))}
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="text-xs flex items-center gap-1"><Hash className="w-3.5 h-3.5" /> Referencia del pedido</Label>
+            <Label className="text-xs flex items-center gap-1">
+              <Hash className="w-3.5 h-3.5" /> Referencia del pedido
+            </Label>
             {APP_REF_DIGITS[config.canalApp] ? (
               <div className="flex gap-2">
                 <Input
                   placeholder={APP_REF_DIGITS[config.canalApp]!.placeholder}
                   value={refDigits}
                   onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, '').slice(0, APP_REF_DIGITS[config.canalApp]!.maxLength);
+                    const v = e.target.value
+                      .replace(/\D/g, '')
+                      .slice(0, APP_REF_DIGITS[config.canalApp]!.maxLength);
                     updateRef(v, refName);
                   }}
                   className="h-9 w-28 shrink-0"
@@ -501,8 +554,6 @@ export function ConfigForm({
               className="h-9"
             />
           </div>
-
-
         </>
       )}
 
@@ -521,9 +572,11 @@ export function ConfigForm({
                 variant={config.tipoFactura === opt.value ? 'default' : 'outline'}
                 size="sm"
                 className="flex-1 min-w-0"
-                onClick={() => set({
-                  tipoFactura: opt.value,
-                })}
+                onClick={() =>
+                  set({
+                    tipoFactura: opt.value,
+                  })
+                }
               >
                 {opt.label}
               </Button>
@@ -566,8 +619,14 @@ export function ConfigForm({
           {config.tipoFactura === 'B' && (
             <Collapsible open={receptorOpen} onOpenChange={setReceptorOpen}>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="mt-1 gap-1.5 text-xs text-muted-foreground w-full justify-start">
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${receptorOpen ? '' : '-rotate-90'}`} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-1 gap-1.5 text-xs text-muted-foreground w-full justify-start"
+                >
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${receptorOpen ? '' : '-rotate-90'}`}
+                  />
                   Datos del receptor (opcional)
                 </Button>
               </CollapsibleTrigger>

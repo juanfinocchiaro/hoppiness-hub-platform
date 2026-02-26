@@ -1,18 +1,30 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Calendar, Info, Briefcase } from 'lucide-react';
-import type { EmployeeData, LOCAL_ROLE_LABELS } from './types';
-import type { LocalRole } from '@/hooks/usePermissionsV2';
+import type { EmployeeData } from './types';
+import type { LocalRole } from '@/hooks/usePermissions';
 import type { WorkPositionType } from '@/types/workPosition';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 
@@ -35,29 +47,39 @@ interface EmployeeDataModalProps {
   onSuccess: () => void;
 }
 
-export function EmployeeDataModal({ userId, branchId, existingData, currentRole, roleId, currentDefaultPosition, open, onOpenChange, onSuccess }: EmployeeDataModalProps) {
+export function EmployeeDataModal({
+  userId,
+  branchId,
+  existingData,
+  currentRole,
+  roleId,
+  currentDefaultPosition,
+  open,
+  onOpenChange,
+  onSuccess,
+}: EmployeeDataModalProps) {
   const queryClient = useQueryClient();
   const { data: workPositions = [] } = useWorkPositions();
-  
+
   // Personal data
   const [dni, setDni] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [personalAddress, setPersonalAddress] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
-  
+
   // Banking data
   const [bankName, setBankName] = useState('');
   const [cbu, setCbu] = useState('');
   const [alias, setAlias] = useState('');
   const [cuil, setCuil] = useState('');
-  
+
   // Labor data
   const [selectedRole, setSelectedRole] = useState<LocalRole>(currentRole);
   const [hireDate, setHireDate] = useState('');
   const [defaultPosition, setDefaultPosition] = useState<string>(currentDefaultPosition || '');
   const [registeredHours, setRegisteredHours] = useState<string>('');
-  
+
   useEffect(() => {
     setDni(existingData?.dni || '');
     setBirthDate(existingData?.birth_date || '');
@@ -69,7 +91,9 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
     setAlias(existingData?.alias || '');
     setCuil(existingData?.cuil || '');
     setHireDate(existingData?.hire_date || '');
-    setRegisteredHours(existingData?.registered_hours != null ? String(existingData.registered_hours) : '');
+    setRegisteredHours(
+      existingData?.registered_hours != null ? String(existingData.registered_hours) : '',
+    );
   }, [existingData, userId, branchId]);
 
   useEffect(() => {
@@ -103,9 +127,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
           .eq('id', existingData.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('employee_data')
-          .insert(data);
+        const { error } = await supabase.from('employee_data').insert(data);
         if (error) throw error;
       }
 
@@ -136,7 +158,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       // Detectar errores de permisos RLS
       if (errorMessage.includes('row-level security') || errorMessage.includes('policy')) {
         toast.error('No tenés permisos para editar estos datos. Contactá al administrador.');
@@ -166,7 +188,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>DNI</Label>
-                <Input 
+                <Input
                   value={dni}
                   onChange={(e) => setDni(e.target.value)}
                   placeholder="12.345.678"
@@ -174,7 +196,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
               </div>
               <div className="space-y-2">
                 <Label>Fecha de nacimiento</Label>
-                <Input 
+                <Input
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
@@ -183,7 +205,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             </div>
             <div className="space-y-2">
               <Label>Dirección</Label>
-              <Input 
+              <Input
                 value={personalAddress}
                 onChange={(e) => setPersonalAddress(e.target.value)}
                 placeholder="Calle 123, Ciudad"
@@ -192,7 +214,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Contacto de emergencia</Label>
-                <Input 
+                <Input
                   value={emergencyContact}
                   onChange={(e) => setEmergencyContact(e.target.value)}
                   placeholder="Nombre"
@@ -200,7 +222,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
               </div>
               <div className="space-y-2">
                 <Label>Teléfono emergencia</Label>
-                <Input 
+                <Input
                   value={emergencyPhone}
                   onChange={(e) => setEmergencyPhone(e.target.value)}
                   placeholder="+54 351 ..."
@@ -212,7 +234,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
           <TabsContent value="banking" className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Banco</Label>
-              <Input 
+              <Input
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
                 placeholder="Banco Galicia"
@@ -220,7 +242,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             </div>
             <div className="space-y-2">
               <Label>CBU</Label>
-              <Input 
+              <Input
                 value={cbu}
                 onChange={(e) => setCbu(e.target.value)}
                 placeholder="0070055530004..."
@@ -229,7 +251,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Alias</Label>
-                <Input 
+                <Input
                   value={alias}
                   onChange={(e) => setAlias(e.target.value)}
                   placeholder="NOMBRE.APELLIDO.BANCO"
@@ -237,7 +259,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
               </div>
               <div className="space-y-2">
                 <Label>CUIL</Label>
-                <Input 
+                <Input
                   value={cuil}
                   onChange={(e) => setCuil(e.target.value)}
                   placeholder="20-12345678-9"
@@ -251,10 +273,7 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
             {currentRole !== 'franquiciado' && (
               <div className="space-y-2">
                 <Label>Rol en el local</Label>
-                <Select
-                  value={selectedRole}
-                  onValueChange={(v) => setSelectedRole(v as LocalRole)}
-                >
+                <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as LocalRole)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -307,15 +326,14 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
                 <Calendar className="h-4 w-4" />
                 Fecha de ingreso al trabajo
               </Label>
-              <Input 
-                type="date"
-                value={hireDate}
-                onChange={(e) => setHireDate(e.target.value)}
-              />
+              <Input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
               <p className="text-xs text-muted-foreground">
                 Fecha real en que el colaborador comenzó a trabajar en la empresa.
                 <br />
-                <span className="text-primary">Puede ser anterior al registro en el sistema</span> (para empleados antiguos).
+                <span className="text-primary">
+                  Puede ser anterior al registro en el sistema
+                </span>{' '}
+                (para empleados antiguos).
               </p>
             </div>
 
@@ -341,7 +359,8 @@ export function EmployeeDataModal({ userId, branchId, existingData, currentRole,
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Cantidad de horas mensuales declaradas formalmente. Dato informativo para liquidación.
+                Cantidad de horas mensuales declaradas formalmente. Dato informativo para
+                liquidación.
               </p>
             </div>
 

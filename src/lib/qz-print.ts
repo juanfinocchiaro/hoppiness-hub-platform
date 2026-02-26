@@ -54,7 +54,7 @@ export function isQZConnected(): boolean {
 export async function printRaw(
   ip: string,
   port: number,
-  data: Uint8Array | number[]
+  data: Uint8Array | number[],
 ): Promise<void> {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   const base64 = btoa(String.fromCharCode(...bytes));
@@ -64,11 +64,7 @@ export async function printRaw(
 /**
  * Envía datos en base64 directamente.
  */
-export async function printRawBase64(
-  ip: string,
-  port: number,
-  dataBase64: string
-): Promise<void> {
+export async function printRawBase64(ip: string, port: number, dataBase64: string): Promise<void> {
   let res: Response;
   try {
     res = await fetch(`${PRINT_BRIDGE_URL}/print`, {
@@ -81,7 +77,7 @@ export async function printRawBase64(
     throw new Error(
       err instanceof Error
         ? `Print Bridge no disponible: ${err.message}`
-        : 'Print Bridge no disponible'
+        : 'Print Bridge no disponible',
     );
   }
 
@@ -103,7 +99,7 @@ export async function printRawBase64(
 export async function testPrinterConnection(
   ip: string,
   port: number,
-  _timeoutMs = 5000
+  _timeoutMs = 5000,
 ): Promise<{ reachable: boolean; latencyMs?: number; error?: string }> {
   try {
     const res = await fetch(`${PRINT_BRIDGE_URL}/test`, {

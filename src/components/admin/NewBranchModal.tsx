@@ -76,9 +76,7 @@ export default function NewBranchModal({ open, onOpenChange, onCreated }: NewBra
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nueva Sucursal</DialogTitle>
-          <DialogDescription>
-            Creá una nueva sucursal con los datos básicos
-          </DialogDescription>
+          <DialogDescription>Creá una nueva sucursal con los datos básicos</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -115,8 +113,8 @@ export default function NewBranchModal({ open, onOpenChange, onCreated }: NewBra
           <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
             <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
             <p>
-              Después de crear, hacé click en la sucursal para completar: 
-              horarios, equipo, datos fiscales.
+              Después de crear, hacé click en la sucursal para completar: horarios, equipo, datos
+              fiscales.
             </p>
           </div>
         </div>

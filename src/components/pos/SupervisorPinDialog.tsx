@@ -125,9 +125,7 @@ export function SupervisorPinDialog({
               <p className="text-lg font-medium text-green-700 dark:text-green-400">
                 Autorizado por {success.fullName}
               </p>
-              {success.role && (
-                <p className="text-sm text-muted-foreground">({success.role})</p>
-              )}
+              {success.role && <p className="text-sm text-muted-foreground">({success.role})</p>}
             </div>
           ) : (
             <>
@@ -159,7 +157,11 @@ export function SupervisorPinDialog({
               )}
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isValidating}>
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isValidating}
+                >
                   Cancelar
                 </Button>
                 <Button

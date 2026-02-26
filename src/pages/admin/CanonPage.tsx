@@ -1,11 +1,32 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Landmark, CheckCircle, ChevronDown, ChevronRight, AlertCircle, Clock, Store } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Landmark,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  AlertCircle,
+  Clock,
+  Store,
+} from 'lucide-react';
 import { useCanonLiquidaciones, usePagosCanonFromProveedores } from '@/hooks/useCanonLiquidaciones';
 import { VerificarPagoModal } from '@/components/finanzas/VerificarPagoModal';
 import { EmptyState } from '@/components/ui/states';
@@ -17,13 +38,27 @@ function formatLocalDate(dateStr: string) {
 
 function formatPeriodo(p: string) {
   const [y, m] = p.split('-');
-  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const meses = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
+  ];
   return `${meses[parseInt(m) - 1]} ${y}`;
 }
 
 function estadoBadge(estado: string | null) {
   if (estado === 'pagado') return <Badge variant="default">Pagado</Badge>;
-  if (estado === 'parcial' || estado === 'pagado_parcial') return <Badge variant="secondary">Parcial</Badge>;
+  if (estado === 'parcial' || estado === 'pagado_parcial')
+    return <Badge variant="secondary">Parcial</Badge>;
   return <Badge variant="destructive">Pendiente</Badge>;
 }
 
@@ -31,12 +66,18 @@ function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: str
   const { data: pagos, isLoading } = usePagosCanonFromProveedores(branchId, periodo);
   const [verificando, setVerificando] = useState<any>(null);
 
-  if (isLoading) return <div className="p-2"><Skeleton className="h-5 w-full" /></div>;
-  if (!pagos?.length) return (
-    <p className="text-sm text-muted-foreground p-3 text-center">
-      El local aún no registró pagos para esta liquidación
-    </p>
-  );
+  if (isLoading)
+    return (
+      <div className="p-2">
+        <Skeleton className="h-5 w-full" />
+      </div>
+    );
+  if (!pagos?.length)
+    return (
+      <p className="text-sm text-muted-foreground p-3 text-center">
+        El local aún no registró pagos para esta liquidación
+      </p>
+    );
 
   const pendientes = pagos.filter((p: any) => !p.verificado);
   const verificados = pagos.filter((p: any) => p.verificado);
@@ -49,12 +90,21 @@ function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: str
             <AlertCircle className="w-3 h-3" /> Pendientes de verificación ({pendientes.length})
           </p>
           {pendientes.map((p: any) => (
-            <div key={p.id} className="flex items-center justify-between text-sm border rounded-lg p-3 border-amber-200 bg-amber-50">
+            <div
+              key={p.id}
+              className="flex items-center justify-between text-sm border rounded-lg p-3 border-amber-200 bg-amber-50"
+            >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                <span className="font-mono font-semibold">$ {Number(p.monto).toLocaleString('es-AR')}</span>
+                <span className="font-mono font-semibold">
+                  $ {Number(p.monto).toLocaleString('es-AR')}
+                </span>
                 <span className="text-muted-foreground">{formatLocalDate(p.fecha_pago)}</span>
-                <Badge variant="outline" className="w-fit">{p.medio_pago}</Badge>
-                {p.referencia && <span className="text-xs text-muted-foreground">Ref: {p.referencia}</span>}
+                <Badge variant="outline" className="w-fit">
+                  {p.medio_pago}
+                </Badge>
+                {p.referencia && (
+                  <span className="text-xs text-muted-foreground">Ref: {p.referencia}</span>
+                )}
               </div>
               <Button size="sm" onClick={() => setVerificando(p)} className="shrink-0">
                 Verificar
@@ -69,7 +119,10 @@ function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: str
             <CheckCircle className="w-3 h-3" /> Verificados ({verificados.length})
           </p>
           {verificados.map((p: any) => (
-            <div key={p.id} className="flex items-center justify-between text-sm border rounded p-2 opacity-70">
+            <div
+              key={p.id}
+              className="flex items-center justify-between text-sm border rounded p-2 opacity-70"
+            >
               <div className="flex items-center gap-3">
                 <span className="font-mono">$ {Number(p.monto).toLocaleString('es-AR')}</span>
                 <span className="text-muted-foreground">{formatLocalDate(p.fecha_pago)}</span>
@@ -108,12 +161,14 @@ export default function CanonPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
 
-  const filtered = useMemo(() => 
-    liquidaciones?.filter((row: any) => {
-      if (filtroEstado === 'todos') return true;
-      return row.estado === filtroEstado;
-    }) ?? [],
-  [liquidaciones, filtroEstado]);
+  const filtered = useMemo(
+    () =>
+      liquidaciones?.filter((row: any) => {
+        if (filtroEstado === 'todos') return true;
+        return row.estado === filtroEstado;
+      }) ?? [],
+    [liquidaciones, filtroEstado],
+  );
 
   const branchGroups = useMemo<BranchGroup[]>(() => {
     const map = new Map<string, BranchGroup>();
@@ -152,13 +207,18 @@ export default function CanonPage() {
         {totalPendientes > 0 && (
           <div className="flex items-center gap-2 p-3 rounded-lg border text-sm bg-amber-50 border-amber-200 text-amber-800 flex-1 min-w-[200px]">
             <Clock className="w-4 h-4 shrink-0" />
-            <span><strong>{totalPendientes}</strong> liquidaciones pendientes</span>
+            <span>
+              <strong>{totalPendientes}</strong> liquidaciones pendientes
+            </span>
           </div>
         )}
         {totalSaldoGlobal > 0 && (
           <div className="flex items-center gap-2 p-3 rounded-lg border text-sm bg-destructive/10 border-destructive/20 text-destructive flex-1 min-w-[200px]">
             <Landmark className="w-4 h-4 shrink-0" />
-            <span>Saldo total pendiente: <strong className="font-mono">$ {totalSaldoGlobal.toLocaleString('es-AR')}</strong></span>
+            <span>
+              Saldo total pendiente:{' '}
+              <strong className="font-mono">$ {totalSaldoGlobal.toLocaleString('es-AR')}</strong>
+            </span>
           </div>
         )}
       </div>
@@ -182,11 +242,17 @@ export default function CanonPage() {
 
       {isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
         </div>
       ) : !branchGroups.length ? (
         <div className="border rounded-lg p-8">
-          <EmptyState icon={Landmark} title="Sin liquidaciones" description="Las liquidaciones se generan automáticamente al cargar ventas mensuales" />
+          <EmptyState
+            icon={Landmark}
+            title="Sin liquidaciones"
+            description="Las liquidaciones se generan automáticamente al cargar ventas mensuales"
+          />
         </div>
       ) : (
         <div className="space-y-3">
@@ -200,21 +266,37 @@ export default function CanonPage() {
                   onClick={() => setExpandedBranch(isOpen ? null : group.branchId)}
                 >
                   <div className="flex items-center gap-3">
-                    {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                    {isOpen ? (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    )}
                     <Store className="w-5 h-5 text-primary" />
                     <span className="font-semibold text-foreground">{group.branchName}</span>
-                    <Badge variant="outline" className="ml-1">{group.liquidaciones.length} liq.</Badge>
-                    {group.hasPendientes && <Badge variant="destructive" className="text-xs">Pendiente</Badge>}
+                    <Badge variant="outline" className="ml-1">
+                      {group.liquidaciones.length} liq.
+                    </Badge>
+                    {group.hasPendientes && (
+                      <Badge variant="destructive" className="text-xs">
+                        Pendiente
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-6 text-sm">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Total Canon</p>
-                      <p className="font-mono font-semibold">$ {group.totalCanon.toLocaleString('es-AR')}</p>
+                      <p className="font-mono font-semibold">
+                        $ {group.totalCanon.toLocaleString('es-AR')}
+                      </p>
                     </div>
                     <div className="text-right min-w-[120px]">
                       <p className="text-xs text-muted-foreground">Saldo</p>
-                      <p className={`font-mono font-semibold ${group.totalSaldo > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                        {group.totalSaldo > 0 ? `$ ${group.totalSaldo.toLocaleString('es-AR')}` : '$ 0'}
+                      <p
+                        className={`font-mono font-semibold ${group.totalSaldo > 0 ? 'text-destructive' : 'text-green-600'}`}
+                      >
+                        {group.totalSaldo > 0
+                          ? `$ ${group.totalSaldo.toLocaleString('es-AR')}`
+                          : '$ 0'}
                       </p>
                     </div>
                   </div>
@@ -244,21 +326,35 @@ export default function CanonPage() {
                               onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
                             >
                               <TableCell>
-                                {expandedRow === row.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                {expandedRow === row.id ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
+                                )}
                               </TableCell>
-                              <TableCell className="font-medium">{formatPeriodo(row.periodo)}</TableCell>
+                              <TableCell className="font-medium">
+                                {formatPeriodo(row.periodo)}
+                              </TableCell>
                               <TableCell className="text-right font-mono">
                                 $ {Number(row.canon_monto).toLocaleString('es-AR')}
-                                <span className="text-xs text-muted-foreground ml-1">({row.canon_porcentaje}%)</span>
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({row.canon_porcentaje}%)
+                                </span>
                               </TableCell>
                               <TableCell className="text-right font-mono">
                                 $ {Number(row.marketing_monto).toLocaleString('es-AR')}
-                                <span className="text-xs text-muted-foreground ml-1">({row.marketing_porcentaje}%)</span>
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({row.marketing_porcentaje}%)
+                                </span>
                               </TableCell>
-                              <TableCell className="text-right font-mono font-semibold">$ {Number(row.total_canon).toLocaleString('es-AR')}</TableCell>
+                              <TableCell className="text-right font-mono font-semibold">
+                                $ {Number(row.total_canon).toLocaleString('es-AR')}
+                              </TableCell>
                               <TableCell>{estadoBadge(row.estado)}</TableCell>
                               <TableCell className="text-right font-mono text-destructive">
-                                {Number(row.saldo_pendiente) > 0 ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}` : '-'}
+                                {Number(row.saldo_pendiente) > 0
+                                  ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}`
+                                  : '-'}
                               </TableCell>
                             </TableRow>
                             {expandedRow === row.id && (

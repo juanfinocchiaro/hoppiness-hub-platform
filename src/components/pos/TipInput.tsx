@@ -16,7 +16,7 @@ const QUICK_PERCENT = [10, 15, 20];
 
 export function TipInput({ value, onChange, orderTotal, disabled }: TipInputProps) {
   const handlePercent = (pct: number) => {
-    const amount = Math.round((orderTotal * pct) / 100 * 100) / 100;
+    const amount = Math.round(((orderTotal * pct) / 100) * 100) / 100;
     onChange(amount);
   };
 

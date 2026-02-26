@@ -102,9 +102,7 @@ export function OperatorVerificationDialog({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold text-lg">
-                    {currentOperator?.fullName || 'Usuario'}
-                  </p>
+                  <p className="font-semibold text-lg">{currentOperator?.fullName || 'Usuario'}</p>
                 </div>
 
                 <Button onClick={handleConfirmIdentity} className="w-full mt-2">

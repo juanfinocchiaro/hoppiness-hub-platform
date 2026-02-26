@@ -46,7 +46,7 @@ export function RegisterOpenModal({
   const [openingAmount, setOpeningAmount] = useState('');
   const [isOpening, setIsOpening] = useState(false);
 
-  const registers = (registersData?.active ?? []).filter(r => r.register_type === 'ventas');
+  const registers = (registersData?.active ?? []).filter((r) => r.register_type === 'ventas');
 
   useEffect(() => {
     if (open && registers.length > 0 && !selectedRegister) {
@@ -109,7 +109,9 @@ export function RegisterOpenModal({
             <div className="space-y-2">
               <Label>Efectivo inicial</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
                 <Input
                   type="number"
                   placeholder="0"

@@ -1,6 +1,6 @@
 /**
  * CuentaHome - Dashboard simplificado de Mi Cuenta
- * 
+ *
  * Muestra resumen del día con acceso rápido a lo importante.
  */
 import { useEffectiveUser } from '@/hooks/useEffectiveUser';
@@ -66,8 +66,8 @@ export default function CuentaHome() {
   });
 
   // Detect if user only has franquiciado role
-  const isOnlyFranquiciado = branchRoles.length > 0 && 
-    branchRoles.every(r => r.local_role === 'franquiciado');
+  const isOnlyFranquiciado =
+    branchRoles.length > 0 && branchRoles.every((r) => r.local_role === 'franquiciado');
 
   const helpPageId = isOnlyFranquiciado ? 'cuenta-dashboard-franquiciado' : 'cuenta-dashboard';
 
@@ -76,33 +76,31 @@ export default function CuentaHome() {
     queryKey: ['urgent-unread', effectiveUserId, branchRoles],
     queryFn: async () => {
       if (!effectiveUserId) return [];
-      
-      const userLocalRoles = new Set<string>(
-        branchRoles.map(r => r.local_role).filter(Boolean)
-      );
-      
+
+      const userLocalRoles = new Set<string>(branchRoles.map((r) => r.local_role).filter(Boolean));
+
       const { data: urgentComms, error: commsError } = await supabase
         .from('communications')
         .select('id, title, target_roles')
         .eq('type', 'urgent')
         .eq('is_published', true);
-      
+
       if (commsError) throw commsError;
       if (!urgentComms?.length) return [];
-      
-      const filteredComms = urgentComms.filter(c => {
+
+      const filteredComms = urgentComms.filter((c) => {
         if (!c.target_roles || c.target_roles.length === 0) return true;
         return c.target_roles.some((role: string) => userLocalRoles.has(role));
       });
-      
+
       const { data: reads } = await supabase
         .from('communication_reads')
         .select('communication_id')
         .eq('user_id', effectiveUserId);
-      
-      const readIds = new Set(reads?.map(r => r.communication_id) || []);
-      
-      return filteredComms.filter(c => !readIds.has(c.id));
+
+      const readIds = new Set(reads?.map((r) => r.communication_id) || []);
+
+      return filteredComms.filter((c) => !readIds.has(c.id));
     },
     enabled: !!effectiveUserId,
     staleTime: 60000,
@@ -114,10 +112,12 @@ export default function CuentaHome() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pedidos')
-        .select(`
+        .select(
+          `
           id, numero_pedido, estado, total, created_at, webapp_tracking_code, branch_id,
           pedido_items(nombre, cantidad)
-        `)
+        `,
+        )
         .eq('cliente_user_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -146,9 +146,9 @@ export default function CuentaHome() {
 
   const displayName = effectiveUser.full_name || profile?.full_name?.split(' ')[0] || 'Usuario';
   const hasLocalRoles = branchPinData && branchPinData.filter((r: any) => r.local_role).length > 0;
-  
-  const isOperationalStaff = branchRoles.length > 0 && 
-    !branchRoles.every(r => r.local_role === 'franquiciado');
+
+  const isOperationalStaff =
+    branchRoles.length > 0 && !branchRoles.every((r) => r.local_role === 'franquiciado');
   const subtitleText = isOperationalStaff ? 'Tu espacio de trabajo' : 'Bienvenido a tu cuenta';
 
   const estadoLabels: Record<string, string> = {
@@ -166,11 +166,8 @@ export default function CuentaHome() {
     <div className="space-y-6">
       <OnboardingWizard />
       <PageHelp pageId={helpPageId} />
-      
-      <PageHeader 
-        title={`Hola, ${displayName.split(' ')[0]}! 👋`}
-        subtitle={subtitleText}
-      />
+
+      <PageHeader title={`Hola, ${displayName.split(' ')[0]}! 👋`} subtitle={subtitleText} />
 
       {/* Urgent Banner */}
       {urgentUnread.length > 0 && (
@@ -178,7 +175,8 @@ export default function CuentaHome() {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Mensaje urgente</AlertTitle>
           <AlertDescription className="flex items-center gap-2">
-            Tenés {urgentUnread.length} comunicado{urgentUnread.length > 1 ? 's' : ''} urgente{urgentUnread.length > 1 ? 's' : ''} sin leer.
+            Tenés {urgentUnread.length} comunicado{urgentUnread.length > 1 ? 's' : ''} urgente
+            {urgentUnread.length > 1 ? 's' : ''} sin leer.
             <Link to="/cuenta/comunicados" className="underline font-medium hover:no-underline">
               Ver ahora
             </Link>
@@ -209,13 +207,22 @@ export default function CuentaHome() {
               {lastOrderBranch} · {estadoLabels[lastOrder.estado] || lastOrder.estado}
             </p>
             <p className="text-sm text-muted-foreground truncate">
-              {(lastOrder.pedido_items || []).slice(0, 2).map((i: any) => `${i.cantidad}x ${i.nombre}`).join(' · ')}
+              {(lastOrder.pedido_items || [])
+                .slice(0, 2)
+                .map((i: any) => `${i.cantidad}x ${i.nombre}`)
+                .join(' · ')}
             </p>
             <div className="flex items-center justify-between pt-1">
               <span className="font-bold text-sm">${lastOrder.total?.toLocaleString('es-AR')}</span>
               <div className="flex gap-2">
                 {lastOrder.webapp_tracking_code && lastOrderSlug && (
-                  <Button variant="outline" size="sm" onClick={() => navigate(`/pedir/${lastOrderSlug}?tracking=${lastOrder.webapp_tracking_code}`)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigate(`/pedir/${lastOrderSlug}?tracking=${lastOrder.webapp_tracking_code}`)
+                    }
+                  >
                     Ver detalle
                   </Button>
                 )}
@@ -238,9 +245,7 @@ export default function CuentaHome() {
                 <Building2 className="h-8 w-8 text-primary" />
                 <div>
                   <h3 className="font-semibold">Mi Marca</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Panel de administración
-                  </p>
+                  <p className="text-sm text-muted-foreground">Panel de administración</p>
                 </div>
               </div>
               <ArrowRight className="h-5 w-5 text-primary" />
@@ -250,7 +255,9 @@ export default function CuentaHome() {
       )}
 
       {/* Profile completeness */}
-      {effectiveUserId && !isOnlyFranquiciado && <ProfileCompletenessCard userId={effectiveUserId} />}
+      {effectiveUserId && !isOnlyFranquiciado && (
+        <ProfileCompletenessCard userId={effectiveUserId} />
+      )}
 
       {/* No Role Message - updated for clients */}
       {hasNoRole && !lastOrder && (
@@ -259,7 +266,8 @@ export default function CuentaHome() {
             <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-lg font-medium">Tu cuenta está activa</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Hacé tu primer pedido o, si trabajás en Hoppiness, pedile a tu encargado que te asigne un rol.
+              Hacé tu primer pedido o, si trabajás en Hoppiness, pedile a tu encargado que te asigne
+              un rol.
             </p>
             <Button className="mt-4" onClick={() => navigate('/pedir')}>
               <ShoppingBag className="w-4 h-4 mr-2" />
@@ -272,17 +280,19 @@ export default function CuentaHome() {
       {/* Branch Work Cards */}
       {hasLocalRoles && (
         <div className="grid gap-3">
-          {branchPinData?.filter((r: any) => r.local_role).map((ubr: any) => (
-            <BranchWorkCard
-              key={ubr.branch_id}
-              branchId={ubr.branch_id}
-              branchName={ubr.branches?.name || 'Sucursal'}
-              localRole={ubr.local_role || 'empleado'}
-              clockPin={ubr.clock_pin}
-              roleId={ubr.id}
-              userId={effectiveUserId || ''}
-            />
-          ))}
+          {branchPinData
+            ?.filter((r: any) => r.local_role)
+            .map((ubr: any) => (
+              <BranchWorkCard
+                key={ubr.branch_id}
+                branchId={ubr.branch_id}
+                branchName={ubr.branches?.name || 'Sucursal'}
+                localRole={ubr.local_role || 'empleado'}
+                clockPin={ubr.clock_pin}
+                roleId={ubr.id}
+                userId={effectiveUserId || ''}
+              />
+            ))}
         </div>
       )}
     </div>

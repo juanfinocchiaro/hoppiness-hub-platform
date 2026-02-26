@@ -6,8 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Archive, MapPin, RotateCcw, Settings, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,7 +23,10 @@ import BranchTeamTab from '@/components/admin/BranchTeamTab';
 
 type PublicStatus = 'active' | 'coming_soon' | 'hidden' | 'archived';
 
-const statusConfig: Record<PublicStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+const statusConfig: Record<
+  PublicStatus,
+  { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }
+> = {
   active: { label: 'Activo', variant: 'default' },
   coming_soon: { label: 'Próximamente', variant: 'secondary' },
   hidden: { label: 'Oculto', variant: 'outline' },
@@ -29,7 +39,11 @@ export default function BranchDetail() {
   const qc = useQueryClient();
   const [archiving, setArchiving] = useState(false);
 
-  const { data: branch, isLoading, refetch } = useQuery({
+  const {
+    data: branch,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['branch-detail', slug],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -71,7 +85,9 @@ export default function BranchDetail() {
     if (error) {
       toast.error('Error al restaurar la sucursal');
     } else {
-      toast.success('Sucursal restaurada (estado: Oculto). Cambiá el estado a Activo cuando esté lista.');
+      toast.success(
+        'Sucursal restaurada (estado: Oculto). Cambiá el estado a Activo cuando esté lista.',
+      );
       refetch();
       qc.invalidateQueries({ queryKey: ['branches'] });
     }
@@ -119,13 +135,13 @@ export default function BranchDetail() {
           <h1 className="text-3xl font-bold">{branch.name}</h1>
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4" />
-            <span>{branch.address}, {branch.city}</span>
+            <span>
+              {branch.address}, {branch.city}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={config.variant}>
-            {config.label}
-          </Badge>
+          <Badge variant={config.variant}>{config.label}</Badge>
           {isArchived ? (
             <Button variant="outline" size="sm" onClick={handleRestore} disabled={archiving}>
               <RotateCcw className="h-4 w-4 mr-1" />
@@ -134,7 +150,11 @@ export default function BranchDetail() {
           ) : (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                >
                   <Archive className="h-4 w-4 mr-1" />
                   Archivar
                 </Button>
@@ -143,7 +163,9 @@ export default function BranchDetail() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>¿Archivar sucursal "{branch.name}"?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    La sucursal dejará de aparecer en la tienda, selectores y listados públicos. Los datos históricos (ventas, RDO, equipo) se mantienen accesibles desde reportes. Podés restaurarla en cualquier momento.
+                    La sucursal dejará de aparecer en la tienda, selectores y listados públicos. Los
+                    datos históricos (ventas, RDO, equipo) se mantienen accesibles desde reportes.
+                    Podés restaurarla en cualquier momento.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -164,7 +186,8 @@ export default function BranchDetail() {
 
       {isArchived && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-sm text-destructive">
-          Esta sucursal está archivada. No es visible para clientes ni aparece en selectores. Los datos históricos se mantienen.
+          Esta sucursal está archivada. No es visible para clientes ni aparece en selectores. Los
+          datos históricos se mantienen.
         </div>
       )}
 
@@ -182,10 +205,10 @@ export default function BranchDetail() {
         </TabsList>
 
         <TabsContent value="info" className="mt-6">
-          <BranchEditPanel 
+          <BranchEditPanel
             key={branch.id}
-            branch={branch} 
-            onSaved={refetch} 
+            branch={branch}
+            onSaved={refetch}
             onCancel={() => navigate('/mimarca')}
           />
         </TabsContent>

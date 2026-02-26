@@ -108,7 +108,7 @@ export interface CashierReportEntry {
 export function useBranchDiscrepancyReport(
   branchId: string | undefined,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ) {
   return useQuery({
     queryKey: discrepancyKeys.branchReport(branchId || '', startDate, endDate),

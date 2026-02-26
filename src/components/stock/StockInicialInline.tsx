@@ -4,7 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { useStockInicialMasivo, type StockItem } from '@/hooks/pos/useStock';
 
@@ -18,27 +23,28 @@ export function StockInicialInline({ branchId, items }: StockInicialInlineProps)
   const mutation = useStockInicialMasivo(branchId);
 
   const handleChange = (insumoId: string, value: string) => {
-    setCantidades(prev => ({ ...prev, [insumoId]: value }));
+    setCantidades((prev) => ({ ...prev, [insumoId]: value }));
   };
 
   const handleSave = () => {
     const payload = items
-      .map(it => ({
+      .map((it) => ({
         insumo_id: it.insumo_id,
         cantidad: parseFloat(cantidades[it.insumo_id] || '0') || 0,
       }))
-      .filter(it => it.cantidad > 0);
+      .filter((it) => it.cantidad > 0);
     mutation.mutate(payload);
   };
 
-  const filledCount = Object.values(cantidades).filter(v => parseFloat(v) > 0).length;
+  const filledCount = Object.values(cantidades).filter((v) => parseFloat(v) > 0).length;
 
   return (
     <div className="space-y-4">
       <Alert>
         <Package className="h-4 w-4" />
         <AlertDescription>
-          Tu local tiene <strong>{items.length} insumos</strong> configurados. Cargá las cantidades iniciales para comenzar a trackear stock.
+          Tu local tiene <strong>{items.length} insumos</strong> configurados. Cargá las cantidades
+          iniciales para comenzar a trackear stock.
         </AlertDescription>
       </Alert>
 
@@ -52,7 +58,7 @@ export function StockInicialInline({ branchId, items }: StockInicialInlineProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map(it => (
+            {items.map((it) => (
               <TableRow key={it.insumo_id}>
                 <TableCell className="font-medium">{it.nombre}</TableCell>
                 <TableCell className="text-muted-foreground">{it.unidad}</TableCell>
@@ -62,7 +68,7 @@ export function StockInicialInline({ branchId, items }: StockInicialInlineProps)
                     min="0"
                     step="0.01"
                     value={cantidades[it.insumo_id] ?? ''}
-                    onChange={e => handleChange(it.insumo_id, e.target.value)}
+                    onChange={(e) => handleChange(it.insumo_id, e.target.value)}
                     placeholder="0"
                     className="h-8 w-28 tabular-nums"
                   />

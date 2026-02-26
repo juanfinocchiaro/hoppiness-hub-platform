@@ -29,8 +29,14 @@ const WARNING_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   verbal: { label: 'Verbal', color: 'bg-warning/15 text-warning-foreground border-warning/30' },
   written: { label: 'Escrito', color: 'bg-accent/15 text-accent border-accent/30' },
   lateness: { label: 'Llegada tarde', color: 'bg-info/15 text-info border-info/30' },
-  absence: { label: 'Inasistencia', color: 'bg-destructive/15 text-destructive border-destructive/30' },
-  suspension: { label: 'Suspensión', color: 'bg-destructive/20 text-destructive border-destructive/40' },
+  absence: {
+    label: 'Inasistencia',
+    color: 'bg-destructive/15 text-destructive border-destructive/30',
+  },
+  suspension: {
+    label: 'Suspensión',
+    color: 'bg-destructive/20 text-destructive border-destructive/40',
+  },
   other: { label: 'Otro', color: 'bg-muted text-muted-foreground border-border' },
 };
 
@@ -38,19 +44,20 @@ export default function MyWarningsCard() {
   const { id: userId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
   const queryClient = useQueryClient();
-  
+
   // Franquiciados don't receive warnings - hide if only has that role
-  const hasOnlyFranquiciado = branchRoles.length > 0 && 
-    branchRoles.every(r => r.local_role === 'franquiciado');
-  
+  const hasOnlyFranquiciado =
+    branchRoles.length > 0 && branchRoles.every((r) => r.local_role === 'franquiciado');
+
   const { data: warnings, isLoading } = useQuery({
     queryKey: ['my-warnings', userId],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const { data, error } = await supabase
         .from('warnings')
-        .select(`
+        .select(
+          `
           id,
           warning_type,
           description,
@@ -58,32 +65,33 @@ export default function MyWarningsCard() {
           acknowledged_at,
           signed_document_url,
           issued_by
-        `)
+        `,
+        )
         .eq('user_id', userId)
         .eq('is_active', true)
         .order('warning_date', { ascending: false })
         .limit(10);
-      
+
       if (error) throw error;
-      
+
       // Fetch issuer names
-      const issuerIds = [...new Set(data?.map(w => w.issued_by).filter(Boolean))];
+      const issuerIds = [...new Set(data?.map((w) => w.issued_by).filter(Boolean))];
       let issuerMap: Record<string, string> = {};
-      
+
       if (issuerIds.length > 0) {
         const { data: issuers } = await supabase
           .from('profiles')
           .select('id, full_name')
           .in('id', issuerIds);
-        
-        issuers?.forEach(i => {
+
+        issuers?.forEach((i) => {
           if (i.id) issuerMap[i.id] = i.full_name || '';
         });
       }
-      
-      return (data || []).map(w => ({
+
+      return (data || []).map((w) => ({
         ...w,
-        issuer: w.issued_by ? { full_name: issuerMap[w.issued_by] || 'Desconocido' } : undefined
+        issuer: w.issued_by ? { full_name: issuerMap[w.issued_by] || 'Desconocido' } : undefined,
       })) as Warning[];
     },
     enabled: !!userId,
@@ -95,7 +103,7 @@ export default function MyWarningsCard() {
         .from('warnings')
         .update({ acknowledged_at: new Date().toISOString() })
         .eq('id', warningId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -116,7 +124,7 @@ export default function MyWarningsCard() {
     );
   };
 
-  const unreadCount = warnings?.filter(w => !w.acknowledged_at).length || 0;
+  const unreadCount = warnings?.filter((w) => !w.acknowledged_at).length || 0;
 
   if (isLoading) {
     return (
@@ -141,23 +149,21 @@ export default function MyWarningsCard() {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className={`w-5 h-5 ${unreadCount > 0 ? 'text-warning-foreground' : 'text-muted-foreground'}`} />
+            <AlertTriangle
+              className={`w-5 h-5 ${unreadCount > 0 ? 'text-warning-foreground' : 'text-muted-foreground'}`}
+            />
             <CardTitle className="text-lg">Mis Apercibimientos</CardTitle>
           </div>
-          {unreadCount > 0 && (
-            <Badge variant="destructive">
-              {unreadCount} sin ver
-            </Badge>
-          )}
+          {unreadCount > 0 && <Badge variant="destructive">{unreadCount} sin ver</Badge>}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {warnings.map((warning) => (
-          <div 
-            key={warning.id} 
+          <div
+            key={warning.id}
             className={`p-3 rounded-lg border ${
-              !warning.acknowledged_at 
-                ? 'bg-warning/5 border-warning/20' 
+              !warning.acknowledged_at
+                ? 'bg-warning/5 border-warning/20'
                 : 'bg-muted/50 border-muted'
             }`}
           >
@@ -172,11 +178,9 @@ export default function MyWarningsCard() {
                 </div>
                 <p className="text-sm">{warning.description}</p>
                 {warning.issuer && (
-                  <p className="text-xs text-muted-foreground">
-                    Por: {warning.issuer.full_name}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Por: {warning.issuer.full_name}</p>
                 )}
-                
+
                 {/* Signed document link */}
                 {warning.signed_document_url && (
                   <Button
@@ -191,7 +195,7 @@ export default function MyWarningsCard() {
                   </Button>
                 )}
               </div>
-              
+
               <div className="flex-shrink-0">
                 {warning.acknowledged_at ? (
                   <Badge variant="secondary" className="gap-1">
@@ -199,8 +203,8 @@ export default function MyWarningsCard() {
                     Visto
                   </Badge>
                 ) : (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => acknowledgeMutation.mutate(warning.id)}
                     disabled={acknowledgeMutation.isPending}

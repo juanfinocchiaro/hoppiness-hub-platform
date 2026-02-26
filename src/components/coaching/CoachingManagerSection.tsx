@@ -1,6 +1,6 @@
 /**
  * CoachingManagerSection - Sección de competencias para evaluar encargados
- * 
+ *
  * Muestra 6 competencias "visión marca" que un coordinador puede evaluar remotamente.
  * Incluye tooltips con rúbricas 1/3/5 para cada competencia.
  * Escala 1-5.
@@ -44,7 +44,7 @@ export function CoachingManagerSection({ scores, onScoreChange }: CoachingManage
   }
 
   const getScore = (competencyId: string) => {
-    return scores.find(s => s.competencyId === competencyId)?.score || 0;
+    return scores.find((s) => s.competencyId === competencyId)?.score || 0;
   };
 
   const config = MANAGER_CATEGORY_CONFIG.marca;
@@ -64,7 +64,7 @@ export function CoachingManagerSection({ scores, onScoreChange }: CoachingManage
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-0">
           <div className="grid gap-3">
-            {competencies.map(competency => (
+            {competencies.map((competency) => (
               <ManagerCompetencyRow
                 key={competency.id}
                 competency={competency}

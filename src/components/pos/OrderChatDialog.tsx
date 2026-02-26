@@ -3,10 +3,16 @@
  * Uses Supabase client directly (authenticated via RLS).
  */
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, X } from 'lucide-react';
+import { MessageCircle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -32,7 +38,13 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function OrderChatDialog({ pedidoId, branchId, branchName, numeroPedido, clienteNombre }: OrderChatDialogProps) {
+export function OrderChatDialog({
+  pedidoId,
+  branchId,
+  branchName,
+  numeroPedido,
+  clienteNombre,
+}: OrderChatDialogProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -54,21 +66,19 @@ export function OrderChatDialog({ pedidoId, branchId, branchName, numeroPedido, 
     refetchInterval: open ? 10000 : 30000,
   });
 
-  const unreadCount = messages.filter(m => m.sender_type === 'cliente' && !m.leido).length;
+  const unreadCount = messages.filter((m) => m.sender_type === 'cliente' && !m.leido).length;
 
   // Send message mutation
   const sendMutation = useMutation({
     mutationFn: async (text: string) => {
-      const { error } = await supabase
-        .from('webapp_pedido_mensajes')
-        .insert({
-          pedido_id: pedidoId,
-          branch_id: branchId,
-          sender_type: 'local',
-          sender_id: (await supabase.auth.getUser()).data.user?.id,
-          sender_nombre: branchName,
-          mensaje: text.trim(),
-        } as any);
+      const { error } = await supabase.from('webapp_pedido_mensajes').insert({
+        pedido_id: pedidoId,
+        branch_id: branchId,
+        sender_type: 'local',
+        sender_id: (await supabase.auth.getUser()).data.user?.id,
+        sender_nombre: branchName,
+        mensaje: text.trim(),
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -95,16 +105,22 @@ export function OrderChatDialog({ pedidoId, branchId, branchName, numeroPedido, 
   useEffect(() => {
     const channel = supabase
       .channel(`pos-chat-${pedidoId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'webapp_pedido_mensajes',
-        filter: `pedido_id=eq.${pedidoId}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['order-chat', pedidoId] });
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'webapp_pedido_mensajes',
+          filter: `pedido_id=eq.${pedidoId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['order-chat', pedidoId] });
+        },
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [pedidoId, queryClient]);
 
   // Auto-scroll
@@ -128,34 +144,38 @@ export function OrderChatDialog({ pedidoId, branchId, branchName, numeroPedido, 
         <DialogHeader className="px-4 pt-4 pb-2">
           <DialogTitle className="text-sm">
             💬 Chat · Pedido #{numeroPedido}
-            {clienteNombre && <span className="font-normal text-muted-foreground"> · {clienteNombre}</span>}
+            {clienteNombre && (
+              <span className="font-normal text-muted-foreground"> · {clienteNombre}</span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         {/* Messages */}
         <div className="h-64 overflow-y-auto px-3 py-2 space-y-2 bg-muted/30">
           {messages.length === 0 && (
-            <p className="text-center text-xs text-muted-foreground pt-8">
-              Sin mensajes aún
-            </p>
+            <p className="text-center text-xs text-muted-foreground pt-8">Sin mensajes aún</p>
           )}
-          {messages.map(msg => (
+          {messages.map((msg) => (
             <div
               key={msg.id}
               className={`flex ${msg.sender_type === 'local' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[80%] rounded-xl px-3 py-2 ${
-                msg.sender_type === 'local'
-                  ? 'bg-primary text-primary-foreground rounded-br-sm'
-                  : 'bg-card border rounded-bl-sm'
-              }`}>
+              <div
+                className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                  msg.sender_type === 'local'
+                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                    : 'bg-card border rounded-bl-sm'
+                }`}
+              >
                 {msg.sender_type === 'cliente' && (
                   <p className="text-[10px] font-semibold mb-0.5">{msg.sender_nombre}</p>
                 )}
                 <p className="text-sm break-words">{msg.mensaje}</p>
-                <p className={`text-[10px] mt-0.5 ${
-                  msg.sender_type === 'local' ? 'opacity-70' : 'text-muted-foreground'
-                }`}>
+                <p
+                  className={`text-[10px] mt-0.5 ${
+                    msg.sender_type === 'local' ? 'opacity-70' : 'text-muted-foreground'
+                  }`}
+                >
                   {formatTime(msg.created_at)}
                 </p>
               </div>
@@ -166,18 +186,26 @@ export function OrderChatDialog({ pedidoId, branchId, branchName, numeroPedido, 
 
         {/* Input */}
         <form
-          onSubmit={e => { e.preventDefault(); if (input.trim()) sendMutation.mutate(input); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (input.trim()) sendMutation.mutate(input);
+          }}
           className="flex gap-2 p-3 border-t"
         >
           <Input
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             placeholder="Respondé al cliente..."
             maxLength={500}
             className="text-sm h-9"
             disabled={sendMutation.isPending}
           />
-          <Button type="submit" size="sm" className="h-9 px-3" disabled={!input.trim() || sendMutation.isPending}>
+          <Button
+            type="submit"
+            size="sm"
+            className="h-9 px-3"
+            disabled={!input.trim() || sendMutation.isPending}
+          >
             <Send className="w-4 h-4" />
           </Button>
         </form>

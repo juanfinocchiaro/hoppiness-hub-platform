@@ -38,29 +38,29 @@ export default function MySalaryAdvancesCard() {
   const { id: userId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
   const requestAdvance = useRequestAdvance();
-  
+
   const [showRequest, setShowRequest] = useState(false);
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
-  
-  const hasOnlyFranquiciado = branchRoles.length > 0 && 
-    branchRoles.every(r => r.local_role === 'franquiciado');
+
+  const hasOnlyFranquiciado =
+    branchRoles.length > 0 && branchRoles.every((r) => r.local_role === 'franquiciado');
 
   const isOperationalStaff = branchRoles.length > 0 && !hasOnlyFranquiciado;
-  const firstBranchId = branchRoles.find(r => r.local_role !== 'franquiciado')?.branch_id;
-  
+  const firstBranchId = branchRoles.find((r) => r.local_role !== 'franquiciado')?.branch_id;
+
   const { data: advances, isLoading } = useQuery({
     queryKey: ['my-salary-advances-v2', userId],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const { data, error } = await supabase
         .from('salary_advances')
         .select('id, amount, status, payment_method, reason, paid_at, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(20);
-      
+
       if (error) {
         if (import.meta.env.DEV) console.warn('Could not fetch salary advances:', error.message);
         return [];
@@ -73,27 +73,37 @@ export default function MySalaryAdvancesCard() {
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
-  
-  const thisMonthAdvances = advances?.filter(a => {
-    const date = new Date(a.created_at);
-    return date >= monthStart && date <= monthEnd;
-  }) || [];
 
-  const pendingRequests = advances?.filter(a => a.status === 'pending') || [];
-  
+  const thisMonthAdvances =
+    advances?.filter((a) => {
+      const date = new Date(a.created_at);
+      return date >= monthStart && date <= monthEnd;
+    }) || [];
+
+  const pendingRequests = advances?.filter((a) => a.status === 'pending') || [];
+
   const thisMonthTotal = thisMonthAdvances
-    .filter(a => a.status !== 'cancelled' && a.status !== 'pending')
+    .filter((a) => a.status !== 'cancelled' && a.status !== 'pending')
     .reduce((acc, a) => acc + Number(a.amount), 0);
 
   const formatCurrency = (n: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(n);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
         return <Badge variant="default">Pagado</Badge>;
       case 'pending':
-        return <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50"><Clock className="w-3 h-3" />Pendiente</Badge>;
+        return (
+          <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50">
+            <Clock className="w-3 h-3" />
+            Pendiente
+          </Badge>
+        );
       case 'pending_transfer':
         return <Badge variant="outline">Pend. transferencia</Badge>;
       case 'transferred':
@@ -107,7 +117,7 @@ export default function MySalaryAdvancesCard() {
 
   const handleRequest = async () => {
     if (!amount || parseFloat(amount) <= 0 || !firstBranchId) return;
-    
+
     try {
       await requestAdvance.mutateAsync({
         branchId: firstBranchId,
@@ -125,8 +135,12 @@ export default function MySalaryAdvancesCard() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="pb-2"><Skeleton className="h-5 w-32" /></CardHeader>
-        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-5 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
       </Card>
     );
   }
@@ -153,24 +167,42 @@ export default function MySalaryAdvancesCard() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Solicitar Adelanto</DialogTitle>
-                    <DialogDescription>Tu encargado recibirá la solicitud y podrá aprobarla o rechazarla.</DialogDescription>
+                    <DialogDescription>
+                      Tu encargado recibirá la solicitud y podrá aprobarla o rechazarla.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Monto *</Label>
                       <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input type="number" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} className="pl-10" />
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="pl-10"
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Motivo (opcional)</Label>
-                      <Textarea placeholder="¿Para qué necesitás el adelanto?" value={reason} onChange={e => setReason(e.target.value)} rows={2} />
+                      <Textarea
+                        placeholder="¿Para qué necesitás el adelanto?"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        rows={2}
+                      />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowRequest(false)}>Cancelar</Button>
-                    <Button onClick={handleRequest} disabled={!amount || parseFloat(amount) <= 0 || requestAdvance.isPending}>
+                    <Button variant="outline" onClick={() => setShowRequest(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleRequest}
+                      disabled={!amount || parseFloat(amount) <= 0 || requestAdvance.isPending}
+                    >
                       Enviar solicitud
                     </Button>
                   </DialogFooter>
@@ -207,24 +239,42 @@ export default function MySalaryAdvancesCard() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Solicitar Adelanto</DialogTitle>
-                  <DialogDescription>Tu encargado recibirá la solicitud y podrá aprobarla o rechazarla.</DialogDescription>
+                  <DialogDescription>
+                    Tu encargado recibirá la solicitud y podrá aprobarla o rechazarla.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Monto *</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="number" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} className="pl-10" />
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="pl-10"
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Motivo (opcional)</Label>
-                    <Textarea placeholder="¿Para qué necesitás el adelanto?" value={reason} onChange={e => setReason(e.target.value)} rows={2} />
+                    <Textarea
+                      placeholder="¿Para qué necesitás el adelanto?"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      rows={2}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowRequest(false)}>Cancelar</Button>
-                  <Button onClick={handleRequest} disabled={!amount || parseFloat(amount) <= 0 || requestAdvance.isPending}>
+                  <Button variant="outline" onClick={() => setShowRequest(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleRequest}
+                    disabled={!amount || parseFloat(amount) <= 0 || requestAdvance.isPending}
+                  >
                     Enviar solicitud
                   </Button>
                 </DialogFooter>
@@ -238,7 +288,8 @@ export default function MySalaryAdvancesCard() {
         {pendingRequests.length > 0 && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm font-medium text-amber-800">
-              Tenés {pendingRequests.length} solicitud{pendingRequests.length > 1 ? 'es' : ''} pendiente{pendingRequests.length > 1 ? 's' : ''} de aprobación
+              Tenés {pendingRequests.length} solicitud{pendingRequests.length > 1 ? 'es' : ''}{' '}
+              pendiente{pendingRequests.length > 1 ? 's' : ''} de aprobación
             </p>
           </div>
         )}
@@ -257,13 +308,13 @@ export default function MySalaryAdvancesCard() {
           </h4>
           <div className="space-y-1">
             {advances.slice(0, 10).map((advance) => (
-              <div 
-                key={advance.id} 
+              <div
+                key={advance.id}
                 className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted/50"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground w-20">
-                    {format(new Date(advance.created_at), "d MMM", { locale: es })}
+                    {format(new Date(advance.created_at), 'd MMM', { locale: es })}
                   </span>
                   <span className="font-medium">{formatCurrency(advance.amount)}</span>
                 </div>

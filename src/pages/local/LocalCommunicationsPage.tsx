@@ -26,9 +26,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Send,
   Bell,
   AlertTriangle,
@@ -50,9 +50,19 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const TYPES = [
   { value: 'info', label: 'Información', icon: Info, color: 'bg-blue-500/10 text-blue-600' },
-  { value: 'warning', label: 'Aviso', icon: AlertTriangle, color: 'bg-yellow-500/10 text-yellow-600' },
+  {
+    value: 'warning',
+    label: 'Aviso',
+    icon: AlertTriangle,
+    color: 'bg-yellow-500/10 text-yellow-600',
+  },
   { value: 'urgent', label: 'Urgente', icon: Bell, color: 'bg-red-500/10 text-red-600' },
-  { value: 'celebration', label: 'Celebración', icon: PartyPopper, color: 'bg-green-500/10 text-green-600' },
+  {
+    value: 'celebration',
+    label: 'Celebración',
+    icon: PartyPopper,
+    color: 'bg-green-500/10 text-green-600',
+  },
 ];
 
 export default function LocalCommunicationsPage() {
@@ -93,19 +103,19 @@ export default function LocalCommunicationsPage() {
         .select('user_id')
         .eq('branch_id', branchId!)
         .eq('is_active', true);
-      
+
       if (error) throw error;
-      
-      const userIds = data?.map(r => r.user_id) || [];
+
+      const userIds = data?.map((r) => r.user_id) || [];
       if (userIds.length === 0) return [];
-      
+
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', userIds)
         .order('full_name');
-      
-      return (profiles || []).map(p => ({ user_id: p.id, full_name: p.full_name }));
+
+      return (profiles || []).map((p) => ({ user_id: p.id, full_name: p.full_name }));
     },
     enabled: !!branchId,
   });
@@ -174,20 +184,18 @@ export default function LocalCommunicationsPage() {
     },
   });
 
-  const getTypeInfo = (type: string) => TYPES.find(t => t.value === type) || TYPES[0];
+  const getTypeInfo = (type: string) => TYPES.find((t) => t.value === type) || TYPES[0];
 
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    setSelectedUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
   // Get brand communications for this user
   const { data: userComms } = useUserCommunications();
   const brandCommsForMe = userComms?.brand || [];
-  const unreadBrandCount = brandCommsForMe.filter(c => !c.is_read).length;
+  const unreadBrandCount = brandCommsForMe.filter((c) => !c.is_read).length;
   const markAsRead = useMarkAsRead();
 
   return (
@@ -204,7 +212,10 @@ export default function LocalCommunicationsPage() {
             <Inbox className="h-4 w-4" />
             De la Marca
             {unreadBrandCount > 0 && (
-              <Badge variant="destructive" className="ml-1 h-5 min-w-5 p-0 text-xs flex items-center justify-center">
+              <Badge
+                variant="destructive"
+                className="ml-1 h-5 min-w-5 p-0 text-xs flex items-center justify-center"
+              >
                 {unreadBrandCount}
               </Badge>
             )}
@@ -231,7 +242,9 @@ export default function LocalCommunicationsPage() {
                       <Label>Título</Label>
                       <Input
                         value={formData.title}
-                        onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, title: e.target.value }))
+                        }
                         placeholder="Título del mensaje"
                       />
                     </div>
@@ -240,7 +253,7 @@ export default function LocalCommunicationsPage() {
                       <Label>Mensaje</Label>
                       <Textarea
                         value={formData.body}
-                        onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, body: e.target.value }))}
                         placeholder="Escribe el mensaje para tu equipo..."
                         rows={4}
                       />
@@ -250,13 +263,15 @@ export default function LocalCommunicationsPage() {
                       <Label>Tipo</Label>
                       <Select
                         value={formData.type}
-                        onValueChange={(v) => setFormData(prev => ({ ...prev, type: v as typeof formData.type }))}
+                        onValueChange={(v) =>
+                          setFormData((prev) => ({ ...prev, type: v as typeof formData.type }))
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {TYPES.map(t => (
+                          {TYPES.map((t) => (
                             <SelectItem key={t.value} value={t.value}>
                               <div className="flex items-center gap-2">
                                 <t.icon className="w-4 h-4" />
@@ -274,21 +289,28 @@ export default function LocalCommunicationsPage() {
                         <Users className="w-4 h-4" />
                         Destinatarios
                       </Label>
-                      <RadioGroup value={targetType} onValueChange={(v) => setTargetType(v as 'all' | 'selected')}>
+                      <RadioGroup
+                        value={targetType}
+                        onValueChange={(v) => setTargetType(v as 'all' | 'selected')}
+                      >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="all" id="all" />
-                          <label htmlFor="all" className="text-sm">Todo el equipo</label>
+                          <label htmlFor="all" className="text-sm">
+                            Todo el equipo
+                          </label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="selected" id="selected" />
-                          <label htmlFor="selected" className="text-sm">Seleccionar empleados</label>
+                          <label htmlFor="selected" className="text-sm">
+                            Seleccionar empleados
+                          </label>
                         </div>
                       </RadioGroup>
 
                       {targetType === 'selected' && (
                         <ScrollArea className="h-40 border rounded-md p-2">
                           <div className="space-y-2">
-                            {teamMembers?.map(member => (
+                            {teamMembers?.map((member) => (
                               <div key={member.user_id} className="flex items-center gap-2">
                                 <Checkbox
                                   id={member.user_id!}
@@ -303,7 +325,7 @@ export default function LocalCommunicationsPage() {
                           </div>
                         </ScrollArea>
                       )}
-                      
+
                       {targetType === 'selected' && selectedUsers.length > 0 && (
                         <p className="text-xs text-muted-foreground">
                           {selectedUsers.length} empleado(s) seleccionado(s)
@@ -311,10 +333,15 @@ export default function LocalCommunicationsPage() {
                       )}
                     </div>
 
-                    <Button 
-                      className="w-full" 
+                    <Button
+                      className="w-full"
                       onClick={() => createMutation.mutate()}
-                      disabled={!formData.title || !formData.body || createMutation.isPending || (targetType === 'selected' && selectedUsers.length === 0)}
+                      disabled={
+                        !formData.title ||
+                        !formData.body ||
+                        createMutation.isPending ||
+                        (targetType === 'selected' && selectedUsers.length === 0)
+                      }
                     >
                       <Send className="w-4 h-4 mr-2" />
                       Enviar al Equipo
@@ -327,11 +354,13 @@ export default function LocalCommunicationsPage() {
 
           {isLoading ? (
             <div className="space-y-4">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
             </div>
           ) : communications && communications.length > 0 ? (
             <div className="space-y-4">
-              {communications.map(comm => {
+              {communications.map((comm) => {
                 const typeInfo = getTypeInfo(comm.type);
                 const TypeIcon = typeInfo.icon;
                 const readCount = comm.communication_reads?.length || 0;
@@ -347,7 +376,11 @@ export default function LocalCommunicationsPage() {
                           <h3 className="font-semibold truncate mb-1">{comm.title}</h3>
                           <p className="text-sm text-muted-foreground line-clamp-2">{comm.body}</p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                            <span>{format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}</span>
+                            <span>
+                              {format(new Date(comm.published_at), 'd MMM yyyy HH:mm', {
+                                locale: es,
+                              })}
+                            </span>
                             <span>👁 {readCount} lecturas</span>
                             {comm.target_roles && comm.target_roles.length > 0 && (
                               <Badge variant="outline" className="text-xs">
@@ -357,11 +390,7 @@ export default function LocalCommunicationsPage() {
                           </div>
                         </div>
                         {local.canSendLocalCommunication && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(comm.id)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(comm.id)}>
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         )}
@@ -387,12 +416,12 @@ export default function LocalCommunicationsPage() {
         <TabsContent value="received" className="mt-4">
           {brandCommsForMe.length > 0 ? (
             <div className="space-y-4">
-              {brandCommsForMe.map(comm => {
+              {brandCommsForMe.map((comm) => {
                 const typeInfo = getTypeInfo(comm.type);
                 const TypeIcon = typeInfo.icon;
-                
+
                 return (
-                  <Card 
+                  <Card
                     key={comm.id}
                     className={!comm.is_read ? 'border-primary/30 bg-primary/5' : ''}
                     onClick={() => !comm.is_read && markAsRead.mutate(comm.id)}
@@ -409,11 +438,11 @@ export default function LocalCommunicationsPage() {
                               <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {comm.body}
-                          </p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{comm.body}</p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {format(new Date(comm.published_at), "d MMM yyyy HH:mm", { locale: es })}
+                            {format(new Date(comm.published_at), 'd MMM yyyy HH:mm', {
+                              locale: es,
+                            })}
                           </p>
                         </div>
                       </div>

@@ -1,6 +1,6 @@
 /**
  * usePermissionConfig - Hook para leer y modificar la configuración de permisos
- * 
+ *
  * Lee desde la tabla permission_config y permite al superadmin
  * activar/desactivar permisos por rol.
  */
@@ -20,7 +20,13 @@ export interface PermissionConfigRow {
 }
 
 export const BRAND_ROLES = ['superadmin', 'coordinador', 'informes', 'contador_marca'] as const;
-export const LOCAL_ROLES = ['franquiciado', 'encargado', 'contador_local', 'cajero', 'empleado'] as const;
+export const LOCAL_ROLES = [
+  'franquiciado',
+  'encargado',
+  'contador_local',
+  'cajero',
+  'empleado',
+] as const;
 
 export const BRAND_ROLE_LABELS: Record<string, string> = {
   superadmin: 'Super',
@@ -40,7 +46,11 @@ export const LOCAL_ROLE_LABELS: Record<string, string> = {
 export function usePermissionConfig() {
   const queryClient = useQueryClient();
 
-  const { data: permissions = [], isLoading, error } = useQuery({
+  const {
+    data: permissions = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['permission-config'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -57,25 +67,25 @@ export function usePermissionConfig() {
   });
 
   // Agrupar por scope y categoría
-  const brandPermissions = permissions.filter(p => p.scope === 'brand');
-  const localPermissions = permissions.filter(p => p.scope === 'local');
+  const brandPermissions = permissions.filter((p) => p.scope === 'brand');
+  const localPermissions = permissions.filter((p) => p.scope === 'local');
 
-  const brandCategories = [...new Set(brandPermissions.map(p => p.category))];
-  const localCategories = [...new Set(localPermissions.map(p => p.category))];
+  const brandCategories = [...new Set(brandPermissions.map((p) => p.category))];
+  const localCategories = [...new Set(localPermissions.map((p) => p.category))];
 
   // Mutación para actualizar un permiso
   const updatePermission = useMutation({
-    mutationFn: async ({ 
-      permissionId, 
-      role, 
-      enabled 
-    }: { 
-      permissionId: string; 
-      role: string; 
+    mutationFn: async ({
+      permissionId,
+      role,
+      enabled,
+    }: {
+      permissionId: string;
+      role: string;
       enabled: boolean;
     }) => {
       // Obtener el permiso actual
-      const permission = permissions.find(p => p.id === permissionId);
+      const permission = permissions.find((p) => p.id === permissionId);
       if (!permission) throw new Error('Permiso no encontrado');
       if (!permission.is_editable) throw new Error('Este permiso no es editable');
 
@@ -83,7 +93,7 @@ export function usePermissionConfig() {
       if (enabled) {
         newRoles = [...new Set([...permission.allowed_roles, role])];
       } else {
-        newRoles = permission.allowed_roles.filter(r => r !== role);
+        newRoles = permission.allowed_roles.filter((r) => r !== role);
       }
 
       const { error } = await supabase
@@ -105,13 +115,13 @@ export function usePermissionConfig() {
 
   // Función helper para verificar si un rol tiene un permiso
   const hasPermission = (permissionKey: string, role: string): boolean => {
-    const permission = permissions.find(p => p.permission_key === permissionKey);
+    const permission = permissions.find((p) => p.permission_key === permissionKey);
     return permission?.allowed_roles.includes(role) ?? false;
   };
 
   // Función helper para togglear un permiso
   const togglePermission = (permissionId: string, role: string) => {
-    const permission = permissions.find(p => p.id === permissionId);
+    const permission = permissions.find((p) => p.id === permissionId);
     if (!permission) return;
 
     const currentlyEnabled = permission.allowed_roles.includes(role);

@@ -8,7 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { FileText, Upload, Plus, CheckCircle, Clock, Eye, History } from 'lucide-react';
@@ -51,7 +57,7 @@ export default function RegulationsManager() {
         .neq('local_role', 'franquiciado');
 
       // Eliminate duplicates (an employee can work at multiple branches)
-      const uniqueEmployees = new Set(employeeRoles?.map(r => r.user_id) || []);
+      const uniqueEmployees = new Set(employeeRoles?.map((r) => r.user_id) || []);
       const totalEmployees = uniqueEmployees.size;
 
       // Count signatures for this regulation
@@ -70,12 +76,12 @@ export default function RegulationsManager() {
 
   const handleUploadNewRegulation = async () => {
     if (!selectedFile || !newTitle || !user) return;
-    
+
     setUploading(true);
     try {
       // Calculate next version
       const nextVersion = (regulations[0]?.version || 0) + 1;
-      
+
       // Upload PDF
       const filePath = `v${nextVersion}_${Date.now()}.pdf`;
       const { error: uploadError } = await supabase.storage
@@ -85,15 +91,11 @@ export default function RegulationsManager() {
       if (uploadError) throw uploadError;
 
       // Deactivate previous regulations
-      await supabase
-        .from('regulations')
-        .update({ is_active: false })
-        .neq('version', 0);
+      await supabase.from('regulations').update({ is_active: false }).neq('version', 0);
 
       // Create new regulation record
-      const { error: insertError } = await supabase
-        .from('regulations')
-        .insert([{
+      const { error: insertError } = await supabase.from('regulations').insert([
+        {
           version: nextVersion,
           title: newTitle,
           description: newDescription || null,
@@ -102,7 +104,8 @@ export default function RegulationsManager() {
           published_at: new Date().toISOString(),
           is_active: true,
           created_by: user.id,
-        }]);
+        },
+      ]);
 
       if (insertError) throw insertError;
 
@@ -121,10 +124,8 @@ export default function RegulationsManager() {
 
   const handleViewPdf = async (pdfUrl: string | null) => {
     if (!pdfUrl) return;
-    const { data } = await supabase.storage
-      .from('regulations')
-      .createSignedUrl(pdfUrl, 3600);
-    
+    const { data } = await supabase.storage.from('regulations').createSignedUrl(pdfUrl, 3600);
+
     if (data?.signedUrl) {
       window.open(data.signedUrl, '_blank');
     }
@@ -140,9 +141,7 @@ export default function RegulationsManager() {
                 <FileText className="w-5 h-5" />
                 Reglamento Interno
               </CardTitle>
-              <CardDescription>
-                Gestión de versiones del reglamento de la marca
-              </CardDescription>
+              <CardDescription>Gestión de versiones del reglamento de la marca</CardDescription>
             </div>
             <Button onClick={() => setShowNewDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -170,10 +169,21 @@ export default function RegulationsManager() {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground mt-2">
-                    Publicado {format(new Date(latestRegulation.published_at || latestRegulation.created_at), "d 'de' MMMM yyyy", { locale: es })}
+                    Publicado{' '}
+                    {format(
+                      new Date(latestRegulation.published_at || latestRegulation.created_at),
+                      "d 'de' MMMM yyyy",
+                      { locale: es },
+                    )}
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => handleViewPdf(latestRegulation.pdf_url || latestRegulation.document_url)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleViewPdf(latestRegulation.pdf_url || latestRegulation.document_url)
+                  }
+                >
                   <Eye className="w-4 h-4 mr-1" />
                   Ver PDF
                 </Button>
@@ -189,14 +199,17 @@ export default function RegulationsManager() {
                     </span>
                   </div>
                   <div className="w-full h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-primary transition-all"
-                      style={{ width: `${signatureStats.total > 0 ? (signatureStats.signed / signatureStats.total) * 100 : 0}%` }}
+                      style={{
+                        width: `${signatureStats.total > 0 ? (signatureStats.signed / signatureStats.total) * 100 : 0}%`,
+                      }}
                     />
                   </div>
                   {signatureStats.signed < signatureStats.total && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      ⚠️ {signatureStats.total - signatureStats.signed} empleados pendientes de firmar
+                      ⚠️ {signatureStats.total - signatureStats.signed} empleados pendientes de
+                      firmar
                     </p>
                   )}
                 </div>
@@ -213,7 +226,7 @@ export default function RegulationsManager() {
             <ScrollArea className="h-[200px]">
               <div className="space-y-2">
                 {regulations.map((reg) => (
-                  <div 
+                  <div
                     key={reg.id}
                     className={`flex items-center justify-between p-3 rounded-lg border ${
                       reg.is_active ? 'bg-emerald-50/50 border-emerald-200' : 'bg-muted/30'
@@ -223,7 +236,9 @@ export default function RegulationsManager() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">v{reg.version}</span>
                         {reg.is_active && (
-                          <Badge variant="outline" className="text-xs">Actual</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Actual
+                          </Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">{reg.title}</p>
@@ -231,8 +246,8 @@ export default function RegulationsManager() {
                         {format(new Date(reg.published_at || reg.created_at), 'd/MM/yyyy')}
                       </p>
                     </div>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleViewPdf(reg.pdf_url || reg.document_url)}
                     >
@@ -252,7 +267,7 @@ export default function RegulationsManager() {
           <DialogHeader>
             <DialogTitle>Publicar nueva versión del reglamento</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título *</Label>
@@ -291,7 +306,8 @@ export default function RegulationsManager() {
             )}
 
             <div className="p-3 bg-amber-50 rounded-lg text-sm text-amber-700">
-              ⚠️ Al publicar una nueva versión, todos los empleados deberán firmarla en un plazo de 5 días.
+              ⚠️ Al publicar una nueva versión, todos los empleados deberán firmarla en un plazo de
+              5 días.
             </div>
           </div>
 
@@ -299,8 +315,8 @@ export default function RegulationsManager() {
             <Button variant="outline" onClick={() => setShowNewDialog(false)}>
               Cancelar
             </Button>
-            <Button 
-              onClick={handleUploadNewRegulation} 
+            <Button
+              onClick={handleUploadNewRegulation}
               disabled={!selectedFile || !newTitle || uploading}
             >
               {uploading ? (

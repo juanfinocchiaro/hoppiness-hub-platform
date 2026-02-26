@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { EmployeeExpandedRow } from './EmployeeExpandedRow';
@@ -22,16 +29,16 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
   // Helper para obtener label de posición
   const getPositionLabel = (key: string | null): string => {
     if (!key) return '-';
-    const position = positions.find(p => p.key === key);
+    const position = positions.find((p) => p.key === key);
     return position?.label || key;
   };
 
   // Separate franchisees from employees (franchisees are owners, not employees)
-  const employees = team.filter(m => m.local_role !== 'franquiciado');
-  const franchisees = team.filter(m => m.local_role === 'franquiciado');
+  const employees = team.filter((m) => m.local_role !== 'franquiciado');
+  const franchisees = team.filter((m) => m.local_role === 'franquiciado');
 
   const handleRowClick = (memberId: string) => {
-    setExpandedMemberId(prev => prev === memberId ? null : memberId);
+    setExpandedMemberId((prev) => (prev === memberId ? null : memberId));
   };
 
   return (
@@ -43,7 +50,7 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
             Propietario{franchisees.length > 1 ? 's' : ''} del Local
           </h3>
           <div className="space-y-2">
-            {franchisees.map(f => (
+            {franchisees.map((f) => (
               <div key={f.id} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{f.full_name}</span>
                 <span className="text-amber-600 dark:text-amber-400">{f.email}</span>
@@ -74,15 +81,15 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                 const isExpanded = expandedMemberId === member.id;
                 const permissionLabel = LOCAL_ROLE_LABELS[member.local_role || ''] || 'Empleado';
                 const positionLabel = getPositionLabel(member.default_position);
-                
+
                 return (
                   <>
-                    <TableRow 
+                    <TableRow
                       key={member.id}
                       onClick={() => handleRowClick(member.id)}
                       className={cn(
-                        "cursor-pointer transition-colors",
-                        isExpanded && "bg-muted/50"
+                        'cursor-pointer transition-colors',
+                        isExpanded && 'bg-muted/50',
                       )}
                     >
                       <TableCell className="text-muted-foreground text-sm">
@@ -102,11 +109,14 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                         </Tooltip>
                       </TableCell>
                       <TableCell>
-                        <span className={cn(
-                          "text-sm font-medium",
-                          member.local_role === 'encargado' && "text-success",
-                          (member.local_role === 'cajero' || member.local_role === 'empleado') && "text-muted-foreground"
-                        )}>
+                        <span
+                          className={cn(
+                            'text-sm font-medium',
+                            member.local_role === 'encargado' && 'text-success',
+                            (member.local_role === 'cajero' || member.local_role === 'empleado') &&
+                              'text-muted-foreground',
+                          )}
+                        >
                           {permissionLabel}
                         </span>
                       </TableCell>
@@ -123,11 +133,11 @@ export function TeamTable({ team, branchId, onMemberUpdated }: TeamTableProps) {
                         <StatusBadge member={member} />
                       </TableCell>
                     </TableRow>
-                    
+
                     {isExpanded && (
                       <TableRow key={`${member.id}-expanded`}>
                         <TableCell colSpan={8} className="p-0 bg-muted/30">
-                          <EmployeeExpandedRow 
+                          <EmployeeExpandedRow
                             member={member}
                             branchId={branchId}
                             onClose={() => setExpandedMemberId(null)}
@@ -163,7 +173,7 @@ function StatusBadge({ member }: { member: TeamMember }) {
       </span>
     );
   }
-  
+
   if (member.is_working) {
     return (
       <span className="inline-flex items-center gap-1 text-sm text-success">
@@ -172,7 +182,7 @@ function StatusBadge({ member }: { member: TeamMember }) {
       </span>
     );
   }
-  
+
   return (
     <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
       <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />

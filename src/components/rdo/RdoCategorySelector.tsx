@@ -1,4 +1,10 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useRdoCategoryOptions } from '@/hooks/useRdoCategories';
 import { RDO_SECTIONS } from '@/types/rdo';
 
@@ -9,7 +15,12 @@ interface Props {
   placeholder?: string;
 }
 
-export function RdoCategorySelector({ value, onChange, itemType, placeholder = 'Seleccionar categoría RDO...' }: Props) {
+export function RdoCategorySelector({
+  value,
+  onChange,
+  itemType,
+  placeholder = 'Seleccionar categoría RDO...',
+}: Props) {
   const { data: categories, isLoading } = useRdoCategoryOptions(itemType);
 
   // Group by parent
@@ -30,8 +41,11 @@ export function RdoCategorySelector({ value, onChange, itemType, placeholder = '
         {Object.entries(grouped).map(([parentCode, cats]) => (
           <div key={parentCode}>
             <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {cats?.[0]?.rdo_section ? RDO_SECTIONS[cats[0].rdo_section as keyof typeof RDO_SECTIONS] : parentCode}
-              {' › '}{parentCode}
+              {cats?.[0]?.rdo_section
+                ? RDO_SECTIONS[cats[0].rdo_section as keyof typeof RDO_SECTIONS]
+                : parentCode}
+              {' › '}
+              {parentCode}
             </div>
             {cats?.map((cat) => (
               <SelectItem key={cat.code} value={cat.code}>

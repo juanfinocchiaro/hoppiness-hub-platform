@@ -35,45 +35,51 @@ export default function CadeteTrackingPage() {
   const baseUrl = import.meta.env.VITE_SUPABASE_URL;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  const callApi = useCallback(async (method: string, body?: unknown) => {
-    const url = method === 'GET'
-      ? `${baseUrl}/functions/v1/delivery-tracking?token=${token}`
-      : `${baseUrl}/functions/v1/delivery-tracking`;
+  const callApi = useCallback(
+    async (method: string, body?: unknown) => {
+      const url =
+        method === 'GET'
+          ? `${baseUrl}/functions/v1/delivery-tracking?token=${token}`
+          : `${baseUrl}/functions/v1/delivery-tracking`;
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        apikey: apiKey,
-        'Content-Type': 'application/json',
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
+      const res = await fetch(url, {
+        method,
+        headers: {
+          apikey: apiKey,
+          'Content-Type': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
 
-    return res.json();
-  }, [baseUrl, apiKey, token]);
+      return res.json();
+    },
+    [baseUrl, apiKey, token],
+  );
 
   useEffect(() => {
     if (!token) return;
 
-    callApi('GET').then((data) => {
-      if (data.error) {
-        setError(data.error);
+    callApi('GET')
+      .then((data) => {
+        if (data.error) {
+          setError(data.error);
+          setPageState('error');
+          return;
+        }
+        setInfo(data);
+        if (data.tracking_completed) {
+          setPageState('completed');
+        } else if (data.tracking_started) {
+          setPageState('tracking');
+          startGeolocation();
+        } else {
+          setPageState('ready');
+        }
+      })
+      .catch(() => {
+        setError('No se pudo cargar la información');
         setPageState('error');
-        return;
-      }
-      setInfo(data);
-      if (data.tracking_completed) {
-        setPageState('completed');
-      } else if (data.tracking_started) {
-        setPageState('tracking');
-        startGeolocation();
-      } else {
-        setPageState('ready');
-      }
-    }).catch(() => {
-      setError('No se pudo cargar la información');
-      setPageState('error');
-    });
+      });
 
     return () => stopGeolocation();
   }, [token]);
@@ -109,7 +115,9 @@ export default function CadeteTrackingPage() {
           action: 'update',
         });
         setLastUpdate(new Date());
-      } catch { /* silently retry next interval */ }
+      } catch {
+        /* silently retry next interval */
+      }
     }, 10000);
   };
 
@@ -146,7 +154,9 @@ export default function CadeteTrackingPage() {
       },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
-          setGeoError('Necesitamos acceso a tu ubicación para el rastreo. Activalo en la configuración del navegador.');
+          setGeoError(
+            'Necesitamos acceso a tu ubicación para el rastreo. Activalo en la configuración del navegador.',
+          );
         } else {
           setGeoError('No se pudo obtener la ubicación. Intentá de nuevo.');
         }
@@ -211,9 +221,7 @@ export default function CadeteTrackingPage() {
           <h3 className="text-sm font-bold flex items-center gap-2">
             <MapPin className="w-4 h-4" /> Datos de entrega
           </h3>
-          {info?.pedido.cliente_nombre && (
-            <p className="text-sm">{info.pedido.cliente_nombre}</p>
-          )}
+          {info?.pedido.cliente_nombre && <p className="text-sm">{info.pedido.cliente_nombre}</p>}
           {info?.pedido.cliente_direccion && (
             <p className="text-sm text-muted-foreground">{info.pedido.cliente_direccion}</p>
           )}
@@ -260,7 +268,12 @@ export default function CadeteTrackingPage() {
               </p>
               {lastUpdate && (
                 <p className="text-xs text-muted-foreground">
-                  Última actualización: {lastUpdate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  Última actualización:{' '}
+                  {lastUpdate.toLocaleTimeString('es-AR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  })}
                 </p>
               )}
             </div>

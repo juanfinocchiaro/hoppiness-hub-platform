@@ -1,6 +1,6 @@
 /**
  * MyOwnCoachingTab - Vista del coaching propio (para Encargado)
- * 
+ *
  * Muestra el coaching que la Marca (Superadmin/Coordinador) le hizo al encargado.
  * Permite confirmar lectura (acknowledgment) y ver evolución histórica.
  */
@@ -15,16 +15,16 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/states';
-import { 
-  Clock, 
-  CheckCircle, 
-  User, 
-  Calendar, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  Clock,
+  CheckCircle,
+  User,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
   Minus,
   MessageSquare,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -60,7 +60,7 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
   const { id: userId } = useEffectiveUser();
   const [showAckForm, setShowAckForm] = useState(false);
   const [ackNotes, setAckNotes] = useState('');
-  
+
   const acknowledgeMutation = useAcknowledgeCoaching();
 
   // Obtener coachings propios
@@ -80,15 +80,15 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
       if (error) throw error;
 
       // Obtener evaluadores
-      const evaluatorIds = [...new Set(data.map(c => c.evaluated_by))];
+      const evaluatorIds = [...new Set(data.map((c) => c.evaluated_by))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', evaluatorIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
-      return data.map(c => ({
+      return data.map((c) => ({
         ...c,
         evaluator: profileMap.get(c.evaluated_by) || null,
       }));
@@ -114,12 +114,12 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
 
   const handleAcknowledge = async () => {
     if (!latestCoaching) return;
-    
+
     await acknowledgeMutation.mutateAsync({
       coachingId: latestCoaching.id,
       notes: ackNotes.trim() || undefined,
     });
-    
+
     setShowAckForm(false);
     setAckNotes('');
   };
@@ -168,9 +168,7 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
                   Confirmá que lo leíste para que quede registrado
                 </p>
               </div>
-              <Button onClick={() => setShowAckForm(true)}>
-                Confirmar Lectura
-              </Button>
+              <Button onClick={() => setShowAckForm(true)}>Confirmar Lectura</Button>
             </div>
           </CardContent>
         </Card>
@@ -181,9 +179,7 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
         <Card className="border-primary">
           <CardHeader>
             <CardTitle className="text-base">Confirmar Lectura</CardTitle>
-            <CardDescription>
-              Opcionalmente podés agregar un comentario
-            </CardDescription>
+            <CardDescription>Opcionalmente podés agregar un comentario</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
@@ -193,10 +189,7 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
               rows={3}
             />
             <div className="flex gap-2">
-              <Button
-                onClick={handleAcknowledge}
-                disabled={acknowledgeMutation.isPending}
-              >
+              <Button onClick={handleAcknowledge} disabled={acknowledgeMutation.isPending}>
                 {acknowledgeMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Confirmar
               </Button>
@@ -215,7 +208,11 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
             <div>
               <CardTitle>Mi Evaluación</CardTitle>
               <CardDescription className="capitalize">
-                {format(new Date(latestCoaching.coaching_year, latestCoaching.coaching_month - 1), 'MMMM yyyy', { locale: es })}
+                {format(
+                  new Date(latestCoaching.coaching_year, latestCoaching.coaching_month - 1),
+                  'MMMM yyyy',
+                  { locale: es },
+                )}
               </CardDescription>
             </div>
             <div className="text-right">
@@ -224,10 +221,11 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
                 <span className="text-lg font-normal text-muted-foreground">/5</span>
               </p>
               <div className="flex items-center gap-1 justify-end">
-                {getTrendIcon(latestCoaching.overall_score, previousCoaching?.overall_score || null)}
-                <span className="text-xs text-muted-foreground">
-                  vs mes anterior
-                </span>
+                {getTrendIcon(
+                  latestCoaching.overall_score,
+                  previousCoaching?.overall_score || null,
+                )}
+                <span className="text-xs text-muted-foreground">vs mes anterior</span>
               </div>
             </div>
           </div>
@@ -284,12 +282,12 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
             <CardTitle className="text-base">Mi Evolución</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScoreEvolutionChart 
-              data={chartData.map(c => ({
+            <ScoreEvolutionChart
+              data={chartData.map((c) => ({
                 coaching_month: c.coaching_month,
                 coaching_year: c.coaching_year,
                 overall_score: c.overall_score,
-              }))} 
+              }))}
             />
           </CardContent>
         </Card>
@@ -378,25 +376,26 @@ export function MyOwnCoachingTab({ branchId }: MyOwnCoachingTabProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {coachings.slice(1, 6).map(c => (
-                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              {coachings.slice(1, 6).map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
                   <div>
                     <span className="text-sm font-medium capitalize">
-                      {format(new Date(c.coaching_year, c.coaching_month - 1), 'MMMM yyyy', { locale: es })}
+                      {format(new Date(c.coaching_year, c.coaching_month - 1), 'MMMM yyyy', {
+                        locale: es,
+                      })}
                     </span>
                     {c.evaluator && (
-                      <p className="text-xs text-muted-foreground">
-                        Por {c.evaluator.full_name}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Por {c.evaluator.full_name}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`font-semibold ${getScoreColor(c.overall_score)}`}>
                       {c.overall_score?.toFixed(1) || '-'}
                     </span>
-                    {c.acknowledged_at && (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    )}
+                    {c.acknowledged_at && <CheckCircle className="h-4 w-4 text-green-600" />}
                   </div>
                 </div>
               ))}

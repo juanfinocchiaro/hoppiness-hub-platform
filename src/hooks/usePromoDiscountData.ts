@@ -29,7 +29,9 @@ export function usePromoDiscountData(branchId: string, periodo: string) {
       // Get all items from orders in this branch/period
       const { data: items, error } = await supabase
         .from('pedido_items')
-        .select('precio_unitario, precio_referencia, cantidad, subtotal, pedido_id, pedidos!inner(branch_id, created_at)')
+        .select(
+          'precio_unitario, precio_referencia, cantidad, subtotal, pedido_id, pedidos!inner(branch_id, created_at)',
+        )
         .gte('pedidos.created_at', startDate)
         .lt('pedidos.created_at', endDate)
         .eq('pedidos.branch_id', branchId);

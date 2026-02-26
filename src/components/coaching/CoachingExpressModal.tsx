@@ -41,12 +41,12 @@ interface QuickScore {
   score: number;
 }
 
-export function CoachingExpressModal({ 
-  open, 
-  onOpenChange, 
-  employee, 
-  branchId, 
-  onSuccess 
+export function CoachingExpressModal({
+  open,
+  onOpenChange,
+  employee,
+  branchId,
+  onSuccess,
 }: CoachingExpressModalProps) {
   const { stations, generalCompetencies, isLoading: loadingConfig } = useCompetencyConfig();
   const createCoaching = useCreateCoaching();
@@ -60,13 +60,13 @@ export function CoachingExpressModal({
   useEffect(() => {
     if (stations && generalCompetencies && scores.length === 0) {
       const initialScores: QuickScore[] = [
-        ...stations.map(s => ({
+        ...stations.map((s) => ({
           id: s.id,
           name: s.name,
           type: 'station' as const,
           score: 0,
         })),
-        ...generalCompetencies.map(c => ({
+        ...generalCompetencies.map((c) => ({
           id: c.id,
           name: c.name,
           type: 'general' as const,
@@ -78,20 +78,20 @@ export function CoachingExpressModal({
   }, [stations, generalCompetencies, scores.length]);
 
   const handleScoreChange = (id: string, newScore: number) => {
-    setScores(prev => prev.map(s => 
-      s.id === id ? { ...s, score: newScore } : s
-    ));
+    setScores((prev) => prev.map((s) => (s.id === id ? { ...s, score: newScore } : s)));
   };
 
   const handleCopyFromPrevious = () => {
     if (!previousCoaching) return;
-    
+
     // Copy scores from previous coaching (simplified - just set all to previous overall)
     if (previousCoaching.overall_score) {
-      setScores(prev => prev.map(s => ({
-        ...s,
-        score: Math.round(previousCoaching.overall_score || 3),
-      })));
+      setScores((prev) =>
+        prev.map((s) => ({
+          ...s,
+          score: Math.round(previousCoaching.overall_score || 3),
+        })),
+      );
       setCopied(true);
       toast.success('Scores copiados del coaching anterior');
     }
@@ -99,16 +99,16 @@ export function CoachingExpressModal({
 
   const handleSubmit = async () => {
     const stationScores = scores
-      .filter(s => s.type === 'station' && s.score > 0)
-      .map(s => ({
+      .filter((s) => s.type === 'station' && s.score > 0)
+      .map((s) => ({
         stationId: s.id,
         score: s.score,
         competencyScores: [],
       }));
 
     const generalScores = scores
-      .filter(s => s.type === 'general' && s.score > 0)
-      .map(s => ({
+      .filter((s) => s.type === 'general' && s.score > 0)
+      .map((s) => ({
         competencyId: s.id,
         score: s.score,
       }));
@@ -140,10 +140,11 @@ export function CoachingExpressModal({
     }
   };
 
-  const filledScores = scores.filter(s => s.score > 0);
-  const avgScore = filledScores.length > 0
-    ? filledScores.reduce((sum, s) => sum + s.score, 0) / filledScores.length
-    : 0;
+  const filledScores = scores.filter((s) => s.score > 0);
+  const avgScore =
+    filledScores.length > 0
+      ? filledScores.reduce((sum, s) => sum + s.score, 0) / filledScores.length
+      : 0;
 
   const getScoreColor = (score: number) => {
     if (score >= 4) return 'text-green-600';
@@ -167,7 +168,7 @@ export function CoachingExpressModal({
 
         {loadingConfig ? (
           <div className="space-y-4 py-4">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
@@ -175,9 +176,9 @@ export function CoachingExpressModal({
           <>
             {/* Copy from previous */}
             {previousCoaching && !copied && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full mb-4"
                 onClick={handleCopyFromPrevious}
               >
@@ -202,25 +203,28 @@ export function CoachingExpressModal({
                 <Label className="text-sm font-medium flex items-center gap-2">
                   Estaciones
                   <Badge variant="secondary" className="text-xs">
-                    {scores.filter(s => s.type === 'station' && s.score > 0).length}/{scores.filter(s => s.type === 'station').length}
+                    {scores.filter((s) => s.type === 'station' && s.score > 0).length}/
+                    {scores.filter((s) => s.type === 'station').length}
                   </Badge>
                 </Label>
-                {scores.filter(s => s.type === 'station').map(score => (
-                  <div key={score.id} className="flex items-center gap-4">
-                    <span className="text-sm w-28 truncate">{score.name}</span>
-                    <Slider
-                      value={[score.score]}
-                      onValueChange={([v]) => handleScoreChange(score.id, v)}
-                      min={0}
-                      max={5}
-                      step={0.5}
-                      className="flex-1"
-                    />
-                    <span className={`font-mono w-8 text-right ${getScoreColor(score.score)}`}>
-                      {score.score > 0 ? score.score : '-'}
-                    </span>
-                  </div>
-                ))}
+                {scores
+                  .filter((s) => s.type === 'station')
+                  .map((score) => (
+                    <div key={score.id} className="flex items-center gap-4">
+                      <span className="text-sm w-28 truncate">{score.name}</span>
+                      <Slider
+                        value={[score.score]}
+                        onValueChange={([v]) => handleScoreChange(score.id, v)}
+                        min={0}
+                        max={5}
+                        step={0.5}
+                        className="flex-1"
+                      />
+                      <span className={`font-mono w-8 text-right ${getScoreColor(score.score)}`}>
+                        {score.score > 0 ? score.score : '-'}
+                      </span>
+                    </div>
+                  ))}
               </div>
 
               {/* General competencies */}
@@ -228,25 +232,28 @@ export function CoachingExpressModal({
                 <Label className="text-sm font-medium flex items-center gap-2">
                   Competencias Generales
                   <Badge variant="secondary" className="text-xs">
-                    {scores.filter(s => s.type === 'general' && s.score > 0).length}/{scores.filter(s => s.type === 'general').length}
+                    {scores.filter((s) => s.type === 'general' && s.score > 0).length}/
+                    {scores.filter((s) => s.type === 'general').length}
                   </Badge>
                 </Label>
-                {scores.filter(s => s.type === 'general').map(score => (
-                  <div key={score.id} className="flex items-center gap-4">
-                    <span className="text-sm w-28 truncate">{score.name}</span>
-                    <Slider
-                      value={[score.score]}
-                      onValueChange={([v]) => handleScoreChange(score.id, v)}
-                      min={0}
-                      max={5}
-                      step={0.5}
-                      className="flex-1"
-                    />
-                    <span className={`font-mono w-8 text-right ${getScoreColor(score.score)}`}>
-                      {score.score > 0 ? score.score : '-'}
-                    </span>
-                  </div>
-                ))}
+                {scores
+                  .filter((s) => s.type === 'general')
+                  .map((score) => (
+                    <div key={score.id} className="flex items-center gap-4">
+                      <span className="text-sm w-28 truncate">{score.name}</span>
+                      <Slider
+                        value={[score.score]}
+                        onValueChange={([v]) => handleScoreChange(score.id, v)}
+                        min={0}
+                        max={5}
+                        step={0.5}
+                        className="flex-1"
+                      />
+                      <span className={`font-mono w-8 text-right ${getScoreColor(score.score)}`}>
+                        {score.score > 0 ? score.score : '-'}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </div>
           </>
@@ -256,7 +263,7 @@ export function CoachingExpressModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleSubmit}
             disabled={filledScores.length === 0 || createCoaching.isPending}
           >

@@ -1,6 +1,6 @@
 /**
  * Centralized Error Handler
- * 
+ *
  * Provides consistent error handling across the application:
  * - In development: logs detailed error information
  * - In production: logs generic messages, could integrate with monitoring services
@@ -23,29 +23,26 @@ const DEFAULT_USER_MESSAGE = 'Ocurrió un error. Por favor, intentá de nuevo.';
 
 /**
  * Handles errors consistently across the application
- * 
+ *
  * @param error - The error object
  * @param options - Configuration options
- * 
+ *
  * @example
  * // Basic usage
  * handleError(error);
- * 
+ *
  * @example
  * // With custom message
- * handleError(error, { 
+ * handleError(error, {
  *   userMessage: 'No se pudo guardar el producto',
  *   context: 'ProductForm.handleSave'
  * });
- * 
+ *
  * @example
  * // Silent logging (no toast)
  * handleError(error, { showToast: false, context: 'BackgroundSync' });
  */
-export function handleError(
-  error: unknown,
-  options: ErrorHandlerOptions = {}
-): void {
+export function handleError(error: unknown, options: ErrorHandlerOptions = {}): void {
   const {
     showToast = true,
     userMessage = DEFAULT_USER_MESSAGE,
@@ -98,11 +95,11 @@ export function handleError(
 
 /**
  * Wraps an async function with error handling
- * 
+ *
  * @param fn - The async function to wrap
  * @param options - Error handling options
  * @returns The wrapped function
- * 
+ *
  * @example
  * const safeFetch = withErrorHandling(
  *   async () => await fetchData(),
@@ -111,11 +108,11 @@ export function handleError(
  */
 export function withErrorHandling<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
-  options: ErrorHandlerOptions = {}
+  options: ErrorHandlerOptions = {},
 ): (...args: Parameters<T>) => Promise<ReturnType<T> | undefined> {
   return async (...args: Parameters<T>) => {
     try {
-      return await fn(...args) as ReturnType<T>;
+      return (await fn(...args)) as ReturnType<T>;
     } catch (error) {
       handleError(error, options);
       return undefined;

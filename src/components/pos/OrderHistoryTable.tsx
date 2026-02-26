@@ -1,17 +1,33 @@
 import { useState, useMemo, Fragment } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronDown, ChevronRight, ChevronUp, Pencil, Printer, FileText, ChefHat, Truck, Wine, Ban, RefreshCw, ArrowUpDown } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Pencil,
+  Printer,
+  FileText,
+  ChefHat,
+  Truck,
+  Wine,
+  Ban,
+  RefreshCw,
+  ArrowUpDown,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PaymentEditModal } from '@/components/pos/PaymentEditModal';
 import type { PosOrder } from '@/hooks/pos/usePosOrderHistory';
@@ -58,7 +74,11 @@ const SERVICIO_LABELS: Record<string, string> = {
 };
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(n);
 
 function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   if (!pagos || pagos.length === 0) return '-';
@@ -66,10 +86,26 @@ function paymentSummary(pagos: PosOrder['pedido_pagos']) {
   return 'Dividido';
 }
 
-type SortKey = 'numero_pedido' | 'created_at' | 'canal_venta' | 'tipo_servicio' | 'cliente_nombre' | 'total' | 'estado';
+type SortKey =
+  | 'numero_pedido'
+  | 'created_at'
+  | 'canal_venta'
+  | 'tipo_servicio'
+  | 'cliente_nombre'
+  | 'total'
+  | 'estado';
 type SortDir = 'asc' | 'desc';
 
-export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, onReprint, onCancelOrder, onChangeInvoice, valeCategoryIds }: Props) {
+export function OrderHistoryTable({
+  orders,
+  isLoading,
+  branchId,
+  hasOpenShift,
+  onReprint,
+  onCancelOrder,
+  onChangeInvoice,
+  valeCategoryIds,
+}: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<PosOrder | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
@@ -78,7 +114,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
       setSortDir(key === 'total' || key === 'numero_pedido' ? 'desc' : 'asc');
@@ -102,10 +138,22 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
-    return sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+    return sortDir === 'asc' ? (
+      <ChevronUp className="w-3 h-3" />
+    ) : (
+      <ChevronDown className="w-3 h-3" />
+    );
   };
 
-  const SortableHead = ({ col, children, className }: { col: SortKey; children: React.ReactNode; className?: string }) => (
+  const SortableHead = ({
+    col,
+    children,
+    className,
+  }: {
+    col: SortKey;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <TableHead
       className={`cursor-pointer select-none hover:bg-muted/50 ${className || ''}`}
       onClick={() => handleSort(col)}
@@ -121,7 +169,9 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
     return (
       <Card>
         <CardContent className="p-4 space-y-3">
-          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12" />)}
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-12" />
+          ))}
         </CardContent>
       </Card>
     );
@@ -137,7 +187,7 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
     );
   }
 
-  const toggle = (id: string) => setExpandedId(prev => prev === id ? null : id);
+  const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
   return (
     <Card>
@@ -152,15 +202,19 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
               {!isMobile && <SortableHead col="tipo_servicio">Servicio</SortableHead>}
               {!isMobile && <SortableHead col="cliente_nombre">Cliente</SortableHead>}
               {!isMobile && <TableHead className="text-center">Items</TableHead>}
-              <SortableHead col="total" className="text-right">Total</SortableHead>
+              <SortableHead col="total" className="text-right">
+                Total
+              </SortableHead>
               {!isMobile && <TableHead>Pago</TableHead>}
-              <SortableHead col="estado" className="text-center">Estado</SortableHead>
+              <SortableHead col="estado" className="text-center">
+                Estado
+              </SortableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedOrders.map(order => {
+            {sortedOrders.map((order) => {
               const isExpanded = expandedId === order.id;
-              const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+              const activeInvoice = order.facturas_emitidas?.find((f) => !f.anulada);
               const hasActiveInvoice = !!activeInvoice;
               return (
                 <Fragment key={order.id}>
@@ -169,7 +223,11 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
                     onClick={() => toggle(order.id)}
                   >
                     <TableCell className="px-2">
-                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
                     </TableCell>
                     <TableCell className="font-medium tabular-nums">
                       <span className="flex items-center gap-1">
@@ -179,17 +237,46 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
                     </TableCell>
                     <TableCell className="text-sm">
                       {order.created_at
-                        ? format(new Date(order.created_at), isMobile ? 'd/M HH:mm' : 'EEE d MMM HH:mm', { locale: es })
+                        ? format(
+                            new Date(order.created_at),
+                            isMobile ? 'd/M HH:mm' : 'EEE d MMM HH:mm',
+                            { locale: es },
+                          )
                         : '-'}
                     </TableCell>
-                    {!isMobile && <TableCell className="text-sm">{CANAL_LABELS[order.canal_venta || ''] || '-'}</TableCell>}
-                    {!isMobile && <TableCell className="text-sm">{SERVICIO_LABELS[order.tipo_servicio || ''] || '-'}</TableCell>}
-                    {!isMobile && <TableCell className="text-sm truncate max-w-[120px]">{order.cliente_nombre || '-'}</TableCell>}
-                    {!isMobile && <TableCell className="text-center tabular-nums">{order.pedido_items?.length || 0}</TableCell>}
-                    <TableCell className="text-right font-medium tabular-nums">{fmt(order.total)}</TableCell>
-                    {!isMobile && <TableCell className="text-sm">{paymentSummary(order.pedido_pagos)}</TableCell>}
+                    {!isMobile && (
+                      <TableCell className="text-sm">
+                        {CANAL_LABELS[order.canal_venta || ''] || '-'}
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell className="text-sm">
+                        {SERVICIO_LABELS[order.tipo_servicio || ''] || '-'}
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell className="text-sm truncate max-w-[120px]">
+                        {order.cliente_nombre || '-'}
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell className="text-center tabular-nums">
+                        {order.pedido_items?.length || 0}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {fmt(order.total)}
+                    </TableCell>
+                    {!isMobile && (
+                      <TableCell className="text-sm">
+                        {paymentSummary(order.pedido_pagos)}
+                      </TableCell>
+                    )}
                     <TableCell className="text-center">
-                      <Badge variant={ESTADO_VARIANT[order.estado] || 'outline'} className="text-xs capitalize">
+                      <Badge
+                        variant={ESTADO_VARIANT[order.estado] || 'outline'}
+                        className="text-xs capitalize"
+                      >
                         {order.estado}
                       </Badge>
                     </TableCell>
@@ -218,7 +305,9 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
         {editingOrder && branchId && (
           <PaymentEditModal
             open={!!editingOrder}
-            onOpenChange={(v) => { if (!v) setEditingOrder(null); }}
+            onOpenChange={(v) => {
+              if (!v) setEditingOrder(null);
+            }}
             pedidoId={editingOrder.id}
             pedidoTotal={editingOrder.total}
             branchId={branchId}
@@ -231,7 +320,13 @@ export function OrderHistoryTable({ orders, isLoading, branchId, hasOpenShift, o
 }
 
 /* ─── Reprint button with disabled state + tooltip ─── */
-function ReprintButton({ label, icon: Icon, enabled, disabledReason, onClick }: {
+function ReprintButton({
+  label,
+  icon: Icon,
+  enabled,
+  disabledReason,
+  onClick,
+}: {
   label: string;
   icon: React.ElementType;
   enabled: boolean;
@@ -243,7 +338,10 @@ function ReprintButton({ label, icon: Icon, enabled, disabledReason, onClick }: 
       variant="outline"
       size="sm"
       className={`h-8 text-xs ${!enabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-      onClick={(e) => { e.stopPropagation(); if (enabled) onClick(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (enabled) onClick();
+      }}
       disabled={!enabled}
     >
       <Icon className="h-3 w-3 mr-1" />
@@ -269,7 +367,15 @@ function ReprintButton({ label, icon: Icon, enabled, disabledReason, onClick }: 
   return btn;
 }
 
-function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChangeInvoice, valeCategoryIds }: {
+function OrderDetail({
+  order,
+  canEdit,
+  onEdit,
+  onReprint,
+  onCancelOrder,
+  onChangeInvoice,
+  valeCategoryIds,
+}: {
   order: PosOrder;
   canEdit?: boolean;
   onEdit?: () => void;
@@ -278,14 +384,13 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
   onChangeInvoice?: (order: PosOrder) => void;
   valeCategoryIds?: Set<string>;
 }) {
-  const activeInvoice = order.facturas_emitidas?.find(f => !f.anulada);
+  const activeInvoice = order.facturas_emitidas?.find((f) => !f.anulada);
   const activeFactura = order.facturas_emitidas?.find(
-    f => !f.anulada && !f.tipo_comprobante.startsWith('NC_')
+    (f) => !f.anulada && !f.tipo_comprobante.startsWith('NC_'),
   );
-  const cancelledInvoices = order.facturas_emitidas?.filter(f => f.anulada) || [];
-  const creditNotes = order.facturas_emitidas?.filter(f =>
-    f.tipo_comprobante.startsWith('NC_')
-  ) || [];
+  const cancelledInvoices = order.facturas_emitidas?.filter((f) => f.anulada) || [];
+  const creditNotes =
+    order.facturas_emitidas?.filter((f) => f.tipo_comprobante.startsWith('NC_')) || [];
   const lastCreditNote = creditNotes.length > 0 ? creditNotes[creditNotes.length - 1] : null;
 
   const hasActiveInvoice = !!activeInvoice;
@@ -295,9 +400,12 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
   const isCancelled = order.estado === 'cancelado';
 
   // Check if order has vale items
-  const hasValeItems = valeCategoryIds && valeCategoryIds.size > 0
-    ? order.pedido_items?.some(item => item.categoria_carta_id && valeCategoryIds.has(item.categoria_carta_id))
-    : true; // If no category data, show enabled by default
+  const hasValeItems =
+    valeCategoryIds && valeCategoryIds.size > 0
+      ? order.pedido_items?.some(
+          (item) => item.categoria_carta_id && valeCategoryIds.has(item.categoria_carta_id),
+        )
+      : true; // If no category data, show enabled by default
 
   return (
     <div className="space-y-4 text-sm">
@@ -306,9 +414,11 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
         <div>
           <p className="font-medium mb-1">Items</p>
           <ul className="space-y-0.5">
-            {order.pedido_items?.map(item => (
+            {order.pedido_items?.map((item) => (
               <li key={item.id} className="flex justify-between">
-                <span>{item.nombre} x{item.cantidad}</span>
+                <span>
+                  {item.nombre} x{item.cantidad}
+                </span>
                 <span className="tabular-nums">{fmt(item.subtotal)}</span>
               </li>
             ))}
@@ -337,7 +447,7 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
             )}
           </div>
           <ul className="space-y-0.5">
-            {order.pedido_pagos?.map(pago => (
+            {order.pedido_pagos?.map((pago) => (
               <li key={pago.id} className="flex justify-between">
                 <span>{METODO_LABELS[pago.metodo] || pago.metodo}</span>
                 <span className="tabular-nums">{fmt(pago.monto)}</span>
@@ -350,9 +460,16 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
             <div className="mt-3 pt-2 border-t space-y-1">
               <p className="font-medium flex items-center gap-1">
                 <FileText className="h-3.5 w-3.5 text-primary" />
-                {activeInvoice.tipo_comprobante.startsWith('NC_') ? 'Nota de Crédito' : 'Factura'} {activeInvoice.tipo_comprobante} — N° {String(activeInvoice.punto_venta).padStart(5, '0')}-{String(activeInvoice.numero_comprobante).padStart(8, '0')}
+                {activeInvoice.tipo_comprobante.startsWith('NC_')
+                  ? 'Nota de Crédito'
+                  : 'Factura'}{' '}
+                {activeInvoice.tipo_comprobante} — N°{' '}
+                {String(activeInvoice.punto_venta).padStart(5, '0')}-
+                {String(activeInvoice.numero_comprobante).padStart(8, '0')}
               </p>
-              {activeInvoice.cae && <p className="text-muted-foreground text-xs">CAE: {activeInvoice.cae}</p>}
+              {activeInvoice.cae && (
+                <p className="text-muted-foreground text-xs">CAE: {activeInvoice.cae}</p>
+              )}
               <p className="font-medium">{fmt(activeInvoice.total)}</p>
             </div>
           )}
@@ -360,18 +477,20 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
           {/* Cancelled invoices / Credit Notes */}
           {cancelledInvoices.length > 0 && (
             <div className="mt-2 space-y-1">
-              {cancelledInvoices.map(f => (
+              {cancelledInvoices.map((f) => (
                 <div key={f.id} className="text-xs text-muted-foreground line-through">
-                  Factura {f.tipo_comprobante} {String(f.punto_venta).padStart(5, '0')}-{String(f.numero_comprobante).padStart(8, '0')} (anulada)
+                  Factura {f.tipo_comprobante} {String(f.punto_venta).padStart(5, '0')}-
+                  {String(f.numero_comprobante).padStart(8, '0')} (anulada)
                 </div>
               ))}
             </div>
           )}
           {creditNotes.length > 0 && (
             <div className="mt-1 space-y-1">
-              {creditNotes.map(nc => (
+              {creditNotes.map((nc) => (
                 <div key={nc.id} className="text-xs text-orange-600 dark:text-orange-400">
-                  {nc.tipo_comprobante.replace('_', ' ')} {String(nc.punto_venta).padStart(5, '0')}-{String(nc.numero_comprobante).padStart(8, '0')}
+                  {nc.tipo_comprobante.replace('_', ' ')} {String(nc.punto_venta).padStart(5, '0')}-
+                  {String(nc.numero_comprobante).padStart(8, '0')}
                   {nc.cae && ` — CAE: ${nc.cae}`}
                 </div>
               ))}
@@ -380,8 +499,12 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
 
           {isMobileView() && (
             <div className="mt-2 text-muted-foreground space-y-0.5">
-              {order.canal_venta && <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>}
-              {order.tipo_servicio && <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>}
+              {order.canal_venta && (
+                <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>
+              )}
+              {order.tipo_servicio && (
+                <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>
+              )}
               {order.cliente_nombre && <p>Cliente: {order.cliente_nombre}</p>}
             </div>
           )}
@@ -452,7 +575,10 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
                 variant="outline"
                 size="sm"
                 className="h-8 text-xs"
-                onClick={(e) => { e.stopPropagation(); onChangeInvoice(order); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChangeInvoice(order);
+                }}
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Cambiar facturación
@@ -463,7 +589,10 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
                 variant="outline"
                 size="sm"
                 className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                onClick={(e) => { e.stopPropagation(); onCancelOrder(order); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelOrder(order);
+                }}
               >
                 <Ban className="h-3 w-3 mr-1" />
                 Anular pedido
@@ -475,7 +604,9 @@ function OrderDetail({ order, canEdit, onEdit, onReprint, onCancelOrder, onChang
 
       {isCancelled && (
         <div className="pt-3 border-t">
-          <Badge variant="destructive" className="text-xs">Pedido anulado</Badge>
+          <Badge variant="destructive" className="text-xs">
+            Pedido anulado
+          </Badge>
         </div>
       )}
     </div>

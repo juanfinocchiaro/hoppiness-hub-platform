@@ -1,12 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { 
-  Coaching, 
-  CoachingWithDetails, 
+import type {
+  CoachingWithDetails,
   CoachingFormData,
   CoachingStationScore,
-  CoachingCompetencyScore 
+  CoachingCompetencyScore,
 } from '@/types/coaching';
 
 interface CoachingFilters {
@@ -48,19 +47,18 @@ export function useCoachings(filters: CoachingFilters = {}) {
       if (error) throw error;
 
       // Obtener perfiles de empleados y evaluadores
-      const userIds = [...new Set([
-        ...data.map(c => c.user_id),
-        ...data.map(c => c.evaluated_by)
-      ])];
+      const userIds = [
+        ...new Set([...data.map((c) => c.user_id), ...data.map((c) => c.evaluated_by)]),
+      ];
 
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
-      return data.map(coaching => ({
+      return data.map((coaching) => ({
         ...coaching,
         employee: profileMap.get(coaching.user_id),
         evaluator: profileMap.get(coaching.evaluated_by),
@@ -106,7 +104,7 @@ export function useCoachingDetails(coachingId: string | null) {
         .select('id, full_name, avatar_url')
         .in('id', [coaching.user_id, coaching.evaluated_by]);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
       return {
         ...coaching,
@@ -144,15 +142,15 @@ export function useEmployeeCoachings(userId: string | null, branchId: string | n
       if (error) throw error;
 
       // Obtener evaluadores
-      const evaluatorIds = [...new Set(data.map(c => c.evaluated_by))];
+      const evaluatorIds = [...new Set(data.map((c) => c.evaluated_by))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', evaluatorIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
-      return data.map(coaching => ({
+      return data.map((coaching) => ({
         ...coaching,
         evaluator: profileMap.get(coaching.evaluated_by),
       })) as CoachingWithDetails[];
@@ -179,17 +177,20 @@ export function useCreateCoaching() {
       const year = coachingDate.getFullYear();
 
       // Calcular scores
-      const stationAvg = formData.stationScores.length > 0
-        ? formData.stationScores.reduce((sum, s) => sum + s.score, 0) / formData.stationScores.length
-        : null;
+      const stationAvg =
+        formData.stationScores.length > 0
+          ? formData.stationScores.reduce((sum, s) => sum + s.score, 0) /
+            formData.stationScores.length
+          : null;
 
-      const generalAvg = formData.generalScores.length > 0
-        ? formData.generalScores.reduce((sum, s) => sum + s.score, 0) / formData.generalScores.length
-        : null;
+      const generalAvg =
+        formData.generalScores.length > 0
+          ? formData.generalScores.reduce((sum, s) => sum + s.score, 0) /
+            formData.generalScores.length
+          : null;
 
-      const overallAvg = stationAvg && generalAvg 
-        ? (stationAvg + generalAvg) / 2 
-        : stationAvg || generalAvg;
+      const overallAvg =
+        stationAvg && generalAvg ? (stationAvg + generalAvg) / 2 : stationAvg || generalAvg;
 
       // 1. Crear coaching principal
       const { data: coaching, error: coachingError } = await supabase
@@ -217,7 +218,7 @@ export function useCreateCoaching() {
 
       // 2. Crear scores de estaciones
       if (formData.stationScores.length > 0) {
-        const stationScoresData = formData.stationScores.map(s => ({
+        const stationScoresData = formData.stationScores.map((s) => ({
           coaching_id: coaching.id,
           station_id: s.stationId,
           score: s.score,
@@ -230,13 +231,13 @@ export function useCreateCoaching() {
         if (stationError) throw stationError;
 
         // 3. Crear scores de competencias de estación
-        const competencyScoresData = formData.stationScores.flatMap(s => 
-          s.competencyScores.map(c => ({
+        const competencyScoresData = formData.stationScores.flatMap((s) =>
+          s.competencyScores.map((c) => ({
             coaching_id: coaching.id,
             competency_type: 'station' as const,
             competency_id: c.competencyId,
             score: c.score,
-          }))
+          })),
         );
 
         if (competencyScoresData.length > 0) {
@@ -250,7 +251,7 @@ export function useCreateCoaching() {
 
       // 4. Crear scores de competencias generales
       if (formData.generalScores.length > 0) {
-        const generalScoresData = formData.generalScores.map(g => ({
+        const generalScoresData = formData.generalScores.map((g) => ({
           coaching_id: coaching.id,
           competency_type: 'general' as const,
           competency_id: g.competencyId,
@@ -266,7 +267,7 @@ export function useCreateCoaching() {
 
       // 5. Actualizar certificaciones si hay cambios
       if (formData.certificationChanges.length > 0) {
-        const certUpdates = formData.certificationChanges.map(c => ({
+        const certUpdates = formData.certificationChanges.map((c) => ({
           user_id: formData.userId,
           branch_id: formData.branchId,
           station_id: c.stationId,

@@ -1,25 +1,24 @@
 /**
  * PermissionsConfigPage - Tablero de permisos configurables
- * 
+ *
  * Permite al superadmin activar/desactivar permisos por rol.
  * Los permisos marcados como is_editable=false no pueden modificarse.
  */
 import React from 'react';
 import { Lock, Check, X, Shield, Building2, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+
 import { cn } from '@/lib/utils';
-import { 
-  usePermissionConfig, 
-  BRAND_ROLES, 
+import {
+  usePermissionConfig,
+  BRAND_ROLES,
   LOCAL_ROLES,
   BRAND_ROLE_LABELS,
   LOCAL_ROLE_LABELS,
-  type PermissionConfigRow
+  type PermissionConfigRow,
 } from '@/hooks/usePermissionConfig';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 
@@ -39,9 +38,7 @@ export default function PermissionsConfigPage() {
     return (
       <div className="p-6">
         <Alert variant="destructive">
-          <AlertDescription>
-            No tenés permisos para acceder a esta página.
-          </AlertDescription>
+          <AlertDescription>No tenés permisos para acceder a esta página.</AlertDescription>
         </Alert>
       </div>
     );
@@ -61,14 +58,14 @@ export default function PermissionsConfigPage() {
     permissions: PermissionConfigRow[],
     categories: string[],
     roles: readonly string[],
-    roleLabels: Record<string, string>
+    roleLabels: Record<string, string>,
   ) => (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b">
             <th className="text-left py-3 px-2 font-medium w-48">Permiso</th>
-            {roles.map(role => (
+            {roles.map((role) => (
               <th key={role} className="text-center py-3 px-2 font-medium w-16">
                 {roleLabels[role]}
               </th>
@@ -77,21 +74,24 @@ export default function PermissionsConfigPage() {
           </tr>
         </thead>
         <tbody>
-          {categories.map(category => (
+          {categories.map((category) => (
             <React.Fragment key={`cat-${category}`}>
               <tr className="bg-muted/50">
-                <td colSpan={roles.length + 2} className="py-2 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                <td
+                  colSpan={roles.length + 2}
+                  className="py-2 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wide"
+                >
                   {category}
                 </td>
               </tr>
               {permissions
-                .filter(p => p.category === category)
-                .map(permission => (
+                .filter((p) => p.category === category)
+                .map((permission) => (
                   <tr key={permission.id} className="border-b hover:bg-muted/30">
                     <td className="py-2 px-2">
                       <span className="font-medium">{permission.permission_label}</span>
                     </td>
-                    {roles.map(role => {
+                    {roles.map((role) => {
                       const hasRole = permission.allowed_roles.includes(role);
                       const isEditable = permission.is_editable;
                       const isUpdating = updatePermission.isPending;
@@ -103,18 +103,16 @@ export default function PermissionsConfigPage() {
                             disabled={!isEditable || isUpdating}
                             className={cn(
                               'w-8 h-8 rounded-full inline-flex items-center justify-center transition-all',
-                              hasRole 
-                                ? 'bg-primary text-primary-foreground' 
+                              hasRole
+                                ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground',
-                              isEditable && !isUpdating && 'cursor-pointer hover:ring-2 hover:ring-primary/50',
-                              !isEditable && 'cursor-not-allowed opacity-50'
+                              isEditable &&
+                                !isUpdating &&
+                                'cursor-pointer hover:ring-2 hover:ring-primary/50',
+                              !isEditable && 'cursor-not-allowed opacity-50',
                             )}
                           >
-                            {hasRole ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <X className="w-4 h-4" />
-                            )}
+                            {hasRole ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                           </button>
                         </td>
                       );
@@ -178,13 +176,16 @@ export default function PermissionsConfigPage() {
             <Shield className="w-5 h-5" />
             Permisos de Marca
           </CardTitle>
-          <CardDescription>
-            Permisos para el panel Mi Marca (nivel central)
-          </CardDescription>
+          <CardDescription>Permisos para el panel Mi Marca (nivel central)</CardDescription>
         </CardHeader>
         <CardContent>
           <ScrollArea className="w-full">
-            {renderPermissionGrid(brandPermissions, brandCategories, BRAND_ROLES, BRAND_ROLE_LABELS)}
+            {renderPermissionGrid(
+              brandPermissions,
+              brandCategories,
+              BRAND_ROLES,
+              BRAND_ROLE_LABELS,
+            )}
           </ScrollArea>
         </CardContent>
       </Card>
@@ -196,13 +197,16 @@ export default function PermissionsConfigPage() {
             <Building2 className="w-5 h-5" />
             Permisos de Sucursal
           </CardTitle>
-          <CardDescription>
-            Permisos para el panel Mi Local (por sucursal)
-          </CardDescription>
+          <CardDescription>Permisos para el panel Mi Local (por sucursal)</CardDescription>
         </CardHeader>
         <CardContent>
           <ScrollArea className="w-full">
-            {renderPermissionGrid(localPermissions, localCategories, LOCAL_ROLES, LOCAL_ROLE_LABELS)}
+            {renderPermissionGrid(
+              localPermissions,
+              localCategories,
+              LOCAL_ROLES,
+              LOCAL_ROLE_LABELS,
+            )}
           </ScrollArea>
         </CardContent>
       </Card>

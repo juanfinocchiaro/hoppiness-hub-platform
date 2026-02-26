@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -21,7 +27,13 @@ interface Props {
   branchId: string;
 }
 
-export function CondicionesLocalModal({ open, onOpenChange, proveedorId, proveedorName, branchId }: Props) {
+export function CondicionesLocalModal({
+  open,
+  onOpenChange,
+  proveedorId,
+  proveedorName,
+  branchId,
+}: Props) {
   const { data: existing, isLoading } = useCondicionesProveedor(branchId, proveedorId);
   const { upsert } = useCondicionesMutations();
 
@@ -68,10 +80,19 @@ export function CondicionesLocalModal({ open, onOpenChange, proveedorId, proveed
         {isLoading ? (
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><div className="h-4 w-24 rounded bg-muted animate-pulse" /><div className="h-9 rounded bg-muted animate-pulse" /></div>
-              <div className="space-y-2"><div className="h-4 w-24 rounded bg-muted animate-pulse" /><div className="h-9 rounded bg-muted animate-pulse" /></div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+                <div className="h-9 rounded bg-muted animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+                <div className="h-9 rounded bg-muted animate-pulse" />
+              </div>
             </div>
-            <div className="space-y-2"><div className="h-4 w-32 rounded bg-muted animate-pulse" /><div className="h-20 rounded bg-muted animate-pulse" /></div>
+            <div className="space-y-2">
+              <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+              <div className="h-20 rounded bg-muted animate-pulse" />
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -126,7 +147,9 @@ export function CondicionesLocalModal({ open, onOpenChange, proveedorId, proveed
             </FormRow>
 
             <StickyActions>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
               <LoadingButton loading={upsert.isPending} onClick={handleSubmit}>
                 Guardar Condiciones
               </LoadingButton>

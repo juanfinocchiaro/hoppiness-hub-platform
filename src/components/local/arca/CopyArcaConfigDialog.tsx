@@ -20,7 +20,12 @@ interface CopyArcaConfigDialogProps {
   onCopied: () => void;
 }
 
-export function CopyArcaConfigDialog({ open, onOpenChange, targetBranchId, onCopied }: CopyArcaConfigDialogProps) {
+export function CopyArcaConfigDialog({
+  open,
+  onOpenChange,
+  targetBranchId,
+  onCopied,
+}: CopyArcaConfigDialogProps) {
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
   const queryClient = useQueryClient();
@@ -85,9 +90,7 @@ export function CopyArcaConfigDialog({ open, onOpenChange, targetBranchId, onCop
           .eq('branch_id', targetBranchId) as any);
         if (error) throw error;
       } else {
-        const { error } = await (supabase
-          .from('afip_config' as any)
-          .insert(payload) as any);
+        const { error } = await (supabase.from('afip_config' as any).insert(payload) as any);
         if (error) throw error;
       }
 
@@ -107,7 +110,8 @@ export function CopyArcaConfigDialog({ open, onOpenChange, targetBranchId, onCop
         <DialogHeader>
           <DialogTitle>Copiar datos fiscales de otra sucursal</DialogTitle>
           <DialogDescription>
-            Copiá CUIT, razón social, dirección e inicio de actividades. El punto de venta y el certificado NO se copian.
+            Copiá CUIT, razón social, dirección e inicio de actividades. El punto de venta y el
+            certificado NO se copian.
           </DialogDescription>
         </DialogHeader>
 
@@ -134,7 +138,9 @@ export function CopyArcaConfigDialog({ open, onOpenChange, targetBranchId, onCop
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">{b.branch_name}</p>
-                    <p className="text-xs text-muted-foreground">CUIT: {b.cuit} · {b.razon_social}</p>
+                    <p className="text-xs text-muted-foreground">
+                      CUIT: {b.cuit} · {b.razon_social}
+                    </p>
                   </div>
                   {selectedBranchId === b.branch_id && (
                     <CheckCircle className="h-4 w-4 text-primary" />
@@ -146,11 +152,10 @@ export function CopyArcaConfigDialog({ open, onOpenChange, targetBranchId, onCop
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button
-            onClick={handleCopy}
-            disabled={!selectedBranchId || isCopying}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleCopy} disabled={!selectedBranchId || isCopying}>
             {isCopying ? 'Copiando...' : 'Copiar datos fiscales'}
           </Button>
         </DialogFooter>

@@ -39,13 +39,18 @@ export function MyCoachingsCardEnhanced() {
   const { id: effectiveUserId } = useEffectiveUser();
   const { branchRoles } = usePermissionsWithImpersonation();
   const { data: pendingCoachings, isLoading: loadingPending } = useMyPendingCoachings();
-  const { data: recentCoachings, isLoading: loadingRecent } = useEmployeeCoachings(effectiveUserId, null);
+  const { data: recentCoachings, isLoading: loadingRecent } = useEmployeeCoachings(
+    effectiveUserId,
+    null,
+  );
   const acknowledgeCoaching = useAcknowledgeCoaching();
-  
+
   // Get first branch for comparison
-  const firstBranchId = branchRoles.find(r => r.local_role === 'empleado' || r.local_role === 'cajero')?.branch_id;
+  const firstBranchId = branchRoles.find(
+    (r) => r.local_role === 'empleado' || r.local_role === 'cajero',
+  )?.branch_id;
   const { data: vsTeamData } = useEmployeeVsTeam(effectiveUserId, firstBranchId || null);
-  
+
   const [selectedCoaching, setSelectedCoaching] = useState<{
     id: string;
     month: string;
@@ -54,10 +59,11 @@ export function MyCoachingsCardEnhanced() {
     areas: string | null;
   } | null>(null);
   const [acknowledgeNotes, setAcknowledgeNotes] = useState('');
-  
+
   // Los encargados y franquiciados no reciben coachings - ocultar este card
-  const hasOnlyExcludedRoles = branchRoles.length > 0 && 
-    branchRoles.every(r => r.local_role === 'encargado' || r.local_role === 'franquiciado');
+  const hasOnlyExcludedRoles =
+    branchRoles.length > 0 &&
+    branchRoles.every((r) => r.local_role === 'encargado' || r.local_role === 'franquiciado');
 
   const isLoading = loadingPending || loadingRecent;
 
@@ -80,13 +86,14 @@ export function MyCoachingsCardEnhanced() {
   const lastCoaching = recentCoachings?.[0];
 
   // Prepare chart data
-  const chartData = vsTeamData?.comparison.map(c => ({
-    name: format(new Date(c.year, c.month - 1), 'MMM', { locale: es }),
-    miScore: c.myScore,
-    equipoPromedio: c.teamAvg,
-  })) || [];
+  const chartData =
+    vsTeamData?.comparison.map((c) => ({
+      name: format(new Date(c.year, c.month - 1), 'MMM', { locale: es }),
+      miScore: c.myScore,
+      equipoPromedio: c.teamAvg,
+    })) || [];
 
-  const handleViewPending = (coaching: typeof pendingCoachings[0]) => {
+  const handleViewPending = (coaching: (typeof pendingCoachings)[0]) => {
     const date = new Date(coaching.coaching_date);
     setSelectedCoaching({
       id: coaching.id,
@@ -99,12 +106,12 @@ export function MyCoachingsCardEnhanced() {
 
   const handleAcknowledge = async () => {
     if (!selectedCoaching) return;
-    
+
     await acknowledgeCoaching.mutateAsync({
       coachingId: selectedCoaching.id,
       notes: acknowledgeNotes || undefined,
     });
-    
+
     setSelectedCoaching(null);
     setAcknowledgeNotes('');
   };
@@ -117,9 +124,7 @@ export function MyCoachingsCardEnhanced() {
             <ClipboardCheck className="h-4 w-4" />
             Mis Coachings
           </CardTitle>
-          <CardDescription>
-            Evaluaciones mensuales de desempeño
-          </CardDescription>
+          <CardDescription>Evaluaciones mensuales de desempeño</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Badges de logro */}
@@ -136,31 +141,23 @@ export function MyCoachingsCardEnhanced() {
           {/* Pendientes de confirmar */}
           {hasPending && (
             <div className="space-y-2">
-              {pendingCoachings.map(coaching => {
+              {pendingCoachings.map((coaching) => {
                 const date = new Date(coaching.coaching_date);
                 const monthName = format(date, 'MMMM', { locale: es });
-                
+
                 return (
-                  <div 
+                  <div
                     key={coaching.id}
                     className="flex items-center justify-between p-3 rounded-lg border border-warning/30 bg-warning/10"
                   >
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-4 w-4 text-warning-foreground" />
                       <div>
-                        <p className="text-sm font-medium capitalize">
-                          Coaching de {monthName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Pendiente de confirmar
-                        </p>
+                        <p className="text-sm font-medium capitalize">Coaching de {monthName}</p>
+                        <p className="text-xs text-muted-foreground">Pendiente de confirmar</p>
                       </div>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleViewPending(coaching)}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => handleViewPending(coaching)}>
                       Ver y Confirmar
                     </Button>
                   </div>
@@ -185,37 +182,37 @@ export function MyCoachingsCardEnhanced() {
               <div className="h-24">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-                    <XAxis 
-                      dataKey="name" 
-                      tick={{ fontSize: 10 }} 
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                     />
-                    <YAxis 
-                      domain={[0, 4]} 
-                      ticks={[1, 2, 3, 4]} 
+                    <YAxis
+                      domain={[0, 4]}
+                      ticks={[1, 2, 3, 4]}
                       tick={{ fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       width={20}
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number) => value?.toFixed(2)}
                       labelFormatter={(label) => `${label}`}
                     />
                     <ReferenceLine y={2.5} stroke="#e5e7eb" strokeDasharray="3 3" />
-                    <Line 
-                      type="monotone" 
-                      dataKey="miScore" 
-                      stroke="hsl(var(--primary))" 
+                    <Line
+                      type="monotone"
+                      dataKey="miScore"
+                      stroke="hsl(var(--primary))"
                       strokeWidth={2}
                       dot={{ r: 3 }}
                       name="Mi Score"
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="equipoPromedio" 
-                      stroke="#94a3b8" 
+                    <Line
+                      type="monotone"
+                      dataKey="equipoPromedio"
+                      stroke="#94a3b8"
                       strokeWidth={1}
                       strokeDasharray="4 4"
                       dot={false}
@@ -259,12 +256,8 @@ export function MyCoachingsCardEnhanced() {
       <Dialog open={!!selectedCoaching} onOpenChange={() => setSelectedCoaching(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="capitalize">
-              Coaching de {selectedCoaching?.month}
-            </DialogTitle>
-            <DialogDescription>
-              Revisa tu evaluación y confirma que la leíste
-            </DialogDescription>
+            <DialogTitle className="capitalize">Coaching de {selectedCoaching?.month}</DialogTitle>
+            <DialogDescription>Revisa tu evaluación y confirma que la leíste</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -287,10 +280,10 @@ export function MyCoachingsCardEnhanced() {
 
             {selectedCoaching?.areas && (
               <div>
-                <Label className="text-sm font-medium text-warning-foreground">Áreas de Mejora</Label>
-                <p className="text-sm mt-1 p-2 rounded bg-warning/10">
-                  {selectedCoaching.areas}
-                </p>
+                <Label className="text-sm font-medium text-warning-foreground">
+                  Áreas de Mejora
+                </Label>
+                <p className="text-sm mt-1 p-2 rounded bg-warning/10">{selectedCoaching.areas}</p>
               </div>
             )}
 
@@ -310,10 +303,7 @@ export function MyCoachingsCardEnhanced() {
             <Button variant="outline" onClick={() => setSelectedCoaching(null)}>
               Cerrar
             </Button>
-            <Button 
-              onClick={handleAcknowledge}
-              disabled={acknowledgeCoaching.isPending}
-            >
+            <Button onClick={handleAcknowledge} disabled={acknowledgeCoaching.isPending}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Confirmar Lectura
             </Button>

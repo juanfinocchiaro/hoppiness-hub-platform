@@ -36,7 +36,10 @@ export function useCodigosDescuento() {
   });
 }
 
-export function useValidateCode(branchId: string | undefined, context: 'webapp' | 'pos' = 'webapp') {
+export function useValidateCode(
+  branchId: string | undefined,
+  context: 'webapp' | 'pos' = 'webapp',
+) {
   const { user } = useAuth();
 
   return useMutation({
@@ -54,9 +57,11 @@ export function useValidateCode(branchId: string | undefined, context: 'webapp' 
       const code = data as CodigoDescuento;
       const today = new Date().toISOString().slice(0, 10);
 
-      if (code.fecha_inicio && today < code.fecha_inicio) throw new Error('Este código aún no está activo');
+      if (code.fecha_inicio && today < code.fecha_inicio)
+        throw new Error('Este código aún no está activo');
       if (code.fecha_fin && today > code.fecha_fin) throw new Error('Este código ya expiró');
-      if (code.usos_maximos && code.usos_actuales >= code.usos_maximos) throw new Error('Este código ya alcanzó el máximo de usos');
+      if (code.usos_maximos && code.usos_actuales >= code.usos_maximos)
+        throw new Error('Este código ya alcanzó el máximo de usos');
       const bids = code.branch_ids ?? [];
       if (bids.length > 0) {
         if (!branchId) throw new Error('No se puede validar el código sin un local seleccionado');
@@ -77,7 +82,7 @@ export function useValidateCode(branchId: string | undefined, context: 'webapp' 
 
       let descuento = 0;
       if (code.tipo === 'descuento_porcentaje') {
-        descuento = Math.round(subtotal * code.valor / 100);
+        descuento = Math.round((subtotal * code.valor) / 100);
       } else {
         descuento = Math.min(code.valor, subtotal);
       }
@@ -88,20 +93,23 @@ export function useValidateCode(branchId: string | undefined, context: 'webapp' 
 }
 
 /** Register usage of a discount code (call after order is confirmed) */
-export async function registerCodeUsage({ codigoId, userId, pedidoId, montoDescontado }: {
+export async function registerCodeUsage({
+  codigoId,
+  userId,
+  pedidoId,
+  montoDescontado,
+}: {
   codigoId: string;
   userId?: string;
   pedidoId?: string;
   montoDescontado: number;
 }) {
-  await supabase
-    .from('codigos_descuento_usos')
-    .insert({
-      codigo_id: codigoId,
-      user_id: userId || null,
-      pedido_id: pedidoId || null,
-      monto_descontado: montoDescontado,
-    } as any);
+  await supabase.from('codigos_descuento_usos').insert({
+    codigo_id: codigoId,
+    user_id: userId || null,
+    pedido_id: pedidoId || null,
+    monto_descontado: montoDescontado,
+  } as any);
 
   const { data } = await supabase
     .from('codigos_descuento')

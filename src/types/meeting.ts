@@ -19,21 +19,21 @@ export const MEETING_AREAS = [
   { value: 'operaciones', label: 'Operaciones' },
 ] as const;
 
-export type MeetingArea = typeof MEETING_AREAS[number]['value'];
+export type MeetingArea = (typeof MEETING_AREAS)[number]['value'];
 
 // Meeting base
 export interface Meeting {
   id: string;
   title: string;
-  scheduled_at: string;          // Fecha/hora programada
-  date: string;                   // Legacy - mantener por compatibilidad
+  scheduled_at: string; // Fecha/hora programada
+  date: string; // Legacy - mantener por compatibilidad
   area: MeetingArea;
-  branch_id: string | null;       // null = reunión de red (Mi Marca)
+  branch_id: string | null; // null = reunión de red (Mi Marca)
   created_by: string;
   status: MeetingStatus;
-  notes: string | null;           // null hasta que se ejecute
-  started_at: string | null;      // Cuando inició ejecución
-  closed_at: string | null;       // Cuando se cerró
+  notes: string | null; // null hasta que se ejecute
+  started_at: string | null; // Cuando inició ejecución
+  closed_at: string | null; // Cuando se cerró
   source: MeetingSource;
   created_at: string;
   updated_at?: string;
@@ -44,8 +44,8 @@ export interface MeetingParticipant {
   id: string;
   meeting_id: string;
   user_id: string;
-  attended: boolean;              // Legacy
-  was_present: boolean | null;    // null = no tomada, true/false después
+  attended: boolean; // Legacy
+  was_present: boolean | null; // null = no tomada, true/false después
   read_at: string | null;
   notified_at: string | null;
   reminder_count: number;
@@ -105,7 +105,7 @@ export interface MeetingConveneData {
   time: string;
   area: MeetingArea;
   participantIds: string[];
-  branchId?: string | null;      // null para reuniones de red
+  branchId?: string | null; // null para reuniones de red
 }
 
 // Form data for ejecución (Fase 2)

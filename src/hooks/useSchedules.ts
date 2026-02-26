@@ -1,13 +1,13 @@
 /**
  * useSchedules - Hook for employee monthly schedules management
- * 
+ *
  * Uses employee_schedules table with the new schedule_date column
  * for specific day scheduling (monthly system)
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns';
+import { format, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
 import type { WorkPositionType } from '@/types/workPosition';
 
@@ -71,10 +71,10 @@ export function useMonthlySchedules(branchId: string | undefined, month: number,
     queryKey: ['monthly-schedules', branchId, year, month],
     queryFn: async () => {
       if (!branchId) return [];
-      
+
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { data, error } = await supabase
         .from('employee_schedules')
         .select('*')
@@ -82,7 +82,7 @@ export function useMonthlySchedules(branchId: string | undefined, month: number,
         .gte('schedule_date', startDate)
         .lte('schedule_date', endDate)
         .order('schedule_date', { ascending: true });
-      
+
       if (error) throw error;
       return (data || []) as ScheduleEntry[];
     },
@@ -99,10 +99,10 @@ export function useEmployeeMonthSchedule(userId: string | undefined, month: numb
     queryKey: ['employee-schedule', userId, year, month],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { data, error } = await supabase
         .from('employee_schedules')
         .select('*')
@@ -110,7 +110,7 @@ export function useEmployeeMonthSchedule(userId: string | undefined, month: numb
         .gte('schedule_date', startDate)
         .lte('schedule_date', endDate)
         .order('schedule_date', { ascending: true });
-      
+
       if (error) throw error;
       return (data || []) as ScheduleEntry[];
     },
@@ -127,10 +127,10 @@ export function useHasPublishedSchedule(userId: string | undefined, month: numbe
     queryKey: ['has-published-schedule', userId, year, month],
     queryFn: async () => {
       if (!userId) return false;
-      
+
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { data, error } = await supabase
         .from('employee_schedules')
         .select('id, published_at')
@@ -139,7 +139,7 @@ export function useHasPublishedSchedule(userId: string | undefined, month: numbe
         .lte('schedule_date', endDate)
         .not('published_at', 'is', null)
         .limit(1);
-      
+
       if (error) throw error;
       return (data?.length || 0) > 0;
     },
@@ -155,20 +155,20 @@ export function useHasPublishedSchedule(userId: string | undefined, month: numbe
 export function useSaveMonthlySchedule() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (input: SaveScheduleInput) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       const now = new Date().toISOString();
-      
+
       // Filter out days without schedule (empty days)
-      const validDays = input.days.filter(day => 
-        day.is_day_off || (day.start_time && day.end_time)
+      const validDays = input.days.filter(
+        (day) => day.is_day_off || (day.start_time && day.end_time),
       );
-      
+
       // Build upsert records
-      const records = validDays.map(day => ({
+      const records = validDays.map((day) => ({
         user_id: input.user_id,
         branch_id: input.branch_id,
         schedule_date: day.date,
@@ -188,28 +188,25 @@ export function useSaveMonthlySchedule() {
         })(),
         employee_id: input.user_id, // Legacy compatibility
       }));
-      
+
       // Delete existing entries for this user/month first
       const startDate = format(new Date(input.year, input.month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(input.year, input.month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { error: deleteError } = await supabase
         .from('employee_schedules')
         .delete()
         .eq('user_id', input.user_id)
         .gte('schedule_date', startDate)
         .lte('schedule_date', endDate);
-      
+
       if (deleteError) throw deleteError;
-      
+
       // Insert new entries
-      const { data, error } = await supabase
-        .from('employee_schedules')
-        .insert(records)
-        .select();
-      
+      const { data, error } = await supabase.from('employee_schedules').insert(records).select();
+
       if (error) throw error;
-      
+
       // Send notifications if requested
       if (input.notify_email || input.notify_communication) {
         await sendScheduleNotification({
@@ -223,7 +220,7 @@ export function useSaveMonthlySchedule() {
           sender_id: user.id,
         });
       }
-      
+
       return data as ScheduleEntry[];
     },
     onSuccess: (_, variables) => {
@@ -242,22 +239,22 @@ export function useSaveMonthlySchedule() {
 export function useModifySchedule() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (input: ModifyScheduleInput) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       const now = new Date().toISOString();
-      
+
       // First get the existing entry
       const { data: existing, error: fetchError } = await supabase
         .from('employee_schedules')
         .select('*')
         .eq('id', input.schedule_id)
         .single();
-      
+
       if (fetchError) throw fetchError;
-      
+
       // Update the entry
       const { data, error } = await supabase
         .from('employee_schedules')
@@ -272,9 +269,9 @@ export function useModifySchedule() {
         .eq('id', input.schedule_id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       // Send notifications if requested
       if (input.notify_email || input.notify_communication) {
         await sendScheduleNotification({
@@ -290,7 +287,7 @@ export function useModifySchedule() {
           sender_id: user.id,
         });
       }
-      
+
       return data as ScheduleEntry;
     },
     onSuccess: (data) => {
@@ -307,17 +304,22 @@ export function useModifySchedule() {
  */
 export function useDeleteMonthSchedule() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ userId, branchId, month, year }: { 
-      userId: string; 
-      branchId: string; 
-      month: number; 
+    mutationFn: async ({
+      userId,
+      branchId,
+      month,
+      year,
+    }: {
+      userId: string;
+      branchId: string;
+      month: number;
       year: number;
     }) => {
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { error } = await supabase
         .from('employee_schedules')
         .delete()
@@ -325,7 +327,7 @@ export function useDeleteMonthSchedule() {
         .eq('branch_id', branchId)
         .gte('schedule_date', startDate)
         .lte('schedule_date', endDate);
-      
+
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
@@ -357,21 +359,31 @@ interface NotificationInput {
 
 async function sendScheduleNotification(input: NotificationInput) {
   const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'Enero',
+    'Febrero',
+    'Marzo',
+    'Abril',
+    'Mayo',
+    'Junio',
+    'Julio',
+    'Agosto',
+    'Septiembre',
+    'Octubre',
+    'Noviembre',
+    'Diciembre',
   ];
   const monthName = monthNames[input.month - 1];
-  
+
   // Create internal communication
   if (input.notify_communication) {
     const title = input.is_modification
       ? `📅 Tu horario de ${monthName} fue modificado`
       : `📅 Tu horario de ${monthName} ya está disponible`;
-    
+
     let body = input.is_modification
       ? `Tu encargado modificó tu horario. ${input.modification_reason ? `Motivo: ${input.modification_reason}` : ''} Revisalo en 'Mi Horario'.`
       : `Tu encargado publicó el horario del mes. Revisalo en 'Mi Horario'.`;
-    
+
     await supabase.from('communications').insert({
       title,
       body,
@@ -384,7 +396,7 @@ async function sendScheduleNotification(input: NotificationInput) {
       created_by: input.sender_id,
     });
   }
-  
+
   // Send email notification
   if (input.notify_email) {
     try {
@@ -407,15 +419,19 @@ async function sendScheduleNotification(input: NotificationInput) {
 /**
  * Get schedule requests for an employee for a specific month
  */
-export function useEmployeeScheduleRequests(userId: string | undefined, month: number, year: number) {
+export function useEmployeeScheduleRequests(
+  userId: string | undefined,
+  month: number,
+  year: number,
+) {
   return useQuery({
     queryKey: ['employee-schedule-requests', userId, year, month],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const startDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-      
+
       const { data, error } = await supabase
         .from('schedule_requests')
         .select('*')
@@ -423,7 +439,7 @@ export function useEmployeeScheduleRequests(userId: string | undefined, month: n
         .gte('request_date', startDate)
         .lte('request_date', endDate)
         .order('request_date', { ascending: true });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -438,11 +454,11 @@ export function useEmployeeScheduleRequests(userId: string | undefined, month: n
 export function useApproveScheduleRequest() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async ({ requestId, notes }: { requestId: string; notes?: string }) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       const { data, error } = await supabase
         .from('schedule_requests')
         .update({
@@ -454,11 +470,11 @@ export function useApproveScheduleRequest() {
         .eq('id', requestId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-schedule-requests'] });
       queryClient.invalidateQueries({ queryKey: ['pending-schedule-requests'] });
       toast.success('Solicitud aprobada');
@@ -473,11 +489,11 @@ export function useApproveScheduleRequest() {
 export function useRejectScheduleRequest() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async ({ requestId, notes }: { requestId: string; notes?: string }) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       const { data, error } = await supabase
         .from('schedule_requests')
         .update({
@@ -489,7 +505,7 @@ export function useRejectScheduleRequest() {
         .eq('id', requestId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },

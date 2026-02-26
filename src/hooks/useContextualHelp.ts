@@ -25,15 +25,18 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
     queryKey: ['profile-help-prefs', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .select('help_dismissed_pages, show_floating_help')
         .eq('id', user.id)
         .maybeSingle();
-      
+
       if (error) throw error;
-      return data as { help_dismissed_pages: string[] | null; show_floating_help: boolean | null } | null;
+      return data as {
+        help_dismissed_pages: string[] | null;
+        show_floating_help: boolean | null;
+      } | null;
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -46,7 +49,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
   const dismissMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) return;
-      
+
       const currentDismissed = profile?.help_dismissed_pages || [];
       if (currentDismissed.includes(pageId)) return;
 
@@ -56,7 +59,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
           help_dismissed_pages: [...currentDismissed, pageId],
         })
         .eq('id', user.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -76,7 +79,7 @@ export function useContextualHelp(pageId: string): UseContextualHelpResult {
           show_floating_help: !showFloatingHelp,
         })
         .eq('id', user.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {

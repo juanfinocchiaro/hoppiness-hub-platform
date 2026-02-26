@@ -1,13 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Bell, 
-  MessageSquare, 
-  CalendarClock, 
-  DollarSign,
-  ChevronRight
-} from 'lucide-react';
+import { Bell, MessageSquare, CalendarClock, DollarSign, ChevronRight } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/useCommunications';
 import { useMyMeetings } from '@/hooks/useMeetings';
 import { useMyAdvances } from '@/hooks/useSalaryAdvances';
@@ -30,13 +24,10 @@ export function PendingItemsPanel({ userId }: PendingItemsPanelProps) {
   const { data: myMeetings } = useMyMeetings();
   const { data: myAdvances } = useMyAdvances(userId);
 
-  const pendingMeetings = myMeetings?.filter(
-    m => m.status === 'convocada' || m.status === 'en_curso'
-  ).length || 0;
+  const pendingMeetings =
+    myMeetings?.filter((m) => m.status === 'convocada' || m.status === 'en_curso').length || 0;
 
-  const pendingAdvances = myAdvances?.filter(
-    a => a.status === 'pending'
-  ).length || 0;
+  const pendingAdvances = myAdvances?.filter((a) => a.status === 'pending').length || 0;
 
   const items = [
     {
@@ -63,7 +54,7 @@ export function PendingItemsPanel({ userId }: PendingItemsPanelProps) {
       href: '/cuenta/adelantos',
       variant: 'secondary',
     },
-  ].filter(item => item.count > 0) as PendingItem[];
+  ].filter((item) => item.count > 0) as PendingItem[];
 
   if (items.length === 0) return null;
 
@@ -75,11 +66,13 @@ export function PendingItemsPanel({ userId }: PendingItemsPanelProps) {
         <CardTitle className="text-base flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary" />
           Pendientes
-          <Badge variant="secondary" className="ml-auto">{totalPending}</Badge>
+          <Badge variant="secondary" className="ml-auto">
+            {totalPending}
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
-        {items.map(item => (
+        {items.map((item) => (
           <Link
             key={item.key}
             to={item.href}
@@ -87,7 +80,9 @@ export function PendingItemsPanel({ userId }: PendingItemsPanelProps) {
           >
             <span className="text-muted-foreground">{item.icon}</span>
             <span className="flex-1 text-sm font-medium">{item.label}</span>
-            <Badge variant={item.variant} className="text-xs">{item.count}</Badge>
+            <Badge variant={item.variant} className="text-xs">
+              {item.count}
+            </Badge>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
         ))}

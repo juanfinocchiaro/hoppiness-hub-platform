@@ -9,7 +9,10 @@ export default function ShiftConfigPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Configuración de Turnos" subtitle="Habilita o deshabilita turnos para la carga de ventas" />
+      <PageHeader
+        title="Configuración de Turnos"
+        subtitle="Habilita o deshabilita turnos para la carga de ventas"
+      />
       <ShiftConfigCard branchId={branchId} />
     </div>
   );

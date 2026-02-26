@@ -31,7 +31,7 @@ export function DataToolbar({
     <div
       className={cn(
         'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4',
-        className
+        className,
       )}
     >
       <div className="flex flex-1 items-center gap-2">

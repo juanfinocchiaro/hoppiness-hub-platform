@@ -17,19 +17,31 @@ export interface CashRegister {
 }
 
 /* ── Visibility helpers ── */
-export function canViewBalance(registerType: RegisterType, localRole: string | null, isSuperadmin: boolean): boolean {
+export function canViewBalance(
+  registerType: RegisterType,
+  localRole: string | null,
+  isSuperadmin: boolean,
+): boolean {
   if (isSuperadmin) return true;
   if (registerType === 'ventas') return true;
   return ['franquiciado', 'contador_local'].includes(localRole ?? '');
 }
 
-export function canViewMovements(registerType: RegisterType, localRole: string | null, isSuperadmin: boolean): boolean {
+export function canViewMovements(
+  registerType: RegisterType,
+  localRole: string | null,
+  isSuperadmin: boolean,
+): boolean {
   if (isSuperadmin) return true;
   if (registerType === 'ventas') return true;
   return ['franquiciado', 'contador_local'].includes(localRole ?? '');
 }
 
-export function canViewSection(registerType: RegisterType, localRole: string | null, isSuperadmin: boolean): boolean {
+export function canViewSection(
+  registerType: RegisterType,
+  localRole: string | null,
+  isSuperadmin: boolean,
+): boolean {
   if (isSuperadmin) return true;
   if (registerType === 'ventas') return true;
   if (registerType === 'alivio') return true; // visible but restricted
@@ -41,9 +53,9 @@ export function useCashRegistersByType(branchId: string | undefined) {
   const { data, isLoading } = useCashRegisters(branchId);
   const all = data?.all ?? [];
   return {
-    ventas: all.find(r => r.register_type === 'ventas') ?? null,
-    alivio: all.find(r => r.register_type === 'alivio') ?? null,
-    fuerte: all.find(r => r.register_type === 'fuerte') ?? null,
+    ventas: all.find((r) => r.register_type === 'ventas') ?? null,
+    alivio: all.find((r) => r.register_type === 'alivio') ?? null,
+    fuerte: all.find((r) => r.register_type === 'fuerte') ?? null,
     isLoading,
   };
 }
@@ -111,7 +123,8 @@ export function useCashShifts(branchId: string | undefined, registerIds: string[
   return useQuery({
     queryKey: [...cashRegisterKeys.shifts(branchId ?? ''), registerIds.join(',')],
     queryFn: async () => {
-      if (!branchId || registerIds.length === 0) return {} as Record<string, CashRegisterShift | null>;
+      if (!branchId || registerIds.length === 0)
+        return {} as Record<string, CashRegisterShift | null>;
       const shiftsMap: Record<string, CashRegisterShift | null> = {};
       for (const registerId of registerIds) {
         const { data } = await supabase
@@ -150,9 +163,11 @@ export function useCashMovements(shiftId: string | undefined) {
 
 export function useAllCashMovements(
   branchId: string | undefined,
-  shifts: Record<string, CashRegisterShift | null>
+  shifts: Record<string, CashRegisterShift | null>,
 ) {
-  const shiftIds = Object.values(shifts).filter(Boolean).map((s) => s!.id);
+  const shiftIds = Object.values(shifts)
+    .filter(Boolean)
+    .map((s) => s!.id);
   return useQuery({
     queryKey: [...cashRegisterKeys.all, 'all-movements', branchId, shiftIds.join(',')],
     queryFn: async () => {
@@ -166,7 +181,7 @@ export function useAllCashMovements(
       const movementsMap: Record<string, CashRegisterMovement[]> = {};
       for (const [registerId, shift] of Object.entries(shifts)) {
         movementsMap[registerId] = shift
-          ? (data || []).filter((m) => m.shift_id === shift.id) as CashRegisterMovement[]
+          ? ((data || []).filter((m) => m.shift_id === shift.id) as CashRegisterMovement[])
           : [];
       }
       return movementsMap;
@@ -356,7 +371,7 @@ export function useAddExpenseMovement(branchId: string) {
 
 export function calculateExpectedCash(
   shift: CashRegisterShift | null | undefined,
-  movements: CashRegisterMovement[]
+  movements: CashRegisterMovement[],
 ): number {
   if (!shift) return 0;
   if (shift.current_balance != null) return Number(shift.current_balance);

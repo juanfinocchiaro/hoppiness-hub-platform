@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,14 @@ import ImpersonationSelector from '@/components/admin/ImpersonationSelector';
 import { AlertCircle, Eye, Building2 } from 'lucide-react';
 
 export default function BrandLayout() {
-  const { user, signOut, loading } = useAuth();
-  const { canAccessAdmin, canAccessLocal, accessibleBranches, loading: permLoading } = useRoleLandingV2();
-  const { isEmbedded } = useEmbedMode();
+  const { user, loading } = useAuth();
+  const {
+    canAccessAdmin,
+    canAccessLocal,
+    accessibleBranches,
+    loading: permLoading,
+  } = useRoleLanding();
+  const { isEmbedded: _isEmbedded } = useEmbedMode();
   const { canImpersonate, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
 
@@ -77,12 +82,7 @@ export default function BrandLayout() {
 
   return (
     <>
-      <WorkShell
-        mode="brand"
-        title="Mi Marca"
-        sidebarNav={<BrandSidebar />}
-        footer={footer}
-      >
+      <WorkShell mode="brand" title="Mi Marca" sidebarNav={<BrandSidebar />} footer={footer}>
         <Outlet />
       </WorkShell>
 

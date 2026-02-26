@@ -3,14 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePagoProveedorMutations } from '@/hooks/useCompras';
 import { MEDIO_PAGO_OPTIONS } from '@/types/compra';
 import type { FacturaProveedor } from '@/types/compra';
 import { Banknote, ArrowRightLeft, Plus, Trash2, BadgeDollarSign } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface Props {
   open: boolean;
@@ -57,7 +62,15 @@ function parseCanonObservaciones(obs: string | null) {
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const EMPTY_LINE = (): PagoLine => ({ monto: '', medio_pago: 'transferencia', fecha: todayStr() });
 
-export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombre, proveedorId, branchId, saldoAFavor = 0 }: Props) {
+export function PagoProveedorModal({
+  open,
+  onOpenChange,
+  factura,
+  proveedorNombre,
+  proveedorId,
+  branchId,
+  saldoAFavor = 0,
+}: Props) {
   const { create } = usePagoProveedorMutations();
   const [lines, setLines] = useState<PagoLine[]>([EMPTY_LINE()]);
   const [referencia, setReferencia] = useState('');
@@ -88,11 +101,11 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
   }, [open]);
 
   const updateLine = (idx: number, key: keyof PagoLine, value: string) => {
-    setLines(prev => prev.map((l, i) => i === idx ? { ...l, [key]: value } : l));
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [key]: value } : l)));
   };
 
   const addLine = () => {
-    if (lines.length < 4) setLines(prev => [...prev, EMPTY_LINE()]);
+    if (lines.length < 4) setLines((prev) => [...prev, EMPTY_LINE()]);
   };
 
   const removeLine = (idx: number) => {
@@ -100,7 +113,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     if (line.locked) {
       setHasImputacion(false);
     }
-    if (lines.length > 1) setLines(prev => prev.filter((_, i) => i !== idx));
+    if (lines.length > 1) setLines((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const imputarSaldoAFavor = () => {
@@ -113,15 +126,15 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
       locked: true,
     };
     // Add imputación as first line, keep existing lines for remaining balance
-    setLines(prev => {
-      const nonLocked = prev.filter(l => !l.locked);
+    setLines((prev) => {
+      const nonLocked = prev.filter((l) => !l.locked);
       return [imputacionLine, ...nonLocked];
     });
     setHasImputacion(true);
   };
 
   const handleSubmit = async () => {
-    const validLines = lines.filter(l => parseFloat(l.monto) > 0);
+    const validLines = lines.filter((l) => parseFloat(l.monto) > 0);
     if (validLines.length === 0) return;
 
     setSubmitting(true);
@@ -129,16 +142,18 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
       for (const line of validLines) {
         const isImputacion = line.medio_pago === 'imputacion_saldo';
         await create.mutateAsync({
-          aplicaciones: factura?.id ? [{ factura_id: factura.id, monto_aplicado: parseFloat(line.monto) }] : undefined,
+          aplicaciones: factura?.id
+            ? [{ factura_id: factura.id, monto_aplicado: parseFloat(line.monto) }]
+            : undefined,
           proveedor_id: effectiveProveedorId,
           branch_id: effectiveBranchId,
           monto: parseFloat(line.monto),
           fecha_pago: line.fecha,
           medio_pago: line.medio_pago,
-          referencia: isImputacion ? 'Imputación saldo a favor' : (referencia || undefined),
+          referencia: isImputacion ? 'Imputación saldo a favor' : referencia || undefined,
           observaciones: isImputacion
             ? `Imputación de saldo a favor de cuenta corriente. Monto: $${line.monto}`
-            : (observaciones || undefined),
+            : observaciones || undefined,
         });
       }
       onOpenChange(false);
@@ -153,22 +168,27 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
     if (!canonInfo) return;
     const efectivo = Math.round(canonInfo.pagarEfectivo * 100) / 100;
     const pendienteRestante = hasImputacion
-      ? saldoPendiente - (parseFloat(lines.find(l => l.locked)?.monto || '0'))
+      ? saldoPendiente - parseFloat(lines.find((l) => l.locked)?.monto || '0')
       : saldoPendiente;
     const transferencia = Math.round((pendienteRestante - efectivo) * 100) / 100;
     const hoy = todayStr();
-    const imputacionLines = lines.filter(l => l.locked);
+    const imputacionLines = lines.filter((l) => l.locked);
     setLines([
       ...imputacionLines,
       { monto: efectivo.toFixed(2), medio_pago: 'efectivo', fecha: hoy },
-      { monto: transferencia > 0 ? transferencia.toFixed(2) : '0', medio_pago: 'transferencia', fecha: hoy },
+      {
+        monto: transferencia > 0 ? transferencia.toFixed(2) : '0',
+        medio_pago: 'transferencia',
+        fecha: hoy,
+      },
     ]);
   };
 
-  const fmt = (n: number) => Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n: number) =>
+    Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const hasValidPayment = lines.some(l => parseFloat(l.monto) > 0);
-  const editableLines = lines.filter(l => !l.locked).length;
+  const hasValidPayment = lines.some((l) => parseFloat(l.monto) > 0);
+  const editableLines = lines.filter((l) => !l.locked).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,15 +200,25 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
         <div className="space-y-4">
           {factura && (
             <div className="p-3 rounded-md bg-muted text-sm">
-              <p>Total factura: <strong>$ {fmt(Number(factura.total ?? 0))}</strong></p>
-              <p>Saldo pendiente: <strong className="text-destructive">$ {fmt(saldoPendiente)}</strong></p>
+              <p>
+                Total factura: <strong>$ {fmt(Number(factura.total ?? 0))}</strong>
+              </p>
+              <p>
+                Saldo pendiente:{' '}
+                <strong className="text-destructive">$ {fmt(saldoPendiente)}</strong>
+              </p>
             </div>
           )}
 
           {isAccountLevel && (
             <div className="p-3 rounded-md bg-muted text-sm">
-              <p className="text-muted-foreground">Pago a cuenta general para <strong>{proveedorNombre || 'Proveedor'}</strong></p>
-              <p className="text-xs text-muted-foreground mt-1">Este pago no se vincula a una factura específica. Se reflejará como saldo a favor en la cuenta corriente.</p>
+              <p className="text-muted-foreground">
+                Pago a cuenta general para <strong>{proveedorNombre || 'Proveedor'}</strong>
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Este pago no se vincula a una factura específica. Se reflejará como saldo a favor en
+                la cuenta corriente.
+              </p>
             </div>
           )}
 
@@ -226,21 +256,39 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     <Banknote className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                    <span>En <strong>efectivo</strong>:</span>
+                    <span>
+                      En <strong>efectivo</strong>:
+                    </span>
                   </div>
-                  <span className="font-mono font-semibold whitespace-nowrap">$ {fmt(canonInfo.pagarEfectivo)}</span>
+                  <span className="font-mono font-semibold whitespace-nowrap">
+                    $ {fmt(canonInfo.pagarEfectivo)}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6">5% de $ {fmt(canonInfo.efectivo)}</p>
+                <p className="text-xs text-muted-foreground ml-6">
+                  5% de $ {fmt(canonInfo.efectivo)}
+                </p>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     <ArrowRightLeft className="w-4 h-4 shrink-0 text-primary" />
-                    <span>Por <strong>transferencia</strong>:</span>
+                    <span>
+                      Por <strong>transferencia</strong>:
+                    </span>
                   </div>
-                  <span className="font-mono font-semibold whitespace-nowrap">$ {fmt(canonInfo.pagarTransferencia)}</span>
+                  <span className="font-mono font-semibold whitespace-nowrap">
+                    $ {fmt(canonInfo.pagarTransferencia)}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6">5% de $ {fmt(canonInfo.online)}</p>
+                <p className="text-xs text-muted-foreground ml-6">
+                  5% de $ {fmt(canonInfo.online)}
+                </p>
               </div>
-              <Button type="button" variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={setCanonPreset}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full mt-2 text-xs"
+                onClick={setCanonPreset}
+              >
                 Cargar ambos pagos automáticamente
               </Button>
             </div>
@@ -251,18 +299,29 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Pagos</Label>
               {lines.length < 4 && (
-                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={addLine}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={addLine}
+                >
                   <Plus className="w-3 h-3 mr-1" /> Agregar pago
                 </Button>
               )}
             </div>
 
             {lines.map((line, idx) => (
-              <div key={idx} className={`space-y-1.5 rounded-md border p-2 ${line.locked ? 'border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800' : ''}`}>
+              <div
+                key={idx}
+                className={`space-y-1.5 rounded-md border p-2 ${line.locked ? 'border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800' : ''}`}
+              >
                 {line.locked && (
                   <div className="flex items-center gap-1.5 mb-1">
                     <BadgeDollarSign className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-medium text-green-700 dark:text-green-400">Imputación de saldo a favor</span>
+                    <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                      Imputación de saldo a favor
+                    </span>
                   </div>
                 )}
                 <div className="flex items-end gap-2">
@@ -272,7 +331,7 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                       type="number"
                       step="0.01"
                       value={line.monto}
-                      onChange={e => updateLine(idx, 'monto', e.target.value)}
+                      onChange={(e) => updateLine(idx, 'monto', e.target.value)}
                       placeholder="$ 0,00"
                       disabled={line.locked}
                     />
@@ -282,18 +341,31 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                     {line.locked ? (
                       <Input value="Imputación" disabled className="text-xs" />
                     ) : (
-                      <Select value={line.medio_pago} onValueChange={v => updateLine(idx, 'medio_pago', v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Select
+                        value={line.medio_pago}
+                        onValueChange={(v) => updateLine(idx, 'medio_pago', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
-                          {MEDIO_PAGO_OPTIONS.map(m => (
-                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                          {MEDIO_PAGO_OPTIONS.map((m) => (
+                            <SelectItem key={m.value} value={m.value}>
+                              {m.label}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     )}
                   </div>
                   {(lines.length > 1 || line.locked) && (
-                    <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => removeLine(idx)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 shrink-0"
+                      onClick={() => removeLine(idx)}
+                    >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   )}
@@ -301,7 +373,11 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                 {!line.locked && (
                   <div>
                     <Label className="text-xs text-muted-foreground">Fecha</Label>
-                    <Input type="date" value={line.fecha} onChange={e => updateLine(idx, 'fecha', e.target.value)} />
+                    <Input
+                      type="date"
+                      value={line.fecha}
+                      onChange={(e) => updateLine(idx, 'fecha', e.target.value)}
+                    />
                   </div>
                 )}
               </div>
@@ -318,7 +394,9 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
                     <span className="text-muted-foreground">
                       {saldoResultante >= 0 ? 'Saldo pendiente:' : 'Saldo a favor:'}
                     </span>
-                    <span className={`font-mono font-semibold ${saldoResultante <= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                    <span
+                      className={`font-mono font-semibold ${saldoResultante <= 0 ? 'text-green-600' : 'text-destructive'}`}
+                    >
                       $ {fmt(Math.abs(saldoResultante))}
                     </span>
                   </div>
@@ -332,19 +410,29 @@ export function PagoProveedorModal({ open, onOpenChange, factura, proveedorNombr
             <>
               <div>
                 <Label>Referencia</Label>
-                <Input value={referencia} onChange={e => setReferencia(e.target.value)} />
+                <Input value={referencia} onChange={(e) => setReferencia(e.target.value)} />
               </div>
               <div>
                 <Label>Observaciones</Label>
-                <Textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows={2} />
+                <Textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  rows={2}
+                />
               </div>
             </>
           )}
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSubmit} disabled={submitting || !hasValidPayment}>
-              {submitting ? 'Guardando...' : lines.filter(l => parseFloat(l.monto) > 0).length > 1 ? `Registrar ${lines.filter(l => parseFloat(l.monto) > 0).length} Pagos` : 'Registrar Pago'}
+              {submitting
+                ? 'Guardando...'
+                : lines.filter((l) => parseFloat(l.monto) > 0).length > 1
+                  ? `Registrar ${lines.filter((l) => parseFloat(l.monto) > 0).length} Pagos`
+                  : 'Registrar Pago'}
             </Button>
           </div>
         </div>

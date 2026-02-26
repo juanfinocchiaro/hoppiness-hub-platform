@@ -82,10 +82,14 @@ export function usePOSSessionState(branchId: string | undefined) {
   }, [branchId]);
 
   return {
-    cart, setCart,
-    payments, setPayments,
-    configConfirmed, setConfigConfirmed,
-    orderConfig, setOrderConfig,
+    cart,
+    setCart,
+    payments,
+    setPayments,
+    configConfirmed,
+    setConfigConfirmed,
+    orderConfig,
+    setOrderConfig,
     resetAll,
   };
 }

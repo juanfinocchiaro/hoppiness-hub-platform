@@ -10,25 +10,46 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  Plus, 
-  AlertTriangle, 
-  MessageSquare, 
-  FileText, 
+import {
+  Plus,
+  AlertTriangle,
+  MessageSquare,
+  FileText,
   Clock,
   UserX,
   CheckCircle,
@@ -37,7 +58,7 @@ import {
   Image,
   ExternalLink,
   User,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { EmployeeWarningsHistory, WarningsReport } from '@/components/warnings';
@@ -61,11 +82,26 @@ interface Warning {
 }
 
 const WARNING_TYPES = [
-  { value: 'verbal', label: 'Llamado de atención verbal', icon: MessageSquare, color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'written', label: 'Apercibimiento escrito', icon: FileText, color: 'bg-orange-100 text-orange-800' },
+  {
+    value: 'verbal',
+    label: 'Llamado de atención verbal',
+    icon: MessageSquare,
+    color: 'bg-yellow-100 text-yellow-800',
+  },
+  {
+    value: 'written',
+    label: 'Apercibimiento escrito',
+    icon: FileText,
+    color: 'bg-orange-100 text-orange-800',
+  },
   { value: 'lateness', label: 'Llegada tarde', icon: Clock, color: 'bg-blue-100 text-blue-800' },
   { value: 'absence', label: 'Inasistencia', icon: UserX, color: 'bg-red-100 text-red-800' },
-  { value: 'suspension', label: 'Suspensión', icon: AlertTriangle, color: 'bg-red-200 text-red-900' },
+  {
+    value: 'suspension',
+    label: 'Suspensión',
+    icon: AlertTriangle,
+    color: 'bg-red-200 text-red-900',
+  },
   { value: 'other', label: 'Otro', icon: AlertTriangle, color: 'bg-gray-100 text-gray-800' },
 ];
 
@@ -75,14 +111,14 @@ export default function WarningsPage() {
   const { user } = useAuth();
   const { local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
-  
+
   const [showNewWarning, setShowNewWarning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
   const [warningType, setWarningType] = useState('');
   const [description, setDescription] = useState('');
   const [incidentDate, setIncidentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  
+
   // Upload state
   const [uploadingWarningId, setUploadingWarningId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,22 +132,22 @@ export default function WarningsPage() {
         .select('user_id')
         .eq('branch_id', branchId!)
         .eq('is_active', true);
-      
+
       if (error) throw error;
-      
-      const userIds = data?.map(r => r.user_id) || [];
+
+      const userIds = data?.map((r) => r.user_id) || [];
       if (userIds.length === 0) return [];
-      
+
       // profiles.id = user_id after migration
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', userIds)
         .order('full_name');
-      
+
       if (profilesError) throw profilesError;
       // Map to maintain user_id field for compatibility
-      return (profiles || []).map(p => ({ user_id: p.id, full_name: p.full_name }));
+      return (profiles || []).map((p) => ({ user_id: p.id, full_name: p.full_name }));
     },
     enabled: !!branchId,
   });
@@ -125,15 +161,17 @@ export default function WarningsPage() {
         .select('*')
         .eq('branch_id', branchId!)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
-      
+
       // Get user names for all warnings
-      const userIds = [...new Set([
-        ...(data?.map(w => w.user_id).filter(Boolean) || []),
-        ...(data?.map(w => w.issued_by).filter(Boolean) || [])
-      ])];
-      
+      const userIds = [
+        ...new Set([
+          ...(data?.map((w) => w.user_id).filter(Boolean) || []),
+          ...(data?.map((w) => w.issued_by).filter(Boolean) || []),
+        ]),
+      ];
+
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         // profiles.id = user_id after migration
@@ -141,16 +179,16 @@ export default function WarningsPage() {
           .from('profiles')
           .select('id, full_name')
           .in('id', userIds);
-        
-        profiles?.forEach(p => {
+
+        profiles?.forEach((p) => {
           if (p.id) profileMap[p.id] = p.full_name || 'Sin nombre';
         });
       }
-      
-      return (data || []).map(w => ({
+
+      return (data || []).map((w) => ({
         ...w,
         employee_name: w.user_id ? profileMap[w.user_id] : 'N/A',
-        issuer_name: w.issued_by ? profileMap[w.issued_by] : 'Sistema'
+        issuer_name: w.issued_by ? profileMap[w.issued_by] : 'Sistema',
       })) as Warning[];
     },
     enabled: !!branchId,
@@ -159,18 +197,16 @@ export default function WarningsPage() {
   // Create warning mutation
   const createWarning = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('warnings')
-        .insert({
-          user_id: selectedUser,
-          branch_id: branchId!,
-          warning_type: warningType,
-          description,
-          warning_date: incidentDate,
-          issued_by: user?.id,
-          is_active: true,
-        });
-      
+      const { error } = await supabase.from('warnings').insert({
+        user_id: selectedUser,
+        branch_id: branchId!,
+        warning_type: warningType,
+        description,
+        warning_date: incidentDate,
+        issued_by: user?.id,
+        is_active: true,
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -188,27 +224,25 @@ export default function WarningsPage() {
   // Upload signed document mutation
   const uploadSignedDocument = useMutation({
     mutationFn: async ({ warningId, file }: { warningId: string; file: File }) => {
-      const warning = warnings?.find(w => w.id === warningId);
+      const warning = warnings?.find((w) => w.id === warningId);
       if (!warning) throw new Error('Apercibimiento no encontrado');
-      
+
       const fileExt = file.name.split('.').pop();
       const filePath = `${warning.user_id}/${warningId}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('warning-signatures')
         .upload(filePath, file, { upsert: true });
-      
+
       if (uploadError) throw uploadError;
-      
-      const { data: urlData } = supabase.storage
-        .from('warning-signatures')
-        .getPublicUrl(filePath);
-      
+
+      const { data: urlData } = supabase.storage.from('warning-signatures').getPublicUrl(filePath);
+
       const { error: updateError } = await supabase
         .from('warnings')
         .update({ signed_document_url: urlData.publicUrl })
         .eq('id', warningId);
-      
+
       if (updateError) throw updateError;
     },
     onSuccess: () => {
@@ -244,7 +278,7 @@ export default function WarningsPage() {
   };
 
   const getWarningTypeBadge = (type: string) => {
-    const config = WARNING_TYPES.find(t => t.value === type) || WARNING_TYPES[5];
+    const config = WARNING_TYPES.find((t) => t.value === type) || WARNING_TYPES[5];
     const Icon = config.icon;
     return (
       <Badge className={`${config.color} gap-1`}>
@@ -255,16 +289,19 @@ export default function WarningsPage() {
   };
 
   // Filter warnings
-  const filteredWarnings = warnings?.filter(w => {
-    if (!searchQuery) return true;
-    return w.employee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           w.description?.toLowerCase().includes(searchQuery.toLowerCase());
-  }) || [];
+  const filteredWarnings =
+    warnings?.filter((w) => {
+      if (!searchQuery) return true;
+      return (
+        w.employee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        w.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }) || [];
 
   // Stats by type
-  const warningsByType = WARNING_TYPES.map(type => ({
+  const warningsByType = WARNING_TYPES.map((type) => ({
     ...type,
-    count: warnings?.filter(w => w.warning_type === type.value).length || 0,
+    count: warnings?.filter((w) => w.warning_type === type.value).length || 0,
   }));
 
   if (isLoading) {
@@ -294,94 +331,100 @@ export default function WarningsPage() {
       />
 
       {/* Header */}
-      <PageHeader title="Apercibimientos" subtitle={branch?.name} actions={
-        local.canCreateWarning ? (
-          <Dialog open={showNewWarning} onOpenChange={setShowNewWarning}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Apercibimiento
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Registrar Apercibimiento</DialogTitle>
-              <DialogDescription>
-                Este registro será visible para el empleado en su cuenta
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Empleado *</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar empleado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teamMembers?.map(member => (
-                      <SelectItem key={member.user_id} value={member.user_id!}>
-                        {member.full_name || 'Sin nombre'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Tipo *</Label>
-                <Select value={warningType} onValueChange={setWarningType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tipo de apercibimiento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WARNING_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                          <type.icon className="h-4 w-4" />
-                          {type.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Fecha del incidente *</Label>
-                <Input
-                  type="date"
-                  value={incidentDate}
-                  onChange={(e) => setIncidentDate(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Descripción *</Label>
-                <Textarea
-                  placeholder="Describí la situación..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowNewWarning(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={() => createWarning.mutate()}
-                disabled={!selectedUser || !warningType || !description || createWarning.isPending}
-              >
-                Registrar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        ) : undefined
-      } />
+      <PageHeader
+        title="Apercibimientos"
+        subtitle={branch?.name}
+        actions={
+          local.canCreateWarning ? (
+            <Dialog open={showNewWarning} onOpenChange={setShowNewWarning}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Apercibimiento
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Registrar Apercibimiento</DialogTitle>
+                  <DialogDescription>
+                    Este registro será visible para el empleado en su cuenta
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Empleado *</Label>
+                    <Select value={selectedUser} onValueChange={setSelectedUser}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar empleado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teamMembers?.map((member) => (
+                          <SelectItem key={member.user_id} value={member.user_id!}>
+                            {member.full_name || 'Sin nombre'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tipo *</Label>
+                    <Select value={warningType} onValueChange={setWarningType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tipo de apercibimiento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WARNING_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            <div className="flex items-center gap-2">
+                              <type.icon className="h-4 w-4" />
+                              {type.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Fecha del incidente *</Label>
+                    <Input
+                      type="date"
+                      value={incidentDate}
+                      onChange={(e) => setIncidentDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Descripción *</Label>
+                    <Textarea
+                      placeholder="Describí la situación..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowNewWarning(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => createWarning.mutate()}
+                    disabled={
+                      !selectedUser || !warningType || !description || createWarning.isPending
+                    }
+                  >
+                    Registrar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : undefined
+        }
+      />
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="w-full">
@@ -403,7 +446,7 @@ export default function WarningsPage() {
         <TabsContent value="all" className="mt-4 space-y-4">
           {/* Stats by type */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {warningsByType.map(type => (
+            {warningsByType.map((type) => (
               <Card key={type.value} className={type.count > 0 ? '' : 'opacity-50'}>
                 <CardContent className="p-4 text-center">
                   <type.icon className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
@@ -448,21 +491,17 @@ export default function WarningsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredWarnings.map(warning => (
+                  filteredWarnings.map((warning) => (
                     <TableRow key={warning.id}>
                       <TableCell className="whitespace-nowrap">
-                        {format(new Date(warning.warning_date), "dd/MM/yy", { locale: es })}
+                        {format(new Date(warning.warning_date), 'dd/MM/yy', { locale: es })}
                       </TableCell>
-                      <TableCell className="font-medium">
-                        {warning.employee_name}
-                      </TableCell>
+                      <TableCell className="font-medium">{warning.employee_name}</TableCell>
                       <TableCell>{getWarningTypeBadge(warning.warning_type)}</TableCell>
                       <TableCell className="max-w-[200px]">
                         <p className="truncate">{warning.description}</p>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {warning.issuer_name}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{warning.issuer_name}</TableCell>
                       <TableCell>
                         {warning.acknowledged_at ? (
                           <Badge variant="outline" className="gap-1 text-primary">
@@ -491,7 +530,9 @@ export default function WarningsPage() {
                             size="sm"
                             className="gap-1"
                             onClick={() => handleFileSelect(warning.id)}
-                            disabled={uploadSignedDocument.isPending && uploadingWarningId === warning.id}
+                            disabled={
+                              uploadSignedDocument.isPending && uploadingWarningId === warning.id
+                            }
                           >
                             <Upload className="h-4 w-4" />
                             Subir firma
@@ -509,8 +550,11 @@ export default function WarningsPage() {
         </TabsContent>
 
         <TabsContent value="by-employee" className="mt-4">
-          <EmployeeWarningsHistory 
-            teamMembers={teamMembers?.map(m => ({ user_id: m.user_id!, full_name: m.full_name || '' }))}
+          <EmployeeWarningsHistory
+            teamMembers={teamMembers?.map((m) => ({
+              user_id: m.user_id!,
+              full_name: m.full_name || '',
+            }))}
             warnings={warnings}
           />
         </TabsContent>

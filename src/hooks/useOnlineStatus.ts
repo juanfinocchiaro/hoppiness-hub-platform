@@ -11,8 +11,8 @@ interface OnlineStatus {
  * - wasOffline: true si hubo desconexión reciente (se resetea después de 5 segundos)
  */
 export function useOnlineStatus(): OnlineStatus {
-  const [isOnline, setIsOnline] = useState(() => 
-    typeof navigator !== 'undefined' ? navigator.onLine : true
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
   const [wasOffline, setWasOffline] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();

@@ -23,9 +23,7 @@ export function CartBar({ totalItems, totalPrecio, onOpen }: Props) {
           </div>
           <span className="font-bold text-sm">Ver carrito</span>
         </div>
-        <span className="font-black text-lg">
-          ${totalPrecio.toLocaleString('es-AR')}
-        </span>
+        <span className="font-black text-lg">${totalPrecio.toLocaleString('es-AR')}</span>
       </button>
     </div>
   );

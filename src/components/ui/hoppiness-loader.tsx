@@ -8,22 +8,21 @@ interface HoppinessLoaderProps {
   className?: string;
 }
 
-export function HoppinessLoader({ 
-  size = 'md', 
+export function HoppinessLoader({
+  size = 'md',
   text = 'Cargando',
   fullScreen = false,
-  className 
+  className,
 }: HoppinessLoaderProps) {
   return (
-    <div className={cn(
-      'flex items-center justify-center',
-      fullScreen && 'min-h-screen bg-background',
-      className
-    )}>
-      <SpinnerLoader
-        size={size}
-        text={size === 'sm' ? undefined : text}
-      />
+    <div
+      className={cn(
+        'flex items-center justify-center',
+        fullScreen && 'min-h-screen bg-background',
+        className,
+      )}
+    >
+      <SpinnerLoader size={size} text={size === 'sm' ? undefined : text} />
     </div>
   );
 }

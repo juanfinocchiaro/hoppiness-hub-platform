@@ -31,7 +31,6 @@ export function DashboardCoachingAlert({ branchId }: DashboardCoachingAlertProps
 
   // Determinar nivel de urgencia
   const isEndOfMonth = daysRemaining <= 5;
-  const hasManyPending = stats.pendingCoachings > 2;
   const isUrgent = isEndOfMonth && stats.pendingCoachings > 0;
 
   return (
@@ -39,7 +38,11 @@ export function DashboardCoachingAlert({ branchId }: DashboardCoachingAlertProps
       <ClipboardList className="h-4 w-4" />
       <AlertTitle className="flex items-center gap-2">
         Coaching de {monthName}
-        {isUrgent && <Badge variant="destructive" className="text-xs">Urgente</Badge>}
+        {isUrgent && (
+          <Badge variant="destructive" className="text-xs">
+            Urgente
+          </Badge>
+        )}
       </AlertTitle>
       <AlertDescription className="space-y-2">
         <div className="flex flex-wrap items-center gap-3 mt-2">

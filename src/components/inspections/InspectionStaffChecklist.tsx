@@ -1,6 +1,6 @@
 /**
  * InspectionStaffChecklist - Checklist de personal presente durante la inspección
- * 
+ *
  * Nuevo enfoque: Solo agregar quienes están presentes, con evaluación de:
  * - Uniforme en correcto estado
  * - Estación de trabajo limpia
@@ -9,12 +9,18 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, X, UserPlus, Trash2, Shirt, Sparkles, MessageSquare, Users } from 'lucide-react';
+import { UserPlus, Trash2, Shirt, Sparkles, MessageSquare, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -68,15 +74,15 @@ export function InspectionStaffChecklist({
 
       if (!roles?.length) return [];
 
-      const userIds = [...new Set(roles.map(r => r.user_id))];
+      const userIds = [...new Set(roles.map((r) => r.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name')
         .in('id', userIds)
         .order('full_name');
 
-      return (profiles || []).map(p => {
-        const role = roles.find(r => r.user_id === p.id);
+      return (profiles || []).map((p) => {
+        const role = roles.find((r) => r.user_id === p.id);
         return {
           id: p.id,
           full_name: p.full_name,
@@ -101,9 +107,7 @@ export function InspectionStaffChecklist({
   });
 
   // Available staff (not yet added)
-  const availableStaff = allStaff.filter(
-    s => !presentStaff.some(p => p.user_id === s.id)
-  );
+  const availableStaff = allStaff.filter((s) => !presentStaff.some((p) => p.user_id === s.id));
 
   // Add staff member mutation
   const addStaff = useMutation({
@@ -131,17 +135,18 @@ export function InspectionStaffChecklist({
   // Remove staff member mutation
   const removeStaff = useMutation({
     mutationFn: async (recordId: string) => {
-      const { error } = await supabase
-        .from('inspection_staff_present')
-        .delete()
-        .eq('id', recordId);
+      const { error } = await supabase.from('inspection_staff_present').delete().eq('id', recordId);
       if (error) throw error;
     },
     onMutate: async (recordId) => {
       await queryClient.cancelQueries({ queryKey: ['inspection-staff-present', inspectionId] });
-      const previous = queryClient.getQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId]);
-      queryClient.setQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId], 
-        old => old?.filter(s => s.id !== recordId) || []
+      const previous = queryClient.getQueryData<StaffPresent[]>([
+        'inspection-staff-present',
+        inspectionId,
+      ]);
+      queryClient.setQueryData<StaffPresent[]>(
+        ['inspection-staff-present', inspectionId],
+        (old) => old?.filter((s) => s.id !== recordId) || [],
       );
       return { previous };
     },
@@ -158,13 +163,13 @@ export function InspectionStaffChecklist({
 
   // Update evaluation mutation
   const updateEvaluation = useMutation({
-    mutationFn: async ({ 
-      recordId, 
-      field, 
-      value 
-    }: { 
-      recordId: string; 
-      field: 'uniform_ok' | 'station_clean'; 
+    mutationFn: async ({
+      recordId,
+      field,
+      value,
+    }: {
+      recordId: string;
+      field: 'uniform_ok' | 'station_clean';
       value: boolean | null;
     }) => {
       const { error } = await supabase
@@ -175,9 +180,13 @@ export function InspectionStaffChecklist({
     },
     onMutate: async ({ recordId, field, value }) => {
       await queryClient.cancelQueries({ queryKey: ['inspection-staff-present', inspectionId] });
-      const previous = queryClient.getQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId]);
-      queryClient.setQueryData<StaffPresent[]>(['inspection-staff-present', inspectionId], 
-        old => old?.map(s => s.id === recordId ? { ...s, [field]: value } : s) || []
+      const previous = queryClient.getQueryData<StaffPresent[]>([
+        'inspection-staff-present',
+        inspectionId,
+      ]);
+      queryClient.setQueryData<StaffPresent[]>(
+        ['inspection-staff-present', inspectionId],
+        (old) => old?.map((s) => (s.id === recordId ? { ...s, [field]: value } : s)) || [],
       );
       return { previous };
     },
@@ -224,9 +233,9 @@ export function InspectionStaffChecklist({
   };
 
   const handleToggleEvaluation = (
-    recordId: string, 
-    field: 'uniform_ok' | 'station_clean', 
-    currentValue: boolean | null
+    recordId: string,
+    field: 'uniform_ok' | 'station_clean',
+    currentValue: boolean | null,
   ) => {
     if (readOnly) return;
     // Toggle: null -> true -> false -> null
@@ -234,7 +243,7 @@ export function InspectionStaffChecklist({
     if (currentValue === null) newValue = true;
     else if (currentValue === true) newValue = false;
     else newValue = null;
-    
+
     updateEvaluation.mutate({ recordId, field, value: newValue });
   };
 
@@ -249,12 +258,12 @@ export function InspectionStaffChecklist({
   };
 
   const getStaffName = (userId: string) => {
-    const staff = allStaff.find(s => s.id === userId);
+    const staff = allStaff.find((s) => s.id === userId);
     return staff?.full_name || 'Desconocido';
   };
 
   const getStaffRole = (userId: string) => {
-    const staff = allStaff.find(s => s.id === userId);
+    const staff = allStaff.find((s) => s.id === userId);
     return ROLE_LABELS[staff?.local_role || ''] || 'Empleado';
   };
 
@@ -276,15 +285,15 @@ export function InspectionStaffChecklist({
                   <SelectValue placeholder="Agregar empleado presente..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableStaff.map(staff => (
+                  {availableStaff.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id}>
                       {staff.full_name} ({ROLE_LABELS[staff.local_role] || staff.local_role})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button 
-                onClick={() => handleAddStaff(selectedUserId)} 
+              <Button
+                onClick={() => handleAddStaff(selectedUserId)}
                 disabled={!selectedUserId || addStaff.isPending}
               >
                 <UserPlus className="w-4 h-4" />
@@ -311,13 +320,15 @@ export function InspectionStaffChecklist({
           </div>
         ) : (
           <div className="space-y-3">
-            {presentStaff.map(record => (
+            {presentStaff.map((record) => (
               <div key={record.id} className="space-y-2">
                 <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                   {/* Staff info */}
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{getStaffName(record.user_id)}</div>
-                    <div className="text-xs text-muted-foreground">{getStaffRole(record.user_id)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {getStaffRole(record.user_id)}
+                    </div>
                   </div>
 
                   {/* Evaluation toggles */}
@@ -331,17 +342,25 @@ export function InspectionStaffChecklist({
                           size="icon"
                           className={cn(
                             'h-9 w-9',
-                            record.uniform_ok === true && 'bg-green-100 border-green-500 text-green-700',
-                            record.uniform_ok === false && 'bg-red-100 border-red-500 text-red-700'
+                            record.uniform_ok === true &&
+                              'bg-green-100 border-green-500 text-green-700',
+                            record.uniform_ok === false && 'bg-red-100 border-red-500 text-red-700',
                           )}
-                          onClick={() => handleToggleEvaluation(record.id, 'uniform_ok', record.uniform_ok)}
+                          onClick={() =>
+                            handleToggleEvaluation(record.id, 'uniform_ok', record.uniform_ok)
+                          }
                           disabled={readOnly}
                         >
                           <Shirt className="w-4 h-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        Uniforme: {record.uniform_ok === true ? '✓ Correcto' : record.uniform_ok === false ? '✗ Incorrecto' : 'Sin evaluar'}
+                        Uniforme:{' '}
+                        {record.uniform_ok === true
+                          ? '✓ Correcto'
+                          : record.uniform_ok === false
+                            ? '✗ Incorrecto'
+                            : 'Sin evaluar'}
                       </TooltipContent>
                     </Tooltip>
 
@@ -354,17 +373,26 @@ export function InspectionStaffChecklist({
                           size="icon"
                           className={cn(
                             'h-9 w-9',
-                            record.station_clean === true && 'bg-green-100 border-green-500 text-green-700',
-                            record.station_clean === false && 'bg-red-100 border-red-500 text-red-700'
+                            record.station_clean === true &&
+                              'bg-green-100 border-green-500 text-green-700',
+                            record.station_clean === false &&
+                              'bg-red-100 border-red-500 text-red-700',
                           )}
-                          onClick={() => handleToggleEvaluation(record.id, 'station_clean', record.station_clean)}
+                          onClick={() =>
+                            handleToggleEvaluation(record.id, 'station_clean', record.station_clean)
+                          }
                           disabled={readOnly}
                         >
                           <Sparkles className="w-4 h-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        Estación: {record.station_clean === true ? '✓ Limpia' : record.station_clean === false ? '✗ Sucia' : 'Sin evaluar'}
+                        Estación:{' '}
+                        {record.station_clean === true
+                          ? '✓ Limpia'
+                          : record.station_clean === false
+                            ? '✗ Sucia'
+                            : 'Sin evaluar'}
                       </TooltipContent>
                     </Tooltip>
 
@@ -377,7 +405,9 @@ export function InspectionStaffChecklist({
                             variant="ghost"
                             size="icon"
                             className={cn('h-9 w-9', record.observations && 'text-primary')}
-                            onClick={() => handleStartEditObservation(record.id, record.observations)}
+                            onClick={() =>
+                              handleStartEditObservation(record.id, record.observations)
+                            }
                           >
                             <MessageSquare className="w-4 h-4" />
                           </Button>
@@ -433,7 +463,7 @@ export function InspectionStaffChecklist({
 
                 {/* Show saved observation (not editing) */}
                 {!readOnly && editingObservation !== record.id && record.observations && (
-                  <div 
+                  <div
                     className="ml-4 text-sm text-muted-foreground bg-muted/30 p-2 rounded cursor-pointer hover:bg-muted/50"
                     onClick={() => handleStartEditObservation(record.id, record.observations)}
                   >
@@ -449,7 +479,8 @@ export function InspectionStaffChecklist({
         {presentStaff.length > 0 && (
           <div className="pt-3 border-t space-y-2">
             <div className="text-sm text-muted-foreground">
-              {presentStaff.length} empleado{presentStaff.length !== 1 ? 's' : ''} presente{presentStaff.length !== 1 ? 's' : ''}
+              {presentStaff.length} empleado{presentStaff.length !== 1 ? 's' : ''} presente
+              {presentStaff.length !== 1 ? 's' : ''}
             </div>
             <div className="flex gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">

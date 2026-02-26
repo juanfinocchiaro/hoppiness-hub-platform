@@ -1,6 +1,6 @@
 /**
  * CoachingManagerForm - Formulario específico para evaluar encargados
- * 
+ *
  * Evalúa 12 competencias de gestión agrupadas por categoría.
  * Muestra total/promedio con barra visual de nivel.
  */
@@ -35,10 +35,15 @@ interface ManagerScore {
   score: number;
 }
 
-export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }: CoachingManagerFormProps) {
+export function CoachingManagerForm({
+  employee,
+  branchId,
+  onSuccess,
+  onCancel,
+}: CoachingManagerFormProps) {
   const { data: managerCompetencies, isLoading: loadingConfig } = useManagerCompetencies();
   const createCoaching = useCreateCoaching();
-  
+
   // Obtener coachings anteriores para mostrar el plan de acción previo
   const { data: previousCoachings } = useEmployeeCoachings(employee.id, branchId);
   const previousCoaching = previousCoachings?.[0]; // El más reciente
@@ -53,10 +58,10 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
 
   // Handler para competencias de gestión
   const handleManagerScoreChange = (competencyId: string, score: number) => {
-    setManagerScores(prev => {
-      const existing = prev.find(s => s.competencyId === competencyId);
+    setManagerScores((prev) => {
+      const existing = prev.find((s) => s.competencyId === competencyId);
       if (existing) {
-        return prev.map(s => s.competencyId === competencyId ? { ...s, score } : s);
+        return prev.map((s) => (s.competencyId === competencyId ? { ...s, score } : s));
       }
       return [...prev, { competencyId, score }];
     });
@@ -64,10 +69,9 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
 
   // Calculate totals
   const totalCompetencies = managerCompetencies?.length || 0;
-  const maxScore = totalCompetencies * 5;
-  const filledScores = managerScores.filter(s => s.score > 0);
+  const filledScores = managerScores.filter((s) => s.score > 0);
   const totalScore = filledScores.reduce((sum, s) => sum + s.score, 0);
-  
+
   // Previous average for trend (if available)
   const previousAverage = previousCoaching?.overall_score || undefined;
 
@@ -78,7 +82,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
       branchId,
       coachingDate: new Date(),
       stationScores: [], // NO hay estaciones para encargados
-      generalScores: managerScores.filter(s => s.score > 0),
+      generalScores: managerScores.filter((s) => s.score > 0),
       strengths,
       areasToImprove,
       actionPlan,
@@ -116,10 +120,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
       <ScrollArea className="h-[calc(100vh-320px)]">
         <div className="space-y-6 px-1 py-1">
           {/* Sección de Competencias de Gestión (sin estaciones) */}
-          <CoachingManagerSection
-            scores={managerScores}
-            onScoreChange={handleManagerScoreChange}
-          />
+          <CoachingManagerSection scores={managerScores} onScoreChange={handleManagerScoreChange} />
 
           <Separator />
 
@@ -135,7 +136,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
                   {previousCoaching.action_plan}
                 </AlertDescription>
               </Alert>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="previousReview">¿Cómo fue el seguimiento del plan anterior?</Label>
                 <Textarea
@@ -146,7 +147,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
                   rows={2}
                 />
               </div>
-              
+
               <Separator />
             </>
           )}
@@ -154,7 +155,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
           {/* Notas cualitativas */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Feedback Cualitativo</Label>
-            
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="strengths">Fortalezas</Label>
@@ -166,7 +167,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
                   rows={3}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="areas">Áreas de Mejora</Label>
                 <Textarea
@@ -211,10 +212,7 @@ export function CoachingManagerForm({ employee, branchId, onSuccess, onCancel }:
             Cancelar
           </Button>
         )}
-        <Button 
-          onClick={handleSubmit} 
-          disabled={!canSubmit || createCoaching.isPending}
-        >
+        <Button onClick={handleSubmit} disabled={!canSubmit || createCoaching.isPending}>
           {createCoaching.isPending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

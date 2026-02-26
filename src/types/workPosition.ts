@@ -1,10 +1,10 @@
 /**
  * Work Position Types - Posiciones operativas para cálculo de horas
- * 
+ *
  * Estas posiciones son DIFERENTES de los roles de sistema (local_role).
  * - local_role: Define permisos en el sistema (empleado, encargado, etc.)
  * - work_position: Define qué función cumple operativamente (cajero, sandwichero, etc.)
- * 
+ *
  * IMPORTANTE: Las posiciones ahora se cargan dinámicamente desde la tabla work_positions.
  * Usar el hook useWorkPositions() para obtener la lista actualizada.
  */

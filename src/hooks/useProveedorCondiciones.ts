@@ -32,7 +32,9 @@ export function useCondicionesByBranch(branchId?: string) {
         .eq('branch_id', branchId!);
       if (error) throw error;
       const map: Record<string, CondicionesLocal> = {};
-      data?.forEach((r: any) => { map[r.proveedor_id] = r; });
+      data?.forEach((r: any) => {
+        map[r.proveedor_id] = r;
+      });
       return map;
     },
     enabled: !!user && !!branchId,
@@ -71,19 +73,17 @@ export function useCondicionesMutations() {
       branchId: string;
       data: CondicionesFormData;
     }) => {
-      const { error } = await supabase
-        .from('proveedor_condiciones_local')
-        .upsert(
-          {
-            proveedor_id: proveedorId,
-            branch_id: branchId,
-            permite_cuenta_corriente: data.permite_cuenta_corriente,
-            dias_pago_habitual: data.dias_pago_habitual ?? null,
-            descuento_pago_contado: data.descuento_pago_contado ?? null,
-            observaciones: data.observaciones ?? null,
-          },
-          { onConflict: 'proveedor_id,branch_id' }
-        );
+      const { error } = await supabase.from('proveedor_condiciones_local').upsert(
+        {
+          proveedor_id: proveedorId,
+          branch_id: branchId,
+          permite_cuenta_corriente: data.permite_cuenta_corriente,
+          dias_pago_habitual: data.dias_pago_habitual ?? null,
+          descuento_pago_contado: data.descuento_pago_contado ?? null,
+          observaciones: data.observaciones ?? null,
+        },
+        { onConflict: 'proveedor_id,branch_id' },
+      );
       if (error) throw error;
     },
     onSuccess: () => {

@@ -4,17 +4,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, TrendingUp, TrendingDown, Minus, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import {
+  CalendarIcon,
+  AlertTriangle,
+} from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState, useMemo } from 'react';
-import { cn } from '@/lib/utils';
-
 type DateRange = {
   from: Date;
   to: Date;
@@ -50,7 +58,11 @@ export function BrandDailySalesTable() {
     const today = new Date();
     return [
       { label: 'Hoy', from: today, to: today },
-      { label: 'Esta semana', from: startOfWeek(today, { weekStartsOn: 1 }), to: endOfWeek(today, { weekStartsOn: 1 }) },
+      {
+        label: 'Esta semana',
+        from: startOfWeek(today, { weekStartsOn: 1 }),
+        to: endOfWeek(today, { weekStartsOn: 1 }),
+      },
       { label: 'Este mes', from: startOfMonth(today), to: endOfMonth(today) },
       { label: 'Últimos 7 días', from: subDays(today, 6), to: today },
     ];
@@ -60,10 +72,7 @@ export function BrandDailySalesTable() {
   const { data: branches } = useQuery({
     queryKey: ['branches-all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('branches')
-        .select('id, name')
-        .order('name');
+      const { data, error } = await supabase.from('branches').select('id, name').order('name');
       if (error) throw error;
       return data;
     },
@@ -89,37 +98,47 @@ export function BrandDailySalesTable() {
     if (!branches || !closuresData) return [];
 
     return branches
-      .map(branch => {
-        const branchClosures = closuresData.filter(c => c.branch_id === branch.id);
-        
-        const totals = branchClosures.reduce((acc, c) => {
-          const h = c.hamburguesas as any || {};
-          return {
-            vendido: acc.vendido + Number(c.total_vendido || 0),
-            efectivo: acc.efectivo + Number(c.total_efectivo || 0),
-            digital: acc.digital + Number(c.total_digital || 0),
-            hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
-            clasicas: acc.clasicas + (h.clasicas || 0),
-            originales: acc.originales + (h.originales || 0),
-            mas_sabor: acc.mas_sabor + (h.mas_sabor || 0),
-            veggies: acc.veggies + ((h.veggies?.not_american || 0) + (h.veggies?.not_claudio || 0)),
-            ultrasmash: acc.ultrasmash + ((h.ultrasmash?.ultra_cheese || 0) + (h.ultrasmash?.ultra_bacon || 0)),
-            extras: acc.extras + ((h.extras?.extra_carne || 0) + (h.extras?.extra_not_burger || 0) + (h.extras?.extra_not_chicken || 0)),
-            hasAlert: acc.hasAlert || c.tiene_alerta_facturacion,
-          };
-        }, {
-          vendido: 0,
-          efectivo: 0,
-          digital: 0,
-          hamburguesas: 0,
-          clasicas: 0,
-          originales: 0,
-          mas_sabor: 0,
-          veggies: 0,
-          ultrasmash: 0,
-          extras: 0,
-          hasAlert: false,
-        });
+      .map((branch) => {
+        const branchClosures = closuresData.filter((c) => c.branch_id === branch.id);
+
+        const totals = branchClosures.reduce(
+          (acc, c) => {
+            const h = (c.hamburguesas as any) || {};
+            return {
+              vendido: acc.vendido + Number(c.total_vendido || 0),
+              efectivo: acc.efectivo + Number(c.total_efectivo || 0),
+              digital: acc.digital + Number(c.total_digital || 0),
+              hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
+              clasicas: acc.clasicas + (h.clasicas || 0),
+              originales: acc.originales + (h.originales || 0),
+              mas_sabor: acc.mas_sabor + (h.mas_sabor || 0),
+              veggies:
+                acc.veggies + ((h.veggies?.not_american || 0) + (h.veggies?.not_claudio || 0)),
+              ultrasmash:
+                acc.ultrasmash +
+                ((h.ultrasmash?.ultra_cheese || 0) + (h.ultrasmash?.ultra_bacon || 0)),
+              extras:
+                acc.extras +
+                ((h.extras?.extra_carne || 0) +
+                  (h.extras?.extra_not_burger || 0) +
+                  (h.extras?.extra_not_chicken || 0)),
+              hasAlert: acc.hasAlert || c.tiene_alerta_facturacion,
+            };
+          },
+          {
+            vendido: 0,
+            efectivo: 0,
+            digital: 0,
+            hamburguesas: 0,
+            clasicas: 0,
+            originales: 0,
+            mas_sabor: 0,
+            veggies: 0,
+            ultrasmash: 0,
+            extras: 0,
+            hasAlert: false,
+          },
+        );
 
         return {
           branchId: branch.id,
@@ -128,7 +147,7 @@ export function BrandDailySalesTable() {
           closures: branchClosures,
         };
       })
-      .filter(b => b.vendido > 0 || b.closures.length > 0)
+      .filter((b) => b.vendido > 0 || b.closures.length > 0)
       .sort((a, b) => b.vendido - a.vendido);
   }, [branches, closuresData]);
 
@@ -147,12 +166,27 @@ export function BrandDailySalesTable() {
         ultrasmash: acc.ultrasmash + row.ultrasmash,
         extras: acc.extras + row.extras,
       }),
-      { vendido: 0, efectivo: 0, digital: 0, hamburguesas: 0, clasicas: 0, originales: 0, mas_sabor: 0, veggies: 0, ultrasmash: 0, extras: 0 }
+      {
+        vendido: 0,
+        efectivo: 0,
+        digital: 0,
+        hamburguesas: 0,
+        clasicas: 0,
+        originales: 0,
+        mas_sabor: 0,
+        veggies: 0,
+        ultrasmash: 0,
+        extras: 0,
+      },
     );
   }, [aggregatedData]);
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
 
   return (
     <Card>
@@ -203,13 +237,16 @@ export function BrandDailySalesTable() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground mt-2">
-          Período: {format(dateRange.from, 'd MMM', { locale: es })} - {format(dateRange.to, 'd MMM yyyy', { locale: es })}
+          Período: {format(dateRange.from, 'd MMM', { locale: es })} -{' '}
+          {format(dateRange.to, 'd MMM yyyy', { locale: es })}
         </p>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -254,12 +291,24 @@ export function BrandDailySalesTable() {
                         <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
                           {formatCurrency(row.digital)}
                         </TableCell>
-                        <TableCell className="text-center font-medium">{row.hamburguesas}</TableCell>
-                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">{row.clasicas}</TableCell>
-                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">{row.originales}</TableCell>
-                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">{row.mas_sabor}</TableCell>
-                        <TableCell className="text-center text-muted-foreground hidden lg:table-cell">{row.veggies}</TableCell>
-                        <TableCell className="text-center text-muted-foreground hidden lg:table-cell">{row.ultrasmash}</TableCell>
+                        <TableCell className="text-center font-medium">
+                          {row.hamburguesas}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">
+                          {row.clasicas}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">
+                          {row.originales}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden md:table-cell">
+                          {row.mas_sabor}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden lg:table-cell">
+                          {row.veggies}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground hidden lg:table-cell">
+                          {row.ultrasmash}
+                        </TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/50 font-bold">
@@ -267,14 +316,28 @@ export function BrandDailySalesTable() {
                       <TableCell className="text-right text-primary text-lg">
                         {formatCurrency(totals.vendido)}
                       </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell">{formatCurrency(totals.efectivo)}</TableCell>
-                      <TableCell className="text-right hidden sm:table-cell">{formatCurrency(totals.digital)}</TableCell>
+                      <TableCell className="text-right hidden sm:table-cell">
+                        {formatCurrency(totals.efectivo)}
+                      </TableCell>
+                      <TableCell className="text-right hidden sm:table-cell">
+                        {formatCurrency(totals.digital)}
+                      </TableCell>
                       <TableCell className="text-center">{totals.hamburguesas}</TableCell>
-                      <TableCell className="text-center hidden md:table-cell">{totals.clasicas}</TableCell>
-                      <TableCell className="text-center hidden md:table-cell">{totals.originales}</TableCell>
-                      <TableCell className="text-center hidden md:table-cell">{totals.mas_sabor}</TableCell>
-                      <TableCell className="text-center hidden lg:table-cell">{totals.veggies}</TableCell>
-                      <TableCell className="text-center hidden lg:table-cell">{totals.ultrasmash}</TableCell>
+                      <TableCell className="text-center hidden md:table-cell">
+                        {totals.clasicas}
+                      </TableCell>
+                      <TableCell className="text-center hidden md:table-cell">
+                        {totals.originales}
+                      </TableCell>
+                      <TableCell className="text-center hidden md:table-cell">
+                        {totals.mas_sabor}
+                      </TableCell>
+                      <TableCell className="text-center hidden lg:table-cell">
+                        {totals.veggies}
+                      </TableCell>
+                      <TableCell className="text-center hidden lg:table-cell">
+                        {totals.ultrasmash}
+                      </TableCell>
                     </TableRow>
                   </>
                 )}

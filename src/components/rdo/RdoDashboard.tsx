@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -32,27 +38,60 @@ function formatCurrency(value: number): string {
   }).format(value || 0);
 }
 
-function RdoLine({ label, value, pct, indent = 0, bold = false }: {
-  label: string; value: number; pct?: number; indent?: number; bold?: boolean;
+function RdoLine({
+  label,
+  value,
+  pct,
+  indent = 0,
+  bold = false,
+}: {
+  label: string;
+  value: number;
+  pct?: number;
+  indent?: number;
+  bold?: boolean;
 }) {
   const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const pl = indent === 1 ? 'pl-5' : indent === 2 ? 'pl-10' : indent === 3 ? 'pl-14' : '';
   return (
-    <div className={`flex justify-between items-center py-1.5 ${pl} ${bold ? 'font-semibold text-base' : 'text-sm'}`}>
+    <div
+      className={`flex justify-between items-center py-1.5 ${pl} ${bold ? 'font-semibold text-base' : 'text-sm'}`}
+    >
       <span className={bold ? '' : 'text-muted-foreground'}>{label}</span>
       <div className="flex items-center gap-3">
         {pct !== undefined && (
-          <span className="text-xs text-muted-foreground font-mono w-14 text-right">{pct.toFixed(1)}%</span>
+          <span className="text-xs text-muted-foreground font-mono w-14 text-right">
+            {pct.toFixed(1)}%
+          </span>
         )}
-        <span className={`font-mono min-w-[100px] text-right ${value < 0 ? 'text-destructive' : ''}`}>{formatted}</span>
+        <span
+          className={`font-mono min-w-[100px] text-right ${value < 0 ? 'text-destructive' : ''}`}
+        >
+          {formatted}
+        </span>
       </div>
     </div>
   );
 }
 
-function CollapsibleRow({ label, value, pct, indent = 0, bold = false, expanded, onToggle, children }: {
-  label: string; value: number; pct?: number; indent?: number; bold?: boolean;
-  expanded: boolean; onToggle: () => void; children: React.ReactNode;
+function CollapsibleRow({
+  label,
+  value,
+  pct,
+  indent = 0,
+  bold = false,
+  expanded,
+  onToggle,
+  children,
+}: {
+  label: string;
+  value: number;
+  pct?: number;
+  indent?: number;
+  bold?: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }) {
   const formatted = `$ ${Math.abs(value).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const pl = indent === 1 ? 'pl-4' : indent === 2 ? 'pl-8' : '';
@@ -64,16 +103,22 @@ function CollapsibleRow({ label, value, pct, indent = 0, bold = false, expanded,
         className={`flex justify-between items-center py-1.5 w-full text-left hover:bg-muted/40 rounded-sm transition-colors ${pl} ${bold ? 'font-semibold text-base' : 'text-sm font-medium'}`}
       >
         <span className="flex items-center gap-1">
-          {expanded
-            ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-            : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+          {expanded ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
           {label}
         </span>
         <div className="flex items-center gap-3">
           {pct !== undefined && (
-            <span className="text-xs text-muted-foreground font-mono w-14 text-right">{pct.toFixed(1)}%</span>
+            <span className="text-xs text-muted-foreground font-mono w-14 text-right">
+              {pct.toFixed(1)}%
+            </span>
           )}
-          <span className={`font-mono min-w-[100px] text-right ${bold ? 'font-bold' : ''}`}>{formatted}</span>
+          <span className={`font-mono min-w-[100px] text-right ${bold ? 'font-bold' : ''}`}>
+            {formatted}
+          </span>
         </div>
       </button>
       {expanded && children}
@@ -81,14 +126,22 @@ function CollapsibleRow({ label, value, pct, indent = 0, bold = false, expanded,
   );
 }
 
-function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoReportLine[]; ventas: number }) {
+function SectionBlock({
+  title,
+  lines,
+  ventas,
+}: {
+  title: string;
+  lines: RdoReportLine[];
+  ventas: number;
+}) {
   const level2 = lines.filter((l) => l.level === 2);
   const level3 = lines.filter((l) => l.level === 3);
   const sectionTotal = level3.reduce((s, l) => s + l.total, 0);
   const sectionPct = ventas > 0 ? (sectionTotal / ventas) * 100 : 0;
   const [sectionExpanded, setSectionExpanded] = useState(true);
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(
-    Object.fromEntries(level2.map((p) => [p.category_code, true]))
+    Object.fromEntries(level2.map((p) => [p.category_code, true])),
   );
 
   return (
@@ -113,7 +166,12 @@ function SectionBlock({ title, lines, ventas }: { title: string; lines: RdoRepor
             indent={1}
             bold
             expanded={!!expandedParents[parent.category_code]}
-            onToggle={() => setExpandedParents((prev) => ({ ...prev, [parent.category_code]: !prev[parent.category_code] }))}
+            onToggle={() =>
+              setExpandedParents((prev) => ({
+                ...prev,
+                [parent.category_code]: !prev[parent.category_code],
+              }))
+            }
           >
             {children.map((child) => (
               <RdoLine
@@ -172,8 +230,13 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   const cmvTotal = cmvAuto + cmvAjuste;
 
   // Other variable costs (excluding CMV lines that come from rdo_lines to avoid duplication)
-  const variablesNoCmv = rdoLines.filter((l) => l.rdo_section === 'costos_variables' && !(l.level === 3 && l.category_code.startsWith('cmv')));
-  const totalVariablesNoCmv = variablesNoCmv.filter((l) => l.level === 3).reduce((s, l) => s + l.total, 0);
+  const variablesNoCmv = rdoLines.filter(
+    (l) =>
+      l.rdo_section === 'costos_variables' && !(l.level === 3 && l.category_code.startsWith('cmv')),
+  );
+  const totalVariablesNoCmv = variablesNoCmv
+    .filter((l) => l.level === 3)
+    .reduce((s, l) => s + l.total, 0);
 
   // Unified total: CMV + other variable costs
   const totalVariables = cmvTotal + totalVariablesNoCmv;
@@ -186,7 +249,9 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 w-full" />
+        ))}
       </div>
     );
   }
@@ -206,25 +271,40 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Resultado Económico</h2>
-          <p className="text-sm text-muted-foreground">Estado de resultados mensual (base devengado)</p>
+          <p className="text-sm text-muted-foreground">
+            Estado de resultados mensual (base devengado)
+          </p>
         </div>
         <Select value={periodo} onValueChange={setPeriodo}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
-            {periodos.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            {periodos.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {(totalVentas > 0 && cmvAuto === 0) || (data?.diagnostico_costos.items_sin_costo_count || 0) > 0 ? (
+      {(totalVentas > 0 && cmvAuto === 0) ||
+      (data?.diagnostico_costos.items_sin_costo_count || 0) > 0 ? (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             {totalVentas > 0 && cmvAuto === 0
               ? 'Hay ventas en el período pero el CMV automático es 0. Revisá costos de carta y mapeo de items.'
-              : 'Se detectaron productos vendidos sin costo cargado.'}
-            {' '}Items sin costo: <strong>{data?.diagnostico_costos.items_sin_costo_count || 0}</strong> · Ventas afectadas: <strong>{formatCurrency(data?.diagnostico_costos.ventas_afectadas || 0)}</strong>.
-            {' '}Corregi costos en <a href="/mimarca/carta" className="underline">Mi Marca {'>'} Carta</a>.
+              : 'Se detectaron productos vendidos sin costo cargado.'}{' '}
+            Items sin costo: <strong>{data?.diagnostico_costos.items_sin_costo_count || 0}</strong>{' '}
+            · Ventas afectadas:{' '}
+            <strong>{formatCurrency(data?.diagnostico_costos.ventas_afectadas || 0)}</strong>.{' '}
+            Corregi costos en{' '}
+            <a href="/mimarca/carta" className="underline">
+              Mi Marca {'>'} Carta
+            </a>
+            .
           </AlertDescription>
         </Alert>
       ) : null}
@@ -233,31 +313,52 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="w-4 h-4" /> Ventas Netas</div>
-            <div className="text-2xl font-bold font-mono mt-1">{formatCurrency(totalVentasNetas)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowDown className="w-4 h-4" /> Costos Totales</div>
-            <div className="text-2xl font-bold font-mono mt-1">{formatCurrency(totalCostos)}</div>
-            <div className="text-xs text-muted-foreground mt-1">{totalVentasNetas > 0 ? ((totalCostos / totalVentasNetas) * 100).toFixed(1) : 0}% s/ventas</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground"><ArrowUp className="w-4 h-4" /> Margen Operativo</div>
-            <div className="text-2xl font-bold font-mono mt-1">{margenOperativo.toFixed(1)}%</div>
-            <div className="text-xs text-muted-foreground mt-1">{formatCurrency(resultadoOperativo)}</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <DollarSign className="w-4 h-4" /> Ventas Netas
+            </div>
+            <div className="text-2xl font-bold font-mono mt-1">
+              {formatCurrency(totalVentasNetas)}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {resultadoEconomico >= 0 ? <TrendingUp className="w-4 h-4 text-success" /> : <TrendingDown className="w-4 h-4 text-destructive" />}
+              <ArrowDown className="w-4 h-4" /> Costos Totales
+            </div>
+            <div className="text-2xl font-bold font-mono mt-1">{formatCurrency(totalCostos)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {totalVentasNetas > 0 ? ((totalCostos / totalVentasNetas) * 100).toFixed(1) : 0}%
+              s/ventas
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ArrowUp className="w-4 h-4" /> Margen Operativo
+            </div>
+            <div className="text-2xl font-bold font-mono mt-1">{margenOperativo.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatCurrency(resultadoOperativo)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {resultadoEconomico >= 0 ? (
+                <TrendingUp className="w-4 h-4 text-success" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-destructive" />
+              )}
               Resultado Económico
             </div>
-            <div className={`text-2xl font-bold font-mono mt-1 ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}>{formatCurrency(resultadoEconomico)}</div>
+            <div
+              className={`text-2xl font-bold font-mono mt-1 ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}
+            >
+              {formatCurrency(resultadoEconomico)}
+            </div>
             <div className="text-xs text-muted-foreground mt-1">Operativo - IVA neto</div>
           </CardContent>
         </Card>
@@ -281,19 +382,39 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
             expanded={ventasExpanded}
             onToggle={() => setVentasExpanded((e) => !e)}
           >
-            <RdoLine label="Ventas facturadas (total c/IVA antes NC)" value={data?.fiscal.ventas_facturadas_brutas_original || 0} indent={1} />
+            <RdoLine
+              label="Ventas facturadas (total c/IVA antes NC)"
+              value={data?.fiscal.ventas_facturadas_brutas_original || 0}
+              indent={1}
+            />
             <RdoLine
               label="Base imponible facturada (neto antes NC)"
               value={(data?.fiscal.ventas_facturadas_brutas_original || 0) - ivaVentasBruto}
               indent={2}
             />
-            <RdoLine label="(-) Notas de Crédito (total c/IVA)" value={-(data?.fiscal.notas_credito_brutas || 0)} indent={1} />
-            <RdoLine label="Ventas facturadas vigentes (total c/IVA)" value={data?.fiscal.ventas_facturadas_brutas || 0} indent={1} />
+            <RdoLine
+              label="(-) Notas de Crédito (total c/IVA)"
+              value={-(data?.fiscal.notas_credito_brutas || 0)}
+              indent={1}
+            />
+            <RdoLine
+              label="Ventas facturadas vigentes (total c/IVA)"
+              value={data?.fiscal.ventas_facturadas_brutas || 0}
+              indent={1}
+            />
             <RdoLine label="(-) IVA facturado neto de NC" value={-ivaVentas} indent={1} />
             <RdoLine label="   • IVA facturas emitidas" value={-ivaVentasBruto} indent={2} />
             <RdoLine label="   • Reverso IVA por NC" value={ivaNotasCredito} indent={2} />
-            <RdoLine label="Ventas facturadas (neto)" value={data?.fiscal.ventas_facturadas_netas || 0} indent={1} />
-            <RdoLine label="Ventas sin facturar (neto)" value={data?.fiscal.ventas_no_facturadas_netas || 0} indent={1} />
+            <RdoLine
+              label="Ventas facturadas (neto)"
+              value={data?.fiscal.ventas_facturadas_netas || 0}
+              indent={1}
+            />
+            <RdoLine
+              label="Ventas sin facturar (neto)"
+              value={data?.fiscal.ventas_no_facturadas_netas || 0}
+              indent={1}
+            />
           </CollapsibleRow>
 
           <Separator className="my-3" />
@@ -316,7 +437,9 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
                 indent={1}
                 bold
                 expanded={!!cmvRubrosExpanded['_cmv_root']}
-                onToggle={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_cmv_root': !prev['_cmv_root'] }))}
+                onToggle={() =>
+                  setCmvRubrosExpanded((prev) => ({ ...prev, _cmv_root: !prev['_cmv_root'] }))
+                }
               >
                 {/* CMV Automático: desglose por categoría de carta */}
                 {cmvPorRubro.length > 0 ? (
@@ -326,28 +449,43 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
                       <div key={rubro.category_code} className="pl-8">
                         <button
                           type="button"
-                          onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, [rubro.category_code]: !prev[rubro.category_code] }))}
+                          onClick={() =>
+                            setCmvRubrosExpanded((prev) => ({
+                              ...prev,
+                              [rubro.category_code]: !prev[rubro.category_code],
+                            }))
+                          }
                           className="w-full flex items-center justify-between py-1.5 text-sm hover:bg-muted/40 rounded-sm transition-colors"
                         >
                           <span className="flex items-center gap-1.5 text-muted-foreground">
-                            {expanded ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                            {expanded ? (
+                              <Minus className="w-3.5 h-3.5" />
+                            ) : (
+                              <Plus className="w-3.5 h-3.5" />
+                            )}
                             {rubro.category_name}
                           </span>
                           <div className="flex items-center gap-3">
                             <span className="text-xs text-muted-foreground font-mono w-14 text-right">
-                              {totalVentasNetas > 0 ? ((rubro.total / totalVentasNetas) * 100).toFixed(1) : '0.0'}%
+                              {totalVentasNetas > 0
+                                ? ((rubro.total / totalVentasNetas) * 100).toFixed(1)
+                                : '0.0'}
+                              %
                             </span>
-                            <span className="font-mono min-w-[100px] text-right">{formatCurrency(rubro.total)}</span>
+                            <span className="font-mono min-w-[100px] text-right">
+                              {formatCurrency(rubro.total)}
+                            </span>
                           </div>
                         </button>
-                        {expanded && rubro.gastos.map((gasto, idx) => (
-                          <RdoLine
-                            key={`${rubro.category_code}-${gasto.producto_id || idx}`}
-                            label={`${gasto.producto_nombre} (${gasto.cantidad.toFixed(0)} uds)`}
-                            value={gasto.total}
-                            indent={3}
-                          />
-                        ))}
+                        {expanded &&
+                          rubro.gastos.map((gasto, idx) => (
+                            <RdoLine
+                              key={`${rubro.category_code}-${gasto.producto_id || idx}`}
+                              label={`${gasto.producto_nombre} (${gasto.cantidad.toFixed(0)} uds)`}
+                              value={gasto.total}
+                              indent={3}
+                            />
+                          ))}
                       </div>
                     );
                   })
@@ -360,23 +498,36 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
                   <div className="pl-8">
                     <button
                       type="button"
-                      onClick={() => setCmvRubrosExpanded((prev) => ({ ...prev, '_stock': !prev['_stock'] }))}
+                      onClick={() =>
+                        setCmvRubrosExpanded((prev) => ({ ...prev, _stock: !prev['_stock'] }))
+                      }
                       className="w-full flex items-center justify-between py-1.5 text-sm hover:bg-muted/40 rounded-sm transition-colors"
                     >
                       <span className="flex items-center gap-1.5 text-muted-foreground">
-                        {cmvRubrosExpanded['_stock'] ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                        {cmvRubrosExpanded['_stock'] ? (
+                          <Minus className="w-3.5 h-3.5" />
+                        ) : (
+                          <Plus className="w-3.5 h-3.5" />
+                        )}
                         Consumo por Deducción de Stock
                       </span>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground font-mono w-14 text-right">
-                          {totalVentasNetas > 0 ? ((cmvAjuste / totalVentasNetas) * 100).toFixed(1) : '0.0'}%
+                          {totalVentasNetas > 0
+                            ? ((cmvAjuste / totalVentasNetas) * 100).toFixed(1)
+                            : '0.0'}
+                          %
                         </span>
-                        <span className="font-mono min-w-[100px] text-right">{formatCurrency(cmvAjuste)}</span>
+                        <span className="font-mono min-w-[100px] text-right">
+                          {formatCurrency(cmvAjuste)}
+                        </span>
                       </div>
                     </button>
                     {cmvRubrosExpanded['_stock'] && (
                       <div className="pl-6 py-1.5 text-xs text-muted-foreground space-y-1 border-l-2 border-border/50 ml-2">
-                        <p className="font-medium">Packaging, Descartables, Insumos no en receta.</p>
+                        <p className="font-medium">
+                          Packaging, Descartables, Insumos no en receta.
+                        </p>
                         <p>Fórmula: Stock Inicial + Compras − Stock Final = Consumo</p>
                       </div>
                     )}
@@ -403,7 +554,12 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
                     indent={1}
                     bold
                     expanded={!!cmvRubrosExpanded[parent.category_code]}
-                    onToggle={() => setCmvRubrosExpanded((prev) => ({ ...prev, [parent.category_code]: !prev[parent.category_code] }))}
+                    onToggle={() =>
+                      setCmvRubrosExpanded((prev) => ({
+                        ...prev,
+                        [parent.category_code]: !prev[parent.category_code],
+                      }))
+                    }
                   >
                     {children.map((child) => (
                       <RdoLine
@@ -426,10 +582,15 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
           <div className="flex justify-between items-center py-2 bg-muted/30 px-3 rounded-md">
             <span className="font-bold">Contribución Marginal</span>
             <div className="flex items-center gap-3">
-              <Badge variant={(totalVentasNetas - totalVariables) >= 0 ? 'default' : 'destructive'}>
-                {totalVentasNetas > 0 ? (((totalVentasNetas - totalVariables) / totalVentasNetas) * 100).toFixed(1) : 0}%
+              <Badge variant={totalVentasNetas - totalVariables >= 0 ? 'default' : 'destructive'}>
+                {totalVentasNetas > 0
+                  ? (((totalVentasNetas - totalVariables) / totalVentasNetas) * 100).toFixed(1)
+                  : 0}
+                %
               </Badge>
-              <span className={`font-mono font-bold ${(totalVentasNetas - totalVariables) < 0 ? 'text-destructive' : ''}`}>
+              <span
+                className={`font-mono font-bold ${totalVentasNetas - totalVariables < 0 ? 'text-destructive' : ''}`}
+              >
                 {formatCurrency(totalVentasNetas - totalVariables)}
               </span>
             </div>
@@ -446,10 +607,15 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
           <div className="flex justify-between items-center py-3 bg-muted/30 px-3 rounded-md">
             <span className="font-bold text-lg">Resultado Operativo</span>
             <div className="flex items-center gap-3">
-              <Badge variant={resultadoOperativo >= 0 ? 'default' : 'destructive'} className="text-sm">
+              <Badge
+                variant={resultadoOperativo >= 0 ? 'default' : 'destructive'}
+                className="text-sm"
+              >
                 {margenOperativo.toFixed(1)}%
               </Badge>
-              <span className={`font-mono font-bold text-lg ${resultadoOperativo < 0 ? 'text-destructive' : ''}`}>
+              <span
+                className={`font-mono font-bold text-lg ${resultadoOperativo < 0 ? 'text-destructive' : ''}`}
+              >
                 {formatCurrency(resultadoOperativo)}
               </span>
             </div>
@@ -479,10 +645,18 @@ export function RdoDashboard({ branchId }: RdoDashboardProps) {
           <div className="flex justify-between items-center py-3 bg-primary/10 px-3 rounded-md border border-primary/20">
             <span className="font-bold text-lg">Resultado Económico</span>
             <div className="flex items-center gap-3">
-              <Badge variant={resultadoEconomico >= 0 ? 'default' : 'destructive'} className="text-sm">
-                {totalVentasNetas > 0 ? ((resultadoEconomico / totalVentasNetas) * 100).toFixed(1) : '0.0'}%
+              <Badge
+                variant={resultadoEconomico >= 0 ? 'default' : 'destructive'}
+                className="text-sm"
+              >
+                {totalVentasNetas > 0
+                  ? ((resultadoEconomico / totalVentasNetas) * 100).toFixed(1)
+                  : '0.0'}
+                %
               </Badge>
-              <span className={`font-mono font-bold text-lg ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}>
+              <span
+                className={`font-mono font-bold text-lg ${resultadoEconomico < 0 ? 'text-destructive' : ''}`}
+              >
                 {formatCurrency(resultadoEconomico)}
               </span>
             </div>

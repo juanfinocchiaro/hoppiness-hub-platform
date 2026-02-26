@@ -23,10 +23,7 @@ export function normalizePhone(raw: string | null | undefined): string {
 }
 
 /** Returns true if two phone numbers refer to the same number after normalization. */
-export function phonesMatch(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): boolean {
+export function phonesMatch(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a || !b) return false;
   const na = normalizePhone(a);
   const nb = normalizePhone(b);

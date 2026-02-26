@@ -32,7 +32,7 @@ export function useCommunications() {
         .select('*')
         .order('published_at', { ascending: false })
         .limit(100);
-      
+
       if (error) throw error;
       return (data || []) as Communication[];
     },
@@ -52,27 +52,29 @@ export interface CommunicationWithSource extends CommunicationWithRead {
 
 export function useUserCommunications() {
   const { id: userId } = useEffectiveUser();
-  
+
   return useQuery({
     queryKey: ['user-communications', userId],
     queryFn: async () => {
       if (!userId) return { brand: [], local: [] };
-      
+
       // Get user's branch IDs and local roles from user_branch_roles
       const { data: userBranches, error: branchError } = await supabase
         .from('user_branch_roles')
         .select('branch_id, local_role')
         .eq('user_id', userId)
         .eq('is_active', true);
-      
+
       if (branchError) {
         if (import.meta.env.DEV) console.error('Error fetching user branches:', branchError);
         throw branchError;
       }
-      
-      const userBranchIds = new Set(userBranches?.map(b => b.branch_id) || []);
-      const userLocalRoles = new Set<string>(userBranches?.map(b => b.local_role).filter(Boolean) || []);
-      
+
+      const userBranchIds = new Set(userBranches?.map((b) => b.branch_id) || []);
+      const userLocalRoles = new Set<string>(
+        userBranches?.map((b) => b.local_role).filter(Boolean) || [],
+      );
+
       // Get all published communications (RLS handles basic filtering)
       const { data: comms, error: commsError } = await supabase
         .from('communications')
@@ -81,20 +83,20 @@ export function useUserCommunications() {
         .or('expires_at.is.null,expires_at.gt.now()')
         .order('published_at', { ascending: false })
         .limit(100);
-      
+
       if (commsError) throw commsError;
-      
+
       // Get user's reads with confirmation status
       const { data: reads, error: readsError } = await supabase
         .from('communication_reads')
         .select('communication_id, confirmed_at')
         .eq('user_id', userId);
-      
+
       if (readsError) throw readsError;
-      
-      const readMap = new Map(reads?.map(r => [r.communication_id, r]) || []);
-      
-      const allComms = (comms || []).map(c => {
+
+      const readMap = new Map(reads?.map((r) => [r.communication_id, r]) || []);
+
+      const allComms = (comms || []).map((c) => {
         const readRecord = readMap.get(c.id);
         return {
           ...c,
@@ -103,25 +105,24 @@ export function useUserCommunications() {
           branch_name: (c.branches as any)?.name || null,
         };
       }) as CommunicationWithSource[];
-      
+
       // Separate by source - filter brand communications by target_roles
-      const brand = allComms.filter(c => {
+      const brand = allComms.filter((c) => {
         if (c.source_type !== 'brand') return false;
-        
+
         // If no target_roles specified, it's for everyone
         if (!c.target_roles || c.target_roles.length === 0) return true;
-        
+
         // Check if user has at least one of the target roles
-        return c.target_roles.some(role => userLocalRoles.has(role));
+        return c.target_roles.some((role) => userLocalRoles.has(role));
       });
-      
+
       // Filter local communications: only show those from user's branches
-      const local = allComms.filter(c => 
-        c.source_type === 'local' && 
-        c.source_branch_id && 
-        userBranchIds.has(c.source_branch_id)
+      const local = allComms.filter(
+        (c) =>
+          c.source_type === 'local' && c.source_branch_id && userBranchIds.has(c.source_branch_id),
       );
-      
+
       return { brand, local };
     },
     enabled: !!userId,
@@ -132,26 +133,24 @@ export function useUserCommunications() {
 export function useUnreadCount() {
   const { data } = useUserCommunications();
   if (!data) return 0;
-  const brandUnread = data.brand?.filter(c => !c.is_read).length || 0;
-  const localUnread = data.local?.filter(c => !c.is_read).length || 0;
+  const brandUnread = data.brand?.filter((c) => !c.is_read).length || 0;
+  const localUnread = data.local?.filter((c) => !c.is_read).length || 0;
   return brandUnread + localUnread;
 }
 
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
   const { id: userId } = useEffectiveUser();
-  
+
   return useMutation({
     mutationFn: async (communicationId: string) => {
       if (!userId) throw new Error('Not authenticated');
-      
-      const { error } = await supabase
-        .from('communication_reads')
-        .insert({
-          communication_id: communicationId,
-          user_id: userId,
-        });
-      
+
+      const { error } = await supabase.from('communication_reads').insert({
+        communication_id: communicationId,
+        user_id: userId,
+      });
+
       // Ignore unique constraint violation (already read)
       if (error && !error.message.includes('duplicate')) {
         throw error;
@@ -167,17 +166,17 @@ export function useMarkAsRead() {
 export function useConfirmCommunication() {
   const queryClient = useQueryClient();
   const { id: userId } = useEffectiveUser();
-  
+
   return useMutation({
     mutationFn: async (communicationId: string) => {
       if (!userId) throw new Error('Not authenticated');
-      
+
       const { error } = await supabase
         .from('communication_reads')
         .update({ confirmed_at: new Date().toISOString() })
         .eq('communication_id', communicationId)
         .eq('user_id', userId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -190,7 +189,7 @@ export function useConfirmCommunication() {
 export function useCreateCommunication() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   return useMutation({
     mutationFn: async (data: {
       title: string;
@@ -201,14 +200,12 @@ export function useCreateCommunication() {
       expires_at?: string;
     }) => {
       if (!user?.id) throw new Error('Not authenticated');
-      
-      const { error } = await supabase
-        .from('communications')
-        .insert({
-          ...data,
-          created_by: user.id,
-        });
-      
+
+      const { error } = await supabase.from('communications').insert({
+        ...data,
+        created_by: user.id,
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -221,14 +218,11 @@ export function useCreateCommunication() {
 
 export function useDeleteCommunication() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('communications')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('communications').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -241,21 +235,31 @@ export function useDeleteCommunication() {
 
 export function getTypeLabel(type: Communication['type']): string {
   switch (type) {
-    case 'info': return 'Información';
-    case 'warning': return 'Aviso';
-    case 'urgent': return 'Urgente';
-    case 'celebration': return 'Celebración';
-    default: return type;
+    case 'info':
+      return 'Información';
+    case 'warning':
+      return 'Aviso';
+    case 'urgent':
+      return 'Urgente';
+    case 'celebration':
+      return 'Celebración';
+    default:
+      return type;
   }
 }
 
 export function getTypeColor(type: Communication['type']): string {
   switch (type) {
-    case 'info': return 'bg-blue-500/10 text-blue-600';
-    case 'warning': return 'bg-yellow-500/10 text-yellow-600';
-    case 'urgent': return 'bg-red-500/10 text-red-600';
-    case 'celebration': return 'bg-green-500/10 text-green-600';
-    default: return 'bg-muted text-muted-foreground';
+    case 'info':
+      return 'bg-blue-500/10 text-blue-600';
+    case 'warning':
+      return 'bg-yellow-500/10 text-yellow-600';
+    case 'urgent':
+      return 'bg-red-500/10 text-red-600';
+    case 'celebration':
+      return 'bg-green-500/10 text-green-600';
+    default:
+      return 'bg-muted text-muted-foreground';
   }
 }
 

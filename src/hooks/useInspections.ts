@@ -62,10 +62,12 @@ export function useInspections(options: UseInspectionsOptions = {}) {
     queryFn: async () => {
       let query = supabase
         .from('branch_inspections')
-        .select(`
+        .select(
+          `
           *,
           branch:branches(id, name, slug)
-        `)
+        `,
+        )
         .order('started_at', { ascending: false })
         .limit(limit);
 
@@ -81,10 +83,12 @@ export function useInspections(options: UseInspectionsOptions = {}) {
 
       const { data, error } = await query;
       if (error) throw error;
-      
+
       // Fetch profiles separately
-      const inspectorIds = [...new Set((data || []).map(d => d.inspector_id).filter(Boolean))];
-      const managerIds = [...new Set((data || []).map(d => d.present_manager_id).filter(Boolean))];
+      const inspectorIds = [...new Set((data || []).map((d) => d.inspector_id).filter(Boolean))];
+      const managerIds = [
+        ...new Set((data || []).map((d) => d.present_manager_id).filter(Boolean)),
+      ];
       const allUserIds = [...new Set([...inspectorIds, ...managerIds])];
 
       let profiles: Record<string, { id: string; full_name: string }> = {};
@@ -93,16 +97,18 @@ export function useInspections(options: UseInspectionsOptions = {}) {
           .from('profiles')
           .select('id, full_name')
           .in('id', allUserIds);
-        
+
         if (profilesData) {
-          profiles = Object.fromEntries(profilesData.map(p => [p.id, p]));
+          profiles = Object.fromEntries(profilesData.map((p) => [p.id, p]));
         }
       }
 
-      return (data || []).map(row => ({
+      return (data || []).map((row) => ({
         ...row,
         inspection_type: row.inspection_type as InspectionType,
-        action_items: (Array.isArray(row.action_items) ? row.action_items : []) as unknown as InspectionActionItem[],
+        action_items: (Array.isArray(row.action_items)
+          ? row.action_items
+          : []) as unknown as InspectionActionItem[],
         inspector: profiles[row.inspector_id] || undefined,
         present_manager: row.present_manager_id ? profiles[row.present_manager_id] : undefined,
       })) as BranchInspection[];
@@ -122,10 +128,12 @@ export function useInspection(inspectionId: string | undefined) {
 
       const { data: inspection, error: inspError } = await supabase
         .from('branch_inspections')
-        .select(`
+        .select(
+          `
           *,
           branch:branches(id, name, slug)
-        `)
+        `,
+        )
         .eq('id', inspectionId)
         .single();
 
@@ -139,9 +147,9 @@ export function useInspection(inspectionId: string | undefined) {
           .from('profiles')
           .select('id, full_name')
           .in('id', userIds);
-        
+
         if (profilesData) {
-          profiles = Object.fromEntries(profilesData.map(p => [p.id, p]));
+          profiles = Object.fromEntries(profilesData.map((p) => [p.id, p]));
         }
       }
 
@@ -156,9 +164,13 @@ export function useInspection(inspectionId: string | undefined) {
       return {
         ...inspection,
         inspection_type: inspection.inspection_type as InspectionType,
-        action_items: (Array.isArray(inspection.action_items) ? inspection.action_items : []) as unknown as InspectionActionItem[],
+        action_items: (Array.isArray(inspection.action_items)
+          ? inspection.action_items
+          : []) as unknown as InspectionActionItem[],
         inspector: profiles[inspection.inspector_id] || undefined,
-        present_manager: inspection.present_manager_id ? profiles[inspection.present_manager_id] : undefined,
+        present_manager: inspection.present_manager_id
+          ? profiles[inspection.present_manager_id]
+          : undefined,
         items: items as InspectionItem[],
       } as BranchInspection;
     },
@@ -175,20 +187,19 @@ export function useCreateInspection() {
 
   return useMutation({
     mutationFn: async (input: CreateInspectionInput) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
 
       // Atomic RPC: creates inspection + items from templates in a single transaction.
       // If items fail, the inspection is rolled back too.
-      const { data: inspectionId, error } = await supabase.rpc(
-        'create_inspection_with_items',
-        {
-          p_branch_id: input.branch_id,
-          p_inspection_type: input.inspection_type,
-          p_inspector_id: user.id,
-          p_present_manager_id: input.present_manager_id || null,
-        }
-      );
+      const { data: inspectionId, error } = await supabase.rpc('create_inspection_with_items', {
+        p_branch_id: input.branch_id,
+        p_inspection_type: input.inspection_type,
+        p_inspector_id: user.id,
+        p_present_manager_id: input.present_manager_id || null,
+      });
 
       if (error) throw error;
 
@@ -229,10 +240,7 @@ export function useUpdateInspectionItem() {
       if (data.photo_urls !== undefined) {
         updateData.photo_urls = data.photo_urls;
       }
-      const { error } = await supabase
-        .from('inspection_items')
-        .update(updateData)
-        .eq('id', itemId);
+      const { error } = await supabase.from('inspection_items').update(updateData).eq('id', itemId);
 
       if (error) throw error;
       return { itemId, inspectionId, data };
@@ -243,16 +251,24 @@ export function useUpdateInspectionItem() {
       await queryClient.cancelQueries({ queryKey: ['inspection', inspectionId] });
 
       // Snapshot previous value
-      const previousInspection = queryClient.getQueryData<BranchInspection>(['inspection', inspectionId]);
+      const previousInspection = queryClient.getQueryData<BranchInspection>([
+        'inspection',
+        inspectionId,
+      ]);
 
       // Optimistically update the cache
       if (previousInspection?.items) {
         queryClient.setQueryData<BranchInspection>(['inspection', inspectionId], {
           ...previousInspection,
-          items: previousInspection.items.map(item =>
+          items: previousInspection.items.map((item) =>
             item.id === itemId
-              ? { ...item, complies: data.complies, observations: data.observations ?? item.observations, photo_urls: data.photo_urls ?? item.photo_urls }
-              : item
+              ? {
+                  ...item,
+                  complies: data.complies,
+                  observations: data.observations ?? item.observations,
+                  photo_urls: data.photo_urls ?? item.photo_urls,
+                }
+              : item,
           ),
         });
       }
@@ -288,7 +304,9 @@ export function useUpdateInspection() {
       data,
     }: {
       inspectionId: string;
-      data: Partial<Pick<BranchInspection, 'present_manager_id' | 'general_notes' | 'critical_findings'>>;
+      data: Partial<
+        Pick<BranchInspection, 'present_manager_id' | 'general_notes' | 'critical_findings'>
+      >;
     }) => {
       const { error } = await supabase
         .from('branch_inspections')
@@ -336,11 +354,12 @@ export function useCompleteInspection() {
       if (itemsError) throw itemsError;
 
       // Calculate score: only count items with a boolean value (not null/N/A)
-      const applicableItems = items.filter(i => i.complies !== null);
-      const compliantItems = applicableItems.filter(i => i.complies === true);
-      const score = applicableItems.length > 0
-        ? Math.round((compliantItems.length / applicableItems.length) * 100)
-        : 0;
+      const applicableItems = items.filter((i) => i.complies !== null);
+      const compliantItems = applicableItems.filter((i) => i.complies === true);
+      const score =
+        applicableItems.length > 0
+          ? Math.round((compliantItems.length / applicableItems.length) * 100)
+          : 0;
 
       // Update inspection
       const { error } = await supabase
@@ -421,10 +440,7 @@ export function useDeleteInspection() {
       if (itemsError) throw itemsError;
 
       // Then delete inspection
-      const { error } = await supabase
-        .from('branch_inspections')
-        .delete()
-        .eq('id', inspectionId);
+      const { error } = await supabase.from('branch_inspections').delete().eq('id', inspectionId);
 
       if (error) throw error;
       return inspectionId;
@@ -464,9 +480,9 @@ export function useUploadInspectionPhoto() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('inspection-photos')
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('inspection-photos').getPublicUrl(fileName);
 
       return publicUrl;
     },

@@ -47,7 +47,7 @@ export function useStockCierrePeriod(branchId: string, periodo: string | null) {
         .eq('periodo', new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10));
 
       const prevMap = new Map(
-        (cierreAnterior ?? []).map((r) => [r.insumo_id, Number(r.stock_cierre_fisico)])
+        (cierreAnterior ?? []).map((r) => [r.insumo_id, Number(r.stock_cierre_fisico)]),
       );
       const insumoIds = new Set<string>((movimientos ?? []).map((m) => m.insumo_id));
       prevMap.forEach((_, id) => insumoIds.add(id));
@@ -66,15 +66,22 @@ export function useStockCierrePeriod(branchId: string, periodo: string | null) {
           .from('stock_actual')
           .select('insumo_id, cantidad, unidad, insumos(nombre)')
           .eq('branch_id', branchId);
-        return (stockActual ?? []).map((r: { insumo_id: string; cantidad: number; unidad: string; insumos?: { nombre?: string } }) => ({
-          insumo_id: r.insumo_id,
-          insumo_nombre: (r.insumos as { nombre?: string })?.nombre ?? r.insumo_id,
-          unidad: r.unidad,
-          stock_apertura: 0,
-          compras: 0,
-          consumo_ventas: 0,
-          stock_esperado: Number(r.cantidad ?? 0),
-        }));
+        return (stockActual ?? []).map(
+          (r: {
+            insumo_id: string;
+            cantidad: number;
+            unidad: string;
+            insumos?: { nombre?: string };
+          }) => ({
+            insumo_id: r.insumo_id,
+            insumo_nombre: (r.insumos as { nombre?: string })?.nombre ?? r.insumo_id,
+            unidad: r.unidad,
+            stock_apertura: 0,
+            compras: 0,
+            consumo_ventas: 0,
+            stock_esperado: Number(r.cantidad ?? 0),
+          }),
+        );
       }
 
       const { data: insumos } = await supabase
@@ -86,7 +93,7 @@ export function useStockCierrePeriod(branchId: string, periodo: string | null) {
         (insumos ?? []).map((i: { id: string; nombre?: string; unidad_base?: string }) => [
           i.id,
           { nombre: i.nombre ?? i.id, unidad: i.unidad_base ?? 'un' },
-        ])
+        ]),
       );
 
       return Array.from(insumoIds).map((id) => {
@@ -157,7 +164,7 @@ export function useSaveCierreMensual(branchId: string) {
             stock_cierre_fisico: it.stock_cierre_fisico,
             merma,
           },
-          { onConflict: 'branch_id,insumo_id,periodo' }
+          { onConflict: 'branch_id,insumo_id,periodo' },
         );
         if (errCierre) throw errCierre;
         const { data: actualRow } = await supabase
@@ -174,7 +181,7 @@ export function useSaveCierreMensual(branchId: string) {
             cantidad: it.stock_cierre_fisico,
             unidad: actualRow?.unidad ?? 'un',
           },
-          { onConflict: 'branch_id,insumo_id' }
+          { onConflict: 'branch_id,insumo_id' },
         );
         if (errStock) throw errStock;
         if (merma > 0) {
@@ -194,9 +201,18 @@ export function useSaveCierreMensual(branchId: string) {
             .single();
           const costo = Number(insumo?.costo_por_unidad_base ?? 0);
           const montoConsumo = merma * costo;
-          const catPl = insumo?.categoria_pl && ['materia_prima','descartables','limpieza','mantenimiento','marketing','varios'].includes(insumo.categoria_pl)
-            ? insumo.categoria_pl
-            : 'materia_prima';
+          const catPl =
+            insumo?.categoria_pl &&
+            [
+              'materia_prima',
+              'descartables',
+              'limpieza',
+              'mantenimiento',
+              'marketing',
+              'varios',
+            ].includes(insumo.categoria_pl)
+              ? insumo.categoria_pl
+              : 'materia_prima';
           if (montoConsumo > 0) {
             await supabase.from('consumos_manuales').insert({
               branch_id: branchId,

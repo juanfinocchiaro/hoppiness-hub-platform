@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { EmployeeCertification, CertificationLevel, EmployeeCertificationWithStation } from '@/types/coaching';
+import type {
+  CertificationLevel,
+  EmployeeCertificationWithStation,
+} from '@/types/coaching';
 
 interface CertificationFilters {
   branchId?: string;
@@ -20,10 +23,12 @@ export function useCertifications(filters: CertificationFilters = {}) {
     queryFn: async (): Promise<EmployeeCertificationWithStation[]> => {
       let query = supabase
         .from('employee_certifications')
-        .select(`
+        .select(
+          `
           *,
           station:work_stations(*)
-        `)
+        `,
+        )
         .order('created_at', { ascending: false });
 
       if (branchId) {
@@ -55,10 +60,12 @@ export function useEmployeeCertifications(userId: string | null, branchId: strin
 
       const { data, error } = await supabase
         .from('employee_certifications')
-        .select(`
+        .select(
+          `
           *,
           station:work_stations(*)
-        `)
+        `,
+        )
         .eq('user_id', userId)
         .eq('branch_id', branchId)
         .order('created_at');
@@ -81,10 +88,12 @@ export function useTeamCertifications(branchId: string | null) {
 
       const { data, error } = await supabase
         .from('employee_certifications')
-        .select(`
+        .select(
+          `
           *,
           station:work_stations(*)
-        `)
+        `,
+        )
         .eq('branch_id', branchId)
         .order('user_id')
         .order('station_id');
@@ -92,13 +101,16 @@ export function useTeamCertifications(branchId: string | null) {
       if (error) throw error;
 
       // Agrupar por usuario
-      const byUser = (data as EmployeeCertificationWithStation[]).reduce((acc, cert) => {
-        if (!acc[cert.user_id]) {
-          acc[cert.user_id] = {};
-        }
-        acc[cert.user_id][cert.station_id] = cert;
-        return acc;
-      }, {} as Record<string, Record<string, EmployeeCertificationWithStation>>);
+      const byUser = (data as EmployeeCertificationWithStation[]).reduce(
+        (acc, cert) => {
+          if (!acc[cert.user_id]) {
+            acc[cert.user_id] = {};
+          }
+          acc[cert.user_id][cert.station_id] = cert;
+          return acc;
+        },
+        {} as Record<string, Record<string, EmployeeCertificationWithStation>>,
+      );
 
       return {
         certifications: data as EmployeeCertificationWithStation[],
@@ -177,7 +189,7 @@ export function useBatchUpdateCertifications() {
         throw new Error('No autenticado');
       }
 
-      const certificationsData = updates.map(data => ({
+      const certificationsData = updates.map((data) => ({
         user_id: data.userId,
         branch_id: data.branchId,
         station_id: data.stationId,

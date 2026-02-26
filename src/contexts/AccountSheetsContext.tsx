@@ -28,9 +28,12 @@ export function AccountSheetsProvider({ children }: { children: ReactNode }) {
   const openDirecciones = useCallback(() => setDireccionesOpen(true), []);
   const openPerfil = useCallback(() => setPerfilOpen(true), []);
 
-  const handleShowTracking = useCallback((trackingCode: string) => {
-    navigate(`/pedido/${trackingCode}`);
-  }, [navigate]);
+  const handleShowTracking = useCallback(
+    (trackingCode: string) => {
+      navigate(`/pedido/${trackingCode}`);
+    },
+    [navigate],
+  );
 
   return (
     <AccountSheetsContext.Provider value={{ openMisPedidos, openDirecciones, openPerfil }}>

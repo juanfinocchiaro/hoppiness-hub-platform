@@ -10,11 +10,7 @@ export function useProveedores(branchId?: string) {
   const query = useQuery({
     queryKey: ['proveedores', branchId],
     queryFn: async () => {
-      let q = supabase
-        .from('proveedores')
-        .select('*')
-        .is('deleted_at', null)
-        .order('razon_social');
+      let q = supabase.from('proveedores').select('*').is('deleted_at', null).order('razon_social');
 
       if (branchId === '__marca_only__') {
         // Brand panel: only marca-level suppliers

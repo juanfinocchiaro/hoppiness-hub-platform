@@ -8,7 +8,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, Loader2, MapPin, CheckCircle2, Globe, Eye, EyeOff, CalendarClock, ShoppingCart, ExternalLink } from 'lucide-react';
+import {
+  Save,
+  Loader2,
+  MapPin,
+  CheckCircle2,
+  Globe,
+  Eye,
+  EyeOff,
+  CalendarClock,
+  ShoppingCart,
+  ExternalLink,
+} from 'lucide-react';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
 import type { Tables } from '@/integrations/supabase/types';
 import BranchLocationMap from '@/components/maps/BranchLocationMap';
@@ -61,17 +72,17 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
   const [latitude, setLatitude] = useState((branch as any).latitude?.toString() || '');
   const [longitude, setLongitude] = useState((branch as any).longitude?.toString() || '');
   const [googlePlaceId, setGooglePlaceId] = useState((branch as any).google_place_id || '');
-  
+
   // Estado público (nuevo sistema)
   const [publicStatus, setPublicStatus] = useState<PublicStatus>(
-    ((branch as any).public_status as PublicStatus) || 'active'
+    ((branch as any).public_status as PublicStatus) || 'active',
   );
-  
+
   // Horarios públicos por día
   const [publicHours, setPublicHours] = useState<PublicHours | null>(
-    (branch as any).public_hours || null
+    (branch as any).public_hours || null,
   );
-  
+
   // Mapa (on-demand)
   const [showMap, setShowMap] = useState(false);
 
@@ -116,10 +127,16 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
       // Actualizar pos_config (solo superadmin)
       if (isSuperadmin) {
         try {
-          const { error: posError } = await supabase.from('pos_config').upsert(
-            { branch_id: branch.id, pos_enabled: posEnabled, updated_at: new Date().toISOString() },
-            { onConflict: 'branch_id' }
-          );
+          const { error: posError } = await supabase
+            .from('pos_config')
+            .upsert(
+              {
+                branch_id: branch.id,
+                pos_enabled: posEnabled,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'branch_id' },
+            );
           if (posError) throw posError;
         } catch (posErr: any) {
           const msg = posErr?.message || posErr?.error_description || String(posErr);
@@ -283,10 +300,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
 
         {/* Horarios públicos por día */}
         <div className="pt-4 border-t">
-          <PublicHoursEditor
-            value={publicHours}
-            onChange={setPublicHours}
-          />
+          <PublicHoursEditor value={publicHours} onChange={setPublicHours} />
         </div>
 
         {/* Estado público del local */}
@@ -303,7 +317,10 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
             <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="active" id="status-active" className="mt-1" />
               <div className="flex-1">
-                <Label htmlFor="status-active" className="flex items-center gap-2 cursor-pointer font-medium">
+                <Label
+                  htmlFor="status-active"
+                  className="flex items-center gap-2 cursor-pointer font-medium"
+                >
                   <Eye className="h-4 w-4 text-success" />
                   Activo
                 </Label>
@@ -312,11 +329,14 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="coming_soon" id="status-coming-soon" className="mt-1" />
               <div className="flex-1">
-                <Label htmlFor="status-coming-soon" className="flex items-center gap-2 cursor-pointer font-medium">
+                <Label
+                  htmlFor="status-coming-soon"
+                  className="flex items-center gap-2 cursor-pointer font-medium"
+                >
                   <CalendarClock className="h-4 w-4 text-accent" />
                   Próximamente
                 </Label>
@@ -325,11 +345,14 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="hidden" id="status-hidden" className="mt-1" />
               <div className="flex-1">
-                <Label htmlFor="status-hidden" className="flex items-center gap-2 cursor-pointer font-medium">
+                <Label
+                  htmlFor="status-hidden"
+                  className="flex items-center gap-2 cursor-pointer font-medium"
+                >
                   <EyeOff className="h-4 w-4 text-muted-foreground" />
                   Oculto
                 </Label>
@@ -353,15 +376,12 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
                 <Label htmlFor="pos-enabled" className="text-sm text-muted-foreground">
                   {posEnabled ? 'Habilitado' : 'Deshabilitado'}
                 </Label>
-                <Switch
-                  id="pos-enabled"
-                  checked={posEnabled}
-                  onCheckedChange={setPosEnabled}
-                />
+                <Switch id="pos-enabled" checked={posEnabled} onCheckedChange={setPosEnabled} />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Si está habilitado, esta sucursal usará el POS integrado. Se ocultan Ventas Mensuales y Cargador RDO (carga manual).
+              Si está habilitado, esta sucursal usará el POS integrado. Se ocultan Ventas Mensuales
+              y Cargador RDO (carga manual).
             </p>
           </div>
         )}
@@ -372,11 +392,7 @@ export default function BranchEditPanel({ branch, onSaved, onCancel }: BranchEdi
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar
           </Button>
         </div>

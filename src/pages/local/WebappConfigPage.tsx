@@ -9,18 +9,40 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/ui/page-header';
-import { Globe, ExternalLink, Truck, ShoppingBag, Clock, MapPin, DollarSign, ChevronDown, Search, Banknote, CreditCard } from 'lucide-react';
+import {
+  Globe,
+  ExternalLink,
+  Truck,
+  ShoppingBag,
+  Clock,
+  MapPin,
+  DollarSign,
+  ChevronDown,
+  Search,
+  Banknote,
+  CreditCard,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { DotsLoader } from '@/components/ui/loaders';
 
-
 const DAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] as const;
 const DAY_LABELS: Record<string, string> = {
-  lunes: 'Lunes', martes: 'Martes', miércoles: 'Miércoles',
-  jueves: 'Jueves', viernes: 'Viernes', sábado: 'Sábado', domingo: 'Domingo',
+  lunes: 'Lunes',
+  martes: 'Martes',
+  miércoles: 'Miércoles',
+  jueves: 'Jueves',
+  viernes: 'Viernes',
+  sábado: 'Sábado',
+  domingo: 'Domingo',
 };
 
 type DaySchedule = { enabled: boolean; from: string; to: string };
@@ -37,7 +59,7 @@ type ServiceScheduleV2 = {
 };
 
 const defaultDays = (): Record<string, DaySchedule> =>
-  Object.fromEntries(DAYS.map(d => [d, { enabled: true, from: '11:00', to: '23:00' }]));
+  Object.fromEntries(DAYS.map((d) => [d, { enabled: true, from: '11:00', to: '23:00' }]));
 
 const defaultPaymentMethods = (serviceKey: string): WebappPaymentMethods => {
   if (serviceKey === 'delivery') return { efectivo: false, mercadopago: true };
@@ -152,7 +174,9 @@ function useBranchWebappAvailability(branchId: string | undefined) {
     queryFn: async () => {
       const { data: items, error: itemsErr } = await supabase
         .from('items_carta')
-        .select('id, nombre, tipo, orden, disponible_webapp, menu_categorias:categoria_carta_id(nombre, orden)')
+        .select(
+          'id, nombre, tipo, orden, disponible_webapp, menu_categorias:categoria_carta_id(nombre, orden)',
+        )
         .eq('activo', true)
         .is('deleted_at', null)
         .order('orden');
@@ -164,9 +188,7 @@ function useBranchWebappAvailability(branchId: string | undefined) {
         .eq('branch_id', branchId!);
       if (avErr) throw avErr;
 
-      const availabilityMap = new Map(
-        (availability || []).map((a: any) => [a.item_carta_id, a]),
-      );
+      const availabilityMap = new Map((availability || []).map((a: any) => [a.item_carta_id, a]));
 
       const rows = (items || [])
         .filter((item: any) => item.tipo !== 'extra')
@@ -204,7 +226,8 @@ function useUpdateBranchWebappAvailability(branchId: string | undefined) {
       outOfStock?: boolean;
     }) => {
       const patch: Record<string, any> = {};
-      if (params.localDisponibleWebapp !== undefined) patch.available_webapp = params.localDisponibleWebapp;
+      if (params.localDisponibleWebapp !== undefined)
+        patch.available_webapp = params.localDisponibleWebapp;
       if (params.outOfStock !== undefined) patch.out_of_stock = params.outOfStock;
       patch.updated_at = new Date().toISOString();
 
@@ -217,14 +240,15 @@ function useUpdateBranchWebappAvailability(branchId: string | undefined) {
       if (updateErr) throw updateErr;
 
       if (!updated || updated.length === 0) {
-        const { error: upsertErr } = await supabase
-          .from('branch_item_availability' as any)
-          .upsert({
+        const { error: upsertErr } = await supabase.from('branch_item_availability' as any).upsert(
+          {
             branch_id: branchId!,
             item_carta_id: params.itemId,
             available_webapp: params.localDisponibleWebapp ?? true,
             out_of_stock: params.outOfStock ?? false,
-          }, { onConflict: 'branch_id,item_carta_id' });
+          },
+          { onConflict: 'branch_id,item_carta_id' },
+        );
         if (upsertErr) throw upsertErr;
       }
     },
@@ -303,26 +327,28 @@ function ServiceSection({
           <div>
             <span className="font-medium">{label}</span>
             {schedule.enabled && (
-              <p className="text-xs text-muted-foreground">
-                Prep: {schedule.prep_time} min
-              </p>
+              <p className="text-xs text-muted-foreground">Prep: {schedule.prep_time} min</p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Switch
             checked={schedule.enabled}
-            onCheckedChange={(v) => onChange({
-              ...schedule,
-              enabled: v,
-              payment_methods: schedule.payment_methods ?? defaultPaymentMethods(serviceKey),
-            })}
+            onCheckedChange={(v) =>
+              onChange({
+                ...schedule,
+                enabled: v,
+                payment_methods: schedule.payment_methods ?? defaultPaymentMethods(serviceKey),
+              })
+            }
           />
           {schedule.enabled && (
             <Collapsible open={open} onOpenChange={setOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+                  />
                 </Button>
               </CollapsibleTrigger>
             </Collapsible>
@@ -343,7 +369,9 @@ function ServiceSection({
                 <Input
                   type="number"
                   value={schedule.prep_time}
-                  onChange={(e) => onChange({ ...schedule, prep_time: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    onChange({ ...schedule, prep_time: parseInt(e.target.value) || 0 })
+                  }
                   className="w-32"
                 />
               </div>
@@ -358,7 +386,9 @@ function ServiceSection({
                     <Input
                       type="number"
                       value={schedule.radio_km ?? ''}
-                      onChange={(e) => onChange({ ...schedule, radio_km: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        onChange({ ...schedule, radio_km: parseFloat(e.target.value) || 0 })
+                      }
                     />
                   </div>
                   <div className="space-y-1">
@@ -368,7 +398,9 @@ function ServiceSection({
                     <Input
                       type="number"
                       value={schedule.costo ?? ''}
-                      onChange={(e) => onChange({ ...schedule, costo: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        onChange({ ...schedule, costo: parseFloat(e.target.value) || 0 })
+                      }
                     />
                   </div>
                   <div className="space-y-1">
@@ -378,7 +410,9 @@ function ServiceSection({
                     <Input
                       type="number"
                       value={schedule.pedido_minimo ?? ''}
-                      onChange={(e) => onChange({ ...schedule, pedido_minimo: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        onChange({ ...schedule, pedido_minimo: parseFloat(e.target.value) || 0 })
+                      }
                     />
                   </div>
                 </div>
@@ -399,7 +433,10 @@ function ServiceSection({
                         <p className="text-xs text-muted-foreground">Pagás al recibir / retirar</p>
                       </div>
                     </div>
-                    <Switch checked={pm.efectivo} onCheckedChange={(v) => setPaymentMethod('efectivo', v)} />
+                    <Switch
+                      checked={pm.efectivo}
+                      onCheckedChange={(v) => setPaymentMethod('efectivo', v)}
+                    />
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-2">
@@ -409,7 +446,10 @@ function ServiceSection({
                         <p className="text-xs text-muted-foreground">Tarjeta, débito o billetera</p>
                       </div>
                     </div>
-                    <Switch checked={pm.mercadopago} onCheckedChange={(v) => setPaymentMethod('mercadopago', v)} />
+                    <Switch
+                      checked={pm.mercadopago}
+                      onCheckedChange={(v) => setPaymentMethod('mercadopago', v)}
+                    />
                   </div>
                 </div>
                 {isDelivery && pm.efectivo && (
@@ -426,10 +466,20 @@ function ServiceSection({
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">Horarios por día</Label>
                   <div className="flex gap-1">
-                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => toggleAllDays(true)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => toggleAllDays(true)}
+                    >
                       Activar todos
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => toggleAllDays(false)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => toggleAllDays(false)}
+                    >
                       Desactivar todos
                     </Button>
                   </div>
@@ -445,7 +495,9 @@ function ServiceSection({
                           onCheckedChange={(v) => updateDay(day, { enabled: v })}
                           className="scale-75"
                         />
-                        <span className={`text-sm w-20 ${ds.enabled ? 'font-medium' : 'text-muted-foreground'}`}>
+                        <span
+                          className={`text-sm w-20 ${ds.enabled ? 'font-medium' : 'text-muted-foreground'}`}
+                        >
                           {DAY_LABELS[day]}
                         </span>
                         {ds.enabled ? (
@@ -495,7 +547,8 @@ export default function WebappConfigPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: config, isLoading } = useWebappConfigAdmin(branchId);
   const { data: branchData } = useBranchSlug(branchId);
-  const { data: availabilityRows, isLoading: loadingAvailability } = useBranchWebappAvailability(branchId);
+  const { data: availabilityRows, isLoading: loadingAvailability } =
+    useBranchWebappAvailability(branchId);
   const updateAvailability = useUpdateBranchWebappAvailability(branchId);
   const qc = useQueryClient();
 
@@ -525,11 +578,17 @@ export default function WebappConfigPage() {
         auto_accept_orders: config.auto_accept_orders ?? false,
         auto_print_orders: config.auto_print_orders ?? false,
       });
-      setServices(migrateSchedules(config.service_schedules, {
-        retiro_habilitado: config.retiro_habilitado ?? true,
-        delivery_habilitado: config.delivery_habilitado ?? false,
-        comer_aca_habilitado: config.comer_aca_habilitado ?? false,
-      }, config));
+      setServices(
+        migrateSchedules(
+          config.service_schedules,
+          {
+            retiro_habilitado: config.retiro_habilitado ?? true,
+            delivery_habilitado: config.delivery_habilitado ?? false,
+            comer_aca_habilitado: config.comer_aca_habilitado ?? false,
+          },
+          config,
+        ),
+      );
     }
   }, [config]);
 
@@ -568,9 +627,7 @@ export default function WebappConfigPage() {
           .eq('branch_id', branchId!);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('webapp_config' as any)
-          .insert(payload);
+        const { error } = await supabase.from('webapp_config' as any).insert(payload);
         if (error) throw error;
       }
     },
@@ -586,16 +643,15 @@ export default function WebappConfigPage() {
   const publicUrl = branchData?.slug ? `${window.location.origin}/pedir/${branchData.slug}` : null;
 
   const updateService = (key: string, s: ServiceScheduleV2) => {
-    setServices(prev => ({ ...prev, [key]: s }));
+    setServices((prev) => ({ ...prev, [key]: s }));
   };
 
   const filteredAvailabilityRows = useMemo(() => {
     const rows = availabilityRows || [];
     const q = itemSearch.trim().toLowerCase();
     if (!q) return rows;
-    return rows.filter((r) =>
-      r.nombre.toLowerCase().includes(q) ||
-      r.categoriaNombre.toLowerCase().includes(q),
+    return rows.filter(
+      (r) => r.nombre.toLowerCase().includes(q) || r.categoriaNombre.toLowerCase().includes(q),
     );
   }, [availabilityRows, itemSearch]);
 
@@ -625,11 +681,13 @@ export default function WebappConfigPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Tienda activa</Label>
-                  <p className="text-xs text-muted-foreground">Habilita o deshabilita la tienda online</p>
+                  <p className="text-xs text-muted-foreground">
+                    Habilita o deshabilita la tienda online
+                  </p>
                 </div>
                 <Switch
                   checked={form.webapp_activa}
-                  onCheckedChange={(v) => setForm(f => ({ ...f, webapp_activa: v }))}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, webapp_activa: v }))}
                 />
               </div>
 
@@ -637,7 +695,10 @@ export default function WebappConfigPage() {
                 <>
                   <div className="space-y-2">
                     <Label>Estado operativo</Label>
-                    <Select value={form.estado} onValueChange={(v) => setForm(f => ({ ...f, estado: v }))}>
+                    <Select
+                      value={form.estado}
+                      onValueChange={(v) => setForm((f) => ({ ...f, estado: v }))}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -670,7 +731,7 @@ export default function WebappConfigPage() {
                       <Input
                         placeholder="Ej: Volvemos en 15 minutos"
                         value={form.mensaje_pausa}
-                        onChange={(e) => setForm(f => ({ ...f, mensaje_pausa: e.target.value }))}
+                        onChange={(e) => setForm((f) => ({ ...f, mensaje_pausa: e.target.value }))}
                       />
                     </div>
                   )}
@@ -697,7 +758,8 @@ export default function WebappConfigPage() {
             <CardHeader>
               <CardTitle>Servicios</CardTitle>
               <CardDescription>
-                Activá cada servicio y configurá sus horarios y tiempos de preparación de forma independiente
+                Activá cada servicio y configurá sus horarios y tiempos de preparación de forma
+                independiente
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -744,13 +806,17 @@ export default function WebappConfigPage() {
               ) : (
                 <div className="border rounded-lg max-h-[380px] overflow-y-auto divide-y">
                   {filteredAvailabilityRows.map((row) => {
-                    const webVisible = row.marcaDisponibleWebapp && row.localDisponibleWebapp && !row.outOfStock;
+                    const webVisible =
+                      row.marcaDisponibleWebapp && row.localDisponibleWebapp && !row.outOfStock;
                     const isPendingThisRow =
                       updateAvailability.isPending &&
                       updateAvailability.variables?.itemId === row.itemId;
 
                     return (
-                      <div key={row.itemId} className="px-3 py-2.5 flex items-center justify-between gap-3">
+                      <div
+                        key={row.itemId}
+                        className="px-3 py-2.5 flex items-center justify-between gap-3"
+                      >
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{row.nombre}</div>
                           <div className="text-xs text-muted-foreground truncate">
@@ -805,10 +871,15 @@ export default function WebappConfigPage() {
           <Card>
             <CardHeader>
               <CardTitle>Recepción de pedidos</CardTitle>
-              <CardDescription>Cómo se reciben y procesan los pedidos entrantes de la webapp</CardDescription>
+              <CardDescription>
+                Cómo se reciben y procesan los pedidos entrantes de la webapp
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select value={form.recepcion_modo} onValueChange={(v) => setForm(f => ({ ...f, recepcion_modo: v }))}>
+              <Select
+                value={form.recepcion_modo}
+                onValueChange={(v) => setForm((f) => ({ ...f, recepcion_modo: v }))}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -829,7 +900,7 @@ export default function WebappConfigPage() {
                 </div>
                 <Switch
                   checked={form.auto_accept_orders}
-                  onCheckedChange={(v) => setForm(f => ({ ...f, auto_accept_orders: v }))}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, auto_accept_orders: v }))}
                 />
               </div>
 
@@ -842,7 +913,7 @@ export default function WebappConfigPage() {
                 </div>
                 <Switch
                   checked={form.auto_print_orders}
-                  onCheckedChange={(v) => setForm(f => ({ ...f, auto_print_orders: v }))}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, auto_print_orders: v }))}
                 />
               </div>
             </CardContent>
@@ -851,7 +922,11 @@ export default function WebappConfigPage() {
           {/* Save button */}
           <div className="flex justify-end">
             <Button onClick={() => save.mutate()} disabled={save.isPending} size="lg">
-              {save.isPending && <span className="mr-2 inline-flex"><DotsLoader /></span>}
+              {save.isPending && (
+                <span className="mr-2 inline-flex">
+                  <DotsLoader />
+                </span>
+              )}
               Guardar configuración
             </Button>
           </div>

@@ -117,7 +117,12 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
   };
 
   const initials = fullName
-    ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    ? fullName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
     : '?';
 
   return (
@@ -165,7 +170,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
               <Input
                 id="sheet-name"
                 value={fullName}
-                onChange={e => setFullName(e.target.value)}
+                onChange={(e) => setFullName(e.target.value)}
                 placeholder="Tu nombre"
               />
             </div>
@@ -177,7 +182,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                 id="sheet-phone"
                 type="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value)}
                 placeholder="351-1234567"
               />
             </div>
@@ -190,14 +195,14 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !birthDate && "text-muted-foreground"
+                      'w-full justify-start text-left font-normal',
+                      !birthDate && 'text-muted-foreground',
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {birthDate
                       ? format(birthDate, "d 'de' MMMM, yyyy", { locale: es })
-                      : "Seleccionar fecha..."}
+                      : 'Seleccionar fecha...'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -205,7 +210,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                     mode="single"
                     selected={birthDate}
                     onSelect={setBirthDate}
-                    disabled={(date) => date > new Date() || date < new Date("1920-01-01")}
+                    disabled={(date) => date > new Date() || date < new Date('1920-01-01')}
                     initialFocus
                     captionLayout="dropdown-buttons"
                     fromYear={1920}
@@ -222,7 +227,9 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
               disabled={updateProfile.isPending}
             >
               {updateProfile.isPending ? (
-                <span className="mr-2 inline-flex"><DotsLoader /></span>
+                <span className="mr-2 inline-flex">
+                  <DotsLoader />
+                </span>
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
@@ -239,11 +246,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                   <span className="text-sm font-medium">Seguridad</span>
                 </div>
                 {!showPasswordSection && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPasswordSection(true)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setShowPasswordSection(true)}>
                     Cambiar contraseña
                   </Button>
                 )}
@@ -258,7 +261,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                         id="sheet-new-pw"
                         type={showPasswords ? 'text' : 'password'}
                         value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
+                        onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Mínimo 6 caracteres"
                       />
                       <Button
@@ -268,7 +271,11 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                         className="absolute right-0 top-0 h-full px-3"
                         onClick={() => setShowPasswords(!showPasswords)}
                       >
-                        {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -279,7 +286,7 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                       id="sheet-confirm-pw"
                       type={showPasswords ? 'text' : 'password'}
                       value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repetir contraseña"
                     />
                   </div>
@@ -302,7 +309,9 @@ export function PerfilSheet({ open, onOpenChange }: Props) {
                       disabled={changePassword.isPending || !newPassword || !confirmPassword}
                     >
                       {changePassword.isPending ? (
-                        <span className="mr-2 inline-flex"><DotsLoader /></span>
+                        <span className="mr-2 inline-flex">
+                          <DotsLoader />
+                        </span>
                       ) : (
                         <Lock className="w-4 h-4 mr-2" />
                       )}

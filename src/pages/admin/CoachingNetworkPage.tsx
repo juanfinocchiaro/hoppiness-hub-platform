@@ -1,6 +1,6 @@
 /**
  * CoachingNetworkPage - Dashboard de Red (Vista de todos los coachings de empleados)
- * 
+ *
  * Vista de solo lectura para Superadmin, Coordinador e Informes.
  * Muestra métricas consolidadas de todos los coachings de empleados hechos por encargados.
  */
@@ -9,27 +9,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Users, 
-  CheckCircle, 
-  Clock, 
+import {
+  Users,
+  CheckCircle,
+  Clock,
   TrendingUp,
   Award,
   AlertTriangle,
   BarChart3,
-  Building2
+  Building2,
 } from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
-  Cell
+  Cell,
 } from 'recharts';
 
 import { RequireBrandPermission } from '@/components/guards';
@@ -72,9 +72,10 @@ function CoachingNetworkPageContent() {
 
   if (!stats) return null;
 
-  const completionRate = stats.totalEmployees > 0 
-    ? Math.round((stats.totalCoachingsThisMonth / stats.totalEmployees) * 100)
-    : 0;
+  const completionRate =
+    stats.totalEmployees > 0
+      ? Math.round((stats.totalCoachingsThisMonth / stats.totalEmployees) * 100)
+      : 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -84,9 +85,7 @@ function CoachingNetworkPageContent() {
           <BarChart3 className="h-6 w-6" />
           Dashboard de Coaching - Red
         </h1>
-        <p className="text-muted-foreground capitalize">
-          Métricas consolidadas de {currentMonth}
-        </p>
+        <p className="text-muted-foreground capitalize">Métricas consolidadas de {currentMonth}</p>
       </div>
 
       {/* Stats principales */}
@@ -166,28 +165,28 @@ function CoachingNetworkPageContent() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats.monthlyTrend}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="month" 
+                  <XAxis
+                    dataKey="month"
                     className="text-xs"
                     tick={{ fill: 'hsl(var(--muted-foreground))' }}
                   />
-                  <YAxis 
-                    domain={[0, 4]} 
+                  <YAxis
+                    domain={[0, 4]}
                     className="text-xs"
                     tick={{ fill: 'hsl(var(--muted-foreground))' }}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
+                  <Tooltip
+                    contentStyle={{
                       backgroundColor: 'hsl(var(--background))',
                       border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
                     }}
                     formatter={(value: number) => [value.toFixed(2), 'Promedio']}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="averageScore" 
-                    stroke="hsl(var(--primary))" 
+                  <Line
+                    type="monotone"
+                    dataKey="averageScore"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     dot={{ fill: 'hsl(var(--primary))' }}
                   />
@@ -209,36 +208,33 @@ function CoachingNetworkPageContent() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={stats.branchStats.filter(b => b.averageScore !== null)}
+                <BarChart
+                  data={stats.branchStats.filter((b) => b.averageScore !== null)}
                   layout="vertical"
                 >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    type="number" 
+                  <XAxis
+                    type="number"
                     domain={[0, 4]}
                     tick={{ fill: 'hsl(var(--muted-foreground))' }}
                   />
-                  <YAxis 
-                    dataKey="branchName" 
-                    type="category" 
+                  <YAxis
+                    dataKey="branchName"
+                    type="category"
                     width={100}
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
+                  <Tooltip
+                    contentStyle={{
                       backgroundColor: 'hsl(var(--background))',
                       border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
                     }}
                     formatter={(value: number) => [value.toFixed(2), 'Promedio']}
                   />
                   <Bar dataKey="averageScore" radius={[0, 4, 4, 0]}>
                     {stats.branchStats.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={getBarColor(entry.averageScore || 0)} 
-                      />
+                      <Cell key={`cell-${index}`} fill={getBarColor(entry.averageScore || 0)} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -260,13 +256,14 @@ function CoachingNetworkPageContent() {
           </CardHeader>
           <CardContent>
             {stats.topPerformers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Sin datos este mes
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">Sin datos este mes</p>
             ) : (
               <div className="space-y-2">
                 {stats.topPerformers.map((p, i) => (
-                  <div key={p.userId} className="flex items-center justify-between p-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+                  <div
+                    key={p.userId}
+                    className="flex items-center justify-between p-2 rounded-lg bg-green-50 dark:bg-green-950/30"
+                  >
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-green-600">#{i + 1}</span>
                       <div>
@@ -293,23 +290,28 @@ function CoachingNetworkPageContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {stats.lowPerformers.filter(p => p.score < 2.5).length === 0 ? (
+            {stats.lowPerformers.filter((p) => p.score < 2.5).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Todos sobre el umbral 👍
               </p>
             ) : (
               <div className="space-y-2">
-                {stats.lowPerformers.filter(p => p.score < 2.5).map(p => (
-                  <div key={p.userId} className="flex items-center justify-between p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30">
-                    <div>
-                      <p className="text-sm font-medium">{p.fullName}</p>
-                      <p className="text-xs text-muted-foreground">{p.branchName}</p>
+                {stats.lowPerformers
+                  .filter((p) => p.score < 2.5)
+                  .map((p) => (
+                    <div
+                      key={p.userId}
+                      className="flex items-center justify-between p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{p.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{p.branchName}</p>
+                      </div>
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-700">
+                        {p.score.toFixed(1)}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                      {p.score.toFixed(1)}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </CardContent>
@@ -325,11 +327,12 @@ function CoachingNetworkPageContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {stats.branchStats.map(branch => {
-                const progress = branch.totalEmployees > 0
-                  ? Math.round((branch.coachingsThisMonth / branch.totalEmployees) * 100)
-                  : 0;
-                
+              {stats.branchStats.map((branch) => {
+                const progress =
+                  branch.totalEmployees > 0
+                    ? Math.round((branch.coachingsThisMonth / branch.totalEmployees) * 100)
+                    : 0;
+
                 return (
                   <div key={branch.branchId} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
@@ -356,7 +359,8 @@ function CoachingNetworkPageContent() {
               <div>
                 <p className="font-medium">Confirmaciones pendientes</p>
                 <p className="text-sm text-muted-foreground">
-                  {stats.totalPendingAcknowledgments} empleados aún no confirmaron lectura de su coaching
+                  {stats.totalPendingAcknowledgments} empleados aún no confirmaron lectura de su
+                  coaching
                 </p>
               </div>
             </div>

@@ -1,16 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  GoogleMap,
-  useJsApiLoader,
-  OverlayView,
-} from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, MapPin, Navigation } from 'lucide-react';
 import { devWarn } from '@/lib/errorHandler';
 import { toast } from 'sonner';
 import logoHoppiness from '@/assets/logo-hoppiness.png';
 
-const libraries: ("places")[] = ['places'];
+const libraries: 'places'[] = ['places'];
 
 interface BranchLocationMapProps {
   placeId: string;
@@ -63,16 +59,18 @@ function BranchLocationMapInner({
     }
   }, [latitude, longitude]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    if (markerPosition) {
-      map.setCenter(markerPosition);
-      map.setZoom(16);
-    }
-  }, [markerPosition]);
+  const onMapLoad = useCallback(
+    (map: google.maps.Map) => {
+      mapRef.current = map;
+      if (markerPosition) {
+        map.setCenter(markerPosition);
+        map.setZoom(16);
+      }
+    },
+    [markerPosition],
+  );
 
-  const sanitizePlaceId = (raw: string) =>
-    raw.trim().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
+  const sanitizePlaceId = (raw: string) => raw.trim().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
 
   const locateByPlaceId = useCallback(() => {
     const cleanId = sanitizePlaceId(placeId);
@@ -84,40 +82,38 @@ function BranchLocationMapInner({
     setLocating(true);
     const service = new google.maps.places.PlacesService(mapRef.current);
 
-    service.getDetails(
-      { placeId: cleanId, fields: ['geometry', 'name'] },
-      (place, status) => {
-        setLocating(false);
+    service.getDetails({ placeId: cleanId, fields: ['geometry', 'name'] }, (place, status) => {
+      setLocating(false);
 
-        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
+      if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
 
-          setMarkerPosition({ lat, lng });
-          onLocated(lat.toFixed(7), lng.toFixed(7));
+        setMarkerPosition({ lat, lng });
+        onLocated(lat.toFixed(7), lng.toFixed(7));
 
-          if (mapRef.current) {
-            mapRef.current.setCenter({ lat, lng });
-            mapRef.current.setZoom(16);
-          }
-
-          const nameHint = place.name ? ` (${place.name})` : '';
-          toast.success(`Ubicación encontrada${nameHint}`);
-        } else {
-          devWarn('PlacesService.getDetails failed', { status, placeId: cleanId });
-
-          const statusMessages: Record<string, string> = {
-            INVALID_REQUEST: 'El Place ID tiene un formato inválido.',
-            NOT_FOUND: 'No se encontró el Place ID. Verificá que sea correcto.',
-            OVER_QUERY_LIMIT: 'Se superó el límite de consultas. Intentá en unos minutos.',
-            REQUEST_DENIED: 'La API de Places no está habilitada en la API Key. Habilitá "Places API" en Google Cloud Console.',
-            ZERO_RESULTS: 'No se encontraron resultados para ese Place ID.',
-          };
-          const msg = statusMessages[status] || `Error al buscar el Place ID (${status}).`;
-          toast.error(msg);
+        if (mapRef.current) {
+          mapRef.current.setCenter({ lat, lng });
+          mapRef.current.setZoom(16);
         }
-      },
-    );
+
+        const nameHint = place.name ? ` (${place.name})` : '';
+        toast.success(`Ubicación encontrada${nameHint}`);
+      } else {
+        devWarn('PlacesService.getDetails failed', { status, placeId: cleanId });
+
+        const statusMessages: Record<string, string> = {
+          INVALID_REQUEST: 'El Place ID tiene un formato inválido.',
+          NOT_FOUND: 'No se encontró el Place ID. Verificá que sea correcto.',
+          OVER_QUERY_LIMIT: 'Se superó el límite de consultas. Intentá en unos minutos.',
+          REQUEST_DENIED:
+            'La API de Places no está habilitada en la API Key. Habilitá "Places API" en Google Cloud Console.',
+          ZERO_RESULTS: 'No se encontraron resultados para ese Place ID.',
+        };
+        const msg = statusMessages[status] || `Error al buscar el Place ID (${status}).`;
+        toast.error(msg);
+      }
+    });
   }, [placeId, onLocated]);
 
   const center = markerPosition || defaultCenter;
@@ -174,7 +170,11 @@ function BranchLocationMapInner({
               getPixelPositionOffset={() => ({ x: -20, y: -20 })}
             >
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-lg">
-                <img src={logoHoppiness} alt="Hoppiness Club" className="w-full h-full object-cover" />
+                <img
+                  src={logoHoppiness}
+                  alt="Hoppiness Club"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </OverlayView>
           )}
@@ -194,11 +194,13 @@ export default function BranchLocationMap(props: BranchLocationMapProps) {
     const fetchApiKey = async () => {
       setLoadingKey(true);
       setError(false);
-      
+
       try {
         const { supabase } = await import('@/integrations/supabase/client');
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (!session) {
           devWarn('No authenticated session for Google Maps API');
           setError(true);
@@ -210,10 +212,10 @@ export default function BranchLocationMap(props: BranchLocationMapProps) {
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-maps-key`,
           {
             headers: {
-              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              'Authorization': `Bearer ${session.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${session.access_token}`,
             },
-          }
+          },
         );
         const data = await response.json();
         if (data.apiKey) {
@@ -233,7 +235,7 @@ export default function BranchLocationMap(props: BranchLocationMapProps) {
   }, [retryCount]);
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
   };
 
   if (loadingKey) {

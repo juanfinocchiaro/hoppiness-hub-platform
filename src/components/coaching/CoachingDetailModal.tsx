@@ -9,9 +9,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useCoachingDetails } from '@/hooks/useCoachings';
 import { useCompetencyConfig } from '@/hooks/useStationCompetencies';
-import { 
-  Star, CheckCircle, Clock, User, Calendar, Target, TrendingUp, 
-  MessageSquare, ChevronDown, ClipboardCheck, FileText 
+import {
+  CheckCircle,
+  Clock,
+  User,
+  Calendar,
+  Target,
+  TrendingUp,
+  MessageSquare,
+  ChevronDown,
+  ClipboardCheck,
+  FileText,
 } from 'lucide-react';
 
 interface CoachingDetailModalProps {
@@ -37,7 +45,7 @@ function ScoreBar({ score, label, sublabel }: { score: number; label: string; su
         <span className="font-semibold">{score}/5</span>
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div 
+        <div
           className={`h-full ${getBarColor()} transition-all duration-300`}
           style={{ width: `${percentage}%` }}
         />
@@ -48,12 +56,12 @@ function ScoreBar({ score, label, sublabel }: { score: number; label: string; su
 }
 
 // Componente para mostrar una sección de estación expandible
-function StationSection({ 
-  stationName, 
-  stationScore, 
+function StationSection({
+  stationName,
+  stationScore,
   competencyScores,
   competencyNames,
-}: { 
+}: {
   stationName: string;
   stationScore: number;
   competencyScores: { competency_id: string; score: number; notes: string | null }[];
@@ -87,7 +95,7 @@ function StationSection({
       <CollapsibleContent>
         <div className="pl-4 pr-2 py-3 space-y-3 border-l-2 border-muted ml-4 mt-2">
           {competencyScores.map((cs, idx) => (
-            <ScoreBar 
+            <ScoreBar
               key={cs.competency_id || idx}
               score={cs.score}
               label={competencyNames.get(cs.competency_id) || 'Competencia'}
@@ -105,42 +113,44 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
   const { stations, stationCompetencies, generalCompetencies } = useCompetencyConfig();
 
   // Crear mapas para nombres
-  const stationNameMap = useMemo(() => 
-    new Map(stations.map(s => [s.id, s.name])), 
-    [stations]
+  const stationNameMap = useMemo(() => new Map(stations.map((s) => [s.id, s.name])), [stations]);
+
+  const stationCompetencyNameMap = useMemo(
+    () => new Map(stationCompetencies.map((c) => [c.id, c.name])),
+    [stationCompetencies],
   );
 
-  const stationCompetencyNameMap = useMemo(() => 
-    new Map(stationCompetencies.map(c => [c.id, c.name])), 
-    [stationCompetencies]
-  );
-
-  const generalCompetencyNameMap = useMemo(() => 
-    new Map(generalCompetencies.map(c => [c.id, c.name])), 
-    [generalCompetencies]
+  const generalCompetencyNameMap = useMemo(
+    () => new Map(generalCompetencies.map((c) => [c.id, c.name])),
+    [generalCompetencies],
   );
 
   // Agrupar competencias por estación
   const competenciesByStation = useMemo(() => {
     if (!coaching?.competency_scores) return new Map();
-    
-    const stationComps = coaching.competency_scores.filter(c => c.competency_type === 'station');
+
+    const stationComps = coaching.competency_scores.filter((c) => c.competency_type === 'station');
     const grouped = new Map<string, typeof stationComps>();
-    
+
     // Necesitamos encontrar a qué estación pertenece cada competencia
-    stationComps.forEach(cs => {
-      const competency = stationCompetencies.find(sc => sc.id === cs.competency_id);
+    stationComps.forEach((cs) => {
+      const competency = stationCompetencies.find((sc) => sc.id === cs.competency_id);
       if (competency) {
         const existing = grouped.get(competency.station_id) || [];
         grouped.set(competency.station_id, [...existing, cs]);
       }
     });
-    
+
     return grouped;
   }, [coaching?.competency_scores, stationCompetencies]);
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const formatDate = (dateStr: string) => {
@@ -199,7 +209,9 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
                       <Avatar className="h-14 w-14 border-2 border-background shadow">
                         <AvatarImage src={coaching.employee?.avatar_url || undefined} />
                         <AvatarFallback className="text-lg">
-                          {coaching.employee?.full_name ? getInitials(coaching.employee.full_name) : '??'}
+                          {coaching.employee?.full_name
+                            ? getInitials(coaching.employee.full_name)
+                            : '??'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -210,18 +222,27 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
                           <User className="h-3 w-3" />
-                          Evaluado por: <span className="font-medium text-foreground">{coaching.evaluator?.full_name}</span>
+                          Evaluado por:{' '}
+                          <span className="font-medium text-foreground">
+                            {coaching.evaluator?.full_name}
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <div className={`text-4xl font-bold ${getScoreColor(coaching.overall_score)}`}>
+                      <div
+                        className={`text-4xl font-bold ${getScoreColor(coaching.overall_score)}`}
+                      >
                         {coaching.overall_score?.toFixed(1) || '-'}
                       </div>
                       <span className="text-sm text-muted-foreground">/ 5</span>
-                      <Badge 
-                        variant={coaching.overall_score && coaching.overall_score >= 3.5 ? 'default' : 'secondary'}
+                      <Badge
+                        variant={
+                          coaching.overall_score && coaching.overall_score >= 3.5
+                            ? 'default'
+                            : 'secondary'
+                        }
                         className="mt-2 block"
                       >
                         {getScoreLabel(coaching.overall_score)}
@@ -250,7 +271,9 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
                     {coaching.acknowledged_at ? (
                       <div className="flex items-center gap-2 text-sm text-primary">
                         <CheckCircle className="h-4 w-4" />
-                        <span>Confirmado por el empleado el {formatDate(coaching.acknowledged_at)}</span>
+                        <span>
+                          Confirmado por el empleado el {formatDate(coaching.acknowledged_at)}
+                        </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -270,12 +293,13 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
                       <Target className="h-4 w-4" />
                       Evaluación por Estación
                       <Badge variant="outline" className="ml-auto">
-                        {coaching.station_scores.length} estacion{coaching.station_scores.length !== 1 ? 'es' : ''}
+                        {coaching.station_scores.length} estacion
+                        {coaching.station_scores.length !== 1 ? 'es' : ''}
                       </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {coaching.station_scores.map(ss => {
+                    {coaching.station_scores.map((ss) => {
                       const stationCompScores = competenciesByStation.get(ss.station_id) || [];
                       return (
                         <StationSection
@@ -292,35 +316,39 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
               )}
 
               {/* Competencias Generales con detalle */}
-              {coaching.competency_scores && coaching.competency_scores.filter(c => c.competency_type === 'general').length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Competencias Generales
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {coaching.competency_scores
-                      .filter(cs => cs.competency_type === 'general')
-                      .map((cs, idx) => (
-                        <ScoreBar
-                          key={cs.id || idx}
-                          score={cs.score}
-                          label={generalCompetencyNameMap.get(cs.competency_id) || 'Competencia'}
-                          sublabel={cs.notes || undefined}
-                        />
-                      ))}
-                    <Separator />
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="font-medium">Promedio General</span>
-                      <span className={`text-lg font-bold ${getScoreColor(coaching.general_score)}`}>
-                        {coaching.general_score?.toFixed(1) || '-'} / 5
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {coaching.competency_scores &&
+                coaching.competency_scores.filter((c) => c.competency_type === 'general').length >
+                  0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Competencias Generales
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {coaching.competency_scores
+                        .filter((cs) => cs.competency_type === 'general')
+                        .map((cs, idx) => (
+                          <ScoreBar
+                            key={cs.id || idx}
+                            score={cs.score}
+                            label={generalCompetencyNameMap.get(cs.competency_id) || 'Competencia'}
+                            sublabel={cs.notes || undefined}
+                          />
+                        ))}
+                      <Separator />
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="font-medium">Promedio General</span>
+                        <span
+                          className={`text-lg font-bold ${getScoreColor(coaching.general_score)}`}
+                        >
+                          {coaching.general_score?.toFixed(1) || '-'} / 5
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Seguimiento del plan anterior */}
               {coaching.previous_action_review && (
@@ -401,9 +429,7 @@ export function CoachingDetailModal({ coachingId, open, onOpenChange }: Coaching
             </div>
           </ScrollArea>
         ) : (
-          <p className="text-center text-muted-foreground py-8">
-            No se encontró el coaching
-          </p>
+          <p className="text-center text-muted-foreground py-8">No se encontró el coaching</p>
         )}
       </DialogContent>
     </Dialog>

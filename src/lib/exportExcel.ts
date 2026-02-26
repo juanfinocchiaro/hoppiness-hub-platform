@@ -18,22 +18,22 @@ export function exportToExcel<T extends Record<string, unknown>>(
   if (data.length === 0) return;
 
   const keys = Object.keys(headers) as (keyof T)[];
-  const headerRow = keys.map(k => headers[k]);
+  const headerRow = keys.map((k) => headers[k]);
 
-  const rows = data.map(item =>
-    keys.map(k => {
+  const rows = data.map((item) =>
+    keys.map((k) => {
       const val = item[k];
       if (val instanceof Date) return val.toLocaleDateString('es-AR');
       return val ?? '';
-    })
+    }),
   );
 
   const ws = XLSX.utils.aoa_to_sheet([headerRow, ...rows]);
 
-  const colWidths = keys.map((k, i) => {
+  const colWidths = keys.map((_k, i) => {
     const maxContent = Math.max(
       String(headerRow[i]).length,
-      ...rows.map(r => String(r[i]).length)
+      ...rows.map((r) => String(r[i]).length),
     );
     return { wch: Math.min(Math.max(maxContent + 2, 10), 40) };
   });

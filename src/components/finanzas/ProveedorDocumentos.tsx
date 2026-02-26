@@ -57,7 +57,9 @@ export function ProveedorDocumentos({ proveedorId }: { proveedorId: string }) {
 
       {isLoading ? (
         <div className="space-y-2">
-          {[1, 2].map(i => <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />)}
+          {[1, 2].map((i) => (
+            <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
+          ))}
         </div>
       ) : !docs?.length ? (
         <p className="text-sm text-muted-foreground">Sin documentos adjuntos</p>
@@ -78,12 +80,7 @@ export function ProveedorDocumentos({ proveedorId }: { proveedorId: string }) {
                 </p>
               </div>
               <div className="flex gap-1 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  asChild
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
                   <a href={doc.public_url} target="_blank" rel="noopener noreferrer">
                     <Download className="w-3.5 h-3.5" />
                   </a>

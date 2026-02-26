@@ -18,7 +18,12 @@ interface AddressAutocompleteProps {
   disabled?: boolean;
 }
 
-export function AddressAutocomplete({ apiKey, onSelect, selectedAddress, disabled }: AddressAutocompleteProps) {
+export function AddressAutocomplete({
+  apiKey,
+  onSelect,
+  selectedAddress,
+  disabled,
+}: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [inputValue, setInputValue] = useState(selectedAddress?.formatted_address ?? '');
@@ -44,7 +49,11 @@ export function AddressAutocomplete({ apiKey, onSelect, selectedAddress, disable
       let neighborhoodName: string | undefined;
       const components = place.address_components ?? [];
       for (const comp of components) {
-        if (comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality')) {
+        if (
+          comp.types.includes('neighborhood') ||
+          comp.types.includes('sublocality_level_1') ||
+          comp.types.includes('sublocality')
+        ) {
           neighborhoodName = comp.long_name;
           break;
         }

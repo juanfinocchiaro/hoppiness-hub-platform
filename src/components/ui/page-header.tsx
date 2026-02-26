@@ -41,10 +41,7 @@ export function PageHeader({
             <span key={index} className="flex items-center gap-1">
               {index > 0 && <ChevronRight className="w-4 h-4" />}
               {item.href ? (
-                <Link
-                  to={item.href}
-                  className="hover:text-foreground transition-colors"
-                >
+                <Link to={item.href} className="hover:text-foreground transition-colors">
                   {item.label}
                 </Link>
               ) : (
@@ -61,21 +58,17 @@ export function PageHeader({
           <h1
             className={cn(
               'font-bold text-foreground flex items-center gap-2',
-              isCompact ? 'text-xl' : 'text-2xl'
+              isCompact ? 'text-xl' : 'text-2xl',
             )}
           >
             {icon && (
-            <span className="shrink-0">
-              {typeof icon === 'function'
-                ? createElement(icon, { className: 'w-6 h-6' })
-                : icon}
-            </span>
-          )}
+              <span className="shrink-0">
+                {typeof icon === 'function' ? createElement(icon, { className: 'w-6 h-6' }) : icon}
+              </span>
+            )}
             {title}
           </h1>
-          {subtitle && (
-            <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>

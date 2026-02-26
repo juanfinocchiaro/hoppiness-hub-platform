@@ -11,12 +11,7 @@ interface LoadingButtonProps extends ButtonProps {
 export const LoadingButton = forwardRef<HTMLButtonElement, LoadingButtonProps>(
   ({ loading = false, loadingText, children, disabled, className, ...props }, ref) => {
     return (
-      <Button
-        ref={ref}
-        disabled={disabled || loading}
-        className={cn(className)}
-        {...props}
-      >
+      <Button ref={ref} disabled={disabled || loading} className={cn(className)} {...props}>
         {loading ? (
           <>
             <DotsLoader />
@@ -27,7 +22,7 @@ export const LoadingButton = forwardRef<HTMLButtonElement, LoadingButtonProps>(
         )}
       </Button>
     );
-  }
+  },
 );
 
 LoadingButton.displayName = 'LoadingButton';

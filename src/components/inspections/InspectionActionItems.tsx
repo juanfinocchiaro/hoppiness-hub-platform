@@ -3,11 +3,17 @@
  */
 
 import { useState } from 'react';
-import { Plus, Trash2, Calendar } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { InspectionActionItem } from '@/types/inspection';
 
@@ -23,11 +29,11 @@ interface InspectionActionItemsProps {
   readOnly?: boolean;
 }
 
-export function InspectionActionItems({ 
-  value, 
-  onChange, 
+export function InspectionActionItems({
+  value,
+  onChange,
   teamMembers,
-  readOnly = false 
+  readOnly = false,
 }: InspectionActionItemsProps) {
   const [newDescription, setNewDescription] = useState('');
   const [newResponsible, setNewResponsible] = useState('');
@@ -36,8 +42,8 @@ export function InspectionActionItems({
   const handleAdd = () => {
     if (!newDescription.trim()) return;
 
-    const responsibleMember = teamMembers.find(m => m.id === newResponsible);
-    
+    const responsibleMember = teamMembers.find((m) => m.id === newResponsible);
+
     const newItem: InspectionActionItem = {
       id: crypto.randomUUID(),
       description: newDescription.trim(),
@@ -54,7 +60,7 @@ export function InspectionActionItems({
   };
 
   const handleRemove = (id: string) => {
-    onChange(value.filter(item => item.id !== id));
+    onChange(value.filter((item) => item.id !== id));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -66,7 +72,7 @@ export function InspectionActionItems({
 
   if (readOnly) {
     if (value.length === 0) return null;
-    
+
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -105,7 +111,10 @@ export function InspectionActionItems({
         {value.length > 0 && (
           <ul className="space-y-2">
             {value.map((item, idx) => (
-              <li key={item.id} className="flex items-start gap-2 text-sm p-2 bg-muted/50 rounded group">
+              <li
+                key={item.id}
+                className="flex items-start gap-2 text-sm p-2 bg-muted/50 rounded group"
+              >
                 <span className="font-medium shrink-0">{idx + 1}.</span>
                 <div className="flex-1">
                   <p>{item.description}</p>
@@ -143,7 +152,7 @@ export function InspectionActionItems({
               className="mt-1"
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Responsable</Label>
@@ -152,7 +161,7 @@ export function InspectionActionItems({
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {teamMembers.map(member => (
+                  {teamMembers.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.full_name}
                     </SelectItem>
@@ -160,7 +169,7 @@ export function InspectionActionItems({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label className="text-xs">Fecha límite</Label>
               <div className="relative mt-1">

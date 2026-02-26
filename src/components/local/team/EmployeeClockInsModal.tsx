@@ -19,12 +19,12 @@ interface EmployeeClockInsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EmployeeClockInsModal({ 
-  userId, 
-  userName, 
-  branchId, 
-  open, 
-  onOpenChange 
+export function EmployeeClockInsModal({
+  userId,
+  userName,
+  branchId,
+  open,
+  onOpenChange,
 }: EmployeeClockInsModalProps) {
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -51,12 +51,12 @@ export function EmployeeClockInsModal({
   // Calculate total hours
   const calculateHours = () => {
     if (!clockIns?.length) return 0;
-    
+
     let totalMinutes = 0;
     let lastClockIn: Date | null = null;
-    
-    const sorted = [...clockIns].sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+
+    const sorted = [...clockIns].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
 
     for (const entry of sorted) {
@@ -68,7 +68,7 @@ export function EmployeeClockInsModal({
       }
     }
 
-    return Math.round(totalMinutes / 60 * 10) / 10;
+    return Math.round((totalMinutes / 60) * 10) / 10;
   };
 
   return (
@@ -83,25 +83,21 @@ export function EmployeeClockInsModal({
 
         <div className="mb-4 p-3 bg-muted rounded-lg">
           <div className="text-sm text-muted-foreground">
-            {format(monthStart, "MMMM yyyy", { locale: es })}
+            {format(monthStart, 'MMMM yyyy', { locale: es })}
           </div>
-          <div className="text-2xl font-bold">
-            {calculateHours()}h trabajadas
-          </div>
+          <div className="text-2xl font-bold">{calculateHours()}h trabajadas</div>
         </div>
 
         {isLoading ? (
           <HoppinessLoader size="sm" text="Cargando fichajes..." />
         ) : clockIns?.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            Sin fichajes este mes
-          </p>
+          <p className="text-center text-muted-foreground py-8">Sin fichajes este mes</p>
         ) : (
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-2">
               {clockIns?.map((entry) => (
-                <div 
-                  key={entry.id} 
+                <div
+                  key={entry.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
                   <div className="flex items-center gap-3">
@@ -119,16 +115,19 @@ export function EmployeeClockInsModal({
                         {entry.entry_type === 'clock_in' ? 'Entrada' : 'Salida'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {format(new Date(entry.created_at), "EEEE dd/MM", { locale: es })}
+                        {format(new Date(entry.created_at), 'EEEE dd/MM', { locale: es })}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-mono text-lg">
-                      {format(new Date(entry.created_at), "HH:mm")}
+                      {format(new Date(entry.created_at), 'HH:mm')}
                     </div>
                     {entry.gps_status && (
-                      <Badge variant={entry.gps_status === 'ok' ? 'secondary' : 'outline'} className="text-xs">
+                      <Badge
+                        variant={entry.gps_status === 'ok' ? 'secondary' : 'outline'}
+                        className="text-xs"
+                      >
                         {entry.gps_status === 'ok' ? 'GPS ✓' : 'Sin GPS'}
                       </Badge>
                     )}

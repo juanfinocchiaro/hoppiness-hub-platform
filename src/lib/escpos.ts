@@ -1,7 +1,7 @@
 /**
  * ESC/POS Command Generator for thermal printers
  * Hoppiness Club — Sistema de tickets térmicos v2
- * 
+ *
  * Genera comandos raw para impresoras térmicas 80mm y 58mm.
  * Los bitmaps se envían como marcadores __BITMAP_B64:...:END__
  * que el Print Bridge (Node.js en localhost:3001) convierte a
@@ -13,7 +13,6 @@ import QRCode from 'qrcode';
 // ─── ESC/POS Commands ────────────────────────────────────────
 const ESC = 0x1b;
 const GS = 0x1d;
-const LF = 0x0a;
 
 const CMD = {
   INIT: [ESC, 0x40],
@@ -37,7 +36,8 @@ const CMD = {
 // Logo Hoppiness Club invertido para impresión térmica.
 // Monocromático 200x200px. Trazos en negro, fondo transparente.
 // El Print Bridge convierte este PNG base64 a raster ESC/POS.
-const LOGO_THERMAL_B64 = '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';
+const LOGO_THERMAL_B64 =
+  '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';
 
 // ─── Builder ─────────────────────────────────────────────────
 class EscPosBuilder {
@@ -62,17 +62,50 @@ class EscPosBuilder {
     return this.text(str + '\n');
   }
 
-  alignLeft() { this.buffer.push(...CMD.ALIGN_LEFT); return this; }
-  alignCenter() { this.buffer.push(...CMD.ALIGN_CENTER); return this; }
-  alignRight() { this.buffer.push(...CMD.ALIGN_RIGHT); return this; }
-  boldOn() { this.buffer.push(...CMD.BOLD_ON); return this; }
-  boldOff() { this.buffer.push(...CMD.BOLD_OFF); return this; }
-  doubleSize() { this.buffer.push(...CMD.DOUBLE_SIZE); return this; }
-  doubleHeight() { this.buffer.push(...CMD.DOUBLE_HEIGHT); return this; }
-  doubleWidth() { this.buffer.push(...CMD.DOUBLE_WIDTH); return this; }
-  normalSize() { this.buffer.push(...CMD.NORMAL_SIZE); return this; }
-  underlineOn() { this.buffer.push(...CMD.UNDERLINE_ON); return this; }
-  underlineOff() { this.buffer.push(...CMD.UNDERLINE_OFF); return this; }
+  alignLeft() {
+    this.buffer.push(...CMD.ALIGN_LEFT);
+    return this;
+  }
+  alignCenter() {
+    this.buffer.push(...CMD.ALIGN_CENTER);
+    return this;
+  }
+  alignRight() {
+    this.buffer.push(...CMD.ALIGN_RIGHT);
+    return this;
+  }
+  boldOn() {
+    this.buffer.push(...CMD.BOLD_ON);
+    return this;
+  }
+  boldOff() {
+    this.buffer.push(...CMD.BOLD_OFF);
+    return this;
+  }
+  doubleSize() {
+    this.buffer.push(...CMD.DOUBLE_SIZE);
+    return this;
+  }
+  doubleHeight() {
+    this.buffer.push(...CMD.DOUBLE_HEIGHT);
+    return this;
+  }
+  doubleWidth() {
+    this.buffer.push(...CMD.DOUBLE_WIDTH);
+    return this;
+  }
+  normalSize() {
+    this.buffer.push(...CMD.NORMAL_SIZE);
+    return this;
+  }
+  underlineOn() {
+    this.buffer.push(...CMD.UNDERLINE_ON);
+    return this;
+  }
+  underlineOff() {
+    this.buffer.push(...CMD.UNDERLINE_OFF);
+    return this;
+  }
 
   feed(lines: number = 1) {
     this.buffer.push(...CMD.FEED_LINES(lines));
@@ -161,36 +194,49 @@ function formatMoney(n: number): string {
 
 function serviceLabel(tipo: string | null): string {
   switch (tipo) {
-    case 'comer_aca': return 'SALON';
-    case 'delivery': return 'DELIVERY';
-    default: return 'TAKEAWAY';
+    case 'comer_aca':
+      return 'SALON';
+    case 'delivery':
+      return 'DELIVERY';
+    default:
+      return 'TAKEAWAY';
   }
 }
 
 function canalLabel(canal: string | null, tipo: string | null): string {
   switch (canal) {
-    case 'rappi': return 'RAPPI';
+    case 'rappi':
+      return 'RAPPI';
     case 'pedidos_ya':
-    case 'pedidosya': return 'PEDIDOSYA';
-    case 'mp_delivery': return 'MP DELIVERY';
-    case 'masdelivery': return 'MASDELIVERY';
-    case 'webapp': return 'WEBAPP';
-    default: return serviceLabel(tipo);
+    case 'pedidosya':
+      return 'PEDIDOSYA';
+    case 'mp_delivery':
+      return 'MP DELIVERY';
+    case 'masdelivery':
+      return 'MASDELIVERY';
+    case 'webapp':
+      return 'WEBAPP';
+    default:
+      return serviceLabel(tipo);
   }
 }
 
 function modPrefix(tipo: string): string {
   switch (tipo) {
-    case 'sin': return 'SIN ';
-    case 'extra': return '+ ';
-    case 'cambio': return '> ';
-    default: return '';
+    case 'sin':
+      return 'SIN ';
+    case 'extra':
+      return '+ ';
+    case 'cambio':
+      return '> ';
+    default:
+      return '';
   }
 }
 
 /**
  * Imprime logo + nombre del local.
- * 
+ *
  * IMPORTANTE: El logo YA contiene "HOPPINESS CLUB" en su diseño.
  * NO imprimir ese texto. Solo el nombre del local debajo.
  */
@@ -230,7 +276,9 @@ function printMarketingFooter(b: EscPosBuilder): void {
     .alignCenter()
     .line('Gracias por elegirnos!')
     .feed(1)
-    .boldOn().line('Pedi por hoppinessclub.com').boldOff()
+    .boldOn()
+    .line('Pedi por hoppinessclub.com')
+    .boldOff()
     .line('y accede a precios exclusivos')
     .feed(1)
     .line('Seguinos en @hoppinessclub');
@@ -313,41 +361,35 @@ export interface TicketClienteData {
 export function generateComandaCompleta(
   order: PrintableOrder,
   branchName: string,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
 
   b.init();
   printBrandHeader(b, branchName);
-  b.alignCenter()
-    .boldOn().line('C O M A N D A').boldOff()
-    .feed(1);
+  b.alignCenter().boldOn().line('C O M A N D A').boldOff().feed(1);
 
   // Número de pedido — LO MÁS GRANDE
-  b.doubleSize().boldOn()
-    .line(`# ${order.numero_pedido}`)
-    .normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
   // Canal — doble alto para visual rápido
-  b.doubleHeight().boldOn()
+  b.doubleHeight()
+    .boldOn()
     .line(canalLabel(order.canal_venta, order.tipo_servicio))
-    .normalSize().boldOff();
+    .normalSize()
+    .boldOff();
 
   // Referencia de plataforma (Rappi #483920, etc.)
   if (order.referencia_app) {
-    b.doubleHeight().boldOn()
-      .line(order.referencia_app)
-      .normalSize().boldOff();
+    b.doubleHeight().boldOn().line(order.referencia_app).normalSize().boldOff();
   }
 
   // Llamador
   if (order.numero_llamador) {
-    b.doubleHeight().boldOn()
-      .line(`LLAMADOR #${order.numero_llamador}`)
-      .normalSize().boldOff();
+    b.doubleHeight().boldOn().line(`LLAMADOR #${order.numero_llamador}`).normalSize().boldOff();
   }
 
   // Cliente
@@ -362,9 +404,11 @@ export function generateComandaCompleta(
   // Items — doble alto, sin precios
   b.alignLeft();
   for (const item of order.items) {
-    b.boldOn().doubleHeight()
+    b.boldOn()
+      .doubleHeight()
       .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
-      .normalSize().boldOff();
+      .normalSize()
+      .boldOff();
 
     printMods(b, item);
     b.separator('-', cols);
@@ -373,7 +417,8 @@ export function generateComandaCompleta(
   // Conteo
   b.alignCenter()
     .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`)
-    .feed(1).cut();
+    .feed(1)
+    .cut();
 
   return b.toBase64();
 }
@@ -385,7 +430,7 @@ export function generateComandaEstacion(
   stationName: string,
   stationItems: PrintableItem[],
   branchName: string,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -393,30 +438,30 @@ export function generateComandaEstacion(
   b.init();
   printBrandHeader(b, branchName);
   b.alignCenter()
-    .boldOn().line('C O M A N D A').boldOff()
-    .boldOn().line(`--- ${stationName.toUpperCase()} ---`).boldOff()
+    .boldOn()
+    .line('C O M A N D A')
+    .boldOff()
+    .boldOn()
+    .line(`--- ${stationName.toUpperCase()} ---`)
+    .boldOff()
     .feed(1);
 
-  b.doubleSize().boldOn()
-    .line(`# ${order.numero_pedido}`)
-    .normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
-  b.doubleHeight().boldOn()
+  b.doubleHeight()
+    .boldOn()
     .line(canalLabel(order.canal_venta, order.tipo_servicio))
-    .normalSize().boldOff();
+    .normalSize()
+    .boldOff();
 
   if (order.referencia_app) {
-    b.doubleHeight().boldOn()
-      .line(order.referencia_app)
-      .normalSize().boldOff();
+    b.doubleHeight().boldOn().line(order.referencia_app).normalSize().boldOff();
   }
 
   if (order.numero_llamador) {
-    b.doubleHeight().boldOn()
-      .line(`LLAMADOR #${order.numero_llamador}`)
-      .normalSize().boldOff();
+    b.doubleHeight().boldOn().line(`LLAMADOR #${order.numero_llamador}`).normalSize().boldOff();
   }
 
   if (order.cliente_nombre) {
@@ -428,9 +473,11 @@ export function generateComandaEstacion(
 
   b.alignLeft();
   for (const item of stationItems) {
-    b.boldOn().doubleHeight()
+    b.boldOn()
+      .doubleHeight()
       .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
-      .normalSize().boldOff();
+      .normalSize()
+      .boldOff();
 
     printMods(b, item);
     b.separator('-', cols);
@@ -438,7 +485,8 @@ export function generateComandaEstacion(
 
   b.alignCenter()
     .line(`Items estacion: ${stationItems.reduce((s, i) => s + i.cantidad, 0)}`)
-    .feed(1).cut();
+    .feed(1)
+    .cut();
 
   return b.toBase64();
 }
@@ -460,24 +508,20 @@ export function generateComandaDelivery(
 
   b.init();
   printBrandHeader(b, branchName);
-  b.alignCenter()
-    .boldOn().line('C O M A N D A').boldOff()
-    .feed(1);
+  b.alignCenter().boldOn().line('C O M A N D A').boldOff().feed(1);
 
-  b.doubleSize().boldOn()
-    .line(`# ${order.numero_pedido}`)
-    .normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
-  b.doubleHeight().boldOn()
+  b.doubleHeight()
+    .boldOn()
     .line(canalLabel(order.canal_venta, order.tipo_servicio))
-    .normalSize().boldOff();
+    .normalSize()
+    .boldOff();
 
   if (order.referencia_app) {
-    b.doubleHeight().boldOn()
-      .line(order.referencia_app)
-      .normalSize().boldOff();
+    b.doubleHeight().boldOn().line(order.referencia_app).normalSize().boldOff();
   }
 
   // Bloque datos entrega
@@ -496,29 +540,27 @@ export function generateComandaDelivery(
   }
   b.separator('=', cols);
 
-  b.alignCenter()
-    .line(`Hora: ${formatTime(order.created_at)}`);
+  b.alignCenter().line(`Hora: ${formatTime(order.created_at)}`);
   b.separator('=', cols);
 
   b.alignLeft();
   for (const item of order.items) {
-    b.boldOn().doubleHeight()
+    b.boldOn()
+      .doubleHeight()
       .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
-      .normalSize().boldOff();
+      .normalSize()
+      .boldOff();
 
     printMods(b, item);
     b.separator('-', cols);
   }
 
-  b.alignCenter()
-    .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`);
+  b.alignCenter().line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`);
 
   // QR de rastreo para cadete (solo canal propio)
   if (trackingQrBitmap) {
     b.feed(1).separator('-', cols);
-    b.alignCenter()
-      .boldOn().line('ESCANEA PARA RASTREO').boldOff()
-      .feed(1);
+    b.alignCenter().boldOn().line('ESCANEA PARA RASTREO').boldOff().feed(1);
     b.printBitmap(trackingQrBitmap);
     b.feed(1);
   }
@@ -530,10 +572,7 @@ export function generateComandaDelivery(
 
 // ─── 4. TICKET CLIENTE (con/sin factura) ─────────────────────
 
-export function generateTicketCliente(
-  data: TicketClienteData,
-  paperWidth: number = 80
-): string {
+export function generateTicketCliente(data: TicketClienteData, paperWidth: number = 80): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const { order, branchName, metodo_pago, tarjeta_marca, monto_recibido, vuelto, factura } = data;
   const b = new EscPosBuilder();
@@ -603,10 +642,12 @@ export function generateTicketCliente(
   if (order.total != null) {
     b.feed(1)
       .alignCenter()
-      .boldOn().line('T O T A L')
+      .boldOn()
+      .line('T O T A L')
       .doubleSize()
       .line(`$ ${formatMoney(order.total)}`)
-      .normalSize().boldOff()
+      .normalSize()
+      .boldOff()
       .alignLeft();
   }
 
@@ -616,18 +657,12 @@ export function generateTicketCliente(
     b.columns(`Pago: ${metodo_pago}`, tarjeta_marca || '', cols);
   }
   if (monto_recibido && vuelto !== undefined) {
-    b.columns(
-      `Recibido: $${formatMoney(monto_recibido)}`,
-      `Vuelto: $${formatMoney(vuelto)}`,
-      cols
-    );
+    b.columns(`Recibido: $${formatMoney(monto_recibido)}`, `Vuelto: $${formatMoney(vuelto)}`, cols);
   }
 
   b.separator('-', cols);
 
-  b.feed(1)
-    .alignCenter()
-    .boldOn().line('*** NO VALIDO COMO FACTURA ***').boldOff();
+  b.feed(1).alignCenter().boldOn().line('*** NO VALIDO COMO FACTURA ***').boldOff();
 
   printMarketingFooter(b);
   b.feed(2).cut();
@@ -639,11 +674,7 @@ export function generateTicketCliente(
  * Genera un ticket fiscal unificado (factura integrada).
  * Layout ARCA: emisor → comprobante → receptor → items → totales → pago → QR.
  */
-function generateTicketFiscal(
-  b: EscPosBuilder,
-  data: TicketClienteData,
-  cols: number
-): string {
+function generateTicketFiscal(b: EscPosBuilder, data: TicketClienteData, cols: number): string {
   const { order, branchName, metodo_pago, tarjeta_marca, monto_recibido, vuelto, factura } = data;
   const f = factura!;
   const isNotaCredito = f.codigo === '03' || f.codigo === '08' || f.codigo === '13';
@@ -651,14 +682,10 @@ function generateTicketFiscal(
 
   // 1. Encabezado
   printBrandHeader(b, branchName);
-  b.alignCenter()
-    .boldOn().line('O R I G I N A L').boldOff()
-    .feed(1);
+  b.alignCenter().boldOn().line('O R I G I N A L').boldOff().feed(1);
 
   // 2. Tipo de comprobante (grande)
-  b.doubleSize().boldOn()
-    .line(f.tipo)
-    .normalSize().boldOff();
+  b.doubleSize().boldOn().line(f.tipo).normalSize().boldOff();
   b.boldOn().line(`${fiscalLabel} (Cod. ${f.codigo})`).boldOff();
   b.boldOn().line(`N\xB0 ${f.numero}`).boldOff();
   b.line(`Fecha: ${formatDateShort(f.fecha)}`);
@@ -736,7 +763,10 @@ function generateTicketFiscal(
     const vLabel = order.voucher_codigo ? `Voucher ${order.voucher_codigo}` : 'Voucher';
     b.columns(vLabel, `-$${formatMoney(order.voucher_descuento)}`, cols);
   }
-  if ((order.descuento && order.descuento > 0) || (order.voucher_descuento && order.voucher_descuento > 0)) {
+  if (
+    (order.descuento && order.descuento > 0) ||
+    (order.voucher_descuento && order.voucher_descuento > 0)
+  ) {
     b.separator('-', cols);
   }
 
@@ -752,10 +782,12 @@ function generateTicketFiscal(
   const total = f.neto_gravado + f.iva + f.otros_tributos;
   b.feed(1)
     .alignCenter()
-    .boldOn().line('T O T A L')
+    .boldOn()
+    .line('T O T A L')
     .doubleSize()
     .line(`$ ${formatMoney(total)}`)
-    .normalSize().boldOff()
+    .normalSize()
+    .boldOff()
     .alignLeft();
 
   b.feed(1);
@@ -765,20 +797,13 @@ function generateTicketFiscal(
     b.columns(`Pago: ${metodo_pago}`, tarjeta_marca || '', cols);
   }
   if (monto_recibido && vuelto !== undefined) {
-    b.columns(
-      `Recibido: $${formatMoney(monto_recibido)}`,
-      `Vuelto: $${formatMoney(vuelto)}`,
-      cols
-    );
+    b.columns(`Recibido: $${formatMoney(monto_recibido)}`, `Vuelto: $${formatMoney(vuelto)}`, cols);
   }
 
   b.separator('-', cols);
 
   // 10. Transparencia Fiscal (Ley 27.743)
-  b.alignCenter()
-    .line('Reg. Transparencia Fiscal')
-    .line('al Consumidor (Ley 27.743)')
-    .alignLeft();
+  b.alignCenter().line('Reg. Transparencia Fiscal').line('al Consumidor (Ley 27.743)').alignLeft();
   b.columns('IVA Contenido:', `$${formatMoney(f.iva_contenido)}`, cols);
   b.columns('Otros Imp. Nac.:', `$${formatMoney(f.otros_imp_nacionales)}`, cols);
 
@@ -789,8 +814,7 @@ function generateTicketFiscal(
   if (f.qr_bitmap_b64) {
     b.printBitmap(f.qr_bitmap_b64);
   }
-  b.feed(1)
-    .boldOn().line('Comprobante Autorizado').boldOff();
+  b.feed(1).boldOn().line('Comprobante Autorizado').boldOff();
   b.columns(`CAE: ${f.cae}`, `Vto: ${formatDateShort(f.cae_vto)}`, cols);
 
   // Marketing footer
@@ -812,10 +836,7 @@ export interface DeliveryTicketData {
   branchName: string;
 }
 
-export function generateTicketDelivery(
-  data: DeliveryTicketData,
-  paperWidth: number = 80
-): string {
+export function generateTicketDelivery(data: DeliveryTicketData, paperWidth: number = 80): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const { order, branchName } = data;
   const b = new EscPosBuilder();
@@ -825,21 +846,15 @@ export function generateTicketDelivery(
 
   b.alignCenter().feed(1);
 
-  b.doubleSize().boldOn()
-    .line(`# ${order.numero_pedido}`)
-    .normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
   const canal = canalLabel(order.canal_venta, order.tipo_servicio);
-  b.doubleHeight().boldOn()
-    .line(canal)
-    .normalSize().boldOff();
+  b.doubleHeight().boldOn().line(canal).normalSize().boldOff();
 
   if (order.referencia_app) {
-    b.doubleHeight().boldOn()
-      .line(order.referencia_app)
-      .normalSize().boldOff();
+    b.doubleHeight().boldOn().line(order.referencia_app).normalSize().boldOff();
   }
 
   b.line(formatDate(order.created_at));
@@ -871,9 +886,11 @@ export function generateTicketDelivery(
 
   if (order.total != null) {
     b.alignCenter()
-      .boldOn().doubleSize()
+      .boldOn()
+      .doubleSize()
       .line(`$ ${formatMoney(order.total)}`)
-      .normalSize().boldOff();
+      .normalSize()
+      .boldOff();
   }
 
   b.feed(2).cut();
@@ -894,7 +911,7 @@ export interface AnulacionTicketData {
 
 export function generateTicketAnulacion(
   data: AnulacionTicketData,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const { order, branchName, metodo_pago } = data;
@@ -905,14 +922,14 @@ export function generateTicketAnulacion(
 
   b.alignCenter()
     .feed(1)
-    .boldOn().doubleSize()
+    .boldOn()
+    .doubleSize()
     .line('A N U L A D O')
-    .normalSize().boldOff()
+    .normalSize()
+    .boldOff()
     .feed(1);
 
-  b.doubleSize().boldOn()
-    .line(`# ${order.numero_pedido}`)
-    .normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
@@ -945,10 +962,12 @@ export function generateTicketAnulacion(
   if (order.total != null) {
     b.feed(1)
       .alignCenter()
-      .boldOn().line('TOTAL ANULADO')
+      .boldOn()
+      .line('TOTAL ANULADO')
       .doubleSize()
       .line(`$ ${formatMoney(order.total)}`)
-      .normalSize().boldOff()
+      .normalSize()
+      .boldOff()
       .alignLeft();
   }
 
@@ -962,9 +981,11 @@ export function generateTicketAnulacion(
 
   b.feed(1)
     .alignCenter()
-    .boldOn().doubleHeight()
+    .boldOn()
+    .doubleHeight()
     .line('*** PEDIDO ANULADO ***')
-    .normalSize().boldOff();
+    .normalSize()
+    .boldOff();
 
   b.feed(2).cut();
 
@@ -979,7 +1000,7 @@ export function generateVale(
   orderTime: string,
   canal?: string,
   llamador?: number | null,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -989,13 +1010,17 @@ export function generateVale(
     .separator('=', cols)
     .alignCenter()
     .feed(1)
-    .doubleSize().boldOn()
+    .doubleSize()
+    .boldOn()
     .line('V A L E')
-    .normalSize().boldOff()
+    .normalSize()
+    .boldOff()
     .feed(1)
-    .doubleSize().boldOn()
+    .doubleSize()
+    .boldOn()
     .line(productName)
-    .normalSize().boldOff()
+    .normalSize()
+    .boldOff()
     .feed(1)
     .separator('=', cols)
     .line(`Pedido #${orderNumber} - ${formatTime(orderTime)}`);
@@ -1007,9 +1032,7 @@ export function generateVale(
     b.line(parts.join(' - '));
   }
 
-  b.feed(1)
-    .line('@hoppinessclub')
-    .feed(1).cut();
+  b.feed(1).line('@hoppinessclub').feed(1).cut();
 
   return b.toBase64();
 }
@@ -1019,7 +1042,7 @@ export function generateVale(
 export function generateTestPage(
   printerName: string,
   branchName: string,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -1029,20 +1052,29 @@ export function generateTestPage(
 
   b.separator('=', cols)
     .alignCenter()
-    .boldOn().line('TEST DE IMPRESORA').boldOff()
+    .boldOn()
+    .line('TEST DE IMPRESORA')
+    .boldOff()
     .separator('-', cols)
     .line(`Impresora: ${printerName}`)
     .line(`Ancho: ${paperWidth}mm`)
     .line(`Fecha: ${new Date().toLocaleString('es-AR')}`)
     .separator('-', cols)
     .alignLeft()
-    .boldOn().line('Texto en negrita').boldOff()
-    .doubleHeight().line('Texto doble alto').normalSize()
-    .doubleSize().line('Texto grande').normalSize()
+    .boldOn()
+    .line('Texto en negrita')
+    .boldOff()
+    .doubleHeight()
+    .line('Texto doble alto')
+    .normalSize()
+    .doubleSize()
+    .line('Texto grande')
+    .normalSize()
     .separator('=', cols)
     .alignCenter()
     .line('Logo + texto = impresora lista')
-    .feed(2).cut();
+    .feed(2)
+    .cut();
 
   return b.toBase64();
 }
@@ -1056,7 +1088,7 @@ export function generateTestPage(
  * según la especificación de ARCA (ex-AFIP).
  */
 export async function generateArcaQrBitmap(
-  factura: NonNullable<TicketClienteData['factura']>
+  factura: NonNullable<TicketClienteData['factura']>,
 ): Promise<string> {
   const numeroParts = factura.numero.split('-');
   const ptoVta = parseInt(numeroParts[0] || '0', 10);
@@ -1069,7 +1101,8 @@ export async function generateArcaQrBitmap(
     ? parseInt(factura.receptor.documento_numero.replace(/-/g, ''), 10)
     : 0;
 
-  const importe = Math.round((factura.neto_gravado + factura.iva + factura.otros_tributos) * 100) / 100;
+  const importe =
+    Math.round((factura.neto_gravado + factura.iva + factura.otros_tributos) * 100) / 100;
 
   const fechaForQr = (() => {
     const d = new Date(factura.fecha);
@@ -1111,9 +1144,8 @@ export async function generateArcaQrBitmap(
  * El QR codifica la URL pública de rastreo del cadete.
  */
 export async function generateTrackingQrBitmap(trackingToken: string): Promise<string> {
-  const baseUrl = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://hoppinessclub.com';
+  const baseUrl =
+    typeof window !== 'undefined' ? window.location.origin : 'https://hoppinessclub.com';
   const url = `${baseUrl}/rastreo/${trackingToken}`;
 
   const dataUrl = await QRCode.toDataURL(url, {
@@ -1130,9 +1162,16 @@ export async function generateTrackingQrBitmap(trackingToken: string): Promise<s
 export function generateValeBebida(
   order: { numero_pedido: number; created_at: string },
   itemNombre: string,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
-  return generateVale(itemNombre, order.numero_pedido, order.created_at, undefined, undefined, paperWidth);
+  return generateVale(
+    itemNombre,
+    order.numero_pedido,
+    order.created_at,
+    undefined,
+    undefined,
+    paperWidth,
+  );
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -1224,7 +1263,7 @@ function fmtComprobante(tipo: string | null, pv: number, num: string | null): st
 export function generateInformeX(
   data: FiscalXData,
   branch: FiscalReportBranchData,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -1308,7 +1347,7 @@ export function generateInformeX(
 export function generateCierreZ(
   data: FiscalZData,
   branch: FiscalReportBranchData,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -1321,7 +1360,11 @@ export function generateCierreZ(
   b.line(branch.address);
   b.separator('=', cols);
 
-  b.boldOn().doubleHeight().line(`CIERRE Z  N° ${String(data.z_number).padStart(4, '0')}`).normalSize().boldOff();
+  b.boldOn()
+    .doubleHeight()
+    .line(`CIERRE Z  N° ${String(data.z_number).padStart(4, '0')}`)
+    .normalSize()
+    .boldOff();
   b.line(`Fecha: ${formatDateShort(data.date)}`);
   b.line(`Hora de cierre: ${formatTime(data.period_to)}`);
   b.line(`Punto de venta: ${String(data.pos_point_of_sale).padStart(4, '0')}`);
@@ -1346,8 +1389,12 @@ export function generateCierreZ(
   b.columns('  Notas de credito B:', String(data.total_credit_notes_b), cols);
   b.columns('  Notas de credito C:', String(data.total_credit_notes_c), cols);
   b.feed(1);
-  b.line(`Primer comprobante: ${fmtComprobante(data.first_voucher_type, data.pos_point_of_sale, data.first_voucher_number)}`);
-  b.line(`Ultimo comprobante: ${fmtComprobante(data.last_voucher_type, data.pos_point_of_sale, data.last_voucher_number)}`);
+  b.line(
+    `Primer comprobante: ${fmtComprobante(data.first_voucher_type, data.pos_point_of_sale, data.first_voucher_number)}`,
+  );
+  b.line(
+    `Ultimo comprobante: ${fmtComprobante(data.last_voucher_type, data.pos_point_of_sale, data.last_voucher_number)}`,
+  );
 
   b.feed(1).alignCenter();
   b.separator('-', cols);
@@ -1401,7 +1448,9 @@ export function generateCierreZ(
 
   b.feed(1).alignCenter();
   b.separator('-', cols);
-  b.boldOn().line(`CIERRE Z N° ${String(data.z_number).padStart(4, '0')} - DOCUMENTO FISCAL`).boldOff();
+  b.boldOn()
+    .line(`CIERRE Z N° ${String(data.z_number).padStart(4, '0')} - DOCUMENTO FISCAL`)
+    .boldOff();
   b.line('No valido como factura');
   b.separator('=', cols);
   b.feed(2).cut();
@@ -1436,7 +1485,7 @@ export interface FiscalAuditData {
 export function generateInformeAuditoria(
   data: FiscalAuditData,
   branch: FiscalReportBranchData,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -1457,8 +1506,12 @@ export function generateInformeAuditoria(
   b.separator('-', cols);
 
   b.alignLeft();
-  b.line(`Desde: ${formatDateShort(data.desde_fecha)} (Z N° ${String(data.desde_z).padStart(4, '0')})`);
-  b.line(`Hasta: ${formatDateShort(data.hasta_fecha)} (Z N° ${String(data.hasta_z).padStart(4, '0')})`);
+  b.line(
+    `Desde: ${formatDateShort(data.desde_fecha)} (Z N° ${String(data.desde_z).padStart(4, '0')})`,
+  );
+  b.line(
+    `Hasta: ${formatDateShort(data.hasta_fecha)} (Z N° ${String(data.hasta_z).padStart(4, '0')})`,
+  );
   b.columns('Cantidad de jornadas:', String(data.cantidad_jornadas), cols);
 
   b.feed(1).alignCenter();
@@ -1471,7 +1524,7 @@ export function generateInformeAuditoria(
     b.columns(
       `${formatDateShort(j.fecha)} | Z ${String(j.z_number).padStart(4, '0')}`,
       fmtFiscalMoney(j.total_sales),
-      cols
+      cols,
     );
   }
 
@@ -1515,7 +1568,7 @@ export interface InvoicedSalesSummaryData {
 export function generateInvoicedSalesSummary(
   data: InvoicedSalesSummaryData,
   branch: FiscalReportBranchData,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -1533,11 +1586,7 @@ export function generateInvoicedSalesSummary(
 
   b.alignLeft();
   for (const v of data.ventas) {
-    b.columns(
-      `${v.tipo} ${v.numero}`,
-      fmtFiscalMoney(v.total),
-      cols
-    );
+    b.columns(`${v.tipo} ${v.numero}`, fmtFiscalMoney(v.total), cols);
   }
 
   b.separator('=', cols);
@@ -1575,7 +1624,7 @@ export interface CashClosingReportData {
 export function generateCashClosingReport(
   data: CashClosingReportData,
   branchName: string,
-  paperWidth: number = 80
+  paperWidth: number = 80,
 ): string {
   const cols = paperWidth === 80 ? 42 : 32;
   const b = new EscPosBuilder();
@@ -1623,7 +1672,7 @@ export function generateCashClosingReport(
       b.columns(
         `${formatTime(m.time)} ${m.concept}`.substring(0, cols - 14),
         `${sign}${fmtFiscalMoney(m.amount)}`,
-        cols
+        cols,
       );
     }
   }

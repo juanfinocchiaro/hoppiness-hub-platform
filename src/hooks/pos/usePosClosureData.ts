@@ -4,11 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export function usePosClosureData(
-  branchId: string,
-  fecha: string,
-  turno: string
-) {
+export function usePosClosureData(branchId: string, fecha: string, turno: string) {
   return useQuery({
     queryKey: ['pos-closure-data', branchId, fecha, turno],
     queryFn: async () => {

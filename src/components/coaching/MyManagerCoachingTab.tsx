@@ -1,6 +1,6 @@
 /**
  * MyManagerCoachingTab - Vista del coaching del encargado (para Franquiciado)
- * 
+ *
  * Muestra el coaching que la Marca (Superadmin/Coordinador) le hizo al encargado
  * de la sucursal. Solo lectura.
  */
@@ -88,15 +88,15 @@ export function MyManagerCoachingTab({ branchId }: MyManagerCoachingTabProps) {
       if (error) throw error;
 
       // Obtener evaluadores
-      const evaluatorIds = [...new Set(data.map(c => c.evaluated_by))];
+      const evaluatorIds = [...new Set(data.map((c) => c.evaluated_by))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', evaluatorIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
-      return data.map(c => ({
+      return data.map((c) => ({
         ...c,
         evaluator: profileMap.get(c.evaluated_by) || null,
       }));
@@ -107,7 +107,12 @@ export function MyManagerCoachingTab({ branchId }: MyManagerCoachingTabProps) {
   const isLoading = loadingManager || loadingCoachings;
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const getScoreColor = (score: number | null) => {
@@ -197,10 +202,11 @@ export function MyManagerCoachingTab({ branchId }: MyManagerCoachingTabProps) {
                 <span className="text-sm font-normal text-muted-foreground">/4</span>
               </p>
               <div className="flex items-center gap-1 justify-end">
-                {getTrendIcon(latestCoaching.overall_score, previousCoaching?.overall_score || null)}
-                <span className="text-xs text-muted-foreground">
-                  vs mes anterior
-                </span>
+                {getTrendIcon(
+                  latestCoaching.overall_score,
+                  previousCoaching?.overall_score || null,
+                )}
+                <span className="text-xs text-muted-foreground">vs mes anterior</span>
               </div>
             </div>
           </div>
@@ -241,12 +247,12 @@ export function MyManagerCoachingTab({ branchId }: MyManagerCoachingTabProps) {
             <CardTitle className="text-base">Evolución del Desempeño</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScoreEvolutionChart 
-              data={chartData.map(c => ({
+            <ScoreEvolutionChart
+              data={chartData.map((c) => ({
                 coaching_month: c.coaching_month,
                 coaching_year: c.coaching_year,
                 overall_score: c.overall_score,
-              }))} 
+              }))}
             />
           </CardContent>
         </Card>
@@ -296,10 +302,15 @@ export function MyManagerCoachingTab({ branchId }: MyManagerCoachingTabProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {coachings.slice(1, 6).map(c => (
-                <div key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+              {coachings.slice(1, 6).map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                >
                   <span className="text-sm capitalize">
-                    {format(new Date(c.coaching_year, c.coaching_month - 1), 'MMMM yyyy', { locale: es })}
+                    {format(new Date(c.coaching_year, c.coaching_month - 1), 'MMMM yyyy', {
+                      locale: es,
+                    })}
                   </span>
                   <span className={`font-medium ${getScoreColor(c.overall_score)}`}>
                     {c.overall_score?.toFixed(1) || '-'}

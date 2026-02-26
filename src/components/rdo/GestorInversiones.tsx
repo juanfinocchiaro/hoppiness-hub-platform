@@ -1,17 +1,29 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Building2, Trash2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/states';
-import { getCurrentPeriodo } from '@/types/compra';
 import {
   useInversiones,
   useInversionMutations,
@@ -38,10 +50,14 @@ export function GestorInversiones({ branchId }: Props) {
 
   const totalInversiones = inversiones?.reduce((sum, inv) => sum + Number(inv.monto_total), 0) || 0;
 
-  const getTipoLabel = (t: string) => TIPO_INVERSION_OPTIONS.find(o => o.value === t)?.label || t;
+  const getTipoLabel = (t: string) => TIPO_INVERSION_OPTIONS.find((o) => o.value === t)?.label || t;
   const getEstadoBadge = (e: string) => {
     const variant = e === 'pagado' ? 'default' : e === 'pendiente' ? 'secondary' : 'outline';
-    return <Badge variant={variant}>{ESTADO_INVERSION_OPTIONS.find(o => o.value === e)?.label || e}</Badge>;
+    return (
+      <Badge variant={variant}>
+        {ESTADO_INVERSION_OPTIONS.find((o) => o.value === e)?.label || e}
+      </Badge>
+    );
   };
 
   return (
@@ -54,11 +70,20 @@ export function GestorInversiones({ branchId }: Props) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Select value={periodo || 'all'} onValueChange={v => setPeriodo(v === 'all' ? undefined : v)}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Todos" /></SelectTrigger>
+          <Select
+            value={periodo || 'all'}
+            onValueChange={(v) => setPeriodo(v === 'all' ? undefined : v)}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los períodos</SelectItem>
-              {periodos.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              {periodos.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button onClick={() => setModalOpen(true)}>
@@ -71,7 +96,9 @@ export function GestorInversiones({ branchId }: Props) {
       <Card>
         <CardContent className="pt-4">
           <div className="text-sm text-muted-foreground">Total invertido</div>
-          <div className="text-2xl font-bold font-mono">$ {totalInversiones.toLocaleString('es-AR')}</div>
+          <div className="text-2xl font-bold font-mono">
+            $ {totalInversiones.toLocaleString('es-AR')}
+          </div>
         </CardContent>
       </Card>
 
@@ -94,30 +121,38 @@ export function GestorInversiones({ branchId }: Props) {
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 6 }).map((_, j) => (
-                      <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell key={j}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : !inversiones?.length ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-40">
-                    <EmptyState icon={Building2} title="Sin inversiones" description="Registrá inversiones de capital" />
+                    <EmptyState
+                      icon={Building2}
+                      title="Sin inversiones"
+                      description="Registrá inversiones de capital"
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
-                inversiones.map(inv => (
+                inversiones.map((inv) => (
                   <TableRow key={inv.id}>
                     <TableCell className="font-medium">{inv.descripcion}</TableCell>
-                    <TableCell><Badge variant="outline">{getTipoLabel(inv.tipo_inversion)}</Badge></TableCell>
-                    <TableCell className="text-sm">{new Date(inv.fecha).toLocaleDateString('es-AR')}</TableCell>
-                    <TableCell className="text-right font-mono">$ {Number(inv.monto_total).toLocaleString('es-AR')}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{getTipoLabel(inv.tipo_inversion)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(inv.fecha).toLocaleDateString('es-AR')}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      $ {Number(inv.monto_total).toLocaleString('es-AR')}
+                    </TableCell>
                     <TableCell>{getEstadoBadge(inv.estado)}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => softDelete.mutate(inv.id)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => softDelete.mutate(inv.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </TableCell>
@@ -140,7 +175,12 @@ export function GestorInversiones({ branchId }: Props) {
   );
 }
 
-function InversionFormModal({ open, onOpenChange, branchId, onCreate }: {
+function InversionFormModal({
+  open,
+  onOpenChange,
+  branchId,
+  onCreate,
+}: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   branchId: string;
@@ -177,9 +217,14 @@ function InversionFormModal({ open, onOpenChange, branchId, onCreate }: {
     await onCreate.mutateAsync(payload);
     onOpenChange(false);
     setForm({
-      descripcion: '', tipo_inversion: 'equipamiento', monto_total: '',
-      fecha: new Date().toISOString().split('T')[0], estado: 'pagado',
-      vida_util_meses: '', cuotas_total: '', observaciones: '',
+      descripcion: '',
+      tipo_inversion: 'equipamiento',
+      monto_total: '',
+      fecha: new Date().toISOString().split('T')[0],
+      estado: 'pagado',
+      vida_util_meses: '',
+      cuotas_total: '',
+      observaciones: '',
     });
   };
 
@@ -193,34 +238,62 @@ function InversionFormModal({ open, onOpenChange, branchId, onCreate }: {
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label>Descripción *</Label>
-            <Input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} />
+            <Input
+              value={form.descripcion}
+              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Tipo</Label>
-              <Select value={form.tipo_inversion} onValueChange={v => setForm({ ...form, tipo_inversion: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={form.tipo_inversion}
+                onValueChange={(v) => setForm({ ...form, tipo_inversion: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {TIPO_INVERSION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  {TIPO_INVERSION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
               <Label>Monto Total *</Label>
-              <Input type="number" min="0" step="0.01" value={form.monto_total} onChange={e => setForm({ ...form, monto_total: e.target.value })} />
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.monto_total}
+                onChange={(e) => setForm({ ...form, monto_total: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Fecha</Label>
-              <Input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+              <Input
+                type="date"
+                value={form.fecha}
+                onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Estado</Label>
-              <Select value={form.estado} onValueChange={v => setForm({ ...form, estado: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {ESTADO_INVERSION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  {ESTADO_INVERSION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -229,23 +302,42 @@ function InversionFormModal({ open, onOpenChange, branchId, onCreate }: {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Cuotas Totales</Label>
-                <Input type="number" min="1" value={form.cuotas_total} onChange={e => setForm({ ...form, cuotas_total: e.target.value })} />
+                <Input
+                  type="number"
+                  min="1"
+                  value={form.cuotas_total}
+                  onChange={(e) => setForm({ ...form, cuotas_total: e.target.value })}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Vida Útil (meses)</Label>
-                <Input type="number" min="1" value={form.vida_util_meses} onChange={e => setForm({ ...form, vida_util_meses: e.target.value })} />
+                <Input
+                  type="number"
+                  min="1"
+                  value={form.vida_util_meses}
+                  onChange={(e) => setForm({ ...form, vida_util_meses: e.target.value })}
+                />
               </div>
             </div>
           )}
           <div className="grid gap-2">
             <Label>Observaciones</Label>
-            <Textarea value={form.observaciones} onChange={e => setForm({ ...form, observaciones: e.target.value })} rows={2} />
+            <Textarea
+              value={form.observaciones}
+              onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+              rows={2}
+            />
           </div>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!form.descripcion || !form.monto_total || onCreate.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!form.descripcion || !form.monto_total || onCreate.isPending}
+          >
             Registrar
           </Button>
         </div>

@@ -1,6 +1,6 @@
 /**
  * useManagersCoachingList - Hook para obtener lista de encargados con estado de coaching
- * 
+ *
  * Usado en Mi Marca > Coaching > Encargados para ver todos los encargados de la red
  * y su estado de coaching del mes actual.
  */
@@ -51,29 +51,31 @@ export function useManagersCoachingList(options: UseManagersCoachingListOptions 
       if (!roles?.length) return [];
 
       // 2. Obtener perfiles
-      const userIds = [...new Set(roles.map(r => r.user_id))];
+      const userIds = [...new Set(roles.map((r) => r.user_id))];
       const { data: profiles, error: profilesErr } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
 
       if (profilesErr) throw profilesErr;
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
       // 3. Obtener sucursales
-      const branchIds = [...new Set(roles.map(r => r.branch_id))];
+      const branchIds = [...new Set(roles.map((r) => r.branch_id))];
       const { data: branches, error: branchesErr } = await supabase
         .from('branches')
         .select('id, name')
         .in('id', branchIds);
 
       if (branchesErr) throw branchesErr;
-      const branchMap = new Map(branches?.map(b => [b.id, b]) ?? []);
+      const branchMap = new Map(branches?.map((b) => [b.id, b]) ?? []);
 
       // 4. Obtener coachings de este mes para los encargados
       const { data: thisMonthCoachings, error: thisMonthErr } = await supabase
         .from('coachings')
-        .select('id, user_id, branch_id, coaching_date, overall_score, acknowledged_at, evaluated_by')
+        .select(
+          'id, user_id, branch_id, coaching_date, overall_score, acknowledged_at, evaluated_by',
+        )
         .in('user_id', userIds)
         .eq('coaching_month', currentMonth)
         .eq('coaching_year', currentYear);
@@ -83,7 +85,7 @@ export function useManagersCoachingList(options: UseManagersCoachingListOptions 
       // 5. Obtener coachings del mes anterior para comparación
       const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-      
+
       const { data: prevMonthCoachings, error: prevMonthErr } = await supabase
         .from('coachings')
         .select('user_id, branch_id, overall_score')
@@ -94,7 +96,7 @@ export function useManagersCoachingList(options: UseManagersCoachingListOptions 
       if (prevMonthErr) throw prevMonthErr;
 
       // 6. Obtener nombres de evaluadores
-      const evaluatorIds = [...new Set(thisMonthCoachings?.map(c => c.evaluated_by) ?? [])];
+      const evaluatorIds = [...new Set(thisMonthCoachings?.map((c) => c.evaluated_by) ?? [])];
       const { data: evaluators, error: evalErr } = await supabase
         .from('profiles')
         .select('id, full_name')
@@ -102,17 +104,17 @@ export function useManagersCoachingList(options: UseManagersCoachingListOptions 
 
       if (evalErr) throw evalErr;
 
-      const evaluatorMap = new Map(evaluators?.map(e => [e.id, e.full_name]) ?? []);
+      const evaluatorMap = new Map(evaluators?.map((e) => [e.id, e.full_name]) ?? []);
 
       // 7. Construir resultado
-      return roles.map(role => {
+      return roles.map((role) => {
         const profile = profileMap.get(role.user_id);
         const branch = branchMap.get(role.branch_id);
-        const coaching = thisMonthCoachings?.find(c => 
-          c.user_id === role.user_id && c.branch_id === role.branch_id
+        const coaching = thisMonthCoachings?.find(
+          (c) => c.user_id === role.user_id && c.branch_id === role.branch_id,
         );
-        const prevCoaching = prevMonthCoachings?.find(c => 
-          c.user_id === role.user_id && c.branch_id === role.branch_id
+        const prevCoaching = prevMonthCoachings?.find(
+          (c) => c.user_id === role.user_id && c.branch_id === role.branch_id,
         );
 
         return {
@@ -122,13 +124,15 @@ export function useManagersCoachingList(options: UseManagersCoachingListOptions 
           branchId: role.branch_id,
           branchName: branch?.name || 'Sin sucursal',
           hasCoachingThisMonth: !!coaching,
-          latestCoaching: coaching ? {
-            id: coaching.id,
-            date: coaching.coaching_date,
-            overallScore: coaching.overall_score,
-            acknowledgedAt: coaching.acknowledged_at,
-            evaluatorName: evaluatorMap.get(coaching.evaluated_by) || null,
-          } : null,
+          latestCoaching: coaching
+            ? {
+                id: coaching.id,
+                date: coaching.coaching_date,
+                overallScore: coaching.overall_score,
+                acknowledgedAt: coaching.acknowledged_at,
+                evaluatorName: evaluatorMap.get(coaching.evaluated_by) || null,
+              }
+            : null,
           previousScore: prevCoaching?.overall_score || null,
         };
       });

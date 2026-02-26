@@ -8,7 +8,9 @@ export function useWebappConfig(branchSlug: string | undefined) {
     queryFn: async () => {
       const { data: branch, error: branchErr } = await supabase
         .from('branches')
-        .select('id, name, address, city, slug, opening_time, closing_time, public_hours, latitude, longitude, google_place_id')
+        .select(
+          'id, name, address, city, slug, opening_time, closing_time, public_hours, latitude, longitude, google_place_id',
+        )
         .eq('slug', branchSlug!)
         .eq('is_active', true)
         .single();
@@ -43,13 +45,15 @@ export function useWebappMenuItems(branchId: string | undefined) {
       // 2. Query active webapp items (brand-level visibility)
       let query = supabase
         .from('items_carta')
-        .select(`
+        .select(
+          `
           id, nombre, nombre_corto, descripcion, imagen_url,
           precio_base, precio_promo, promo_etiqueta,
           categoria_carta_id, orden, disponible_delivery,
           disponible_webapp, tipo,
           menu_categorias:categoria_carta_id(id, nombre, orden)
-        `)
+        `,
+        )
         .eq('activo', true)
         .is('deleted_at', null)
         .eq('disponible_webapp', true)
@@ -123,7 +127,9 @@ export function useWebappItemOptionalGroups(itemId: string | undefined) {
       const groupIds = (groups as any[]).map((g: any) => g.id);
       const { data: options, error: oErr } = await supabase
         .from('item_carta_grupo_opcional_items' as any)
-        .select('id, grupo_id, insumo_id, preparacion_id, costo_unitario, insumos(id, nombre), preparaciones(id, nombre)')
+        .select(
+          'id, grupo_id, insumo_id, preparacion_id, costo_unitario, insumos(id, nombre), preparaciones(id, nombre)',
+        )
         .in('grupo_id', groupIds);
       if (oErr) throw oErr;
 
@@ -187,7 +193,9 @@ export function useWebappItemRemovables(itemId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('item_removibles' as any)
-        .select('id, nombre_display, activo, insumo_id, preparacion_id, insumos(id, nombre), preparaciones(id, nombre)')
+        .select(
+          'id, nombre_display, activo, insumo_id, preparacion_id, insumos(id, nombre), preparaciones(id, nombre)',
+        )
         .eq('item_carta_id', itemId!)
         .eq('activo', true);
       if (error) throw error;

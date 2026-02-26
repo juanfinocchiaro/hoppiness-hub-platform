@@ -7,7 +7,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-const ACTIVE_STATES = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'listo_retiro', 'listo_mesa', 'listo_envio', 'en_camino'];
+const ACTIVE_STATES = [
+  'pendiente',
+  'confirmado',
+  'en_preparacion',
+  'listo',
+  'listo_retiro',
+  'listo_mesa',
+  'listo_envio',
+  'en_camino',
+];
 
 const ESTADO_CONFIG: Record<string, { label: string; icon: typeof Flame }> = {
   pendiente: { label: 'fue enviado', icon: Clock },

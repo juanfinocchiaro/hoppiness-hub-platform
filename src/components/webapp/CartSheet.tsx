@@ -7,8 +7,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, CreditCard, Banknote, MapPin } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  ArrowLeft,
+  CreditCard,
+  Banknote,
+  MapPin,
+} from 'lucide-react';
 import { DotsLoader } from '@/components/ui/loaders';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -63,9 +78,26 @@ function FieldError({ error }: { error: string | null }) {
   return <p className="text-xs text-destructive mt-1">{error}</p>;
 }
 
-export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEnabled, deliveryCosto = 0, initialStep, externalTrackingCode, prevalidatedAddress, prevalidatedCalc }: Props) {
+export function CartSheet({
+  open,
+  onOpenChange,
+  cart,
+  branchName,
+  branchId,
+  mpEnabled,
+  deliveryCosto: _deliveryCosto = 0,
+  initialStep,
+  externalTrackingCode,
+  prevalidatedAddress,
+  prevalidatedCalc,
+}: Props) {
   const { user } = useAuth();
-  const servicioLabel = cart.tipoServicio === 'retiro' ? 'Retiro en local' : cart.tipoServicio === 'delivery' ? 'Delivery' : 'Comer acá';
+  const servicioLabel =
+    cart.tipoServicio === 'retiro'
+      ? 'Retiro en local'
+      : cart.tipoServicio === 'delivery'
+        ? 'Delivery'
+        : 'Comer acá';
 
   // Fetch profile for pre-fill when logged in
   const { data: userProfile } = useQuery({
@@ -87,8 +119,12 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const calculateDelivery = useCalculateDelivery();
 
   // Dynamic delivery state — seed from pre-validated values
-  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(prevalidatedAddress ?? null);
-  const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalcResult | null>(prevalidatedCalc ?? null);
+  const [deliveryAddress, setDeliveryAddress] = useState<AddressResult | null>(
+    prevalidatedAddress ?? null,
+  );
+  const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalcResult | null>(
+    prevalidatedCalc ?? null,
+  );
   const [calcLoading, setCalcLoading] = useState(false);
 
   // Fetch saved addresses for logged-in users
@@ -101,7 +137,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
         .eq('user_id', user!.id)
         .order('es_principal', { ascending: false });
       if (error) throw error;
-      return (data || []) as Array<{ id: string; etiqueta: string; direccion: string; piso: string | null; referencia: string | null }>;
+      return (data || []) as Array<{
+        id: string;
+        etiqueta: string;
+        direccion: string;
+        piso: string | null;
+        referencia: string | null;
+      }>;
     },
     enabled: !!user && isDelivery,
   });
@@ -131,18 +173,22 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
       return;
     }
     setCalcLoading(true);
-    calculateDelivery.mutateAsync({
-      branch_id: branchId,
-      customer_lat: deliveryAddress.lat,
-      customer_lng: deliveryAddress.lng,
-      neighborhood_name: deliveryAddress.neighborhood_name,
-    }).then((result) => {
-      setDeliveryCalc(result);
-    }).catch(() => {
-      setDeliveryCalc(null);
-    }).finally(() => {
-      setCalcLoading(false);
-    });
+    calculateDelivery
+      .mutateAsync({
+        branch_id: branchId,
+        customer_lat: deliveryAddress.lat,
+        customer_lng: deliveryAddress.lng,
+        neighborhood_name: deliveryAddress.neighborhood_name,
+      })
+      .then((result) => {
+        setDeliveryCalc(result);
+      })
+      .catch(() => {
+        setDeliveryCalc(null);
+      })
+      .finally(() => {
+        setCalcLoading(false);
+      });
   }, [deliveryAddress, branchId]);
 
   const handleAddressSelect = (result: AddressResult | null) => {
@@ -157,16 +203,32 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
   // Checkout form state - pre-fill from profile (if logged in) or localStorage
   const [nombre, setNombre] = useState(() => {
-    try { return localStorage.getItem('hop_client_nombre') || ''; } catch { return ''; }
+    try {
+      return localStorage.getItem('hop_client_nombre') || '';
+    } catch {
+      return '';
+    }
   });
   const [telefono, setTelefono] = useState(() => {
-    try { return localStorage.getItem('hop_client_telefono') || ''; } catch { return ''; }
+    try {
+      return localStorage.getItem('hop_client_telefono') || '';
+    } catch {
+      return '';
+    }
   });
   const [email, setEmail] = useState(() => {
-    try { return localStorage.getItem('hop_client_email') || ''; } catch { return ''; }
+    try {
+      return localStorage.getItem('hop_client_email') || '';
+    } catch {
+      return '';
+    }
   });
   const [direccion, setDireccion] = useState(() => {
-    try { return localStorage.getItem('hop_client_direccion') || ''; } catch { return ''; }
+    try {
+      return localStorage.getItem('hop_client_direccion') || '';
+    } catch {
+      return '';
+    }
   });
 
   // Pre-fill from profile when data loads (overrides localStorage if profile has data)
@@ -174,7 +236,8 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     if (userProfile) {
       if (userProfile.full_name && !nombre) setNombre(userProfile.full_name);
       if (userProfile.phone && !telefono) setTelefono(userProfile.phone);
-      if ((userProfile.email || user?.email) && !email) setEmail(userProfile.email || user?.email || '');
+      if ((userProfile.email || user?.email) && !email)
+        setEmail(userProfile.email || user?.email || '');
     }
   }, [userProfile]);
   // Sync pre-validated delivery address when props change
@@ -194,7 +257,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
   const [pagaCon, setPagaCon] = useState<string>('');
   const [showMpConfirm, setShowMpConfirm] = useState(false);
-  const [promoCode, setPromoCode] = useState<{ codigoId: string; codigoText: string; descuento: number } | null>(null);
+  const [promoCode, setPromoCode] = useState<{
+    codigoId: string;
+    codigoText: string;
+    descuento: number;
+  } | null>(null);
 
   const mpEnabledBool = !!mpEnabled;
   const { data: webappConfig } = useQuery({
@@ -212,9 +279,10 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   });
 
   const servicePayments = useMemo(() => {
-    const defaults = serviceKey === 'delivery'
-      ? { efectivo: false, mercadopago: true }
-      : { efectivo: true, mercadopago: true };
+    const defaults =
+      serviceKey === 'delivery'
+        ? { efectivo: false, mercadopago: true }
+        : { efectivo: true, mercadopago: true };
     const pm = (webappConfig?.service_schedules as any)?.[serviceKey]?.payment_methods;
     return {
       efectivo: pm?.efectivo ?? defaults.efectivo,
@@ -225,8 +293,10 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
   const { data: activePromoItems = [] } = useActivePromoItems(branchId, 'webapp');
 
   const promoPayment = useMemo(() => {
-    const promoItemByItemId = new Map(activePromoItems.map(pi => [pi.item_carta_id, pi] as const));
-    const promoById = new Map(activePromos.map(p => [p.id, p] as const));
+    const promoItemByItemId = new Map(
+      activePromoItems.map((pi) => [pi.item_carta_id, pi] as const),
+    );
+    const promoById = new Map(activePromos.map((p) => [p.id, p] as const));
 
     let hasCashOnly = false;
     let hasDigitalOnly = false;
@@ -249,24 +319,32 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
     const conflict = (hasCashOnly && hasDigitalOnly) || (!allowCash && !allowMp);
 
-    const forced: MetodoPago | null =
-      conflict ? null
-        : allowCash !== allowMp
-          ? (allowCash ? 'efectivo' : 'mercadopago')
-          : null;
+    const forced: MetodoPago | null = conflict
+      ? null
+      : allowCash !== allowMp
+        ? allowCash
+          ? 'efectivo'
+          : 'mercadopago'
+        : null;
 
     const svcLabel = serviceKey === 'delivery' ? 'delivery' : 'retiro';
-    const reason =
-      conflict
-        ? (hasCashOnly && !cashAllowed) ? `Este local no acepta efectivo para ${svcLabel}.`
-          : (hasDigitalOnly && !mpAllowed) ? `Este local no acepta MercadoPago para ${svcLabel}.`
-            : (!cashAllowed && !mpAllowed) ? `Este local no tiene medios de pago habilitados para ${svcLabel}.`
-              : (hasCashOnly && hasDigitalOnly) ? 'Tu carrito tiene promociones con restricciones incompatibles (solo efectivo y solo digital).'
-                : 'No hay un método de pago disponible para este carrito.'
-        : (hasCashOnly) ? 'Esta promo requiere pago en efectivo.'
-          : (hasDigitalOnly) ? 'Esta promo requiere pago digital (MercadoPago).'
-            : (!cashAllowed) ? `Efectivo no está habilitado para ${svcLabel}.`
-              : null;
+    const reason = conflict
+      ? hasCashOnly && !cashAllowed
+        ? `Este local no acepta efectivo para ${svcLabel}.`
+        : hasDigitalOnly && !mpAllowed
+          ? `Este local no acepta MercadoPago para ${svcLabel}.`
+          : !cashAllowed && !mpAllowed
+            ? `Este local no tiene medios de pago habilitados para ${svcLabel}.`
+            : hasCashOnly && hasDigitalOnly
+              ? 'Tu carrito tiene promociones con restricciones incompatibles (solo efectivo y solo digital).'
+              : 'No hay un método de pago disponible para este carrito.'
+      : hasCashOnly
+        ? 'Esta promo requiere pago en efectivo.'
+        : hasDigitalOnly
+          ? 'Esta promo requiere pago digital (MercadoPago).'
+          : !cashAllowed
+            ? `Efectivo no está habilitado para ${svcLabel}.`
+            : null;
 
     return { conflict, forced, cashAllowed, mpAllowed, hasCashOnly, hasDigitalOnly, reason };
   }, [activePromoItems, activePromos, cart.items, servicePayments, mpEnabledBool, serviceKey]);
@@ -282,26 +360,41 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     }
   }, [promoPayment.conflict, promoPayment.forced, promoPayment.cashAllowed, metodoPago]);
 
-  const costoEnvio = isDelivery && deliveryCalc?.available && deliveryCalc.cost != null
-    ? deliveryCalc.cost
-    : 0;
+  const costoEnvio =
+    isDelivery && deliveryCalc?.available && deliveryCalc.cost != null ? deliveryCalc.cost : 0;
   const promoDescuento = promoCode?.descuento ?? 0;
   const totalConEnvio = Math.max(0, cart.totalPrecio + costoEnvio - promoDescuento);
-  const deliveryAvailable = !isDelivery || (deliveryCalc?.available === true);
+  const deliveryAvailable = !isDelivery || deliveryCalc?.available === true;
 
   // Inline validation errors
   const errors = useMemo(() => {
     const e: Record<string, string | null> = {};
-    e.nombre = nombre.trim().length === 0 ? 'Ingresá tu nombre' : nombre.trim().length < 2 ? 'Mínimo 2 caracteres' : null;
-    e.telefono = telefono.trim().length === 0 ? 'Ingresá tu teléfono' : telefono.trim().length < 8 ? 'Mínimo 8 dígitos' : null;
-    e.email = email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Email no válido' : null;
+    e.nombre =
+      nombre.trim().length === 0
+        ? 'Ingresá tu nombre'
+        : nombre.trim().length < 2
+          ? 'Mínimo 2 caracteres'
+          : null;
+    e.telefono =
+      telefono.trim().length === 0
+        ? 'Ingresá tu teléfono'
+        : telefono.trim().length < 8
+          ? 'Mínimo 8 dígitos'
+          : null;
+    e.email =
+      email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Email no válido' : null;
     if (isDelivery) {
-      e.direccion = direccion.trim().length === 0 ? 'Ingresá tu dirección' : direccion.trim().length < 5 ? 'Mínimo 5 caracteres' : null;
+      e.direccion =
+        direccion.trim().length === 0
+          ? 'Ingresá tu dirección'
+          : direccion.trim().length < 5
+            ? 'Mínimo 5 caracteres'
+            : null;
     }
     return e;
   }, [nombre, telefono, email, direccion, isDelivery]);
 
-  const hasErrors = Object.values(errors).some(e => e !== null);
+  const hasErrors = Object.values(errors).some((e) => e !== null);
   const paymentAllowed = useMemo(() => {
     if (promoPayment.conflict) return false;
     if (!promoPayment.cashAllowed && metodoPago === 'efectivo') return false;
@@ -318,7 +411,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
     (metodoPago === 'efectivo' || mpEnabled);
   const canSubmitWithRestrictions = canSubmit && paymentAllowed;
 
-  const handleBlur = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+  const handleBlur = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
 
   const handleContinue = () => setStep('checkout');
 
@@ -341,17 +434,22 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
       localStorage.setItem('hop_client_telefono', telefono.trim());
       if (email.trim()) localStorage.setItem('hop_client_email', email.trim());
       if (direccion.trim()) localStorage.setItem('hop_client_direccion', direccion.trim());
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     setSubmitting(true);
     try {
-      const orderItems = cart.items.map(item => ({
+      const orderItems = cart.items.map((item) => ({
         item_carta_id: item.sourceItemId ?? item.itemId,
         nombre: item.nombre,
         cantidad: item.cantidad,
         precio_unitario: item.precioUnitario,
-        extras: item.extras.map(e => ({ nombre: e.nombre, precio: e.precio })),
-        incluidos: (item.includedModifiers || []).map(m => ({ nombre: m.nombre, cantidad: m.cantidad })),
+        extras: item.extras.map((e) => ({ nombre: e.nombre, precio: e.precio })),
+        incluidos: (item.includedModifiers || []).map((m) => ({
+          nombre: m.nombre,
+          cantidad: m.cantidad,
+        })),
         removidos: item.removidos,
         promocion_id: item.promocionId ?? null,
         promocion_item_id: item.promocionItemId ?? null,
@@ -360,29 +458,32 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
         notas: item.notas || null,
       }));
 
-      const { data: orderData, error: orderErr } = await supabase.functions.invoke('create-webapp-order', {
-        body: {
-          branch_id: branchId,
-          tipo_servicio: cart.tipoServicio,
-          cliente_nombre: nombre.trim(),
-          cliente_telefono: normalizePhone(telefono) || telefono.trim(),
-          cliente_email: email.trim() || null,
-          cliente_direccion: isDelivery ? direccion.trim() : null,
-          cliente_piso: isDelivery ? piso.trim() || null : null,
-          cliente_referencia: isDelivery ? referencia.trim() || null : null,
-          cliente_notas: notas.trim() || null,
-          metodo_pago: metodoPago,
-          paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
-          delivery_zone_id: null,
-          delivery_lat: deliveryAddress?.lat ?? null,
-          delivery_lng: deliveryAddress?.lng ?? null,
-          delivery_cost_calculated: costoEnvio > 0 ? costoEnvio : null,
-          delivery_distance_km: deliveryCalc?.distance_km ?? null,
-          codigo_descuento_id: promoCode?.codigoId ?? null,
-          descuento_codigo: promoDescuento > 0 ? promoDescuento : null,
-          items: orderItems,
+      const { data: orderData, error: orderErr } = await supabase.functions.invoke(
+        'create-webapp-order',
+        {
+          body: {
+            branch_id: branchId,
+            tipo_servicio: cart.tipoServicio,
+            cliente_nombre: nombre.trim(),
+            cliente_telefono: normalizePhone(telefono) || telefono.trim(),
+            cliente_email: email.trim() || null,
+            cliente_direccion: isDelivery ? direccion.trim() : null,
+            cliente_piso: isDelivery ? piso.trim() || null : null,
+            cliente_referencia: isDelivery ? referencia.trim() || null : null,
+            cliente_notas: notas.trim() || null,
+            metodo_pago: metodoPago,
+            paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
+            delivery_zone_id: null,
+            delivery_lat: deliveryAddress?.lat ?? null,
+            delivery_lng: deliveryAddress?.lng ?? null,
+            delivery_cost_calculated: costoEnvio > 0 ? costoEnvio : null,
+            delivery_distance_km: deliveryCalc?.distance_km ?? null,
+            codigo_descuento_id: promoCode?.codigoId ?? null,
+            descuento_codigo: promoDescuento > 0 ? promoDescuento : null,
+            items: orderItems,
+          },
         },
-      });
+      );
 
       if (orderErr) {
         let errorMsg = 'Error al crear el pedido';
@@ -393,10 +494,16 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
               const body = await ctx.json();
               errorMsg = body?.error || errorMsg;
             }
-          } else if (typeof orderErr === 'object' && orderErr !== null && 'error' in (orderErr as any)) {
+          } else if (
+            typeof orderErr === 'object' &&
+            orderErr !== null &&
+            'error' in (orderErr as any)
+          ) {
             errorMsg = (orderErr as any).error;
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         throw new Error(errorMsg);
       }
       if (!orderData?.pedido_id) throw new Error('No se pudo crear el pedido');
@@ -404,7 +511,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
       const { pedido_id, tracking_code, numero_pedido } = orderData;
 
       if (metodoPago === 'mercadopago') {
-        const checkoutItems = cart.items.map(item => ({
+        const checkoutItems = cart.items.map((item) => ({
           title: item.nombre,
           quantity: item.cantidad,
           unit_price: item.precioUnitario + item.extras.reduce((s, e) => s + e.precio, 0),
@@ -477,12 +584,27 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
         <SheetHeader className="px-5 pb-3 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2 text-left">
             {(step === 'checkout' || step === 'tracking') && (
-              <button onClick={step === 'tracking' ? () => { setTrackingCode(null); setStep('cart'); onOpenChange(false); } : handleBack} className="p-1 -ml-1 rounded-full hover:bg-muted">
+              <button
+                onClick={
+                  step === 'tracking'
+                    ? () => {
+                        setTrackingCode(null);
+                        setStep('cart');
+                        onOpenChange(false);
+                      }
+                    : handleBack
+                }
+                className="p-1 -ml-1 rounded-full hover:bg-muted"
+              >
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
             <ShoppingBag className="w-5 h-5 text-primary" />
-            {step === 'tracking' ? 'Seguimiento' : step === 'cart' ? 'Tu pedido' : 'Completá tus datos'}
+            {step === 'tracking'
+              ? 'Seguimiento'
+              : step === 'cart'
+                ? 'Tu pedido'
+                : 'Completá tus datos'}
           </SheetTitle>
           {step !== 'tracking' && (
             <p className="text-xs text-muted-foreground">
@@ -493,17 +615,39 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
           {step !== 'tracking' && cart.items.length > 0 && (
             <div className="flex items-center gap-2 pt-2">
               <div className="flex items-center gap-1.5">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  step === 'cart' ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
-                }`}>1</div>
-                <span className={`text-xs font-medium ${step === 'cart' ? 'text-foreground' : 'text-muted-foreground'}`}>Pedido</span>
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    step === 'cart'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-primary text-primary-foreground'
+                  }`}
+                >
+                  1
+                </div>
+                <span
+                  className={`text-xs font-medium ${step === 'cart' ? 'text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Pedido
+                </span>
               </div>
-              <div className={`flex-1 h-0.5 rounded ${step === 'checkout' ? 'bg-primary' : 'bg-border'}`} />
+              <div
+                className={`flex-1 h-0.5 rounded ${step === 'checkout' ? 'bg-primary' : 'bg-border'}`}
+              />
               <div className="flex items-center gap-1.5">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  step === 'checkout' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}>2</div>
-                <span className={`text-xs font-medium ${step === 'checkout' ? 'text-foreground' : 'text-muted-foreground'}`}>Datos y pago</span>
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    step === 'checkout'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  2
+                </div>
+                <span
+                  className={`text-xs font-medium ${step === 'checkout' ? 'text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Datos y pago
+                </span>
               </div>
             </div>
           )}
@@ -527,34 +671,45 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
             <div>
               <span className="text-5xl mb-4 block">🛒</span>
               <p className="text-muted-foreground">Tu carrito está vacío</p>
-              <p className="text-xs text-muted-foreground mt-1">Explorá el menú y armá tu pedido perfecto.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Explorá el menú y armá tu pedido perfecto.
+              </p>
             </div>
           </div>
         ) : step === 'cart' ? (
           /* ── STEP 1: CART ───────────────────────────────────── */
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {cart.items.map(item => {
+              {cart.items.map((item) => {
                 const extrasTotal = item.extras.reduce((s, e) => s + e.precio, 0);
                 const lineTotal = (item.precioUnitario + extrasTotal) * item.cantidad;
 
                 return (
-                  <div key={item.cartId} className="flex items-start gap-3 bg-card rounded-lg p-3 border">
+                  <div
+                    key={item.cartId}
+                    className="flex items-start gap-3 bg-card rounded-lg p-3 border"
+                  >
                     {item.imagen_url ? (
-                      <img src={item.imagen_url} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                      <img
+                        src={item.imagen_url}
+                        alt=""
+                        className="w-14 h-14 rounded-lg object-cover shrink-0"
+                      />
                     ) : (
-                      <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xl">🍔</div>
+                      <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xl">
+                        🍔
+                      </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate">{item.nombre}</p>
                       {item.extras.length > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {item.extras.map(e => `+ ${e.nombre}`).join(', ')}
+                          {item.extras.map((e) => `+ ${e.nombre}`).join(', ')}
                         </p>
                       )}
                       {item.removidos.length > 0 && (
                         <p className="text-xs text-destructive">
-                          {item.removidos.map(r => `Sin ${r}`).join(', ')}
+                          {item.removidos.map((r) => `Sin ${r}`).join(', ')}
                         </p>
                       )}
                       {item.notas && (
@@ -570,7 +725,11 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                             className="w-7 h-7 rounded-full bg-muted flex items-center justify-center active:scale-95"
                             aria-label="Quitar uno"
                           >
-                            {item.cantidad === 1 ? <Trash2 className="w-3 h-3 text-destructive" /> : <Minus className="w-3 h-3" />}
+                            {item.cantidad === 1 ? (
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            ) : (
+                              <Minus className="w-3 h-3" />
+                            )}
                           </button>
                           <span className="w-5 text-center text-sm font-bold">{item.cantidad}</span>
                           <button
@@ -602,7 +761,9 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
               )}
               <div className="flex justify-between items-center pt-1 border-t">
                 <span className="text-base font-bold">Total</span>
-                <span className="text-xl font-black text-foreground">{formatPrice(totalConEnvio)}</span>
+                <span className="text-xl font-black text-foreground">
+                  {formatPrice(totalConEnvio)}
+                </span>
               </div>
               <Button
                 size="lg"
@@ -622,11 +783,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 <h3 className="text-sm font-bold text-foreground">Tus datos</h3>
                 <div className="space-y-2">
                   <div>
-                    <Label htmlFor="checkout-nombre" className="text-xs">Nombre *</Label>
+                    <Label htmlFor="checkout-nombre" className="text-xs">
+                      Nombre *
+                    </Label>
                     <Input
                       id="checkout-nombre"
                       value={nombre}
-                      onChange={e => setNombre(e.target.value)}
+                      onChange={(e) => setNombre(e.target.value)}
                       onBlur={() => handleBlur('nombre')}
                       placeholder="Tu nombre"
                       className={`mt-1 ${touched.nombre && errors.nombre ? 'border-destructive' : ''}`}
@@ -634,29 +797,35 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                     {touched.nombre && <FieldError error={errors.nombre} />}
                   </div>
                   <div>
-                    <Label htmlFor="checkout-telefono" className="text-xs">Teléfono *</Label>
+                    <Label htmlFor="checkout-telefono" className="text-xs">
+                      Teléfono *
+                    </Label>
                     <Input
                       id="checkout-telefono"
                       type="tel"
                       inputMode="tel"
                       value={telefono}
-                      onChange={e => setTelefono(e.target.value)}
+                      onChange={(e) => setTelefono(e.target.value)}
                       onBlur={() => handleBlur('telefono')}
                       placeholder="3511234567"
                       className={`mt-1 ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`}
                     />
                     {touched.telefono && <FieldError error={errors.telefono} />}
                     {(!touched.telefono || !errors.telefono) && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Sin 0 ni +54 — ej: 3511234567</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Sin 0 ni +54 — ej: 3511234567
+                      </p>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="checkout-email" className="text-xs">Email (opcional)</Label>
+                    <Label htmlFor="checkout-email" className="text-xs">
+                      Email (opcional)
+                    </Label>
                     <Input
                       id="checkout-email"
                       type="email"
                       value={email}
-                      onChange={e => setEmail(e.target.value)}
+                      onChange={(e) => setEmail(e.target.value)}
                       onBlur={() => handleBlur('email')}
                       placeholder="tu@email.com"
                       className={`mt-1 ${touched.email && errors.email ? 'border-destructive' : ''}`}
@@ -677,7 +846,9 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-4 w-4 text-green-600 shrink-0" />
-                          <span className="font-medium truncate">{deliveryAddress.formatted_address}</span>
+                          <span className="font-medium truncate">
+                            {deliveryAddress.formatted_address}
+                          </span>
                         </div>
                         <button
                           onClick={() => {
@@ -739,7 +910,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                           <Select
                             value=""
                             onValueChange={(addrId) => {
-                              const addr = savedAddresses.find(a => a.id === addrId);
+                              const addr = savedAddresses.find((a) => a.id === addrId);
                               if (addr) {
                                 setDireccion(addr.direccion);
                                 setPiso(addr.piso || '');
@@ -751,7 +922,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                               <SelectValue placeholder="Seleccionar dirección guardada" />
                             </SelectTrigger>
                             <SelectContent>
-                              {savedAddresses.map(a => (
+                              {savedAddresses.map((a) => (
                                 <SelectItem key={a.id} value={a.id}>
                                   {a.etiqueta} — {a.direccion}
                                 </SelectItem>
@@ -766,21 +937,25 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label htmlFor="checkout-piso" className="text-xs">Piso / Depto</Label>
+                        <Label htmlFor="checkout-piso" className="text-xs">
+                          Piso / Depto
+                        </Label>
                         <Input
                           id="checkout-piso"
                           value={piso}
-                          onChange={e => setPiso(e.target.value)}
+                          onChange={(e) => setPiso(e.target.value)}
                           placeholder="3B"
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="checkout-ref" className="text-xs">Referencia</Label>
+                        <Label htmlFor="checkout-ref" className="text-xs">
+                          Referencia
+                        </Label>
                         <Input
                           id="checkout-ref"
                           value={referencia}
-                          onChange={e => setReferencia(e.target.value)}
+                          onChange={(e) => setReferencia(e.target.value)}
                           placeholder="Edificio verde"
                           className="mt-1"
                         />
@@ -792,11 +967,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
 
               {/* Notes */}
               <div className="space-y-2">
-                <Label htmlFor="checkout-notas" className="text-xs font-bold">Notas para el local (opcional)</Label>
+                <Label htmlFor="checkout-notas" className="text-xs font-bold">
+                  Notas para el local (opcional)
+                </Label>
                 <Textarea
                   id="checkout-notas"
                   value={notas}
-                  onChange={e => setNotas(e.target.value)}
+                  onChange={(e) => setNotas(e.target.value)}
                   placeholder="Ej: tocar timbre, sin servilletas..."
                   rows={2}
                   className="resize-none"
@@ -811,7 +988,7 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                 )}
                 <RadioGroup
                   value={metodoPago}
-                  onValueChange={v => setMetodoPago(v as MetodoPago)}
+                  onValueChange={(v) => setMetodoPago(v as MetodoPago)}
                   className="space-y-2"
                 >
                   {mpEnabled && (
@@ -819,9 +996,13 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                       htmlFor="pago-mp"
                       className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
                         metodoPago === 'mercadopago' ? 'border-primary bg-primary/5' : ''
-                      } ${(!promoPayment.mpAllowed || promoPayment.hasCashOnly) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+                      } ${!promoPayment.mpAllowed || promoPayment.hasCashOnly ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
                     >
-                      <RadioGroupItem value="mercadopago" id="pago-mp" disabled={!promoPayment.mpAllowed || promoPayment.hasCashOnly} />
+                      <RadioGroupItem
+                        value="mercadopago"
+                        id="pago-mp"
+                        disabled={!promoPayment.mpAllowed || promoPayment.hasCashOnly}
+                      />
                       <CreditCard className="w-5 h-5 text-blue-500" />
                       <div>
                         <p className="text-sm font-semibold">MercadoPago</p>
@@ -831,11 +1012,15 @@ export function CartSheet({ open, onOpenChange, cart, branchName, branchId, mpEn
                   )}
                   <label
                     htmlFor="pago-efectivo"
-className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                    metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
-                  } ${(!promoPayment.cashAllowed || promoPayment.hasDigitalOnly) ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+                    className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                      metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
+                    } ${!promoPayment.cashAllowed || promoPayment.hasDigitalOnly ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
                   >
-                    <RadioGroupItem value="efectivo" id="pago-efectivo" disabled={!promoPayment.cashAllowed || promoPayment.hasDigitalOnly} />
+                    <RadioGroupItem
+                      value="efectivo"
+                      id="pago-efectivo"
+                      disabled={!promoPayment.cashAllowed || promoPayment.hasDigitalOnly}
+                    />
                     <Banknote className="w-5 h-5 text-green-600" />
                     <div>
                       <p className="text-sm font-semibold">Efectivo</p>
@@ -854,17 +1039,21 @@ className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
                       <button
                         onClick={() => setPagaCon('')}
                         className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-                          !pagaCon ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                          !pagaCon
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:border-primary/30'
                         }`}
                       >
                         Monto justo
                       </button>
-                      {quickAmounts.map(amt => (
+                      {quickAmounts.map((amt) => (
                         <button
                           key={amt}
                           onClick={() => setPagaCon(String(amt))}
                           className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-                            pagaCon === String(amt) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/30'
+                            pagaCon === String(amt)
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border text-muted-foreground hover:border-primary/30'
                           }`}
                         >
                           {formatPrice(amt)}
@@ -874,7 +1063,7 @@ className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
                     <Input
                       type="number"
                       value={pagaCon}
-                      onChange={e => setPagaCon(e.target.value)}
+                      onChange={(e) => setPagaCon(e.target.value)}
                       placeholder="Otro monto..."
                       className="mt-1 h-8 text-sm"
                     />
@@ -886,7 +1075,9 @@ className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
               <PromoCodeInput
                 branchId={branchId}
                 subtotal={cart.totalPrecio}
-                onApply={(descuento, codigoId, codigoText) => setPromoCode({ codigoId, codigoText, descuento })}
+                onApply={(descuento, codigoId, codigoText) =>
+                  setPromoCode({ codigoId, codigoText, descuento })
+                }
                 onRemove={() => setPromoCode(null)}
                 appliedCode={promoCode?.codigoText ?? null}
                 appliedDiscount={promoDescuento}
@@ -895,12 +1086,16 @@ className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
               {/* Order summary */}
               <div className="space-y-2 rounded-xl border p-3 bg-muted/30">
                 <h3 className="text-sm font-bold text-foreground">Resumen</h3>
-                {cart.items.map(item => {
+                {cart.items.map((item) => {
                   const ext = item.extras.reduce((s, e) => s + e.precio, 0);
                   return (
                     <div key={item.cartId} className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">{item.cantidad}x {item.nombre}</span>
-                      <span className="font-medium">{formatPrice((item.precioUnitario + ext) * item.cantidad)}</span>
+                      <span className="text-muted-foreground">
+                        {item.cantidad}x {item.nombre}
+                      </span>
+                      <span className="font-medium">
+                        {formatPrice((item.precioUnitario + ext) * item.cantidad)}
+                      </span>
                     </div>
                   );
                 })}
@@ -934,9 +1129,12 @@ className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
               {/* MercadoPago pre-redirect confirmation */}
               {showMpConfirm && metodoPago === 'mercadopago' && (
                 <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 space-y-2">
-                  <p className="text-sm font-semibold text-blue-900">Te vamos a llevar a MercadoPago</p>
+                  <p className="text-sm font-semibold text-blue-900">
+                    Te vamos a llevar a MercadoPago
+                  </p>
                   <p className="text-xs text-blue-700">
-                    Vas a completar el pago de forma segura en MercadoPago. Una vez confirmado, volvés acá para seguir el estado de tu pedido.
+                    Vas a completar el pago de forma segura en MercadoPago. Una vez confirmado,
+                    volvés acá para seguir el estado de tu pedido.
                   </p>
                 </div>
               )}
@@ -948,7 +1146,9 @@ className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
               >
                 {submitting && <DotsLoader />}
                 {metodoPago === 'mercadopago'
-                  ? (showMpConfirm ? `Ir a MercadoPago · ${formatPrice(totalConEnvio)}` : `Pagar ${formatPrice(totalConEnvio)}`)
+                  ? showMpConfirm
+                    ? `Ir a MercadoPago · ${formatPrice(totalConEnvio)}`
+                    : `Pagar ${formatPrice(totalConEnvio)}`
                   : `Confirmar pedido ${formatPrice(totalConEnvio)}`}
               </Button>
             </div>

@@ -18,29 +18,20 @@ const statusBadgeVariants = cva(
     defaultVariants: {
       variant: 'inactive',
     },
-  }
+  },
 );
 
 interface StatusBadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof statusBadgeVariants> {
+  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof statusBadgeVariants> {
   children: React.ReactNode;
 }
 
 /**
  * Badge de estado con variantes de color semánticas.
  */
-export function StatusBadge({
-  className,
-  variant,
-  children,
-  ...props
-}: StatusBadgeProps) {
+export function StatusBadge({ className, variant, children, ...props }: StatusBadgeProps) {
   return (
-    <span
-      className={cn(statusBadgeVariants({ variant }), className)}
-      {...props}
-    >
+    <span className={cn(statusBadgeVariants({ variant }), className)} {...props}>
       {children}
     </span>
   );

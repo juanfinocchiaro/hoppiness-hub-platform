@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Store, ArrowRight, Fingerprint, Eye, EyeOff, KeyRound, Check } from 'lucide-react';
-import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissions';
 import { PinManagementModal } from './PinManagementModal';
 
 interface BranchWorkCardProps {
@@ -29,7 +29,7 @@ export function BranchWorkCard({
   const pinTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const hasPin = !!clockPin;
-  
+
   // Franquiciados don't need PIN (they don't clock in)
   const isFranquiciado = localRole === 'franquiciado';
 

@@ -8,7 +8,7 @@ import { MessageCircle, X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ActiveOrder {
@@ -28,7 +28,16 @@ interface ChatMessage {
   created_at: string;
 }
 
-const ACTIVE_STATES = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'listo_retiro', 'listo_mesa', 'listo_envio', 'en_camino'];
+const ACTIVE_STATES = [
+  'pendiente',
+  'confirmado',
+  'en_preparacion',
+  'listo',
+  'listo_retiro',
+  'listo_mesa',
+  'listo_envio',
+  'en_camino',
+];
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
@@ -41,7 +50,6 @@ export function FloatingOrderChat() {
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
 
   const baseUrl = import.meta.env.VITE_SUPABASE_URL;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -53,7 +61,9 @@ export function FloatingOrderChat() {
       if (user) {
         const { data } = await supabase
           .from('pedidos')
-          .select('id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)')
+          .select(
+            'id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
+          )
           .eq('cliente_user_id', user.id)
           .eq('origen', 'webapp')
           .in('estado', ACTIVE_STATES)
@@ -73,17 +83,18 @@ export function FloatingOrderChat() {
       const code = localStorage.getItem('hoppiness_last_tracking');
       if (!code) return null;
       try {
-        const res = await fetch(
-          `${baseUrl}/functions/v1/webapp-pedido-chat?code=${code}`,
-          { headers: { apikey: apiKey } },
-        );
+        const res = await fetch(`${baseUrl}/functions/v1/webapp-pedido-chat?code=${code}`, {
+          headers: { apikey: apiKey },
+        });
         if (!res.ok) return null;
         const chatData = await res.json();
         if (!chatData?.pedido_id) return null;
         // Fetch the order info
         const { data: order } = await supabase
           .from('pedidos')
-          .select('id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)')
+          .select(
+            'id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
+          )
           .eq('webapp_tracking_code', code)
           .in('estado', ACTIVE_STATES)
           .maybeSingle();
@@ -109,16 +120,17 @@ export function FloatingOrderChat() {
   const fetchMessages = useCallback(async () => {
     if (!trackingCode) return;
     try {
-      const res = await fetch(
-        `${baseUrl}/functions/v1/webapp-pedido-chat?code=${trackingCode}`,
-        { headers: { apikey: apiKey } },
-      );
+      const res = await fetch(`${baseUrl}/functions/v1/webapp-pedido-chat?code=${trackingCode}`, {
+        headers: { apikey: apiKey },
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (data?.messages) {
         setMessages(data.messages);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [trackingCode, baseUrl, apiKey]);
 
   useEffect(() => {
@@ -130,20 +142,26 @@ export function FloatingOrderChat() {
     if (!activeOrder?.id) return;
     const channel = supabase
       .channel(`floating-chat-${activeOrder.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'webapp_pedido_mensajes',
-        filter: `pedido_id=eq.${activeOrder.id}`,
-      }, (payload) => {
-        const msg = payload.new as ChatMessage;
-        setMessages(prev => {
-          if (prev.some(m => m.id === msg.id)) return prev;
-          return [...prev, msg];
-        });
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'webapp_pedido_mensajes',
+          filter: `pedido_id=eq.${activeOrder.id}`,
+        },
+        (payload) => {
+          const msg = payload.new as ChatMessage;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        },
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeOrder?.id]);
 
   // Auto-scroll
@@ -151,7 +169,7 @@ export function FloatingOrderChat() {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open]);
 
-  const unreadCount = messages.filter(m => m.sender_type === 'local' && !m.leido).length;
+  const unreadCount = messages.filter((m) => m.sender_type === 'local' && !m.leido).length;
 
   const handleSend = async () => {
     if (!input.trim() || !trackingCode || sending) return;
@@ -169,7 +187,9 @@ export function FloatingOrderChat() {
       });
       setInput('');
       await fetchMessages();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setSending(false);
   };
 
@@ -189,7 +209,10 @@ export function FloatingOrderChat() {
               <p className="text-xs font-bold">Pedido #{activeOrder.numero_pedido}</p>
               <p className="text-[10px] opacity-80">{activeOrder.branch_name}</p>
             </div>
-            <button onClick={() => setOpen(false)} className="p-1 rounded-full hover:bg-primary-foreground/20">
+            <button
+              onClick={() => setOpen(false)}
+              className="p-1 rounded-full hover:bg-primary-foreground/20"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -201,17 +224,28 @@ export function FloatingOrderChat() {
                 Escribí un mensaje al local
               </p>
             )}
-            {messages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.sender_type === 'cliente' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-xl px-3 py-1.5 ${
-                  msg.sender_type === 'cliente'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-foreground'
-                }`}>
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.sender_type === 'cliente' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-xl px-3 py-1.5 ${
+                    msg.sender_type === 'cliente'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  }`}
+                >
                   <p className="text-xs">{msg.mensaje}</p>
-                  <p className={`text-[9px] mt-0.5 ${
-                    msg.sender_type === 'cliente' ? 'text-primary-foreground/60' : 'text-muted-foreground'
-                  }`}>{formatTime(msg.created_at)}</p>
+                  <p
+                    className={`text-[9px] mt-0.5 ${
+                      msg.sender_type === 'cliente'
+                        ? 'text-primary-foreground/60'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    {formatTime(msg.created_at)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -222,12 +256,17 @@ export function FloatingOrderChat() {
           <div className="border-t px-2 py-2 flex gap-1.5">
             <Input
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Escribí un mensaje..."
               className="h-8 text-xs"
             />
-            <Button size="sm" onClick={handleSend} disabled={!input.trim() || sending} className="h-8 w-8 p-0">
+            <Button
+              size="sm"
+              onClick={handleSend}
+              disabled={!input.trim() || sending}
+              className="h-8 w-8 p-0"
+            >
               <Send className="w-3.5 h-3.5" />
             </Button>
           </div>
@@ -236,7 +275,7 @@ export function FloatingOrderChat() {
 
       {/* Bubble */}
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={() => setOpen((v) => !v)}
         className="w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-elevated flex items-center justify-center hover:scale-105 transition-transform relative"
         aria-label="Chat del pedido"
       >

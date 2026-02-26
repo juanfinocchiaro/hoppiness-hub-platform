@@ -11,12 +11,7 @@ import { es } from 'date-fns/locale';
 import { useMyMeetings, useMarkMeetingAsRead } from '@/hooks/useMeetings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MEETING_AREAS } from '@/types/meeting';
@@ -28,12 +23,13 @@ export function MyMeetingsCard() {
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
 
   // Filter: convocadas (scheduled) + cerradas sin leer
-  const pendingMeetings = meetings.filter(m => 
-    m.status === 'convocada' || 
-    m.status === 'en_curso' ||
-    (m.status === 'cerrada' && !m.myParticipation?.read_at)
+  const pendingMeetings = meetings.filter(
+    (m) =>
+      m.status === 'convocada' ||
+      m.status === 'en_curso' ||
+      (m.status === 'cerrada' && !m.myParticipation?.read_at),
   );
-  
+
   const hasPending = pendingMeetings.length > 0;
 
   const handleMarkAsRead = async (meetingId: string) => {
@@ -83,13 +79,25 @@ export function MyMeetingsCard() {
   // Get badge and icon for meeting status
   const getMeetingBadge = (meeting: any) => {
     if (meeting.status === 'convocada') {
-      return <Badge variant="outline" className="text-xs">Convocado</Badge>;
+      return (
+        <Badge variant="outline" className="text-xs">
+          Convocado
+        </Badge>
+      );
     }
     if (meeting.status === 'en_curso') {
-      return <Badge variant="secondary" className="text-xs">En curso</Badge>;
+      return (
+        <Badge variant="secondary" className="text-xs">
+          En curso
+        </Badge>
+      );
     }
     // cerrada sin leer
-    return <Badge variant="destructive" className="text-xs">Sin leer</Badge>;
+    return (
+      <Badge variant="destructive" className="text-xs">
+        Sin leer
+      </Badge>
+    );
   };
 
   return (
@@ -109,7 +117,7 @@ export function MyMeetingsCard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {pendingMeetings.slice(0, 3).map(meeting => (
+          {pendingMeetings.slice(0, 3).map((meeting) => (
             <div
               key={meeting.id}
               className="flex items-center justify-between p-2 rounded-lg bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
@@ -118,7 +126,7 @@ export function MyMeetingsCard() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{meeting.title}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{format(new Date(meeting.date), "d MMM HH:mm", { locale: es })}</span>
+                  <span>{format(new Date(meeting.date), 'd MMM HH:mm', { locale: es })}</span>
                   {getMeetingBadge(meeting)}
                 </div>
               </div>
@@ -144,17 +152,20 @@ export function MyMeetingsCard() {
           <DialogHeader>
             <DialogTitle>{selectedMeeting?.title}</DialogTitle>
           </DialogHeader>
-          
+
           {selectedMeeting && (
             <ScrollArea className="max-h-[60vh]">
               <div className="space-y-4 pr-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
                   <span>
-                    {format(new Date(selectedMeeting.date), "EEEE d 'de' MMMM, HH:mm", { locale: es })}
+                    {format(new Date(selectedMeeting.date), "EEEE d 'de' MMMM, HH:mm", {
+                      locale: es,
+                    })}
                   </span>
                   <Badge variant="secondary">
-                    {MEETING_AREAS.find(a => a.value === selectedMeeting.area)?.label || selectedMeeting.area}
+                    {MEETING_AREAS.find((a) => a.value === selectedMeeting.area)?.label ||
+                      selectedMeeting.area}
                   </Badge>
                 </div>
 
@@ -168,18 +179,21 @@ export function MyMeetingsCard() {
                         El encargado tomará asistencia el día de la reunión
                       </p>
                     </div>
-                    
+
                     <Button
                       variant="outline"
                       className="w-full"
-                      onClick={() => window.open(
-                        generateGoogleCalendarLink({
-                          title: selectedMeeting.title,
-                          date: selectedMeeting.date,
-                          area: MEETING_AREAS.find(a => a.value === selectedMeeting.area)?.label,
-                        }),
-                        '_blank'
-                      )}
+                      onClick={() =>
+                        window.open(
+                          generateGoogleCalendarLink({
+                            title: selectedMeeting.title,
+                            date: selectedMeeting.date,
+                            area: MEETING_AREAS.find((a) => a.value === selectedMeeting.area)
+                              ?.label,
+                          }),
+                          '_blank',
+                        )
+                      }
                     >
                       <Calendar className="w-4 h-4 mr-2" />
                       Agregar a Google Calendar
@@ -191,9 +205,7 @@ export function MyMeetingsCard() {
                   <div className="bg-muted p-4 rounded-lg text-center">
                     <Clock className="w-8 h-8 mx-auto mb-2 text-primary" />
                     <p className="text-sm font-medium">Reunión en curso</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Acercate a participar
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Acercate a participar</p>
                   </div>
                 )}
 
@@ -206,22 +218,26 @@ export function MyMeetingsCard() {
                   </div>
                 )}
 
-                {selectedMeeting.status === 'cerrada' && !selectedMeeting.myParticipation?.read_at && (
-                  <Button
-                    className="w-full"
-                    onClick={() => handleMarkAsRead(selectedMeeting.id)}
-                    disabled={markAsRead.isPending}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Confirmar lectura
-                  </Button>
-                )}
+                {selectedMeeting.status === 'cerrada' &&
+                  !selectedMeeting.myParticipation?.read_at && (
+                    <Button
+                      className="w-full"
+                      onClick={() => handleMarkAsRead(selectedMeeting.id)}
+                      disabled={markAsRead.isPending}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Confirmar lectura
+                    </Button>
+                  )}
 
                 {selectedMeeting.myParticipation?.read_at && (
                   <div className="flex items-center justify-center gap-2 text-sm text-success">
                     <CheckCircle2 className="w-4 h-4" />
                     <span>
-                      Leído el {format(new Date(selectedMeeting.myParticipation.read_at), "d MMM HH:mm", { locale: es })}
+                      Leído el{' '}
+                      {format(new Date(selectedMeeting.myParticipation.read_at), 'd MMM HH:mm', {
+                        locale: es,
+                      })}
                     </span>
                   </div>
                 )}

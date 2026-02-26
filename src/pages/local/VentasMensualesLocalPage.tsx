@@ -4,7 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/ui/page-header';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,20 +63,29 @@ export default function VentasMensualesLocalPage() {
   const periodoForNew = editingVenta ? editingVenta.periodo : getCurrentPeriodo();
   const posEnabled = usePosEnabled(branchId || undefined);
   const currentPeriodo = getCurrentPeriodo();
-  const { data: posVentas, isLoading: loadingPos } = usePosVentasAgregadas(branchId!, currentPeriodo, posEnabled);
+  const { data: posVentas, isLoading: loadingPos } = usePosVentasAgregadas(
+    branchId!,
+    currentPeriodo,
+    posEnabled,
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Ventas Mensuales"
-        subtitle={branch ? `Venta total y efectivo por período — ${branch.name}` : 'Venta total y efectivo por período'}
+        subtitle={
+          branch
+            ? `Venta total y efectivo por período — ${branch.name}`
+            : 'Venta total y efectivo por período'
+        }
       />
 
       {posEnabled && (
         <Alert>
           <Monitor className="w-4 h-4" />
           <AlertDescription>
-            Con POS habilitado, las ventas se registran automáticamente desde el Punto de Venta. La carga manual está deshabilitada.
+            Con POS habilitado, las ventas se registran automáticamente desde el Punto de Venta. La
+            carga manual está deshabilitada.
           </AlertDescription>
         </Alert>
       )}
@@ -87,15 +103,21 @@ export default function VentasMensualesLocalPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <div className="text-xs text-muted-foreground">Venta Total</div>
-                  <div className="text-xl font-bold font-mono">$ {(posVentas?.total ?? 0).toLocaleString('es-AR')}</div>
+                  <div className="text-xl font-bold font-mono">
+                    $ {(posVentas?.total ?? 0).toLocaleString('es-AR')}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Efectivo</div>
-                  <div className="text-xl font-bold font-mono">$ {(posVentas?.ft ?? 0).toLocaleString('es-AR')}</div>
+                  <div className="text-xl font-bold font-mono">
+                    $ {(posVentas?.ft ?? 0).toLocaleString('es-AR')}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Digital</div>
-                  <div className="text-xl font-bold font-mono">$ {(posVentas?.fc ?? 0).toLocaleString('es-AR')}</div>
+                  <div className="text-xl font-bold font-mono">
+                    $ {(posVentas?.fc ?? 0).toLocaleString('es-AR')}
+                  </div>
                 </div>
               </div>
             )}
@@ -129,7 +151,9 @@ export default function VentasMensualesLocalPage() {
               Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -163,7 +187,9 @@ export default function VentasMensualesLocalPage() {
                       $ {online.toLocaleString('es-AR')}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Badge variant={parseFloat(pctEf) > 30 ? 'destructive' : 'secondary'}>{pctEf}%</Badge>
+                      <Badge variant={parseFloat(pctEf) > 30 ? 'destructive' : 'secondary'}>
+                        {pctEf}%
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       $ {canonTotal.toLocaleString('es-AR')}
@@ -174,7 +200,11 @@ export default function VentasMensualesLocalPage() {
                           <Button variant="ghost" size="icon" onClick={() => openModal(v)}>
                             <Pencil className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ id: v.id, periodo: v.periodo })}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget({ id: v.id, periodo: v.periodo })}
+                          >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </div>
@@ -204,9 +234,13 @@ export default function VentasMensualesLocalPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title="Eliminar registro de ventas"
-        description={deleteTarget ? `¿Eliminar las ventas de ${formatPeriodo(deleteTarget.periodo)}?` : ''}
+        description={
+          deleteTarget ? `¿Eliminar las ventas de ${formatPeriodo(deleteTarget.periodo)}?` : ''
+        }
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={() => {

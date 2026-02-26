@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,8 +37,8 @@ export function CoachingHistoryTab({ branchId }: CoachingHistoryTabProps) {
         .in('local_role', ['empleado', 'cajero']);
 
       if (rolesError) throw rolesError;
-      
-      const userIds = roles?.map(r => r.user_id) ?? [];
+
+      const userIds = roles?.map((r) => r.user_id) ?? [];
       if (userIds.length === 0) return [];
 
       // Obtener perfiles
@@ -62,7 +62,7 @@ export function CoachingHistoryTab({ branchId }: CoachingHistoryTabProps) {
 
       // Agrupar por usuario
       const userCoachings = new Map<string, { count: number; latestScore: number | null }>();
-      coachings?.forEach(c => {
+      coachings?.forEach((c) => {
         const existing = userCoachings.get(c.user_id);
         if (!existing) {
           userCoachings.set(c.user_id, { count: 1, latestScore: c.overall_score });
@@ -71,11 +71,15 @@ export function CoachingHistoryTab({ branchId }: CoachingHistoryTabProps) {
         }
       });
 
-      return profiles?.map(p => ({
-        ...p,
-        coaching_count: userCoachings.get(p.id)?.count ?? 0,
-        latest_score: userCoachings.get(p.id)?.latestScore ?? null,
-      })).sort((a, b) => b.coaching_count - a.coaching_count) ?? [];
+      return (
+        profiles
+          ?.map((p) => ({
+            ...p,
+            coaching_count: userCoachings.get(p.id)?.count ?? 0,
+            latest_score: userCoachings.get(p.id)?.latestScore ?? null,
+          }))
+          .sort((a, b) => b.coaching_count - a.coaching_count) ?? []
+      );
     },
     enabled: !!branchId,
   });
@@ -83,24 +87,25 @@ export function CoachingHistoryTab({ branchId }: CoachingHistoryTabProps) {
   // Filtrar por búsqueda
   const filteredEmployees = useMemo(() => {
     if (!employees) return [];
-    if (!searchTerm) return employees.filter(e => e.coaching_count > 0);
-    
+    if (!searchTerm) return employees.filter((e) => e.coaching_count > 0);
+
     const term = searchTerm.toLowerCase();
     return employees
-      .filter(e => e.coaching_count > 0)
-      .filter(e => e.full_name.toLowerCase().includes(term));
+      .filter((e) => e.coaching_count > 0)
+      .filter((e) => e.full_name.toLowerCase().includes(term));
   }, [employees, searchTerm]);
 
   // Stats agregados
   const stats = useMemo(() => {
     if (!employees) return { totalCoachings: 0, avgScore: null, employeesWithCoachings: 0 };
-    
-    const withCoachings = employees.filter(e => e.coaching_count > 0);
+
+    const withCoachings = employees.filter((e) => e.coaching_count > 0);
     const totalCoachings = withCoachings.reduce((sum, e) => sum + e.coaching_count, 0);
     const scoresSum = withCoachings.reduce((sum, e) => sum + (e.latest_score || 0), 0);
-    const avgScore = withCoachings.length > 0 
-      ? scoresSum / withCoachings.filter(e => e.latest_score !== null).length 
-      : null;
+    const avgScore =
+      withCoachings.length > 0
+        ? scoresSum / withCoachings.filter((e) => e.latest_score !== null).length
+        : null;
 
     return {
       totalCoachings,
@@ -135,16 +140,14 @@ export function CoachingHistoryTab({ branchId }: CoachingHistoryTabProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-full bg-green-100 dark:bg-green-950">
               <TrendingUp className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {stats.avgScore?.toFixed(1) || '-'}
-              </p>
+              <p className="text-2xl font-bold">{stats.avgScore?.toFixed(1) || '-'}</p>
               <p className="text-xs text-muted-foreground">Score promedio</p>
             </div>
           </CardContent>
@@ -187,7 +190,7 @@ export function CoachingHistoryTab({ branchId }: CoachingHistoryTabProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredEmployees.map(employee => (
+          {filteredEmployees.map((employee) => (
             <EmployeeCoachingCard
               key={employee.id}
               employee={employee}

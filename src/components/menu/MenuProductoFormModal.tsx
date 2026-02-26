@@ -3,7 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormRow, FormSection } from '@/components/ui/forms-pro';
 import { StickyActions } from '@/components/ui/forms-pro';
 import { ChefHat } from 'lucide-react';
@@ -19,7 +25,12 @@ interface Props {
   preselectedCategoriaId?: string | null;
 }
 
-export function MenuProductoFormModal({ open, onOpenChange, producto, preselectedCategoriaId }: Props) {
+export function MenuProductoFormModal({
+  open,
+  onOpenChange,
+  producto,
+  preselectedCategoriaId,
+}: Props) {
   const { create, update } = useMenuProductoMutations();
   const { data: categorias } = useMenuCategorias();
   const { data: insumos } = useInsumos();
@@ -54,14 +65,19 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
       });
     } else {
       setForm({
-        nombre: '', nombre_corto: '', descripcion: '',
-        tipo: 'elaborado', categoria_id: preselectedCategoriaId || '', insumo_id: '',
-        disponible_delivery: true, visible_en_carta: true,
+        nombre: '',
+        nombre_corto: '',
+        descripcion: '',
+        tipo: 'elaborado',
+        categoria_id: preselectedCategoriaId || '',
+        insumo_id: '',
+        disponible_delivery: true,
+        visible_en_carta: true,
       });
     }
   }, [producto, open, preselectedCategoriaId]);
 
-  const set = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+  const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async () => {
     if (!form.nombre.trim()) return;
@@ -97,20 +113,35 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
 
         <div className="space-y-4">
           <FormRow label="Nombre del producto" required>
-            <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Ej: Hamburguesa Clásica" />
+            <Input
+              value={form.nombre}
+              onChange={(e) => set('nombre', e.target.value)}
+              placeholder="Ej: Hamburguesa Clásica"
+            />
           </FormRow>
 
           <div className="grid grid-cols-2 gap-3">
             <FormRow label="Nombre corto" hint="Para tickets">
-              <Input value={form.nombre_corto} onChange={(e) => set('nombre_corto', e.target.value)} placeholder="Ej: H. Clásica" />
+              <Input
+                value={form.nombre_corto}
+                onChange={(e) => set('nombre_corto', e.target.value)}
+                placeholder="Ej: H. Clásica"
+              />
             </FormRow>
             <FormRow label="Categoría">
-              <Select value={form.categoria_id || 'none'} onValueChange={(v) => set('categoria_id', v === 'none' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+              <Select
+                value={form.categoria_id || 'none'}
+                onValueChange={(v) => set('categoria_id', v === 'none' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin categoría</SelectItem>
                   {categorias?.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nombre}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -118,19 +149,30 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
           </div>
 
           <FormRow label="Descripción">
-            <Textarea value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} placeholder="Descripción del producto..." rows={2} />
+            <Textarea
+              value={form.descripcion}
+              onChange={(e) => set('descripcion', e.target.value)}
+              placeholder="Descripción del producto..."
+              rows={2}
+            />
           </FormRow>
 
           {/* TIPO */}
           <FormSection title="Tipo de producto" icon={ChefHat}>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => set('tipo', 'elaborado')}
-                className={`p-4 rounded-lg border-2 text-left transition-colors ${form.tipo === 'elaborado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+              <button
+                type="button"
+                onClick={() => set('tipo', 'elaborado')}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${form.tipo === 'elaborado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              >
                 <p className="font-medium">Elaborado</p>
                 <p className="text-xs text-muted-foreground">Tiene ficha técnica / receta</p>
               </button>
-              <button type="button" onClick={() => set('tipo', 'terminado')}
-                className={`p-4 rounded-lg border-2 text-left transition-colors ${form.tipo === 'terminado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+              <button
+                type="button"
+                onClick={() => set('tipo', 'terminado')}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${form.tipo === 'terminado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              >
                 <p className="font-medium">Terminado</p>
                 <p className="text-xs text-muted-foreground">Se vende como viene (bebidas)</p>
               </button>
@@ -138,12 +180,19 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
 
             {form.tipo === 'terminado' && (
               <FormRow label="Producto de origen" required className="mt-4">
-                <Select value={form.insumo_id || 'none'} onValueChange={(v) => set('insumo_id', v === 'none' ? '' : v)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar producto..." /></SelectTrigger>
+                <Select
+                  value={form.insumo_id || 'none'}
+                  onValueChange={(v) => set('insumo_id', v === 'none' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar producto..." />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Seleccionar...</SelectItem>
                     {productosTerminados.map((i: any) => (
-                      <SelectItem key={i.id} value={i.id}>{i.nombre}</SelectItem>
+                      <SelectItem key={i.id} value={i.id}>
+                        {i.nombre}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -154,14 +203,20 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
           {/* DELIVERY */}
           <div className="flex items-center justify-between">
             <span className="text-sm">Disponible para delivery</span>
-            <Switch checked={form.disponible_delivery} onCheckedChange={(v) => set('disponible_delivery', v)} />
+            <Switch
+              checked={form.disponible_delivery}
+              onCheckedChange={(v) => set('disponible_delivery', v)}
+            />
           </div>
 
           {/* VISIBILIDAD */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-sm">Visible en la carta</span>
-              <Switch checked={form.visible_en_carta} onCheckedChange={(v) => set('visible_en_carta', v)} />
+              <Switch
+                checked={form.visible_en_carta}
+                onCheckedChange={(v) => set('visible_en_carta', v)}
+              />
             </div>
             <p className="text-xs text-muted-foreground">
               Desactivá esto para productos base que solo se usan en combos
@@ -169,8 +224,14 @@ export function MenuProductoFormModal({ open, onOpenChange, producto, preselecte
           </div>
 
           <StickyActions>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.nombre || (form.tipo === 'terminado' && !form.insumo_id)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <LoadingButton
+              loading={isPending}
+              onClick={handleSubmit}
+              disabled={!form.nombre || (form.tipo === 'terminado' && !form.insumo_id)}
+            >
               {isEdit ? 'Guardar' : 'Crear Producto'}
             </LoadingButton>
           </StickyActions>

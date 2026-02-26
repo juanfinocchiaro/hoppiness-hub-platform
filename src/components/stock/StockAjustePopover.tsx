@@ -24,7 +24,12 @@ interface StockAjustePopoverProps {
 }
 
 export function StockAjustePopover({
-  branchId, insumoId, insumoNombre, cantidadActual, unidad, children,
+  branchId,
+  insumoId,
+  insumoNombre,
+  cantidadActual,
+  unidad,
+  children,
 }: StockAjustePopoverProps) {
   const [open, setOpen] = useState(false);
   const [nuevaCantidad, setNuevaCantidad] = useState('');
@@ -43,7 +48,7 @@ export function StockAjustePopover({
           setNuevaCantidad('');
           setNota('');
         },
-      }
+      },
     );
   };
 
@@ -56,7 +61,9 @@ export function StockAjustePopover({
 
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Actual:</span>
-            <span className="font-mono font-medium">{cantidadActual} {unidad}</span>
+            <span className="font-mono font-medium">
+              {cantidadActual} {unidad}
+            </span>
           </div>
 
           <div>
@@ -66,7 +73,7 @@ export function StockAjustePopover({
               min="0"
               step="0.01"
               value={nuevaCantidad}
-              onChange={e => setNuevaCantidad(e.target.value)}
+              onChange={(e) => setNuevaCantidad(e.target.value)}
               placeholder="0"
               className="mt-1"
               autoFocus
@@ -76,10 +83,12 @@ export function StockAjustePopover({
           <div>
             <Label className="text-xs">Motivo</Label>
             <RadioGroup value={motivo} onValueChange={setMotivo} className="mt-1 space-y-1">
-              {MOTIVOS.map(m => (
+              {MOTIVOS.map((m) => (
                 <div key={m.value} className="flex items-center gap-2">
                   <RadioGroupItem value={m.value} id={`mot-${m.value}`} />
-                  <Label htmlFor={`mot-${m.value}`} className="text-xs font-normal">{m.label}</Label>
+                  <Label htmlFor={`mot-${m.value}`} className="text-xs font-normal">
+                    {m.label}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
@@ -89,7 +98,7 @@ export function StockAjustePopover({
             <Label className="text-xs">Nota (opcional)</Label>
             <Textarea
               value={nota}
-              onChange={e => setNota(e.target.value)}
+              onChange={(e) => setNota(e.target.value)}
               rows={2}
               className="mt-1 text-xs"
               placeholder="Detalle adicional..."
@@ -97,7 +106,9 @@ export function StockAjustePopover({
           </div>
 
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button size="sm" onClick={handleSave} disabled={ajuste.isPending || !nuevaCantidad}>
               Guardar
             </Button>

@@ -25,15 +25,18 @@ export function InvoicingSection({
   noFacturado,
 }: InvoicingSectionProps) {
   const diferencia = totalFacturado - facturacionEsperada;
-  const porcentajeDiferencia = facturacionEsperada > 0 
-    ? (diferencia / facturacionEsperada) * 100 
-    : 0;
+  const porcentajeDiferencia =
+    facturacionEsperada > 0 ? (diferencia / facturacionEsperada) * 100 : 0;
   const tieneAlerta = facturacionEsperada > 0 && Math.abs(porcentajeDiferencia) > 10;
   const esValido = totalFacturado > 0 && !tieneAlerta;
-  
+
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
-  
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
+
   const parseNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value) || 0;
     return Math.max(0, val);
@@ -72,7 +75,7 @@ export function InvoicingSection({
                 placeholder="0"
               />
             </div>
-            
+
             {/* Calculation breakdown */}
             <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
               <div className="flex justify-between text-muted-foreground">
@@ -93,10 +96,13 @@ export function InvoicingSection({
                 Según las reglas de facturación configuradas para este local.
               </p>
             </div>
-            
+
             {/* Difference alert */}
             {totalFacturado > 0 && (
-              <Alert variant={tieneAlerta ? 'destructive' : 'default'} className={!tieneAlerta ? 'border-success bg-success/10' : ''}>
+              <Alert
+                variant={tieneAlerta ? 'destructive' : 'default'}
+                className={!tieneAlerta ? 'border-success bg-success/10' : ''}
+              >
                 {tieneAlerta ? (
                   <AlertTriangle className="h-4 w-4" />
                 ) : (
@@ -104,15 +110,17 @@ export function InvoicingSection({
                 )}
                 <AlertDescription className="flex items-center justify-between">
                   <span>
-                    Diferencia: {diferencia > 0 ? '+' : ''}{formatCurrency(diferencia)}
+                    Diferencia: {diferencia > 0 ? '+' : ''}
+                    {formatCurrency(diferencia)}
                   </span>
                   <span className="text-xs">
-                    ({porcentajeDiferencia > 0 ? '+' : ''}{porcentajeDiferencia.toFixed(1)}%)
+                    ({porcentajeDiferencia > 0 ? '+' : ''}
+                    {porcentajeDiferencia.toFixed(1)}%)
                   </span>
                 </AlertDescription>
               </Alert>
             )}
-            
+
             {tieneAlerta && (
               <p className="text-xs text-warning">
                 ⚠️ La diferencia supera el 10%. Verificá los montos ingresados.

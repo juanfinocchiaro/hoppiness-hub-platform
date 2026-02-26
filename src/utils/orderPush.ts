@@ -13,14 +13,16 @@ export function sendOrderPushNotification(params: {
 }) {
   if (!params.clienteUserId) return;
 
-  supabase.functions.invoke('send-order-push', {
-    body: {
-      pedido_id: params.pedidoId,
-      estado: params.estado,
-      numero_pedido: params.numeroPedido,
-      cliente_user_id: params.clienteUserId,
-    },
-  }).catch(() => {
-    // Silently ignore — push is best-effort
-  });
+  supabase.functions
+    .invoke('send-order-push', {
+      body: {
+        pedido_id: params.pedidoId,
+        estado: params.estado,
+        numero_pedido: params.numeroPedido,
+        cliente_user_id: params.clienteUserId,
+      },
+    })
+    .catch(() => {
+      // Silently ignore — push is best-effort
+    });
 }

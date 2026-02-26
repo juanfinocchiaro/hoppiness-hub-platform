@@ -24,10 +24,7 @@ interface CoachingData {
 /**
  * Exporta coachings a CSV
  */
-export function exportCoachingsToCSV(
-  coachings: CoachingData[],
-  filename?: string
-): void {
+export function exportCoachingsToCSV(coachings: CoachingData[], filename?: string): void {
   const headers = [
     'Fecha',
     'Empleado',
@@ -41,7 +38,7 @@ export function exportCoachingsToCSV(
     'Confirmado',
   ];
 
-  const rows = coachings.map(c => [
+  const rows = coachings.map((c) => [
     format(new Date(c.coaching_date), 'dd/MM/yyyy'),
     c.employee?.full_name || '-',
     c.evaluator?.full_name || '-',
@@ -54,23 +51,20 @@ export function exportCoachingsToCSV(
     c.acknowledged_at ? 'Sí' : 'No',
   ]);
 
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.join(',')),
-  ].join('\n');
+  const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
 
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  
+
   link.setAttribute('href', url);
   link.setAttribute('download', filename || `coachings_${format(new Date(), 'yyyy-MM-dd')}.csv`);
   link.style.visibility = 'hidden';
-  
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 }
 
@@ -81,21 +75,20 @@ export function generateMonthlyReport(
   coachings: CoachingData[],
   branchName: string,
   month: number,
-  year: number
+  year: number,
 ): string {
   const monthName = format(new Date(year, month - 1), 'MMMM yyyy', { locale: es });
-  
+
   const totalCoachings = coachings.length;
-  const confirmedCount = coachings.filter(c => c.acknowledged_at).length;
-  
+  const confirmedCount = coachings.filter((c) => c.acknowledged_at).length;
+
   const scores = coachings
-    .filter(c => c.overall_score !== null)
-    .map(c => c.overall_score as number);
-  
-  const avgScore = scores.length > 0
-    ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
-    : 'N/A';
-  
+    .filter((c) => c.overall_score !== null)
+    .map((c) => c.overall_score as number);
+
+  const avgScore =
+    scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 'N/A';
+
   const maxScore = scores.length > 0 ? Math.max(...scores).toFixed(2) : 'N/A';
   const minScore = scores.length > 0 ? Math.min(...scores).toFixed(2) : 'N/A';
 
@@ -119,9 +112,12 @@ export function generateMonthlyReport(
 
 👥 DETALLE POR EMPLEADO
 ─────────────────────────────────────────────────
-${coachings.map(c => 
-  `• ${c.employee?.full_name || 'Sin nombre'}: ${c.overall_score?.toFixed(1) || '-'}/4 ${c.acknowledged_at ? '✓' : '⏳'}`
-).join('\n')}
+${coachings
+  .map(
+    (c) =>
+      `• ${c.employee?.full_name || 'Sin nombre'}: ${c.overall_score?.toFixed(1) || '-'}/4 ${c.acknowledged_at ? '✓' : '⏳'}`,
+  )
+  .join('\n')}
 
 ═══════════════════════════════════════════════════
 Generado el ${format(new Date(), "d 'de' MMMM yyyy 'a las' HH:mm", { locale: es })}

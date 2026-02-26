@@ -53,8 +53,10 @@ export function useCoachingStats(branchId: string | null) {
       if (rolesError) throw rolesError;
 
       // Separar empleados/cajeros de encargados
-      const employeeIds = employeeRoles?.filter(r => r.local_role !== 'encargado').map(r => r.user_id) ?? [];
-      const managerIds = employeeRoles?.filter(r => r.local_role === 'encargado').map(r => r.user_id) ?? [];
+      const employeeIds =
+        employeeRoles?.filter((r) => r.local_role !== 'encargado').map((r) => r.user_id) ?? [];
+      const managerIds =
+        employeeRoles?.filter((r) => r.local_role === 'encargado').map((r) => r.user_id) ?? [];
       const totalEmployees = employeeIds.length;
       const totalManagers = managerIds.length;
 
@@ -85,30 +87,31 @@ export function useCoachingStats(branchId: string | null) {
       if (coachingsError) throw coachingsError;
 
       // Separar coachings de empleados/cajeros vs encargados
-      const employeeCoachings = coachings?.filter(c => employeeIds.includes(c.user_id)) ?? [];
-      const managerCoachings = coachings?.filter(c => managerIds.includes(c.user_id)) ?? [];
-      
+      const employeeCoachings = coachings?.filter((c) => employeeIds.includes(c.user_id)) ?? [];
+      const managerCoachings = coachings?.filter((c) => managerIds.includes(c.user_id)) ?? [];
+
       const coachingsThisMonth = employeeCoachings.length;
-      const employeesWithCoaching = new Set(employeeCoachings.map(c => c.user_id));
-      const employeesWithoutCoaching = employeeIds.filter(id => !employeesWithCoaching.has(id));
+      const employeesWithCoaching = new Set(employeeCoachings.map((c) => c.user_id));
+      const employeesWithoutCoaching = employeeIds.filter((id) => !employeesWithCoaching.has(id));
       const pendingCoachings = employeesWithoutCoaching.length;
-      const pendingAcknowledgments = employeeCoachings.filter(c => !c.acknowledged_at).length;
+      const pendingAcknowledgments = employeeCoachings.filter((c) => !c.acknowledged_at).length;
 
       // Stats de managers
       const managersWithCoaching = managerCoachings.length;
-      const managersWithCoachingSet = new Set(managerCoachings.map(c => c.user_id));
-      const managersWithoutCoaching = managerIds.filter(id => !managersWithCoachingSet.has(id));
+      const managersWithCoachingSet = new Set(managerCoachings.map((c) => c.user_id));
+      const managersWithoutCoaching = managerIds.filter((id) => !managersWithCoachingSet.has(id));
       const pendingManagerCoachings = managersWithoutCoaching.length;
 
       // Calcular promedio de scores (solo empleados/cajeros)
-      const scoresWithValues = employeeCoachings.filter(c => c.overall_score !== null);
-      const averageScore = scoresWithValues.length > 0
-        ? scoresWithValues.reduce((sum, c) => sum + (c.overall_score || 0), 0) / scoresWithValues.length
-        : null;
+      const scoresWithValues = employeeCoachings.filter((c) => c.overall_score !== null);
+      const averageScore =
+        scoresWithValues.length > 0
+          ? scoresWithValues.reduce((sum, c) => sum + (c.overall_score || 0), 0) /
+            scoresWithValues.length
+          : null;
 
-      const completionRate = totalEmployees > 0 
-        ? Math.round((coachingsThisMonth / totalEmployees) * 100) 
-        : 0;
+      const completionRate =
+        totalEmployees > 0 ? Math.round((coachingsThisMonth / totalEmployees) * 100) : 0;
 
       return {
         totalEmployees,
@@ -168,7 +171,8 @@ export function useMyPendingCoachings() {
 
       const { data, error } = await supabase
         .from('coachings')
-        .select(`
+        .select(
+          `
           id,
           coaching_date,
           coaching_month,
@@ -176,7 +180,8 @@ export function useMyPendingCoachings() {
           overall_score,
           strengths,
           areas_to_improve
-        `)
+        `,
+        )
         .eq('user_id', session.session.user.id)
         .is('acknowledged_at', null)
         .order('coaching_date', { ascending: false });
@@ -190,7 +195,11 @@ export function useMyPendingCoachings() {
 /**
  * Hook para obtener historial de scores de un empleado
  */
-export function useEmployeeScoreHistory(userId: string | null, branchId: string | null, months: number = 6) {
+export function useEmployeeScoreHistory(
+  userId: string | null,
+  branchId: string | null,
+  months: number = 6,
+) {
   return useQuery({
     queryKey: ['employee-score-history', userId, branchId, months],
     queryFn: async () => {

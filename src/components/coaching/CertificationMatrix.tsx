@@ -1,5 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CertificationBadge } from './CertificationBadge';
@@ -45,16 +52,19 @@ export function CertificationMatrix({ branchId, employees }: CertificationMatrix
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-4">
-            No hay estaciones configuradas
-          </p>
+          <p className="text-muted-foreground text-center py-4">No hay estaciones configuradas</p>
         </CardContent>
       </Card>
     );
   }
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -71,7 +81,7 @@ export function CertificationMatrix({ branchId, employees }: CertificationMatrix
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[180px]">Empleado</TableHead>
-                {stations.map(station => (
+                {stations.map((station) => (
                   <TableHead key={station.id} className="text-center min-w-[80px]">
                     {station.name.split('/')[0]}
                   </TableHead>
@@ -79,9 +89,9 @@ export function CertificationMatrix({ branchId, employees }: CertificationMatrix
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.map(employee => {
+              {employees.map((employee) => {
                 const userCerts = certData?.byUser[employee.id] || {};
-                
+
                 return (
                   <TableRow key={employee.id}>
                     <TableCell>
@@ -97,15 +107,15 @@ export function CertificationMatrix({ branchId, employees }: CertificationMatrix
                         </span>
                       </div>
                     </TableCell>
-                    {stations.map(station => {
+                    {stations.map((station) => {
                       const cert = userCerts[station.id];
                       const level = (cert?.level ?? 0) as CertificationLevel;
-                      
+
                       return (
                         <TableCell key={station.id} className="text-center">
                           <div className="flex justify-center">
-                            <CertificationBadge 
-                              level={level} 
+                            <CertificationBadge
+                              level={level}
                               stationName={station.name}
                               size="md"
                             />

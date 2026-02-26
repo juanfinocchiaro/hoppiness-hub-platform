@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,7 +29,8 @@ export default function SociosPage() {
   const [movSocio, setMovSocio] = useState<Socio | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const totalPorcentaje = socios?.reduce((sum, s) => sum + Number(s.porcentaje_participacion), 0) || 0;
+  const totalPorcentaje =
+    socios?.reduce((sum, s) => sum + Number(s.porcentaje_participacion), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -30,7 +38,12 @@ export default function SociosPage() {
         title="Socios"
         subtitle={`Participaciones: ${totalPorcentaje.toFixed(1)}%`}
         actions={
-          <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" /> Nuevo Socio
           </Button>
         }
@@ -60,33 +73,60 @@ export default function SociosPage() {
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !socios?.length ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-40">
-                  <EmptyState icon={Users} title="Sin socios" description="Registrá a los socios del local" />
+                  <EmptyState
+                    icon={Users}
+                    title="Sin socios"
+                    description="Registrá a los socios del local"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
               socios.map((socio) => (
                 <>
-                  <TableRow key={socio.id} className="cursor-pointer" onClick={() => setExpanded(expanded === socio.id ? null : socio.id)}>
+                  <TableRow
+                    key={socio.id}
+                    className="cursor-pointer"
+                    onClick={() => setExpanded(expanded === socio.id ? null : socio.id)}
+                  >
                     <TableCell>
-                      {expanded === socio.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {expanded === socio.id ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
                     </TableCell>
                     <TableCell className="font-medium">{socio.nombre}</TableCell>
                     <TableCell className="text-sm">{socio.cuit || '-'}</TableCell>
-                    <TableCell className="text-right font-mono">{Number(socio.porcentaje_participacion).toFixed(1)}%</TableCell>
-                    <TableCell className="text-sm">{new Date(socio.fecha_ingreso).toLocaleDateString('es-AR')}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {Number(socio.porcentaje_participacion).toFixed(1)}%
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(socio.fecha_ingreso).toLocaleDateString('es-AR')}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant={socio.activo ? 'default' : 'secondary'}>{socio.activo ? 'Activo' : 'Inactivo'}</Badge>
+                      <Badge variant={socio.activo ? 'default' : 'secondary'}>
+                        {socio.activo ? 'Activo' : 'Inactivo'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" onClick={() => { setEditing(socio); setModalOpen(true); }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditing(socio);
+                            setModalOpen(true);
+                          }}
+                        >
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setMovSocio(socio)}>
@@ -109,10 +149,23 @@ export default function SociosPage() {
         </Table>
       </div>
 
-      <SocioFormModal open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) setEditing(null); }} branchId={branchId!} socio={editing} />
+      <SocioFormModal
+        open={modalOpen}
+        onOpenChange={(o) => {
+          setModalOpen(o);
+          if (!o) setEditing(null);
+        }}
+        branchId={branchId!}
+        socio={editing}
+      />
 
       {movSocio && (
-        <MovimientoSocioModal open={!!movSocio} onOpenChange={() => setMovSocio(null)} branchId={branchId!} socio={movSocio} />
+        <MovimientoSocioModal
+          open={!!movSocio}
+          onOpenChange={() => setMovSocio(null)}
+          branchId={branchId!}
+          socio={movSocio}
+        />
       )}
     </div>
   );
@@ -121,12 +174,22 @@ export default function SociosPage() {
 function SocioMovimientosSubtable({ branchId, socioId }: { branchId: string; socioId: string }) {
   const { data: movimientos, isLoading } = useMovimientosSocio(branchId, socioId);
 
-  const getTipoLabel = (tipo: string) => TIPO_MOVIMIENTO_OPTIONS.find(t => t.value === tipo)?.label || tipo;
+  const getTipoLabel = (tipo: string) =>
+    TIPO_MOVIMIENTO_OPTIONS.find((t) => t.value === tipo)?.label || tipo;
 
-  if (isLoading) return <div className="p-4"><Skeleton className="h-20 w-full" /></div>;
+  if (isLoading)
+    return (
+      <div className="p-4">
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
 
   if (!movimientos?.length) {
-    return <div className="p-4 text-sm text-muted-foreground text-center">Sin movimientos registrados</div>;
+    return (
+      <div className="p-4 text-sm text-muted-foreground text-center">
+        Sin movimientos registrados
+      </div>
+    );
   }
 
   return (
@@ -142,10 +205,18 @@ function SocioMovimientosSubtable({ branchId, socioId }: { branchId: string; soc
       <TableBody>
         {movimientos.map((m) => (
           <TableRow key={m.id}>
-            <TableCell className="text-sm">{new Date(m.fecha).toLocaleDateString('es-AR')}</TableCell>
-            <TableCell><Badge variant="outline">{getTipoLabel(m.tipo)}</Badge></TableCell>
-            <TableCell className="text-right font-mono">$ {Number(m.monto).toLocaleString('es-AR')}</TableCell>
-            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{m.observaciones || '-'}</TableCell>
+            <TableCell className="text-sm">
+              {new Date(m.fecha).toLocaleDateString('es-AR')}
+            </TableCell>
+            <TableCell>
+              <Badge variant="outline">{getTipoLabel(m.tipo)}</Badge>
+            </TableCell>
+            <TableCell className="text-right font-mono">
+              $ {Number(m.monto).toLocaleString('es-AR')}
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+              {m.observaciones || '-'}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

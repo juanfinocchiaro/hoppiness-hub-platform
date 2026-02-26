@@ -15,7 +15,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 
-const estadoLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+const estadoLabels: Record<
+  string,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
   confirmado: { label: 'Confirmado', variant: 'secondary' },
   en_preparacion: { label: 'Preparando', variant: 'default' },
@@ -44,12 +47,14 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pedidos')
-        .select(`
+        .select(
+          `
           id, numero_pedido, estado, tipo_servicio,
           total, created_at, webapp_tracking_code,
           branch_id,
           pedido_items(nombre, cantidad, precio_unitario, subtotal)
-        `)
+        `,
+        )
         .eq('cliente_user_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(30);
@@ -59,17 +64,16 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
     enabled: !!user && open,
   });
 
-  const branchIds = [...new Set((orders || []).map(o => o.branch_id).filter(Boolean))];
+  const branchIds = [...new Set((orders || []).map((o) => o.branch_id).filter(Boolean))];
   const { data: branches } = useQuery({
     queryKey: ['branches-names-slugs-sheet', branchIds],
     queryFn: async () => {
       if (branchIds.length === 0) return {};
-      const { data } = await supabase
-        .from('branches')
-        .select('id, name, slug')
-        .in('id', branchIds);
+      const { data } = await supabase.from('branches').select('id, name, slug').in('id', branchIds);
       const map: Record<string, { name: string; slug: string | null }> = {};
-      data?.forEach(b => { map[b.id] = { name: b.name, slug: b.slug }; });
+      data?.forEach((b) => {
+        map[b.id] = { name: b.name, slug: b.slug };
+      });
       return map;
     },
     enabled: branchIds.length > 0,
@@ -106,8 +110,8 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
     }
   };
 
-  const activeOrders = (orders || []).filter(o => activeStates.includes(o.estado));
-  const pastOrders = (orders || []).filter(o => !activeStates.includes(o.estado));
+  const activeOrders = (orders || []).filter((o) => activeStates.includes(o.estado));
+  const pastOrders = (orders || []).filter((o) => !activeStates.includes(o.estado));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -124,7 +128,7 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
             <div className="flex items-center justify-center py-20">
               <SpinnerLoader size="sm" text="Cargando pedidos..." />
             </div>
-          ) : (!orders || orders.length === 0) ? (
+          ) : !orders || orders.length === 0 ? (
             <div className="text-center py-16">
               <ShoppingBag className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Aún no tenés pedidos</p>
@@ -133,15 +137,19 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
             <>
               {activeOrders.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">En curso</h3>
-                  {activeOrders.map(order => (
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    En curso
+                  </h3>
+                  {activeOrders.map((order) => (
                     <InlineOrderCard
                       key={order.id}
                       order={order}
                       branchName={branches?.[order.branch_id]?.name || ''}
                       branchSlug={branches?.[order.branch_id]?.slug || undefined}
                       isActive
-                      onTrack={() => order.webapp_tracking_code && handleTrack(order.webapp_tracking_code)}
+                      onTrack={() =>
+                        order.webapp_tracking_code && handleTrack(order.webapp_tracking_code)
+                      }
                     />
                   ))}
                 </div>
@@ -150,15 +158,19 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
               {pastOrders.length > 0 && (
                 <div className="space-y-2">
                   {activeOrders.length > 0 && (
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Anteriores</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Anteriores
+                    </h3>
                   )}
-                  {pastOrders.map(order => (
+                  {pastOrders.map((order) => (
                     <InlineOrderCard
                       key={order.id}
                       order={order}
                       branchName={branches?.[order.branch_id]?.name || ''}
                       branchSlug={branches?.[order.branch_id]?.slug || undefined}
-                      onTrack={() => order.webapp_tracking_code && handleTrack(order.webapp_tracking_code)}
+                      onTrack={() =>
+                        order.webapp_tracking_code && handleTrack(order.webapp_tracking_code)
+                      }
                       onReorder={() => handleReorder(order)}
                     />
                   ))}
@@ -172,7 +184,14 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
   );
 }
 
-function InlineOrderCard({ order, branchName, branchSlug, isActive, onTrack, onReorder }: {
+function InlineOrderCard({
+  order,
+  branchName,
+  branchSlug,
+  isActive,
+  onTrack,
+  onReorder,
+}: {
   order: any;
   branchName: string;
   branchSlug?: string;
@@ -182,12 +201,17 @@ function InlineOrderCard({ order, branchName, branchSlug, isActive, onTrack, onR
 }) {
   const estado = estadoLabels[order.estado] || { label: order.estado, variant: 'outline' as const };
   const items = order.pedido_items || [];
-  const itemsSummary = items.slice(0, 3).map((i: any) => `${i.cantidad}x ${i.nombre}`).join(' · ');
+  const itemsSummary = items
+    .slice(0, 3)
+    .map((i: any) => `${i.cantidad}x ${i.nombre}`)
+    .join(' · ');
   const moreItems = items.length > 3 ? ` +${items.length - 3} más` : '';
   const canReorder = !isActive && branchSlug && items.length > 0;
 
   return (
-    <div className={`rounded-xl border p-3 space-y-2 ${isActive ? 'border-primary/50 bg-primary/5' : 'bg-card'}`}>
+    <div
+      className={`rounded-xl border p-3 space-y-2 ${isActive ? 'border-primary/50 bg-primary/5' : 'bg-card'}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-bold text-sm">#{order.numero_pedido}</span>
@@ -197,19 +221,18 @@ function InlineOrderCard({ order, branchName, branchSlug, isActive, onTrack, onR
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {format(new Date(order.created_at), "d MMM yyyy · HH:mm", { locale: es })}
+        {format(new Date(order.created_at), 'd MMM yyyy · HH:mm', { locale: es })}
       </p>
 
       <p className="text-sm text-muted-foreground truncate">
-        {itemsSummary}{moreItems}
+        {itemsSummary}
+        {moreItems}
       </p>
 
       <Separator />
 
       <div className="flex items-center justify-between">
-        <span className="font-bold text-sm">
-          ${order.total?.toLocaleString('es-AR')}
-        </span>
+        <span className="font-bold text-sm">${order.total?.toLocaleString('es-AR')}</span>
         <div className="flex gap-2">
           {canReorder && onReorder && (
             <Button variant="outline" size="sm" onClick={onReorder}>

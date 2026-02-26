@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, Users, CheckCircle, Upload, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -36,11 +48,8 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
 
   useEffect(() => {
     const fetchBranches = async () => {
-      const { data } = await supabase
-        .from('branches_public')
-        .select('id, name')
-        .order('name');
-      
+      const { data } = await supabase.from('branches_public').select('id, name').order('name');
+
       if (data) setBranches(data);
     };
 
@@ -50,7 +59,11 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ];
       if (!validTypes.includes(file.type)) {
         toast.error('Solo se permiten archivos PDF, DOC o DOCX');
         return;
@@ -65,7 +78,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email || !formData.phone || !formData.branchId) {
       toast.error('Completá todos los campos obligatorios');
       return;
@@ -77,12 +90,12 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
     }
 
     setLoading(true);
-    
+
     try {
       // Upload CV to storage
       const fileExt = cvFile.name.split('.').pop();
       const fileName = `${Date.now()}-${formData.email.replace('@', '_at_')}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('cv-uploads')
         .upload(fileName, cvFile);
@@ -93,9 +106,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
       }
 
       // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('cv-uploads')
-        .getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from('cv-uploads').getPublicUrl(fileName);
 
       // Save job application to contact_messages (reusing existing table)
       const { error } = await supabase.from('contact_messages').insert({
@@ -125,7 +136,15 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
   const handleClose = () => {
     setSuccess(false);
     setCvFile(null);
-    setFormData({ name: '', email: '', phone: '', branchId: '', position: '', linkedinUrl: '', motivation: '' });
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      branchId: '',
+      position: '',
+      linkedinUrl: '',
+      motivation: '',
+    });
     onOpenChange(false);
   };
 
@@ -148,9 +167,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
             </div>
             <div>
               <DialogTitle>Trabajá con nosotros</DialogTitle>
-              <DialogDescription>
-                Sumate al equipo Hoppiness
-              </DialogDescription>
+              <DialogDescription>Sumate al equipo Hoppiness</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -162,7 +179,8 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
             </div>
             <h3 className="text-lg font-semibold">¡Postulación enviada!</h3>
             <p className="text-muted-foreground text-sm">
-              Gracias por tu interés en ser parte del equipo Hoppiness.<br />
+              Gracias por tu interés en ser parte del equipo Hoppiness.
+              <br />
               Te contactaremos a la brevedad.
             </p>
             <Button variant="outline" onClick={handleClose} className="mt-4">
@@ -210,7 +228,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="branch">¿En qué local te gustaría trabajar? *</Label>
-                <Select 
+                <Select
                   value={formData.branchId}
                   onValueChange={(value) => setFormData({ ...formData, branchId: value })}
                 >
@@ -229,7 +247,7 @@ export function EmpleoModal({ open, onOpenChange }: EmpleoModalProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="position">¿Qué puesto te interesa?</Label>
-                <Select 
+                <Select
                   value={formData.position}
                   onValueChange={(value) => setFormData({ ...formData, position: value })}
                 >

@@ -38,16 +38,14 @@ export function NoAccessState({
     <div
       className={cn(
         'flex flex-col items-center justify-center py-12 px-4 text-center min-h-[400px]',
-        className
+        className,
       )}
     >
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
         <ShieldX className="w-8 h-8 text-muted-foreground" />
       </div>
       <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-sm mb-4">
-        {description}
-      </p>
+      <p className="text-sm text-muted-foreground max-w-sm mb-4">{description}</p>
       {showBackButton && (
         <Button onClick={handleBack} variant="outline">
           <ArrowLeft className="w-4 h-4 mr-2" />

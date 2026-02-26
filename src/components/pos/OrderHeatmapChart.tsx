@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useOrderHeatmap, DAY_LABELS, HEATMAP_HOURS, type HeatmapMetric } from '@/hooks/pos/useOrderHeatmap';
+  useOrderHeatmap,
+  DAY_LABELS,
+  HEATMAP_HOURS,
+  type HeatmapMetric,
+} from '@/hooks/pos/useOrderHeatmap';
 
 interface Props {
   branchId: string;
@@ -15,7 +22,11 @@ interface Props {
 }
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(n);
 
 export function OrderHeatmapChart({ branchId, daysBack }: Props) {
   const [metric, setMetric] = useState<HeatmapMetric>('count');
@@ -24,14 +35,20 @@ export function OrderHeatmapChart({ branchId, daysBack }: Props) {
   const maxVal = metric === 'count' ? maxCount : maxTotal;
 
   if (isLoading) {
-    return <Card><CardContent className="p-4"><Skeleton className="h-64" /></CardContent></Card>;
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <Skeleton className="h-64" />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base">Mapa de calor</CardTitle>
-        <Select value={metric} onValueChange={v => setMetric(v as HeatmapMetric)}>
+        <Select value={metric} onValueChange={(v) => setMetric(v as HeatmapMetric)}>
           <SelectTrigger className="w-40 h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
@@ -53,7 +70,7 @@ export function OrderHeatmapChart({ branchId, daysBack }: Props) {
             {/* Top-left corner */}
             <div />
             {/* Hour labels */}
-            {HEATMAP_HOURS.map(h => (
+            {HEATMAP_HOURS.map((h) => (
               <div key={h} className="text-xs text-muted-foreground text-center font-medium">
                 {h}:00
               </div>
@@ -62,7 +79,10 @@ export function OrderHeatmapChart({ branchId, daysBack }: Props) {
             {/* Rows */}
             {DAY_LABELS.map((day, di) => (
               <>
-                <div key={`label-${di}`} className="text-xs text-muted-foreground flex items-center font-medium">
+                <div
+                  key={`label-${di}`}
+                  className="text-xs text-muted-foreground flex items-center font-medium"
+                >
                   {day}
                 </div>
                 {HEATMAP_HOURS.map((h, hi) => {
@@ -76,14 +96,17 @@ export function OrderHeatmapChart({ branchId, daysBack }: Props) {
                         <div
                           className="rounded-sm border border-border/30 transition-colors"
                           style={{
-                            backgroundColor: intensity > 0
-                              ? `hsla(142, 76%, 36%, ${0.1 + intensity * 0.85})`
-                              : 'hsl(var(--muted))',
+                            backgroundColor:
+                              intensity > 0
+                                ? `hsla(142, 76%, 36%, ${0.1 + intensity * 0.85})`
+                                : 'hsl(var(--muted))',
                           }}
                         />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs">
-                        <p className="font-medium">{day} {h}:00</p>
+                        <p className="font-medium">
+                          {day} {h}:00
+                        </p>
                         <p>{cell.count} pedidos</p>
                         <p>{fmt(cell.total)}</p>
                       </TooltipContent>
@@ -99,7 +122,7 @@ export function OrderHeatmapChart({ branchId, daysBack }: Props) {
         <div className="flex items-center gap-2 mt-3 justify-end text-xs text-muted-foreground">
           <span>Bajo</span>
           <div className="flex gap-0.5">
-            {[0.1, 0.3, 0.5, 0.7, 0.9].map(o => (
+            {[0.1, 0.3, 0.5, 0.7, 0.9].map((o) => (
               <div
                 key={o}
                 className="w-4 h-4 rounded-sm"

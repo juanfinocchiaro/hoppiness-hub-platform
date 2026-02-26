@@ -14,7 +14,15 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Split, Banknote, CreditCard, QrCode, ArrowRightLeft, ChevronDown, AlertTriangle } from 'lucide-react';
+import {
+  Split,
+  Banknote,
+  CreditCard,
+  QrCode,
+  ArrowRightLeft,
+  ChevronDown,
+  AlertTriangle,
+} from 'lucide-react';
 import { DotsLoader } from '@/components/ui/loaders';
 import type { MetodoPago } from '@/types/pos';
 import type { CartItem } from '@/components/pos/ProductGrid';
@@ -34,7 +42,11 @@ function getQuickAmounts(total: number): number[] {
   return results.slice(0, 4);
 }
 
-const METODOS: { value: MetodoPago; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const METODOS: {
+  value: MetodoPago;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { value: 'efectivo', label: 'Efectivo', icon: Banknote },
   { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
   { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
@@ -89,9 +101,13 @@ export function PaymentModal({
   const showPromoWarning = hasPromoItems && !esEfectivo;
 
   const totalItems = cartItems.reduce((s, i) => s + i.cantidad, 0);
-  const summaryPreview = cartItems.length > 0
-    ? cartItems.slice(0, 3).map((i) => i.nombre).join(', ') + (cartItems.length > 3 ? '...' : '')
-    : '';
+  const summaryPreview =
+    cartItems.length > 0
+      ? cartItems
+          .slice(0, 3)
+          .map((i) => i.nombre)
+          .join(', ') + (cartItems.length > 3 ? '...' : '')
+      : '';
 
   const handleConfirmSingle = () => {
     onConfirm({
@@ -122,15 +138,21 @@ export function PaymentModal({
             {cartItems.length > 0 && (
               <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen}>
                 <CollapsibleTrigger className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1">
-                  <span>{totalItems} item{totalItems !== 1 ? 's' : ''} · {summaryPreview}</span>
-                  <ChevronDown className={cn('h-4 w-4 transition-transform', summaryOpen && 'rotate-180')} />
+                  <span>
+                    {totalItems} item{totalItems !== 1 ? 's' : ''} · {summaryPreview}
+                  </span>
+                  <ChevronDown
+                    className={cn('h-4 w-4 transition-transform', summaryOpen && 'rotate-180')}
+                  />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="mt-2 space-y-1.5 border rounded-lg p-3 bg-muted/30">
                     {cartItems.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between text-sm">
                         <span className="text-foreground">
-                          {item.cantidad > 1 && <span className="text-muted-foreground mr-1">×{item.cantidad}</span>}
+                          {item.cantidad > 1 && (
+                            <span className="text-muted-foreground mr-1">×{item.cantidad}</span>
+                          )}
                           {item.nombre}
                         </span>
                         <span className="text-muted-foreground font-medium">
@@ -177,7 +199,7 @@ export function PaymentModal({
                         'flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border text-sm font-medium transition-colors min-h-[72px]',
                         isSelected
                           ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                          : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground',
                       )}
                     >
                       <Icon className="h-5 w-5" />
@@ -203,7 +225,10 @@ export function PaymentModal({
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: 'Exacto', value: totalToPay },
-                    ...getQuickAmounts(totalToPay).map((v) => ({ label: `$ ${v.toLocaleString('es-AR')}`, value: v })),
+                    ...getQuickAmounts(totalToPay).map((v) => ({
+                      label: `$ ${v.toLocaleString('es-AR')}`,
+                      value: v,
+                    })),
                   ].map((btn) => (
                     <Button
                       key={btn.label}
@@ -229,7 +254,8 @@ export function PaymentModal({
               <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="text-xs">
-                  Hay productos de <strong>promo efectivo</strong> en el pedido. ¿Continuar con {METODOS.find(m => m.value === metodo)?.label}?
+                  Hay productos de <strong>promo efectivo</strong> en el pedido. ¿Continuar con{' '}
+                  {METODOS.find((m) => m.value === metodo)?.label}?
                 </AlertDescription>
               </Alert>
             )}

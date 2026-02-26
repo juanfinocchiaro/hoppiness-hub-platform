@@ -6,9 +6,24 @@
 // Nivel de certificación: 0=Sin entrenar, 1=En entrenamiento, 2=Certificado, 3=Experto
 export type CertificationLevel = 0 | 1 | 2 | 3;
 
-export const CERTIFICATION_LEVELS: { value: CertificationLevel; label: string; color: string; description: string }[] = [
-  { value: 0, label: 'Sin entrenar', color: 'bg-gray-800', description: 'No puede trabajar en esta estación' },
-  { value: 1, label: 'En entrenamiento', color: 'bg-yellow-500', description: 'Puede trabajar con supervisión' },
+export const CERTIFICATION_LEVELS: {
+  value: CertificationLevel;
+  label: string;
+  color: string;
+  description: string;
+}[] = [
+  {
+    value: 0,
+    label: 'Sin entrenar',
+    color: 'bg-gray-800',
+    description: 'No puede trabajar en esta estación',
+  },
+  {
+    value: 1,
+    label: 'En entrenamiento',
+    color: 'bg-yellow-500',
+    description: 'Puede trabajar con supervisión',
+  },
   { value: 2, label: 'Certificado', color: 'bg-green-500', description: 'Puede trabajar solo' },
   { value: 3, label: 'Experto', color: 'bg-blue-500', description: 'Puede entrenar a otros' },
 ];
@@ -44,7 +59,10 @@ export interface GeneralCompetency {
 
 export type ManagerCompetencyCategory = 'marca';
 
-export const MANAGER_CATEGORY_CONFIG: Record<ManagerCompetencyCategory, { label: string; icon: string }> = {
+export const MANAGER_CATEGORY_CONFIG: Record<
+  ManagerCompetencyCategory,
+  { label: string; icon: string }
+> = {
   marca: { label: 'Evaluación desde Marca', icon: '🏢' },
 };
 
@@ -83,25 +101,25 @@ export interface Coaching {
   coaching_date: string;
   coaching_month: number; // 1-12
   coaching_year: number;
-  
+
   // Scores generales
   general_score: number | null; // Promedio ponderado 1-4
   station_score: number | null; // Promedio de estaciones 1-4
   overall_score: number | null; // Promedio final
-  
+
   // Notas cualitativas
   strengths: string | null;
   areas_to_improve: string | null;
   action_plan: string | null;
   manager_notes: string | null;
-  
+
   // Seguimiento del plan anterior
   previous_action_review: string | null;
-  
+
   // Confirmación del empleado
   acknowledged_at: string | null;
   acknowledged_notes: string | null;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -128,7 +146,7 @@ export interface CoachingFormData {
   userId: string;
   branchId: string;
   coachingDate: Date;
-  
+
   // Estaciones trabajadas y sus scores
   stationScores: {
     stationId: string;
@@ -138,19 +156,19 @@ export interface CoachingFormData {
       score: number;
     }[];
   }[];
-  
+
   // Competencias generales
   generalScores: {
     competencyId: string;
     score: number;
   }[];
-  
+
   // Notas
   strengths: string;
   areasToImprove: string;
   actionPlan: string;
   managerNotes: string;
-  
+
   // Cambios de certificación propuestos
   certificationChanges: {
     stationId: string;

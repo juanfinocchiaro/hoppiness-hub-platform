@@ -8,7 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { CalendarClock, CheckCircle2, XCircle, Clock, CalendarOff, RefreshCw, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  CalendarClock,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  CalendarOff,
+  RefreshCw,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import RequestDayOffModal from './RequestDayOffModal';
@@ -28,20 +38,20 @@ export default function MyRequestsCard() {
   const { branchRoles } = usePermissionsWithImpersonation();
 
   // Franquiciados no solicitan días libres - ocultar si solo tiene ese rol
-  const hasOnlyFranquiciado = branchRoles.length > 0 && 
-    branchRoles.every(r => r.local_role === 'franquiciado');
+  const hasOnlyFranquiciado =
+    branchRoles.length > 0 && branchRoles.every((r) => r.local_role === 'franquiciado');
   const { data: requests, isLoading } = useQuery({
     queryKey: ['my-schedule-requests', userId],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const { data, error } = await supabase
         .from('schedule_requests')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(20);
-      
+
       if (error) throw error;
       return data as ScheduleRequest[];
     },
@@ -78,18 +88,25 @@ export default function MyRequestsCard() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'day_off': return CalendarOff;
-      case 'shift_change': return RefreshCw;
-      default: return HelpCircle;
+      case 'day_off':
+        return CalendarOff;
+      case 'shift_change':
+        return RefreshCw;
+      default:
+        return HelpCircle;
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'day_off': return 'Día libre';
-      case 'shift_change': return 'Cambio turno';
-      case 'other': return 'Otro';
-      default: return type;
+      case 'day_off':
+        return 'Día libre';
+      case 'shift_change':
+        return 'Cambio turno';
+      case 'other':
+        return 'Otro';
+      default:
+        return type;
     }
   };
 
@@ -111,7 +128,7 @@ export default function MyRequestsCard() {
     );
   }
 
-  const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
+  const pendingCount = requests?.filter((r) => r.status === 'pending').length || 0;
   const [showAll, setShowAll] = useState(false);
   const displayedRequests = showAll ? requests : requests?.slice(0, 5);
 
@@ -123,7 +140,9 @@ export default function MyRequestsCard() {
             <CalendarClock className="w-5 h-5 text-primary" />
             <CardTitle className="text-lg">Mis Solicitudes</CardTitle>
             {pendingCount > 0 && (
-              <Badge variant="secondary">{pendingCount} pendiente{pendingCount > 1 ? 's' : ''}</Badge>
+              <Badge variant="secondary">
+                {pendingCount} pendiente{pendingCount > 1 ? 's' : ''}
+              </Badge>
             )}
           </div>
           <RequestDayOffModal />
@@ -134,9 +153,9 @@ export default function MyRequestsCard() {
           <>
             {displayedRequests.map((request) => {
               const TypeIcon = getTypeIcon(request.request_type);
-              
+
               return (
-                <div 
+                <div
                   key={request.id}
                   className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
                 >
@@ -150,7 +169,7 @@ export default function MyRequestsCard() {
                           {getTypeLabel(request.request_type)}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(request.request_date), "EEE d MMM", { locale: es })}
+                          {format(new Date(request.request_date), 'EEE d MMM', { locale: es })}
                         </span>
                       </div>
                       {request.reason && (
@@ -179,7 +198,7 @@ export default function MyRequestsCard() {
                       )}
                     </div>
                   </div>
-                  
+
                   {getStatusBadge(request.status)}
                 </div>
               );
@@ -192,9 +211,13 @@ export default function MyRequestsCard() {
                 onClick={() => setShowAll(!showAll)}
               >
                 {showAll ? (
-                  <><ChevronUp className="w-4 h-4 mr-1" /> Ver menos</>
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-1" /> Ver menos
+                  </>
                 ) : (
-                  <><ChevronDown className="w-4 h-4 mr-1" /> Ver todas ({requests.length})</>
+                  <>
+                    <ChevronDown className="w-4 h-4 mr-1" /> Ver todas ({requests.length})
+                  </>
                 )}
               </Button>
             )}

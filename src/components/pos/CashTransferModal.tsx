@@ -4,7 +4,12 @@
  */
 import { useState } from 'react';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +31,15 @@ interface CashTransferModalProps {
 }
 
 export function CashTransferModal({
-  open, onOpenChange, branchId, sourceShift, destShift, maxAmount, title, description, conceptPrefix,
+  open,
+  onOpenChange,
+  branchId,
+  sourceShift,
+  destShift,
+  maxAmount,
+  title,
+  description,
+  conceptPrefix,
 }: CashTransferModalProps) {
   const { user } = useAuth();
   const transfer = useTransferBetweenRegisters(branchId);
@@ -92,7 +105,9 @@ export function CashTransferModal({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button
             onClick={handleConfirm}
             disabled={parsedAmount <= 0 || parsedAmount > maxAmount || transfer.isPending}

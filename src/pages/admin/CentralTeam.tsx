@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { Users, Plus, UserMinus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BRAND_ROLE_LABELS, type BrandRole } from '@/hooks/usePermissionsV2';
+import { BRAND_ROLE_LABELS, type BrandRole } from '@/hooks/usePermissions';
 
 interface CentralTeamMember {
   id: string;
@@ -58,7 +58,7 @@ export default function CentralTeam() {
       if (!roles || roles.length === 0) return [];
 
       // 2. Get profiles for those users (profiles.id = user_id after migration)
-      const userIds = roles.map(r => r.user_id);
+      const userIds = roles.map((r) => r.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, email')
@@ -67,9 +67,9 @@ export default function CentralTeam() {
       if (profilesError) throw profilesError;
 
       // 3. Merge data (profiles.id = user_id)
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      
-      return roles.map(role => {
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+      return roles.map((role) => {
         const profile = profileMap.get(role.user_id);
         return {
           id: role.id,
@@ -201,7 +201,10 @@ export default function CentralTeam() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Equipo Central" subtitle="Usuarios con acceso a la administración de la marca" />
+      <PageHeader
+        title="Equipo Central"
+        subtitle="Usuarios con acceso a la administración de la marca"
+      />
 
       <Card>
         <CardHeader>
@@ -218,14 +221,10 @@ export default function CentralTeam() {
             >
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarFallback>
-                    {getInitials(member.full_name, member.email)}
-                  </AvatarFallback>
+                  <AvatarFallback>{getInitials(member.full_name, member.email)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">
-                    {member.full_name || member.email}
-                  </p>
+                  <p className="font-medium">{member.full_name || member.email}</p>
                   <p className="text-sm text-muted-foreground">{member.email}</p>
                   <p className="text-xs text-muted-foreground">
                     Desde{' '}
@@ -267,9 +266,7 @@ export default function CentralTeam() {
             <Plus className="h-5 w-5" />
             Agregar al equipo central
           </CardTitle>
-          <CardDescription>
-            El usuario debe haberse registrado previamente
-          </CardDescription>
+          <CardDescription>El usuario debe haberse registrado previamente</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -304,10 +301,7 @@ export default function CentralTeam() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button
-                onClick={handleInvite}
-                disabled={inviteMutation.isPending}
-              >
+              <Button onClick={handleInvite} disabled={inviteMutation.isPending}>
                 {inviteMutation.isPending ? 'Agregando...' : 'Invitar'}
               </Button>
             </div>

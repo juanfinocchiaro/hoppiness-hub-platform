@@ -1,6 +1,6 @@
 /**
  * WorkSidebar - Componentes reutilizables para navegación por dominios
- * 
+ *
  * Incluye:
  * - WorkSidebarNav: Contenedor principal
  * - NavSectionGroup: Sección colapsable
@@ -11,11 +11,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronRight, ChevronDown, LucideIcon } from 'lucide-react';
 
 // ===== WorkSidebarNav =====
@@ -39,7 +35,6 @@ interface NavSectionGroupProps {
 }
 
 export function NavSectionGroup({
-  id,
   label,
   icon: Icon,
   children,
@@ -60,7 +55,7 @@ export function NavSectionGroup({
           variant="ghost"
           className={cn(
             'w-full justify-start font-semibold text-sm uppercase tracking-wider text-muted-foreground',
-            forceOpen && 'text-primary'
+            forceOpen && 'text-primary',
           )}
         >
           <Icon className="w-[18px] h-[18px] mr-3 shrink-0" />
@@ -72,9 +67,7 @@ export function NavSectionGroup({
           )}
         </Button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-4 space-y-0.5 mt-1.5">
-        {children}
-      </CollapsibleContent>
+      <CollapsibleContent className="pl-4 space-y-0.5 mt-1.5">{children}</CollapsibleContent>
     </Collapsible>
   );
 }
@@ -98,7 +91,7 @@ export function NavItemButton({
   exact = false,
 }: NavItemButtonProps) {
   const location = useLocation();
-  
+
   const isActive = exact
     ? location.pathname === to
     : location.pathname === to || location.pathname.startsWith(`${to}/`);
@@ -115,7 +108,7 @@ export function NavItemButton({
         variant={isActive ? 'secondary' : 'ghost'}
         className={cn(
           'w-full justify-start h-9',
-          isActive && 'bg-primary/10 text-primary border-l-2 border-primary rounded-l-none'
+          isActive && 'bg-primary/10 text-primary border-l-2 border-primary rounded-l-none',
         )}
       >
         <Icon className="w-[18px] h-[18px] mr-3" />
@@ -150,7 +143,7 @@ export function NavActionButton({
       size="sm"
       className={cn(
         'w-full justify-start',
-        variant === 'primary' && 'text-primary hover:bg-primary/10'
+        variant === 'primary' && 'text-primary hover:bg-primary/10',
       )}
       onClick={onClick}
     >
@@ -175,10 +168,7 @@ export function NavDashboardLink({ to, icon: Icon, label }: NavDashboardLinkProp
     <Link to={to}>
       <Button
         variant={isActive ? 'secondary' : 'ghost'}
-        className={cn(
-          'w-full justify-start',
-          isActive && 'bg-primary/10 text-primary'
-        )}
+        className={cn('w-full justify-start', isActive && 'bg-primary/10 text-primary')}
       >
         <Icon className="w-[18px] h-[18px] mr-3" />
         {label}
@@ -190,7 +180,7 @@ export function NavDashboardLink({ to, icon: Icon, label }: NavDashboardLinkProp
 // Helper hook to check if section has active item
 export function useIsSectionActive(basePath: string, paths: string[]) {
   const location = useLocation();
-  return paths.some(path => {
+  return paths.some((path) => {
     const fullPath = `${basePath}/${path}`.replace(/\/+/g, '/');
     return location.pathname === fullPath || location.pathname.startsWith(`${fullPath}/`);
   });

@@ -9,7 +9,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { MapPin, Plus, Pencil, Trash2, Star, ArrowLeft } from 'lucide-react';
 import { SpinnerLoader, DotsLoader } from '@/components/ui/loaders';
 import { toast } from 'sonner';
@@ -69,7 +75,10 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
         ciudad: ciudad.trim() || 'Córdoba',
       };
       if (editId) {
-        const { error } = await supabase.from('cliente_direcciones').update(payload).eq('id', editId);
+        const { error } = await supabase
+          .from('cliente_direcciones')
+          .update(payload)
+          .eq('id', editId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('cliente_direcciones').insert(payload);
@@ -123,12 +132,21 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) closeForm(); onOpenChange(v); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) closeForm();
+        onOpenChange(v);
+      }}
+    >
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {showForm && (
-              <button onClick={closeForm} className="p-1 hover:bg-muted rounded-lg transition-colors">
+              <button
+                onClick={closeForm}
+                className="p-1 hover:bg-muted rounded-lg transition-colors"
+              >
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
@@ -146,38 +164,62 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
             <div className="space-y-2">
               <Label>Etiqueta</Label>
               <Select value={etiqueta} onValueChange={setEtiqueta}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {ETIQUETAS.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                  {ETIQUETAS.map((e) => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Dirección *</Label>
-              <Input value={direccion} onChange={e => setDireccion(e.target.value)} placeholder="Av. Colón 1234" />
+              <Input
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                placeholder="Av. Colón 1234"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Piso / Depto</Label>
-                <Input value={piso} onChange={e => setPiso(e.target.value)} placeholder="2B" />
+                <Input value={piso} onChange={(e) => setPiso(e.target.value)} placeholder="2B" />
               </div>
               <div className="space-y-2">
                 <Label>Ciudad</Label>
-                <Input value={ciudad} onChange={e => setCiudad(e.target.value)} placeholder="Córdoba" />
+                <Input
+                  value={ciudad}
+                  onChange={(e) => setCiudad(e.target.value)}
+                  placeholder="Córdoba"
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Referencia</Label>
-              <Input value={referencia} onChange={e => setReferencia(e.target.value)} placeholder="Frente a la plaza" />
+              <Input
+                value={referencia}
+                onChange={(e) => setReferencia(e.target.value)}
+                placeholder="Frente a la plaza"
+              />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={closeForm}>Cancelar</Button>
+              <Button variant="outline" className="flex-1" onClick={closeForm}>
+                Cancelar
+              </Button>
               <Button
                 className="flex-1"
                 onClick={() => saveMutation.mutate()}
                 disabled={!direccion.trim() || saveMutation.isPending}
               >
-                {saveMutation.isPending && <span className="mr-2 inline-flex"><DotsLoader /></span>}
+                {saveMutation.isPending && (
+                  <span className="mr-2 inline-flex">
+                    <DotsLoader />
+                  </span>
+                )}
                 {editId ? 'Guardar' : 'Agregar'}
               </Button>
             </div>
@@ -195,31 +237,51 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
               </div>
             )}
 
-            {addresses.map(addr => (
-              <div key={addr.id} className={`flex items-start justify-between gap-3 p-3 rounded-xl border ${addr.es_principal ? 'border-primary/50 bg-primary/5' : ''}`}>
+            {addresses.map((addr) => (
+              <div
+                key={addr.id}
+                className={`flex items-start justify-between gap-3 p-3 rounded-xl border ${addr.es_principal ? 'border-primary/50 bg-primary/5' : ''}`}
+              >
                 <div className="flex items-start gap-2.5 min-w-0">
                   <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-semibold text-sm">{addr.etiqueta}</span>
-                      {addr.es_principal && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                      {addr.es_principal && (
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{addr.direccion}</p>
-                    {addr.piso && <p className="text-[11px] text-muted-foreground">Piso: {addr.piso}</p>}
+                    {addr.piso && (
+                      <p className="text-[11px] text-muted-foreground">Piso: {addr.piso}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-0.5 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(addr)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => openEdit(addr)}
+                  >
                     <Pencil className="w-3 h-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMutation.mutate(addr.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => deleteMutation.mutate(addr.id)}
+                  >
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
               </div>
             ))}
 
-            <Button onClick={openNew} className="w-full gap-2 bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button
+              onClick={openNew}
+              className="w-full gap-2 bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
               <Plus className="w-4 h-4" />
               Agregar dirección
             </Button>

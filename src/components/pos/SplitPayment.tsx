@@ -47,12 +47,7 @@ interface SplitPaymentProps {
   onConfirm: (payments: PaymentLine[]) => void;
 }
 
-export function SplitPayment({
-  total,
-  open,
-  onOpenChange,
-  onConfirm,
-}: SplitPaymentProps) {
+export function SplitPayment({ total, open, onOpenChange, onConfirm }: SplitPaymentProps) {
   const [payments, setPayments] = useState<PaymentLine[]>([
     { id: crypto.randomUUID(), method: 'efectivo', amount: total },
   ]);
@@ -96,7 +91,7 @@ export function SplitPayment({
         id: crypto.randomUUID(),
         method: 'efectivo' as MetodoPago,
         amount: i === ways - 1 ? lastAmount : amountPerWay,
-      }))
+      })),
     );
   };
 
@@ -108,7 +103,11 @@ export function SplitPayment({
   };
 
   const formatPrice = (n: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(n);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,7 +136,10 @@ export function SplitPayment({
             <Card key={payment.id} className="relative">
               <CardContent className="pt-4 pb-3 px-4">
                 <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                  <Badge
+                    variant="secondary"
+                    className="w-6 h-6 rounded-full p-0 flex items-center justify-center"
+                  >
                     {index + 1}
                   </Badge>
                   <Select
@@ -190,7 +192,9 @@ export function SplitPayment({
         <div
           className={cn(
             'rounded-lg p-4 space-y-2',
-            isValid ? 'bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-800' : 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+            isValid
+              ? 'bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-800'
+              : 'bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800',
           )}
         >
           <div className="flex justify-between text-sm">
@@ -204,7 +208,7 @@ export function SplitPayment({
           <div
             className={cn(
               'flex justify-between font-bold pt-2 border-t',
-              remaining > 0 ? 'text-amber-700' : remaining < 0 ? 'text-red-600' : 'text-green-700'
+              remaining > 0 ? 'text-amber-700' : remaining < 0 ? 'text-red-600' : 'text-green-700',
             )}
           >
             <span>{remaining > 0 ? 'Falta:' : remaining < 0 ? 'Vuelto:' : 'Correcto:'}</span>

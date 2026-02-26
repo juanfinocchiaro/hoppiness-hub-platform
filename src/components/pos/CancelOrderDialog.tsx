@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { DotsLoader } from '@/components/ui/loaders';
 import {
-  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +22,11 @@ interface Props {
 }
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(n);
 
 export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Props) {
   const [loading, setLoading] = useState(false);
@@ -44,7 +53,8 @@ export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Prop
           <AlertDialogDescription asChild>
             <div className="space-y-3">
               <p>
-                Estás por anular el pedido <strong>#{order.numero_pedido}</strong> por un total de <strong>{fmt(order.total)}</strong>.
+                Estás por anular el pedido <strong>#{order.numero_pedido}</strong> por un total de{' '}
+                <strong>{fmt(order.total)}</strong>.
               </p>
 
               {hasInvoice && factura && (
@@ -53,15 +63,21 @@ export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Prop
                     Este pedido tiene factura emitida
                   </p>
                   <p className="text-sm">
-                    Se generará automáticamente una <Badge variant="outline" className="text-xs">Nota de Crédito</Badge> para anular la factura{' '}
-                    <strong>{factura.tipo_comprobante} {String(factura.punto_venta).padStart(5, '0')}-{String(factura.numero_comprobante).padStart(8, '0')}</strong>.
+                    Se generará automáticamente una{' '}
+                    <Badge variant="outline" className="text-xs">
+                      Nota de Crédito
+                    </Badge>{' '}
+                    para anular la factura{' '}
+                    <strong>
+                      {factura.tipo_comprobante} {String(factura.punto_venta).padStart(5, '0')}-
+                      {String(factura.numero_comprobante).padStart(8, '0')}
+                    </strong>
+                    .
                   </p>
                 </div>
               )}
 
-              <p className="text-sm text-muted-foreground">
-                Esta acción no se puede deshacer.
-              </p>
+              <p className="text-sm text-muted-foreground">Esta acción no se puede deshacer.</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

@@ -30,7 +30,13 @@ import type { LocalPayment } from '@/types/pos';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Banknote, ChefHat, PlusCircle, ShoppingBag } from 'lucide-react';
 import { PendingOrdersBar } from '@/components/pos/PendingOrdersBar';
 import { WebappOrdersPanel } from '@/components/pos/WebappOrdersPanel';
@@ -46,7 +52,7 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
   const [selectedRegister, setSelectedRegister] = useState('');
   const [openingAmount, setOpeningAmount] = useState('');
   const [isOpening, setIsOpening] = useState(false);
-  const registers = (registersData?.active ?? []).filter(r => r.register_type === 'ventas');
+  const registers = (registersData?.active ?? []).filter((r) => r.register_type === 'ventas');
 
   useEffect(() => {
     if (registers.length > 0 && !selectedRegister) {
@@ -79,20 +85,28 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
       </div>
       <div>
         <h2 className="text-xl font-semibold">Caja cerrada</h2>
-        <p className="text-sm text-muted-foreground mt-1">Abrí la caja para empezar a tomar pedidos</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Abrí la caja para empezar a tomar pedidos
+        </p>
       </div>
       {registers.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No hay cajas configuradas para esta sucursal.</p>
+        <p className="text-sm text-muted-foreground">
+          No hay cajas configuradas para esta sucursal.
+        </p>
       ) : (
         <div className="w-full space-y-4 text-left">
           {registers.length > 1 && (
             <div className="space-y-2">
               <Label>Caja</Label>
               <Select value={selectedRegister} onValueChange={setSelectedRegister}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar caja" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar caja" />
+                </SelectTrigger>
                 <SelectContent>
                   {registers.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -101,7 +115,9 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
           <div className="space-y-2">
             <Label>Efectivo inicial</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                $
+              </span>
               <Input
                 type="number"
                 placeholder="0"
@@ -111,7 +127,12 @@ function InlineCashOpen({ branchId, onOpened }: { branchId: string; onOpened: ()
               />
             </div>
           </div>
-          <Button className="w-full" size="lg" onClick={handleOpen} disabled={isOpening || !selectedRegister}>
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleOpen}
+            disabled={isOpening || !selectedRegister}
+          >
             <Banknote className="h-4 w-4 mr-2" />
             {isOpening ? 'Abriendo...' : 'Abrir Caja'}
           </Button>
@@ -138,10 +159,14 @@ export default function POSPage() {
 function POSPageContent({ branchId }: { branchId: string }) {
   const { user } = useAuth();
   const {
-    cart, setCart,
-    payments, setPayments,
-    configConfirmed, setConfigConfirmed,
-    orderConfig, setOrderConfig,
+    cart,
+    setCart,
+    payments,
+    setPayments,
+    configConfirmed,
+    setConfigConfirmed,
+    orderConfig,
+    setOrderConfig,
     resetAll,
   } = usePOSSessionState(branchId);
   const [showPaymentPanel, setShowPaymentPanel] = useState(false);
@@ -192,10 +217,19 @@ function POSPageContent({ branchId }: { branchId: string }) {
   // Cart management
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
-      const hasNoMods = !item.notas && (!item.extras || item.extras.length === 0) && (!item.removibles || item.removibles.length === 0) && (!item.opcionales || item.opcionales.length === 0);
+      const hasNoMods =
+        !item.notas &&
+        (!item.extras || item.extras.length === 0) &&
+        (!item.removibles || item.removibles.length === 0) &&
+        (!item.opcionales || item.opcionales.length === 0);
       if (hasNoMods) {
         const idx = prev.findIndex(
-          (i) => i.item_carta_id === item.item_carta_id && !i.notas && (!i.extras || i.extras.length === 0) && (!i.removibles || i.removibles.length === 0) && (!i.opcionales || i.opcionales.length === 0)
+          (i) =>
+            i.item_carta_id === item.item_carta_id &&
+            !i.notas &&
+            (!i.extras || i.extras.length === 0) &&
+            (!i.removibles || i.removibles.length === 0) &&
+            (!i.opcionales || i.opcionales.length === 0),
         );
         if (idx >= 0) {
           const copy = [...prev];
@@ -258,7 +292,11 @@ function POSPageContent({ branchId }: { branchId: string }) {
       if (orderConfig.tipoServicio === 'comer_aca' && !orderConfig.numeroLlamador) {
         return 'Ingresá el número de llamador';
       }
-      if (orderConfig.tipoServicio === 'takeaway' && !orderConfig.clienteNombre?.trim() && !orderConfig.numeroLlamador) {
+      if (
+        orderConfig.tipoServicio === 'takeaway' &&
+        !orderConfig.clienteNombre?.trim() &&
+        !orderConfig.numeroLlamador
+      ) {
         return 'Ingresá el nombre del cliente o un número de llamador';
       }
       if (orderConfig.tipoServicio === 'delivery') {
@@ -324,7 +362,11 @@ function POSPageContent({ branchId }: { branchId: string }) {
     }
   };
 
-  const handlePointPaymentConfirmed = (payment: { metodo: string; monto: number; mp_payment_id: string }) => {
+  const handlePointPaymentConfirmed = (_payment: {
+    metodo: string;
+    monto: number;
+    mp_payment_id: string;
+  }) => {
     toast.success('Pago confirmado', {
       description: `El pedido ya está en cocina`,
     });
@@ -335,10 +377,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
     // Cancel the order that was created in pendiente_pago
     if (pointPedidoId) {
       try {
-        await supabase
-          .from('pedidos')
-          .update({ estado: 'cancelado' })
-          .eq('id', pointPedidoId);
+        await supabase.from('pedidos').update({ estado: 'cancelado' }).eq('id', pointPedidoId);
       } catch {
         // best-effort
       }
@@ -418,23 +457,24 @@ function POSPageContent({ branchId }: { branchId: string }) {
       onProgress?.('invoicing');
       try {
         const channel = resolveInvoicingChannel();
-        const orderPayments: OrderPayment[] = payments.map(p => ({
+        const orderPayments: OrderPayment[] = payments.map((p) => ({
           method: p.method as OrderPayment['method'],
           amount: p.amount,
         }));
 
         const totalAmount = orderPayments.reduce((s, p) => s + p.amount, 0);
 
-        const clienteQuiereFactura = !!(orderConfig.receptorCuit && orderConfig.receptorRazonSocial);
+        const clienteQuiereFactura = !!(
+          orderConfig.receptorCuit && orderConfig.receptorRazonSocial
+        );
         const result = clienteQuiereFactura
           ? { shouldInvoice: true, invoiceableAmount: totalAmount, totalAmount }
           : evaluateInvoicing(orderPayments, channel, afipConfig.reglas_facturacion ?? null);
 
         if (result.shouldInvoice && result.invoiceableAmount > 0) {
           const tipoFactura = orderConfig.tipoFactura === 'A' ? 'A' : 'B';
-          const condicionIvaReceptor = tipoFactura === 'A'
-            ? 'IVA Responsable Inscripto'
-            : 'Consumidor Final';
+          const condicionIvaReceptor =
+            tipoFactura === 'A' ? 'IVA Responsable Inscripto' : 'Consumidor Final';
 
           const invoiceResult = await emitirFactura.mutateAsync({
             branch_id: branchId!,
@@ -443,7 +483,9 @@ function POSPageContent({ branchId }: { branchId: string }) {
             receptor_cuit: orderConfig.receptorCuit || undefined,
             receptor_razon_social: orderConfig.receptorRazonSocial || undefined,
             receptor_condicion_iva: condicionIvaReceptor,
-            items: [{ descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount }],
+            items: [
+              { descripcion: 'Venta POS', cantidad: 1, precio_unitario: result.invoiceableAmount },
+            ],
             total: result.invoiceableAmount,
           });
 
@@ -498,8 +540,13 @@ function POSPageContent({ branchId }: { branchId: string }) {
       const printableOrder = {
         numero_pedido: pedido.numero_pedido ?? 0,
         tipo_servicio: orderConfig.tipoServicio ?? null,
-        canal_venta: orderConfig.canalVenta === 'apps' ? orderConfig.canalApp : orderConfig.canalVenta ?? null,
-        numero_llamador: orderConfig.numeroLlamador ? parseInt(orderConfig.numeroLlamador, 10) : null,
+        canal_venta:
+          orderConfig.canalVenta === 'apps'
+            ? orderConfig.canalApp
+            : (orderConfig.canalVenta ?? null),
+        numero_llamador: orderConfig.numeroLlamador
+          ? parseInt(orderConfig.numeroLlamador, 10)
+          : null,
         cliente_nombre: orderConfig.clienteNombre ?? null,
         referencia_app: orderConfig.referenciaApp ?? null,
         created_at: new Date().toISOString(),
@@ -523,13 +570,16 @@ function POSPageContent({ branchId }: { branchId: string }) {
 
       const singlePayment = payments.length === 1 ? payments[0] : null;
       const paymentData: PaymentPrintData = {
-        metodo_pago: payments.length > 1
-          ? `Mixto: ${payments.map((p) => formatMetodoPago(p.method)).join(' + ')}`
-          : formatMetodoPago(singlePayment?.method),
-        monto_recibido: singlePayment?.method === 'efectivo' ? singlePayment.montoRecibido : undefined,
-        vuelto: singlePayment?.method === 'efectivo'
-          ? Math.max(0, (singlePayment.montoRecibido || 0) - singlePayment.amount)
-          : undefined,
+        metodo_pago:
+          payments.length > 1
+            ? `Mixto: ${payments.map((p) => formatMetodoPago(p.method)).join(' + ')}`
+            : formatMetodoPago(singlePayment?.method),
+        monto_recibido:
+          singlePayment?.method === 'efectivo' ? singlePayment.montoRecibido : undefined,
+        vuelto:
+          singlePayment?.method === 'efectivo'
+            ? Math.max(0, (singlePayment.montoRecibido || 0) - singlePayment.amount)
+            : undefined,
       };
 
       try {
@@ -537,7 +587,11 @@ function POSPageContent({ branchId }: { branchId: string }) {
           printableOrder,
           effectivePrintConfig,
           allPrinters,
-          menuCategorias as { id: string; nombre: string; tipo_impresion: 'comanda' | 'vale' | 'no_imprimir' }[],
+          menuCategorias as {
+            id: string;
+            nombre: string;
+            tipo_impresion: 'comanda' | 'vale' | 'no_imprimir';
+          }[],
           branchInfo?.name ?? 'Hoppiness',
           esSalon,
           paymentData,
@@ -557,33 +611,38 @@ function POSPageContent({ branchId }: { branchId: string }) {
 
   const isAppsChannel = orderConfig.canalVenta === 'apps';
   const subtotal = cart.reduce((s, i) => s + i.subtotal, 0);
-  const costoEnvio = (orderConfig.tipoServicio === 'delivery' || isAppsChannel) ? (orderConfig.costoDelivery ?? 0) : 0;
+  const costoEnvio =
+    orderConfig.tipoServicio === 'delivery' || isAppsChannel ? (orderConfig.costoDelivery ?? 0) : 0;
   const descRestauranteRaw = orderConfig.descuentoRestaurante ?? 0;
-  const descRestauranteCalc = orderConfig.descuentoModo === 'porcentaje'
-    ? Math.round(subtotal * descRestauranteRaw / 100)
-    : descRestauranteRaw;
+  const descRestauranteCalc =
+    orderConfig.descuentoModo === 'porcentaje'
+      ? Math.round((subtotal * descRestauranteRaw) / 100)
+      : descRestauranteRaw;
   const voucherDesc = orderConfig.voucherDescuento ?? 0;
   const promoDescTotal = cart.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
   const descuentos = (orderConfig.descuentoPlataforma ?? 0) + descRestauranteCalc + promoDescTotal;
   const totalToPay = subtotal + costoEnvio - descuentos - voucherDesc;
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-  const paidCash = payments.filter(p => p.method === 'efectivo').reduce((s, p) => s + p.amount, 0);
+  const paidCash = payments
+    .filter((p) => p.method === 'efectivo')
+    .reduce((s, p) => s + p.amount, 0);
   const paidDigital = totalPaid - paidCash;
 
   const minCashRequired = cart
-    .filter(i => i.promo_restriccion_pago === 'solo_efectivo')
+    .filter((i) => i.promo_restriccion_pago === 'solo_efectivo')
     .reduce((s, i) => s + i.subtotal, 0);
   const minDigitalRequired = cart
-    .filter(i => i.promo_restriccion_pago === 'solo_digital')
+    .filter((i) => i.promo_restriccion_pago === 'solo_digital')
     .reduce((s, i) => s + i.subtotal, 0);
   const minCashRemaining = Math.max(0, minCashRequired - paidCash);
   const minDigitalRemaining = Math.max(0, minDigitalRequired - paidDigital);
 
   const saldo = isAppsChannel ? 0 : totalToPay - totalPaid;
-  const meetsPromoPaymentRestrictions = (paidCash + 0.0001) >= minCashRequired && (paidDigital + 0.0001) >= minDigitalRequired;
+  const meetsPromoPaymentRestrictions =
+    paidCash + 0.0001 >= minCashRequired && paidDigital + 0.0001 >= minDigitalRequired;
   const canSend = isAppsChannel
     ? cart.length > 0
-    : (Math.abs(totalToPay - totalPaid) < 0.01 && cart.length > 0 && meetsPromoPaymentRestrictions);
+    : Math.abs(totalToPay - totalPaid) < 0.01 && cart.length > 0 && meetsPromoPaymentRestrictions;
 
   // Show full-page "Abrir Caja" when cash register is closed
   if (!shiftStatus.loading && !shiftStatus.hasCashOpen) {
@@ -602,157 +661,177 @@ function POSPageContent({ branchId }: { branchId: string }) {
 
   return (
     <POSPortalProvider>
-    <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
-      {/* Pending orders bar — always visible */}
-      <PendingOrdersBar pedidos={(kitchenPedidos ?? []).filter(p => p.origen !== 'webapp')} branchId={branchId!} shiftOpenedAt={shiftStatus.activeCashShift?.opened_at ?? null} />
-      <WebappOrdersPanel branchId={branchId!} />
-      {/* Main grid: menu + account */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
-        {/* Menu column - Zona B */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden bg-slate-50 p-4">
-          {!configConfirmed ? (
-            /* Empty state while config not confirmed */
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+      <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
+        {/* Pending orders bar — always visible */}
+        <PendingOrdersBar
+          pedidos={(kitchenPedidos ?? []).filter((p) => p.origen !== 'webapp')}
+          branchId={branchId!}
+          shiftOpenedAt={shiftStatus.activeCashShift?.opened_at ?? null}
+        />
+        <WebappOrdersPanel branchId={branchId!} />
+        {/* Main grid: menu + account */}
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(380px,1.1fr)] flex-1 min-h-0">
+          {/* Menu column - Zona B */}
+          <div className="min-h-[200px] lg:min-h-0 flex flex-col flex-1 overflow-hidden bg-slate-50 p-4">
+            {!configConfirmed ? (
+              /* Empty state while config not confirmed */
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                  <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Configurá el pedido</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Elegí canal y servicio para ver el menú
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Configurá el pedido</h3>
-                <p className="text-sm text-muted-foreground mt-1">Elegí canal y servicio para ver el menú</p>
-              </div>
-            </div>
-          ) : (
-            <ProductGrid
-              onAddItem={addItem}
-              onSelectItem={handleSelectItem}
-              cart={cart}
-              branchId={branchId}
-              disabled={!configConfirmed}
-              promoChannel={
-                orderConfig.canalVenta === 'apps'
-                  ? orderConfig.canalApp ?? undefined
-                  : orderConfig.canalVenta === 'mostrador'
-                    ? 'salon'
-                    : undefined
-              }
-            />
-          )}
-        </div>
-
-        {/* Account column - Zona C */}
-        <div className="min-h-[200px] lg:min-h-0 flex flex-col bg-background border-l">
-          {!configConfirmed ? (
-            /* Config form inline in Zona C */
-            <div ref={configRef} className="flex-1 overflow-y-auto p-4">
-              <h2 className="text-lg font-semibold mb-4">Nueva venta</h2>
-              <ConfigForm
-                config={orderConfig}
-                onChange={setOrderConfig}
+            ) : (
+              <ProductGrid
+                onAddItem={addItem}
+                onSelectItem={handleSelectItem}
+                cart={cart}
                 branchId={branchId}
-                onConfirm={() => {
-                  const err = validateOrderConfig();
-                  if (err) {
-                    toast.error(err);
-                    return;
-                  }
-                  setConfigConfirmed(true);
-                }}
+                disabled={!configConfirmed}
+                promoChannel={
+                  orderConfig.canalVenta === 'apps'
+                    ? (orderConfig.canalApp ?? undefined)
+                    : orderConfig.canalVenta === 'mostrador'
+                      ? 'salon'
+                      : undefined
+                }
               />
-            </div>
-          ) : (
-            /* Account panel with order config header */
-            <>
-              <AccountPanel
-                items={cart}
-                payments={payments}
-                onUpdateQty={updateQty}
-                onRemove={removeItem}
-                onUpdateNotes={updateNotes}
-                onCancelOrder={cancelOrder}
-                onRegisterPayment={handleOpenPayment}
-                onRemovePayment={removePayment}
-                onSendToKitchen={handleSendToKitchen}
-                onSendComplete={resetAll}
-                willInvoice={willInvoice}
-                willPrint={willPrint}
-                disabled={createPedido.isPending}
-                orderConfig={orderConfig}
-                onEditConfig={handleEditConfig}
-                onUpdateOrderConfig={(partial) => setOrderConfig((prev) => ({ ...prev, ...partial }))}
-                branchId={branchId}
-              />
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile sticky footer */}
-      {configConfirmed && cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-elevated">
-          <div className="text-sm">
-            <span className="text-muted-foreground">{cart.reduce((s, i) => s + i.cantidad, 0)} items</span>
-            <span className="ml-2 font-semibold text-foreground">$ {totalToPay.toLocaleString('es-AR')}</span>
-            {!isAppsChannel && totalPaid > 0 && (
-              <span className="ml-2 text-xs text-success">pagado $ {totalPaid.toLocaleString('es-AR')}</span>
             )}
           </div>
-          {canSend ? (
-            <Button
-              size="lg"
-              onClick={() => handleSendToKitchen().then(resetAll).catch((e: any) => toast.error(e?.message ?? 'Error al registrar pedido'))}
-              disabled={createPedido.isPending}
-              className="shrink-0 bg-success hover:bg-success/90 text-white"
-            >
-              <ChefHat className="h-4 w-4 mr-2" />
-              Enviar
-            </Button>
-          ) : !isAppsChannel ? (
-            <Button
-              size="lg"
-              onClick={handleOpenPayment}
-              disabled={createPedido.isPending || saldo <= 0}
-              className="shrink-0"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Pagar
-            </Button>
-          ) : null}
+
+          {/* Account column - Zona C */}
+          <div className="min-h-[200px] lg:min-h-0 flex flex-col bg-background border-l">
+            {!configConfirmed ? (
+              /* Config form inline in Zona C */
+              <div ref={configRef} className="flex-1 overflow-y-auto p-4">
+                <h2 className="text-lg font-semibold mb-4">Nueva venta</h2>
+                <ConfigForm
+                  config={orderConfig}
+                  onChange={setOrderConfig}
+                  branchId={branchId}
+                  onConfirm={() => {
+                    const err = validateOrderConfig();
+                    if (err) {
+                      toast.error(err);
+                      return;
+                    }
+                    setConfigConfirmed(true);
+                  }}
+                />
+              </div>
+            ) : (
+              /* Account panel with order config header */
+              <>
+                <AccountPanel
+                  items={cart}
+                  payments={payments}
+                  onUpdateQty={updateQty}
+                  onRemove={removeItem}
+                  onUpdateNotes={updateNotes}
+                  onCancelOrder={cancelOrder}
+                  onRegisterPayment={handleOpenPayment}
+                  onRemovePayment={removePayment}
+                  onSendToKitchen={handleSendToKitchen}
+                  onSendComplete={resetAll}
+                  willInvoice={willInvoice}
+                  willPrint={willPrint}
+                  disabled={createPedido.isPending}
+                  orderConfig={orderConfig}
+                  onEditConfig={handleEditConfig}
+                  onUpdateOrderConfig={(partial) =>
+                    setOrderConfig((prev) => ({ ...prev, ...partial }))
+                  }
+                  branchId={branchId}
+                />
+              </>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* Register payment modal */}
-      <RegisterPaymentPanel
-        open={showPaymentPanel}
-        onOpenChange={setShowPaymentPanel}
-        saldoPendiente={saldo}
-        onRegister={registerPayment}
-        onPointSmartPayment={hasPointSmart ? handlePointSmartPayment : undefined}
-        minCashRemaining={minCashRemaining}
-        minDigitalRemaining={minDigitalRemaining}
-      />
+        {/* Mobile sticky footer */}
+        {configConfirmed && cart.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-elevated">
+            <div className="text-sm">
+              <span className="text-muted-foreground">
+                {cart.reduce((s, i) => s + i.cantidad, 0)} items
+              </span>
+              <span className="ml-2 font-semibold text-foreground">
+                $ {totalToPay.toLocaleString('es-AR')}
+              </span>
+              {!isAppsChannel && totalPaid > 0 && (
+                <span className="ml-2 text-xs text-success">
+                  pagado $ {totalPaid.toLocaleString('es-AR')}
+                </span>
+              )}
+            </div>
+            {canSend ? (
+              <Button
+                size="lg"
+                onClick={() =>
+                  handleSendToKitchen()
+                    .then(resetAll)
+                    .catch((e: any) => toast.error(e?.message ?? 'Error al registrar pedido'))
+                }
+                disabled={createPedido.isPending}
+                className="shrink-0 bg-success hover:bg-success/90 text-white"
+              >
+                <ChefHat className="h-4 w-4 mr-2" />
+                Enviar
+              </Button>
+            ) : !isAppsChannel ? (
+              <Button
+                size="lg"
+                onClick={handleOpenPayment}
+                disabled={createPedido.isPending || saldo <= 0}
+                className="shrink-0"
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Pagar
+              </Button>
+            ) : null}
+          </div>
+        )}
 
-      {/* Point Smart payment modal */}
-      {pointPedidoId && (
-        <PointPaymentModal
-          open={pointPaymentOpen}
-          onOpenChange={setPointPaymentOpen}
-          pedidoId={pointPedidoId}
-          branchId={branchId!}
-          amount={pointAmount}
-          onConfirmed={handlePointPaymentConfirmed}
-          onCancelled={handlePointPaymentCancelled}
+        {/* Register payment modal */}
+        <RegisterPaymentPanel
+          open={showPaymentPanel}
+          onOpenChange={setShowPaymentPanel}
+          saldoPendiente={saldo}
+          onRegister={registerPayment}
+          onPointSmartPayment={hasPointSmart ? handlePointSmartPayment : undefined}
+          minCashRemaining={minCashRemaining}
+          minDigitalRemaining={minDigitalRemaining}
         />
-      )}
 
-      <ModifiersModal
-        open={!!modifiersItem}
-        onOpenChange={(open) => { if (!open) setModifiersItem(null); }}
-        item={modifiersItem}
-        onConfirm={handleModifierConfirm}
-      />
+        {/* Point Smart payment modal */}
+        {pointPedidoId && (
+          <PointPaymentModal
+            open={pointPaymentOpen}
+            onOpenChange={setPointPaymentOpen}
+            pedidoId={pointPedidoId}
+            branchId={branchId!}
+            amount={pointAmount}
+            onConfirmed={handlePointPaymentConfirmed}
+            onCancelled={handlePointPaymentCancelled}
+          />
+        )}
 
-      <POSOnboarding />
-    </div>
+        <ModifiersModal
+          open={!!modifiersItem}
+          onOpenChange={(open) => {
+            if (!open) setModifiersItem(null);
+          }}
+          item={modifiersItem}
+          onConfirm={handleModifierConfirm}
+        />
+
+        <POSOnboarding />
+      </div>
     </POSPortalProvider>
   );
 }

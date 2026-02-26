@@ -37,7 +37,10 @@ export function StaticBranchMap({
   const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${latitude},${longitude}`;
 
   return (
-    <div className={`relative rounded-xl overflow-hidden border shadow-soft bg-muted ${className}`} style={{ height }}>
+    <div
+      className={`relative rounded-xl overflow-hidden border shadow-soft bg-muted ${className}`}
+      style={{ height }}
+    >
       <iframe
         title="Ubicación del local"
         src={embedUrl}
@@ -48,11 +51,7 @@ export function StaticBranchMap({
       {/* Centered Hoppiness logo overlay */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         <div className="relative -mt-8 w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-card">
-          <img
-            src={logoHoppiness}
-            alt="Hoppiness Club"
-            className="w-full h-full object-cover"
-          />
+          <img src={logoHoppiness} alt="Hoppiness Club" className="w-full h-full object-cover" />
         </div>
       </div>
       {/* Click-through link */}

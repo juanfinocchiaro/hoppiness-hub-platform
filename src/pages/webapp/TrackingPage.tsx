@@ -1,7 +1,16 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle2, Clock, Flame, Package, Truck, PartyPopper, XCircle, MessageCircle, Send, Utensils } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  Flame,
+  Package,
+  Truck,
+  PartyPopper,
+  XCircle,
+  Send,
+} from 'lucide-react';
 import { SpinnerLoader } from '@/components/ui/loaders';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
@@ -10,7 +19,9 @@ import { PostPurchaseSignup } from '@/components/webapp/PostPurchaseSignup';
 import { WebappHeader } from '@/components/webapp/WebappHeader';
 
 const DeliveryTrackingMap = lazy(() =>
-  import('@/components/webapp/DeliveryTrackingMap').then(m => ({ default: m.DeliveryTrackingMap }))
+  import('@/components/webapp/DeliveryTrackingMap').then((m) => ({
+    default: m.DeliveryTrackingMap,
+  })),
 );
 
 interface DeliveryTrackingData {
@@ -47,7 +58,12 @@ interface TrackingData {
     notas: string | null;
     modificadores: Array<{ tipo: string; descripcion: string; precio_extra: number | null }>;
   }>;
-  branch: { name: string; address: string | null; city: string | null; phone: string | null } | null;
+  branch: {
+    name: string;
+    address: string | null;
+    city: string | null;
+    phone: string | null;
+  } | null;
   timeline: Array<{ estado: string; timestamp: string | null }>;
   delivery_tracking: DeliveryTrackingData | null;
 }
@@ -62,21 +78,48 @@ function getEstadoOrder(tipoServicio: string | null): string[] {
 }
 
 /** Returns label + icon for each estado, adapting "listo" and "en_camino" based on service type */
-function getEstadoConfig(estado: string, tipoServicio: string | null): { label: string; icon: React.ReactNode; color: string } {
+function getEstadoConfig(
+  estado: string,
+  tipoServicio: string | null,
+): { label: string; icon: React.ReactNode; color: string } {
   const isDelivery = tipoServicio === 'delivery';
 
   const map: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
     pendiente: { label: 'Enviado', icon: <Send className="w-5 h-5" />, color: 'text-blue-500' },
-    confirmado: { label: 'Aceptado', icon: <CheckCircle2 className="w-5 h-5" />, color: 'text-blue-600' },
-    en_preparacion: { label: 'Preparando', icon: <Flame className="w-5 h-5" />, color: 'text-orange-500' },
+    confirmado: {
+      label: 'Aceptado',
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      color: 'text-blue-600',
+    },
+    en_preparacion: {
+      label: 'Preparando',
+      icon: <Flame className="w-5 h-5" />,
+      color: 'text-orange-500',
+    },
     listo: {
-      label: isDelivery ? 'Listo para enviar' : (tipoServicio === 'comer_aca' ? 'Listo para consumir' : 'Listo para retirar'),
+      label: isDelivery
+        ? 'Listo para enviar'
+        : tipoServicio === 'comer_aca'
+          ? 'Listo para consumir'
+          : 'Listo para retirar',
       icon: <Package className="w-5 h-5" />,
       color: 'text-green-500',
     },
-    en_camino: { label: 'En camino', icon: <Truck className="w-5 h-5" />, color: 'text-purple-500' },
-    entregado: { label: 'Entregado', icon: <PartyPopper className="w-5 h-5" />, color: 'text-green-600' },
-    cancelado: { label: 'Cancelado', icon: <XCircle className="w-5 h-5" />, color: 'text-destructive' },
+    en_camino: {
+      label: 'En camino',
+      icon: <Truck className="w-5 h-5" />,
+      color: 'text-purple-500',
+    },
+    entregado: {
+      label: 'Entregado',
+      icon: <PartyPopper className="w-5 h-5" />,
+      color: 'text-green-600',
+    },
+    cancelado: {
+      label: 'Cancelado',
+      icon: <XCircle className="w-5 h-5" />,
+      color: 'text-destructive',
+    },
   };
 
   return map[estado] ?? map.pendiente;
@@ -131,17 +174,23 @@ export default function TrackingPage() {
 
     const channel = supabase
       .channel(`tracking-${trackingCode}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'pedidos',
-        filter: `webapp_tracking_code=eq.${trackingCode}`,
-      }, () => {
-        fetchTracking();
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pedidos',
+          filter: `webapp_tracking_code=eq.${trackingCode}`,
+        },
+        () => {
+          fetchTracking();
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [trackingCode]);
 
   // Realtime: subscribe to delivery_tracking position updates
@@ -150,30 +199,40 @@ export default function TrackingPage() {
 
     const channel = supabase
       .channel(`delivery-pos-${data.pedido.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'delivery_tracking',
-        filter: `pedido_id=eq.${data.pedido.id}`,
-      }, (payload: any) => {
-        const row = payload.new;
-        setData(prev => prev ? {
-          ...prev,
-          delivery_tracking: {
-            active: !!row.tracking_started_at && !row.tracking_completed_at,
-            cadete_lat: row.cadete_lat ? Number(row.cadete_lat) : null,
-            cadete_lng: row.cadete_lng ? Number(row.cadete_lng) : null,
-            store_lat: prev.delivery_tracking?.store_lat ?? null,
-            store_lng: prev.delivery_tracking?.store_lng ?? null,
-            dest_lat: prev.delivery_tracking?.dest_lat ?? null,
-            dest_lng: prev.delivery_tracking?.dest_lng ?? null,
-            completed: !!row.tracking_completed_at,
-          },
-        } : prev);
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'delivery_tracking',
+          filter: `pedido_id=eq.${data.pedido.id}`,
+        },
+        (payload: any) => {
+          const row = payload.new;
+          setData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  delivery_tracking: {
+                    active: !!row.tracking_started_at && !row.tracking_completed_at,
+                    cadete_lat: row.cadete_lat ? Number(row.cadete_lat) : null,
+                    cadete_lng: row.cadete_lng ? Number(row.cadete_lng) : null,
+                    store_lat: prev.delivery_tracking?.store_lat ?? null,
+                    store_lng: prev.delivery_tracking?.store_lng ?? null,
+                    dest_lat: prev.delivery_tracking?.dest_lat ?? null,
+                    dest_lng: prev.delivery_tracking?.dest_lng ?? null,
+                    completed: !!row.tracking_completed_at,
+                  },
+                }
+              : prev,
+          );
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [data?.pedido?.id, !!data?.delivery_tracking]);
 
   if (loading) {
@@ -190,7 +249,9 @@ export default function TrackingPage() {
         <div className="text-center space-y-4 max-w-sm">
           <XCircle className="w-12 h-12 text-muted-foreground mx-auto" />
           <h1 className="text-xl font-bold">Pedido no encontrado</h1>
-          <p className="text-muted-foreground text-sm">{error || 'Verificá el link e intentá de nuevo.'}</p>
+          <p className="text-muted-foreground text-sm">
+            {error || 'Verificá el link e intentá de nuevo.'}
+          </p>
           <Link to="/pedir">
             <Button>Hacer un pedido</Button>
           </Link>
@@ -209,10 +270,6 @@ export default function TrackingPage() {
     ? Math.max(0, Math.round((new Date(pedido.tiempo_prometido).getTime() - Date.now()) / 60_000))
     : null;
 
-  const whatsappLink = branch?.phone
-    ? `https://wa.me/549${branch.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola! Consulta por mi pedido #${pedido.numero_pedido}`)}`
-    : null;
-
   return (
     <div className="min-h-screen bg-background">
       <WebappHeader title="Hoppiness" showBack onBack={() => navigate('/pedir')} />
@@ -222,7 +279,9 @@ export default function TrackingPage() {
       <div className="bg-primary text-primary-foreground px-5 pt-8 pb-6">
         <p className="text-sm opacity-80">{branch?.name ?? 'Hoppiness'}</p>
         <h1 className="text-2xl font-black mt-1">Pedido #{pedido.numero_pedido}</h1>
-        <div className={`mt-3 flex items-center gap-2 ${currentCfg.color} bg-white/90 rounded-xl px-4 py-2.5 w-fit`}>
+        <div
+          className={`mt-3 flex items-center gap-2 ${currentCfg.color} bg-white/90 rounded-xl px-4 py-2.5 w-fit`}
+        >
           {currentCfg.icon}
           <span className="font-bold text-sm">{currentCfg.label}</span>
         </div>
@@ -240,25 +299,30 @@ export default function TrackingPage() {
         )}
 
         {/* Delivery tracking map */}
-        {dt && dt.active && dt.store_lat != null && dt.store_lng != null && dt.dest_lat != null && dt.dest_lng != null && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <Truck className="w-4 h-4" /> Seguí tu pedido en vivo
-            </h3>
-            <Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
-              <DeliveryTrackingMap
-                storeLat={Number(dt.store_lat)}
-                storeLng={Number(dt.store_lng)}
-                destLat={Number(dt.dest_lat)}
-                destLng={Number(dt.dest_lng)}
-                cadeteLat={dt.cadete_lat != null ? Number(dt.cadete_lat) : null}
-                cadeteLng={dt.cadete_lng != null ? Number(dt.cadete_lng) : null}
-                trackingActive={dt.active}
-                branchName={branch?.name}
-              />
-            </Suspense>
-          </div>
-        )}
+        {dt &&
+          dt.active &&
+          dt.store_lat != null &&
+          dt.store_lng != null &&
+          dt.dest_lat != null &&
+          dt.dest_lng != null && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Seguí tu pedido en vivo
+              </h3>
+              <Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
+                <DeliveryTrackingMap
+                  storeLat={Number(dt.store_lat)}
+                  storeLng={Number(dt.store_lng)}
+                  destLat={Number(dt.dest_lat)}
+                  destLng={Number(dt.dest_lng)}
+                  cadeteLat={dt.cadete_lat != null ? Number(dt.cadete_lat) : null}
+                  cadeteLng={dt.cadete_lng != null ? Number(dt.cadete_lng) : null}
+                  trackingActive={dt.active}
+                  branchName={branch?.name}
+                />
+              </Suspense>
+            </div>
+          )}
 
         {dt && dt.completed && (
           <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 text-center">
@@ -272,17 +336,21 @@ export default function TrackingPage() {
         {/* Timeline */}
         <div className="space-y-1">
           {estadoOrder.map((estado, i) => {
-            const timelineEntry = timeline.find(t => t.estado === estado);
-            const isPast = timeline.some(t => t.estado === estado);
+            const timelineEntry = timeline.find((t) => t.estado === estado);
+            const isPast = timeline.some((t) => t.estado === estado);
             const isCurrent = pedido.estado === estado;
             const cfg = getEstadoConfig(estado, tipoServicio);
 
             return (
               <div key={estado} className="flex items-start gap-3">
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    isPast ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                  } ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      isPast
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    } ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                  >
                     {isPast ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                   </div>
                   {i < estadoOrder.length - 1 && (
@@ -290,11 +358,15 @@ export default function TrackingPage() {
                   )}
                 </div>
                 <div className="pt-1">
-                  <p className={`text-sm font-semibold ${isPast ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  <p
+                    className={`text-sm font-semibold ${isPast ? 'text-foreground' : 'text-muted-foreground'}`}
+                  >
                     {cfg.label}
                   </p>
                   {timelineEntry?.timestamp && (
-                    <p className="text-xs text-muted-foreground">{formatTime(timelineEntry.timestamp)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatTime(timelineEntry.timestamp)}
+                    </p>
                   )}
                 </div>
               </div>
@@ -323,9 +395,11 @@ export default function TrackingPage() {
                 <span>{item.nombre}</span>
                 {item.modificadores.length > 0 && (
                   <p className="text-xs text-muted-foreground ml-4">
-                    {item.modificadores.map(m =>
-                      m.tipo === 'extra' ? `+ ${m.descripcion}` : `Sin ${m.descripcion}`,
-                    ).join(', ')}
+                    {item.modificadores
+                      .map((m) =>
+                        m.tipo === 'extra' ? `+ ${m.descripcion}` : `Sin ${m.descripcion}`,
+                      )
+                      .join(', ')}
                   </p>
                 )}
               </div>
@@ -355,7 +429,10 @@ export default function TrackingPage() {
           <div className="rounded-xl border p-4 space-y-1">
             <h3 className="text-sm font-bold">{branch.name}</h3>
             {branch.address && (
-              <p className="text-xs text-muted-foreground">{branch.address}{branch.city ? `, ${branch.city}` : ''}</p>
+              <p className="text-xs text-muted-foreground">
+                {branch.address}
+                {branch.city ? `, ${branch.city}` : ''}
+              </p>
             )}
           </div>
         )}

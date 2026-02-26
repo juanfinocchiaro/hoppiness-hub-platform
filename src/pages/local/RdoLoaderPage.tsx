@@ -14,7 +14,8 @@ export default function RdoLoaderPage() {
       <div className="space-y-4">
         <Alert>
           <AlertDescription>
-            Con POS habilitado, el Cargador RDO está deshabilitado. Los consumos y costos se gestionan desde el módulo de Stock y Compras.
+            Con POS habilitado, el Cargador RDO está deshabilitado. Los consumos y costos se
+            gestionan desde el módulo de Stock y Compras.
           </AlertDescription>
         </Alert>
       </div>

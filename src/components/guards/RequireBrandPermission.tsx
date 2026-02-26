@@ -1,6 +1,6 @@
 /**
  * RequireBrandPermission - Guard que verifica permisos específicos en Mi Marca
- * 
+ *
  * Usa useDynamicPermissions para verificar si el usuario tiene el permiso requerido.
  * Muestra NoAccessState si no tiene acceso.
  */

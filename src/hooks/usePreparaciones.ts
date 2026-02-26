@@ -25,7 +25,9 @@ export function usePreparacionIngredientes(preparacionId: string | undefined) {
       if (!preparacionId) return [];
       const { data, error } = await supabase
         .from('preparacion_ingredientes')
-        .select(`*, insumos(id, nombre, unidad_base, costo_por_unidad_base), preparaciones!preparacion_ingredientes_sub_preparacion_id_fkey(id, nombre, costo_calculado)`)
+        .select(
+          `*, insumos(id, nombre, unidad_base, costo_por_unidad_base), preparaciones!preparacion_ingredientes_sub_preparacion_id_fkey(id, nombre, costo_calculado)`,
+        )
         .eq('preparacion_id', preparacionId)
         .order('orden');
       if (error) throw error;
@@ -114,16 +116,16 @@ export function usePreparacionMutations() {
       await supabase.from('preparacion_ingredientes').delete().eq('preparacion_id', preparacion_id);
 
       if (items.length > 0) {
-        const { error } = await supabase
-          .from('preparacion_ingredientes')
-          .insert(items.map((item, index) => ({
+        const { error } = await supabase.from('preparacion_ingredientes').insert(
+          items.map((item, index) => ({
             preparacion_id,
             insumo_id: item.insumo_id || null,
             sub_preparacion_id: item.sub_preparacion_id || null,
             cantidad: item.cantidad,
             unidad: item.unidad,
             orden: index,
-          })) as any);
+          })) as any,
+        );
         if (error) throw error;
       }
 
@@ -139,17 +141,23 @@ export function usePreparacionMutations() {
   });
 
   const saveOpciones = useMutation({
-    mutationFn: async ({ preparacion_id, insumo_ids }: { preparacion_id: string; insumo_ids: string[] }) => {
+    mutationFn: async ({
+      preparacion_id,
+      insumo_ids,
+    }: {
+      preparacion_id: string;
+      insumo_ids: string[];
+    }) => {
       await supabase.from('preparacion_opciones').delete().eq('preparacion_id', preparacion_id);
 
       if (insumo_ids.length > 0) {
-        const { error } = await supabase
-          .from('preparacion_opciones')
-          .insert(insumo_ids.map((insumo_id, index) => ({
+        const { error } = await supabase.from('preparacion_opciones').insert(
+          insumo_ids.map((insumo_id, index) => ({
             preparacion_id,
             insumo_id,
             orden: index,
-          })) as any);
+          })) as any,
+        );
         if (error) throw error;
       }
 

@@ -15,7 +15,12 @@ interface DeliveryUnavailableProps {
   suggestedBranch?: SuggestedBranch | null;
 }
 
-export function DeliveryUnavailable({ onSwitchToPickup, onChangeAddress, reason, suggestedBranch }: DeliveryUnavailableProps) {
+export function DeliveryUnavailable({
+  onSwitchToPickup,
+  onChangeAddress,
+  reason,
+  suggestedBranch,
+}: DeliveryUnavailableProps) {
   const navigate = useNavigate();
 
   // Barrio asignado a otro local → mostrar sugerencia

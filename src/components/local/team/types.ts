@@ -1,4 +1,4 @@
-import type { LocalRole } from '@/hooks/usePermissionsV2';
+import type { LocalRole } from '@/hooks/usePermissions';
 import type { WorkPositionType } from '@/types/workPosition';
 
 export interface TeamMember {
@@ -79,19 +79,19 @@ export function formatHours(hours: number): string {
 
 export function formatClockIn(dateStr: string | null): string {
   if (!dateStr) return '-';
-  
+
   const date = new Date(dateStr);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday = date.toDateString() === yesterday.toDateString();
-  
+
   const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  
+
   if (isToday) return `Hoy ${time}`;
   if (isYesterday) return `Ayer ${time}`;
-  
+
   const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
   return `Hace ${diffDays} días`;
 }

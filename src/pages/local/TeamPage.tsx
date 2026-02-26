@@ -22,21 +22,22 @@ export default function TeamPage() {
   const { team, loading, refetch } = useTeamData(branch?.id);
   const { local } = useDynamicPermissions(branch?.id);
   const isMobile = useIsMobile();
-  
+
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
 
   const filteredTeam = debouncedSearch
-    ? team.filter(m => 
-        m.full_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        m.email?.toLowerCase().includes(debouncedSearch.toLowerCase())
+    ? team.filter(
+        (m) =>
+          m.full_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          m.email?.toLowerCase().includes(debouncedSearch.toLowerCase()),
       )
     : team;
 
   // Separate franchisees from employees for counter display
-  const employees = filteredTeam.filter(m => m.local_role !== 'franquiciado');
-  const franchisees = filteredTeam.filter(m => m.local_role === 'franquiciado');
+  const employees = filteredTeam.filter((m) => m.local_role !== 'franquiciado');
+  const franchisees = filteredTeam.filter((m) => m.local_role === 'franquiciado');
 
   if (loading) {
     return (
@@ -54,7 +55,7 @@ export default function TeamPage() {
         subtitle={`${employees.length} empleado${employees.length !== 1 ? 's' : ''}${franchisees.length > 0 ? ` · ${franchisees.length} propietario${franchisees.length !== 1 ? 's' : ''}` : ''}`}
         actions={
           local.canInviteEmployees ? (
-            <Button 
+            <Button
               onClick={() => setShowInviteDialog(true)}
               className="w-full sm:w-auto min-h-[44px]"
             >
@@ -78,17 +79,9 @@ export default function TeamPage() {
 
       {/* Team list */}
       {isMobile ? (
-        <TeamCardList 
-          team={filteredTeam} 
-          branchId={branch?.id}
-          onMemberUpdated={refetch}
-        />
+        <TeamCardList team={filteredTeam} branchId={branch?.id} onMemberUpdated={refetch} />
       ) : (
-        <TeamTable 
-          team={filteredTeam} 
-          branchId={branch?.id}
-          onMemberUpdated={refetch}
-        />
+        <TeamTable team={filteredTeam} branchId={branch?.id} onMemberUpdated={refetch} />
       )}
 
       <InviteStaffDialog

@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissionsWithImpersonation } from '@/hooks/usePermissionsWithImpersonation';
-import { useRoleLandingV2 } from '@/hooks/useRoleLandingV2';
+import { useRoleLanding } from '@/hooks/useRoleLanding';
 import { useIsClockedInAtBranch } from '@/hooks/useIsClockedInAtBranch';
 import { useEmbedMode } from '@/hooks/useEmbedMode';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
@@ -19,13 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Store,
-  Home,
-  AlertCircle,
-  Eye,
-  LogIn,
-} from 'lucide-react';
+import { Store, Home, AlertCircle, Eye, LogIn } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import ManagerDashboard from '@/components/local/ManagerDashboard';
 import { HoppinessLoader } from '@/components/ui/hoppiness-loader';
@@ -37,16 +31,16 @@ import { WebappIncomingBanner } from '@/components/local/WebappIncomingBanner';
 type Branch = Tables<'branches'>;
 
 export default function BranchLayout() {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { branchId } = useParams();
-  
+
   const permissions = usePermissionsWithImpersonation(branchId);
-  const { canAccessLocal, canAccessAdmin } = useRoleLandingV2();
-  const { isEmbedded } = useEmbedMode();
+  const { canAccessLocal, canAccessAdmin } = useRoleLanding();
+  const { isEmbedded: _isEmbedded } = useEmbedMode();
   const { canImpersonate, isImpersonating } = useImpersonation();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [showImpersonationSelector, setShowImpersonationSelector] = useState(false);
 
@@ -88,14 +82,23 @@ export default function BranchLayout() {
         return;
       }
     }
-  }, [user, authLoading, permLoading, canAccessLocal, accessibleBranches, permissions.isSuperadmin, permissions.isViewingAs, navigate]);
+  }, [
+    user,
+    authLoading,
+    permLoading,
+    canAccessLocal,
+    accessibleBranches,
+    permissions.isSuperadmin,
+    permissions.isViewingAs,
+    navigate,
+  ]);
 
   // Set selected branch from URL or default.
   // During impersonation we also fetch the branch directly so the superadmin
   // can view any branch regardless of the impersonated user's access list.
   useEffect(() => {
     if (branchId && accessibleBranches.length > 0) {
-      const branch = accessibleBranches.find(b => b.id === branchId);
+      const branch = accessibleBranches.find((b) => b.id === branchId);
       if (branch) {
         setSelectedBranch(branch);
       } else if (!permissions.isSuperadmin && !permissions.isViewingAs) {
@@ -122,8 +125,8 @@ export default function BranchLayout() {
         },
         (payload) => {
           const updated = payload.new as Branch;
-          setSelectedBranch(prev => prev ? { ...prev, ...updated } : updated);
-        }
+          setSelectedBranch((prev) => (prev ? { ...prev, ...updated } : updated));
+        },
       )
       .subscribe();
 
@@ -136,7 +139,7 @@ export default function BranchLayout() {
   useEffect(() => {
     if (!selectedBranch || !branchId) return;
     if (permissions.isViewingAs) return;
-    
+
     if (permissions.isEmpleado) {
       navigate('/cuenta');
     }
@@ -145,7 +148,7 @@ export default function BranchLayout() {
   const handleBranchChange = (newBranchId: string) => {
     const pathParts = location.pathname.split('/');
     const subPath = pathParts.slice(3).join('/');
-    
+
     if (subPath) {
       navigate(`/milocal/${newBranchId}/${subPath}`);
     } else {
@@ -228,7 +231,7 @@ export default function BranchLayout() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {accessibleBranches.map(branch => (
+            {accessibleBranches.map((branch) => (
               <div
                 key={branch.id}
                 className="bg-card border rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors"
@@ -238,7 +241,9 @@ export default function BranchLayout() {
                   <Store className="w-5 h-5 text-primary" />
                   <h3 className="font-bold text-lg">{branch.name}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground">{branch.address}, {branch.city}</p>
+                <p className="text-sm text-muted-foreground">
+                  {branch.address}, {branch.city}
+                </p>
               </div>
             ))}
           </div>
@@ -279,7 +284,7 @@ export default function BranchLayout() {
               </div>
             </SelectTrigger>
             <SelectContent>
-              {accessibleBranches.map(branch => (
+              {accessibleBranches.map((branch) => (
                 <SelectItem key={branch.id} value={branch.id}>
                   {branch.name}
                 </SelectItem>

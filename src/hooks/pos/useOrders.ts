@@ -73,10 +73,14 @@ export function useCreatePedido(branchId: string) {
 
   return useMutation({
     mutationFn: async (params: CreatePedidoParams) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('No autenticado');
 
-      const { data: numero, error: errNum } = await supabase.rpc('generar_numero_pedido', { p_branch_id: branchId });
+      const { data: numero, error: errNum } = await supabase.rpc('generar_numero_pedido', {
+        p_branch_id: branchId,
+      });
       if (errNum) throw errNum;
       const numeroPedido = (numero as number) ?? 1;
 
@@ -84,10 +88,11 @@ export function useCreatePedido(branchId: string) {
       const promoDesc = params.items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
       const descuentoPlat = params.orderConfig?.descuentoPlataforma ?? 0;
       const descuentoRestRaw = params.orderConfig?.descuentoRestaurante ?? 0;
-      const descuentoRest = params.orderConfig?.descuentoModo === 'porcentaje'
-        ? Math.round(subtotal * descuentoRestRaw / 100)
-        : descuentoRestRaw;
-      const descuento = params.descuento ?? (descuentoPlat + descuentoRest + promoDesc);
+      const descuentoRest =
+        params.orderConfig?.descuentoModo === 'porcentaje'
+          ? Math.round((subtotal * descuentoRestRaw) / 100)
+          : descuentoRestRaw;
+      const descuento = params.descuento ?? descuentoPlat + descuentoRest + promoDesc;
       const costoDelivery = params.orderConfig?.costoDelivery ?? 0;
       const totalOrder = subtotal - descuento + costoDelivery;
       const propina = params.propina ?? 0;
@@ -111,9 +116,10 @@ export function useCreatePedido(branchId: string) {
       if (costoDelivery > 0) insertPayload.costo_delivery = costoDelivery;
 
       const descuentoPlataforma = cfg?.descuentoPlataforma ?? 0;
-      const descuentoRestaurante = cfg?.descuentoModo === 'porcentaje'
-        ? Math.round(subtotal * (cfg?.descuentoRestaurante ?? 0) / 100)
-        : (cfg?.descuentoRestaurante ?? 0);
+      const descuentoRestaurante =
+        cfg?.descuentoModo === 'porcentaje'
+          ? Math.round((subtotal * (cfg?.descuentoRestaurante ?? 0)) / 100)
+          : (cfg?.descuentoRestaurante ?? 0);
       if (descuentoPlataforma > 0) insertPayload.descuento_plataforma = descuentoPlataforma;
       if (descuentoRestaurante > 0) insertPayload.descuento_restaurante = descuentoRestaurante;
 
@@ -145,11 +151,7 @@ export function useCreatePedido(branchId: string) {
       if (!pedido) throw new Error('No se creó el pedido');
 
       // Si el pedido es delivery con cliente identificado, guardar la dirección en su perfil
-      if (
-        cfg?.tipoServicio === 'delivery' &&
-        cfg.clienteUserId &&
-        cfg.clienteDireccion?.trim()
-      ) {
+      if (cfg?.tipoServicio === 'delivery' && cfg.clienteUserId && cfg.clienteDireccion?.trim()) {
         supabase
           .from('cliente_direcciones')
           .insert({
@@ -159,10 +161,13 @@ export function useCreatePedido(branchId: string) {
             ciudad: 'Córdoba',
             es_principal: false,
           } as any)
-          .then(() => {}, () => {});
+          .then(
+            () => {},
+            () => {},
+          );
       }
 
-      const itemRows = params.items.map(it => ({
+      const itemRows = params.items.map((it) => ({
         pedido_id: pedido.id,
         item_carta_id: it.item_carta_id,
         nombre: it.nombre,
@@ -185,20 +190,21 @@ export function useCreatePedido(branchId: string) {
       if (!isPendientePago && !isAppsOrder && !useSplit && !params.metodoPago) {
         throw new Error('Se requiere un método de pago');
       }
-      const paymentRows = (isPendientePago || isAppsOrder)
-        ? []
-        : useSplit
-          ? params.payments!
-          : [
-              {
-                method: params.metodoPago!,
-                amount: totalToPay,
-                montoRecibido: params.montoRecibido ?? totalToPay,
-              },
-            ];
+      const paymentRows =
+        isPendientePago || isAppsOrder
+          ? []
+          : useSplit
+            ? params.payments!
+            : [
+                {
+                  method: params.metodoPago!,
+                  amount: totalToPay,
+                  montoRecibido: params.montoRecibido ?? totalToPay,
+                },
+              ];
 
       if (paymentRows.length > 0) {
-        const pagoRows = paymentRows.map(row => {
+        const pagoRows = paymentRows.map((row) => {
           const montoRecibido = row.montoRecibido ?? row.amount;
           return {
             pedido_id: pedido.id,
@@ -222,7 +228,7 @@ export function useCreatePedido(branchId: string) {
         .eq('register_type', 'ventas')
         .eq('is_active', true);
 
-      const ventasRegisterIds = (ventasRegisters || []).map(r => r.id);
+      const ventasRegisterIds = (ventasRegisters || []).map((r) => r.id);
 
       let openShift: { id: string } | null = null;
       if (ventasRegisterIds.length > 0) {

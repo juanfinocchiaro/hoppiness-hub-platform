@@ -16,12 +16,16 @@ interface InspectionChecklistProps {
   readOnly?: boolean;
 }
 
-export function InspectionChecklist({ items, inspectionId, readOnly = false }: InspectionChecklistProps) {
+export function InspectionChecklist({
+  items,
+  inspectionId,
+  readOnly = false,
+}: InspectionChecklistProps) {
   // Group items by category
   const groupedItems = useMemo(() => {
     const groups: Record<string, InspectionItem[]> = {};
-    
-    items.forEach(item => {
+
+    items.forEach((item) => {
       if (!groups[item.category]) {
         groups[item.category] = [];
       }
@@ -29,7 +33,7 @@ export function InspectionChecklist({ items, inspectionId, readOnly = false }: I
     });
 
     // Sort each group by sort_order
-    Object.keys(groups).forEach(category => {
+    Object.keys(groups).forEach((category) => {
       groups[category].sort((a, b) => a.sort_order - b.sort_order);
     });
 
@@ -39,13 +43,13 @@ export function InspectionChecklist({ items, inspectionId, readOnly = false }: I
   // Calculate stats per category
   const categoryStats = useMemo(() => {
     const stats: Record<string, { total: number; compliant: number; nonCompliant: number }> = {};
-    
+
     Object.entries(groupedItems).forEach(([category, categoryItems]) => {
-      const applicable = categoryItems.filter(i => i.complies !== null);
+      const applicable = categoryItems.filter((i) => i.complies !== null);
       stats[category] = {
         total: applicable.length,
-        compliant: applicable.filter(i => i.complies === true).length,
-        nonCompliant: applicable.filter(i => i.complies === false).length,
+        compliant: applicable.filter((i) => i.complies === true).length,
+        nonCompliant: applicable.filter((i) => i.complies === false).length,
       };
     });
 
@@ -63,7 +67,7 @@ export function InspectionChecklist({ items, inspectionId, readOnly = false }: I
 
   return (
     <div className="space-y-4">
-      {orderedCategories.map(category => {
+      {orderedCategories.map((category) => {
         const categoryItems = groupedItems[category];
         const stats = categoryStats[category];
         const hasIssues = stats.nonCompliant > 0;
@@ -75,12 +79,8 @@ export function InspectionChecklist({ items, inspectionId, readOnly = false }: I
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-medium flex items-center gap-2">
                   {CATEGORY_LABELS[category] || category}
-                  {hasIssues && (
-                    <AlertTriangle className="w-4 h-4 text-destructive" />
-                  )}
-                  {isComplete && (
-                    <Check className="w-4 h-4 text-green-600" />
-                  )}
+                  {hasIssues && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                  {isComplete && <Check className="w-4 h-4 text-green-600" />}
                 </CardTitle>
                 <Badge
                   variant={hasIssues ? 'destructive' : isComplete ? 'default' : 'secondary'}
@@ -91,7 +91,7 @@ export function InspectionChecklist({ items, inspectionId, readOnly = false }: I
               </div>
             </CardHeader>
             <CardContent className="py-0 px-4 pb-3">
-              {categoryItems.map(item => (
+              {categoryItems.map((item) => (
                 <InspectionItemRow
                   key={item.id}
                   item={item}

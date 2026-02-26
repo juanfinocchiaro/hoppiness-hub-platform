@@ -30,14 +30,16 @@ export function useGruposOpcionales(itemId: string | undefined) {
       if (!itemId) return [];
       const { data, error } = await supabase
         .from('item_carta_grupo_opcional' as any)
-        .select(`
+        .select(
+          `
           *,
           items:item_carta_grupo_opcional_items(
             *,
             insumos(id, nombre, costo_por_unidad_base),
             preparaciones(id, nombre, costo_calculado)
           )
-        `)
+        `,
+        )
         .eq('item_carta_id', itemId)
         .order('orden');
       if (error) throw error;
@@ -60,7 +62,15 @@ export function useGruposOpcionalesMutations() {
   };
 
   const createGrupo = useMutation({
-    mutationFn: async ({ item_carta_id, nombre, orden }: { item_carta_id: string; nombre: string; orden: number }) => {
+    mutationFn: async ({
+      item_carta_id,
+      nombre,
+      orden,
+    }: {
+      item_carta_id: string;
+      nombre: string;
+      orden: number;
+    }) => {
       const { data, error } = await supabase
         .from('item_carta_grupo_opcional' as any)
         .insert({ item_carta_id, nombre, orden } as any)
@@ -77,7 +87,15 @@ export function useGruposOpcionalesMutations() {
   });
 
   const updateGrupo = useMutation({
-    mutationFn: async ({ id, item_carta_id, data }: { id: string; item_carta_id: string; data: { nombre?: string } }) => {
+    mutationFn: async ({
+      id,
+      item_carta_id: _item_carta_id,
+      data,
+    }: {
+      id: string;
+      item_carta_id: string;
+      data: { nombre?: string };
+    }) => {
       const { error } = await supabase
         .from('item_carta_grupo_opcional' as any)
         .update(data as any)
@@ -105,10 +123,19 @@ export function useGruposOpcionalesMutations() {
   });
 
   const saveGrupoItems = useMutation({
-    mutationFn: async ({ grupo_id, item_carta_id, items }: {
+    mutationFn: async ({
+      grupo_id,
+      item_carta_id,
+      items,
+    }: {
       grupo_id: string;
       item_carta_id: string;
-      items: { insumo_id?: string | null; preparacion_id?: string | null; cantidad: number; costo_unitario: number }[];
+      items: {
+        insumo_id?: string | null;
+        preparacion_id?: string | null;
+        cantidad: number;
+        costo_unitario: number;
+      }[];
     }) => {
       // Delete existing items
       await supabase
@@ -118,22 +145,23 @@ export function useGruposOpcionalesMutations() {
 
       // Insert new items
       if (items.length > 0) {
-        const { error } = await supabase
-          .from('item_carta_grupo_opcional_items' as any)
-          .insert(items.map((item) => ({
+        const { error } = await supabase.from('item_carta_grupo_opcional_items' as any).insert(
+          items.map((item) => ({
             grupo_id,
             insumo_id: item.insumo_id || null,
             preparacion_id: item.preparacion_id || null,
             cantidad: item.cantidad,
             costo_unitario: item.costo_unitario,
-          })) as any);
+          })) as any,
+        );
         if (error) throw error;
       }
 
       // Calculate average cost
-      const avg = items.length > 0
-        ? items.reduce((sum, i) => sum + i.cantidad * i.costo_unitario, 0) / items.length
-        : 0;
+      const avg =
+        items.length > 0
+          ? items.reduce((sum, i) => sum + i.cantidad * i.costo_unitario, 0) / items.length
+          : 0;
 
       // Update group with average
       const { error: updErr } = await supabase

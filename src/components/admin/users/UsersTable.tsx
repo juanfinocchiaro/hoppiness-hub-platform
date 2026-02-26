@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { UserExpandedRow } from './UserExpandedRow';
 import type { UserWithStats, Branch } from './types';
-import { formatShortDate, ROLE_LABELS } from './types';
+import { formatShortDate } from './types';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 
 // Labels específicos para roles de marca
@@ -37,7 +44,7 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
   // Helper para obtener label de posición
   const getPositionLabel = (key: string | null): string => {
     if (!key) return '-';
-    const position = positions.find(p => p.key === key);
+    const position = positions.find((p) => p.key === key);
     return position?.label || key;
   };
 
@@ -55,7 +62,7 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
   const getBranchesLabel = (user: UserWithStats): string => {
     // Si es superadmin, tiene acceso a todas
     if (user.brand_role === 'superadmin') return 'Todas';
-    
+
     const count = user.branch_roles.length;
     if (count === 0) return '-';
     if (count === 1) return '1 local';
@@ -63,7 +70,7 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
   };
 
   const handleRowClick = (userId: string) => {
-    setExpandedUserId(prev => prev === userId ? null : userId);
+    setExpandedUserId((prev) => (prev === userId ? null : userId));
   };
 
   return (
@@ -84,20 +91,21 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
           <TableBody>
             {users.map((user) => {
               const isExpanded = expandedUserId === user.id;
-              const brandLabel = user.brand_role ? BRAND_ROLE_LABELS[user.brand_role] || user.brand_role : '-';
-              const localLabel = user.primaryLocalRole ? LOCAL_ROLE_LABELS[user.primaryLocalRole] || user.primaryLocalRole : '-';
+              const brandLabel = user.brand_role
+                ? BRAND_ROLE_LABELS[user.brand_role] || user.brand_role
+                : '-';
+              const localLabel = user.primaryLocalRole
+                ? LOCAL_ROLE_LABELS[user.primaryLocalRole] || user.primaryLocalRole
+                : '-';
               const positionLabel = getUserPosition(user);
               const branchesLabel = getBranchesLabel(user);
-              
+
               return (
                 <>
-                  <TableRow 
+                  <TableRow
                     key={user.id}
                     onClick={() => handleRowClick(user.id)}
-                    className={cn(
-                      "cursor-pointer transition-colors",
-                      isExpanded && "bg-muted/50"
-                    )}
+                    className={cn('cursor-pointer transition-colors', isExpanded && 'bg-muted/50')}
                   >
                     <TableCell className="text-muted-foreground text-sm">
                       {formatShortDate(user.created_at)}
@@ -116,46 +124,58 @@ export function UsersTable({ users, branches, onUserUpdated }: UsersTableProps) 
                       </Tooltip>
                     </TableCell>
                     <TableCell>
-                      <span className={cn(
-                        "text-sm",
-                        user.brand_role === 'superadmin' && "font-medium text-primary",
-                        user.brand_role === 'coordinador' && "font-medium text-info",
-                        user.brand_role && !['superadmin', 'coordinador'].includes(user.brand_role) && "text-muted-foreground",
-                        !user.brand_role && "text-muted-foreground"
-                      )}>
+                      <span
+                        className={cn(
+                          'text-sm',
+                          user.brand_role === 'superadmin' && 'font-medium text-primary',
+                          user.brand_role === 'coordinador' && 'font-medium text-info',
+                          user.brand_role &&
+                            !['superadmin', 'coordinador'].includes(user.brand_role) &&
+                            'text-muted-foreground',
+                          !user.brand_role && 'text-muted-foreground',
+                        )}
+                      >
                         {brandLabel}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={cn(
-                        "text-sm",
-                        user.primaryLocalRole === 'franquiciado' && "font-medium text-accent",
-                        user.primaryLocalRole === 'encargado' && "font-medium text-success",
-                        user.primaryLocalRole && !['franquiciado', 'encargado'].includes(user.primaryLocalRole) && "text-muted-foreground",
-                        !user.primaryLocalRole && "text-muted-foreground"
-                      )}>
+                      <span
+                        className={cn(
+                          'text-sm',
+                          user.primaryLocalRole === 'franquiciado' && 'font-medium text-accent',
+                          user.primaryLocalRole === 'encargado' && 'font-medium text-success',
+                          user.primaryLocalRole &&
+                            !['franquiciado', 'encargado'].includes(user.primaryLocalRole) &&
+                            'text-muted-foreground',
+                          !user.primaryLocalRole && 'text-muted-foreground',
+                        )}
+                      >
                         {localLabel}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {positionLabel}
-                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{positionLabel}</TableCell>
                     <TableCell className="text-sm">
-                      <span className={cn(
-                        user.brand_role === 'superadmin' && "text-primary font-medium",
-                        user.branch_roles.length > 0 && user.brand_role !== 'superadmin' && "text-success",
-                        user.branch_roles.length === 0 && user.brand_role !== 'superadmin' && "text-muted-foreground"
-                      )}>
+                      <span
+                        className={cn(
+                          user.brand_role === 'superadmin' && 'text-primary font-medium',
+                          user.branch_roles.length > 0 &&
+                            user.brand_role !== 'superadmin' &&
+                            'text-success',
+                          user.branch_roles.length === 0 &&
+                            user.brand_role !== 'superadmin' &&
+                            'text-muted-foreground',
+                        )}
+                      >
                         {branchesLabel}
                       </span>
                     </TableCell>
                   </TableRow>
-                  
+
                   {isExpanded && (
                     <TableRow key={`${user.id}-expanded`}>
                       <TableCell colSpan={7} className="p-0 bg-muted/30">
-                        <UserExpandedRow 
-                          user={user} 
+                        <UserExpandedRow
+                          user={user}
                           branches={branches}
                           onClose={() => setExpandedUserId(null)}
                           onUserUpdated={onUserUpdated}

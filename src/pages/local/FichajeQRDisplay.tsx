@@ -1,6 +1,6 @@
 /**
  * FichajeQRDisplay - Pantalla de QR estático para encargados
- * 
+ *
  * Muestra el código QR del local para que los empleados escaneen.
  * El QR apunta a /fichaje/{clock_code}
  */
@@ -29,7 +29,11 @@ export default function FichajeQRDisplay() {
   }, []);
 
   // Fetch branch info
-  const { data: branch, isLoading, error } = useQuery({
+  const {
+    data: branch,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['branch-for-qr', branchId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,7 +41,7 @@ export default function FichajeQRDisplay() {
         .select('id, name, clock_code')
         .eq('id', branchId)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data;
     },
@@ -45,19 +49,19 @@ export default function FichajeQRDisplay() {
   });
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('es-AR', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
     });
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('es-AR', { 
+    return date.toLocaleDateString('es-AR', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
@@ -121,7 +125,7 @@ export default function FichajeQRDisplay() {
           {/* QR Code */}
           <div className="flex flex-col items-center">
             <div className="relative bg-white p-4 rounded-xl shadow-inner">
-              <QRCodeSVG 
+              <QRCodeSVG
                 value={qrUrl}
                 size={256}
                 level="M"
@@ -130,7 +134,7 @@ export default function FichajeQRDisplay() {
                 fgColor="#000000"
               />
             </div>
-            
+
             {/* Static indicator */}
             <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
               <QrCode className="w-4 h-4" />
@@ -151,9 +155,7 @@ export default function FichajeQRDisplay() {
         <p className="text-primary-foreground/80 text-sm">
           Usá la cámara de tu celular para escanear el código QR
         </p>
-        <p className="text-primary-foreground/50 text-xs mt-2">
-          Código: {branch.clock_code}
-        </p>
+        <p className="text-primary-foreground/50 text-xs mt-2">Código: {branch.clock_code}</p>
       </div>
     </div>
   );

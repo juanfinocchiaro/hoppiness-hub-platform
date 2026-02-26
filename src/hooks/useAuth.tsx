@@ -7,8 +7,17 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   emailConfirmed: boolean;
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, captchaToken?: string) => Promise<{ error: Error | null }>;
+  signIn: (
+    email: string,
+    password: string,
+    captchaToken?: string,
+  ) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    captchaToken?: string,
+  ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -23,13 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Use onAuthStateChange as the single source of truth.
     // getSession() is only needed to trigger the INITIAL_SESSION event
     // when no auth event has fired yet.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     // Trigger initial session check — the result is handled by the
     // listener above (fires INITIAL_SESSION event), avoiding double state updates.
@@ -51,9 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const emailConfirmed = !!user?.email_confirmed_at;
 
-  const signUp = async (email: string, password: string, fullName: string, captchaToken?: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    captchaToken?: string,
+  ) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -81,7 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, emailConfirmed, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, session, loading, emailConfirmed, signIn, signUp, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

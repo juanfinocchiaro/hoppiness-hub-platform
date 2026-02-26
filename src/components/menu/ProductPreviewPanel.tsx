@@ -1,14 +1,17 @@
 import { useState, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useItemRemovibles } from '@/hooks/useItemRemovibles';
 import { useGruposOpcionales } from '@/hooks/useGruposOpcionales';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Camera, ImageIcon, Upload } from 'lucide-react';
+import { AlertTriangle, Camera, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fmt = (v: number) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(v);
 
 interface Props {
   item: {
@@ -53,12 +56,14 @@ export function ProductPreviewPanel({ item }: Props) {
       precio: Number(a.extra?.precio_base) || 0,
     }));
 
-  const extrasSinPrecio = activeExtras.filter(e => e.precio <= 0);
-  const hasPersonalization = activeExtras.length > 0 || (removibles || []).length > 0 || (grupos || []).length > 0;
+  const extrasSinPrecio = activeExtras.filter((e) => e.precio <= 0);
+  const hasPersonalization =
+    activeExtras.length > 0 || (removibles || []).length > 0 || (grupos || []).length > 0;
 
   // Alerts
   const alerts: string[] = [];
-  if (extrasSinPrecio.length > 0) alerts.push(`${extrasSinPrecio.length} extras sin precio — configurar en Control de Costos`);
+  if (extrasSinPrecio.length > 0)
+    alerts.push(`${extrasSinPrecio.length} extras sin precio — configurar en Control de Costos`);
   if (!item.imagen_url) alerts.push('Sin foto');
   if (!item.descripcion) alerts.push('Sin descripción');
 
@@ -100,7 +105,9 @@ export function ProductPreviewPanel({ item }: Props) {
 
   return (
     <div className="px-4 py-5 bg-card border-t space-y-5">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vista previa</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Vista previa
+      </p>
 
       <div className="flex gap-6">
         {/* Photo */}
@@ -110,15 +117,15 @@ export function ProductPreviewPanel({ item }: Props) {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ''; }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleUpload(f);
+              e.target.value = '';
+            }}
           />
           {item.imagen_url ? (
             <div className="relative group w-40 h-32 rounded-lg overflow-hidden border">
-              <img
-                src={item.imagen_url}
-                alt={item.nombre}
-                className="w-full h-full object-cover"
-              />
+              <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" />
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
@@ -163,24 +170,24 @@ export function ProductPreviewPanel({ item }: Props) {
       {/* Personalization preview */}
       {hasPersonalization ? (
         <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
-          <p className="font-semibold text-sm">
-            Personalizá tu {item.nombre.split(' ')[0]}
-          </p>
+          <p className="font-semibold text-sm">Personalizá tu {item.nombre.split(' ')[0]}</p>
 
           {/* Extras */}
           {activeExtras.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                Extras · Agregá hasta 10
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">Extras · Agregá hasta 10</p>
               {activeExtras.map((e, i) => (
                 <div key={e.id || i} className="flex items-center justify-between text-sm pl-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-xs w-5 text-center border rounded px-0.5">0</span>
+                    <span className="text-muted-foreground text-xs w-5 text-center border rounded px-0.5">
+                      0
+                    </span>
                     <span>{e.nombre}</span>
                   </div>
                   {e.precio > 0 ? (
-                    <span className="text-xs font-mono text-muted-foreground">+{fmt(e.precio)}</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      +{fmt(e.precio)}
+                    </span>
                   ) : (
                     <span className="text-xs text-yellow-600">⚠ Sin precio</span>
                   )}
@@ -192,11 +199,10 @@ export function ProductPreviewPanel({ item }: Props) {
           {/* Removibles */}
           {(removibles || []).length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                ¿Sacar algo?
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">¿Sacar algo?</p>
               {(removibles || []).map((r: any) => {
-                const nombre = r.nombre_display || `Sin ${r.insumos?.nombre || r.preparaciones?.nombre || '?'}`;
+                const nombre =
+                  r.nombre_display || `Sin ${r.insumos?.nombre || r.preparaciones?.nombre || '?'}`;
                 return (
                   <div key={r.id} className="flex items-center justify-between text-sm pl-2">
                     <div className="flex items-center gap-2">
@@ -212,9 +218,7 @@ export function ProductPreviewPanel({ item }: Props) {
           {/* Grupos opcionales */}
           {(grupos || []).map((g: any) => (
             <div key={g.id} className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                {g.nombre} · Elegí 1
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">{g.nombre} · Elegí 1</p>
               {(g.items || []).map((opt: any) => {
                 const nombre = opt.insumos?.nombre || opt.preparaciones?.nombre || '?';
                 const delta = opt.costo_unitario || 0;
@@ -234,7 +238,9 @@ export function ProductPreviewPanel({ item }: Props) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground italic">Este producto no tiene personalización configurada.</p>
+        <p className="text-sm text-muted-foreground italic">
+          Este producto no tiene personalización configurada.
+        </p>
       )}
 
       {/* Alerts */}

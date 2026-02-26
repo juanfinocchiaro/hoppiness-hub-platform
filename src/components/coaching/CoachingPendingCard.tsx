@@ -50,7 +50,7 @@ export function CoachingPendingCard({ branchId, onStartCoaching }: CoachingPendi
           </span>
         </div>
         <div className="w-full bg-muted rounded-full h-2">
-          <div 
+          <div
             className="bg-primary h-2 rounded-full transition-all"
             style={{ width: `${stats.completionRate}%` }}
           />
@@ -62,7 +62,7 @@ export function CoachingPendingCard({ branchId, onStartCoaching }: CoachingPendi
             <Users className="h-4 w-4 text-muted-foreground" />
             <span>{stats.totalEmployees} empleados</span>
           </div>
-          
+
           {stats.pendingCoachings > 0 ? (
             <div className="flex items-center gap-2 text-sm">
               <AlertCircle className="h-4 w-4 text-amber-500" />
@@ -86,19 +86,16 @@ export function CoachingPendingCard({ branchId, onStartCoaching }: CoachingPendi
           {stats.averageScore && (
             <div className="flex items-center gap-2 text-sm col-span-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span>Promedio: <strong>{stats.averageScore.toFixed(1)}</strong>/4</span>
+              <span>
+                Promedio: <strong>{stats.averageScore.toFixed(1)}</strong>/4
+              </span>
             </div>
           )}
         </div>
 
         {/* Action Button */}
         {stats.pendingCoachings > 0 && onStartCoaching && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full mt-2"
-            onClick={onStartCoaching}
-          >
+          <Button variant="outline" size="sm" className="w-full mt-2" onClick={onStartCoaching}>
             <ClipboardList className="h-4 w-4 mr-2" />
             Hacer Coaching
           </Button>

@@ -1,10 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,13 +7,7 @@ import { Loader2, CheckCircle, XCircle, Smartphone, RefreshCw, Zap } from 'lucid
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-type PaymentStage =
-  | 'sending'
-  | 'waiting'
-  | 'confirmed'
-  | 'rejected'
-  | 'error'
-  | 'cancelled';
+type PaymentStage = 'sending' | 'waiting' | 'confirmed' | 'rejected' | 'error' | 'cancelled';
 
 interface ConfirmedPayment {
   metodo: string;
@@ -63,51 +52,56 @@ export function PointPaymentModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [canForceCancel, setCanForceCancel] = useState(false);
 
-  const createPaymentIntent = useCallback(async (forceCancel = false) => {
-    setStage('sending');
-    setErrorMsg(null);
-    setConfirmedPayment(null);
-    setCanForceCancel(false);
+  const createPaymentIntent = useCallback(
+    async (forceCancel = false) => {
+      setStage('sending');
+      setErrorMsg(null);
+      setConfirmedPayment(null);
+      setCanForceCancel(false);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('mp-point-payment', {
-        body: {
-          branch_id: branchId,
-          pedido_id: pedidoId,
-          amount,
-          ticket_number: ticketNumber,
-          force_cancel_pending: forceCancel,
-        },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('mp-point-payment', {
+          body: {
+            branch_id: branchId,
+            pedido_id: pedidoId,
+            amount,
+            ticket_number: ticketNumber,
+            force_cancel_pending: forceCancel,
+          },
+        });
 
-      if (error) {
-        let msg = error.message || 'Error al enviar cobro';
-        try {
-          if ((error as any).context) {
-            const body = await (error as any).context.json();
-            if (body?.error) msg = body.error;
-            if (body?.can_force_cancel) setCanForceCancel(true);
+        if (error) {
+          let msg = error.message || 'Error al enviar cobro';
+          try {
+            if ((error as any).context) {
+              const body = await (error as any).context.json();
+              if (body?.error) msg = body.error;
+              if (body?.can_force_cancel) setCanForceCancel(true);
+            }
+          } catch {
+            /* ignore */
           }
-        } catch { /* ignore */ }
-        setErrorMsg(msg);
-        setStage('error');
-        return;
-      }
+          setErrorMsg(msg);
+          setStage('error');
+          return;
+        }
 
-      if (data?.error) {
-        setErrorMsg(data.error);
-        if (data.can_force_cancel) setCanForceCancel(true);
-        setStage('error');
-        return;
-      }
+        if (data?.error) {
+          setErrorMsg(data.error);
+          if (data.can_force_cancel) setCanForceCancel(true);
+          setStage('error');
+          return;
+        }
 
-      setPaymentIntentId(data.payment_intent_id);
-      setStage('waiting');
-    } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Error al comunicarse con el Point Smart');
-      setStage('error');
-    }
-  }, [branchId, pedidoId, amount, ticketNumber]);
+        setPaymentIntentId(data.payment_intent_id);
+        setStage('waiting');
+      } catch (err: any) {
+        setErrorMsg(err?.message ?? 'Error al comunicarse con el Point Smart');
+        setStage('error');
+      }
+    },
+    [branchId, pedidoId, amount, ticketNumber],
+  );
 
   // Create intent when modal opens
   useEffect(() => {
@@ -181,14 +175,16 @@ export function PointPaymentModal({
     // Cancel the order via API if we have the ID
     if (paymentIntentId) {
       try {
-        await supabase.functions.invoke('mp-point-payment', {
-          body: {
-            branch_id: branchId,
-            pedido_id: pedidoId,
-            amount: 0,
-            cancel_order_id: paymentIntentId,
-          },
-        }).catch(() => {});
+        await supabase.functions
+          .invoke('mp-point-payment', {
+            body: {
+              branch_id: branchId,
+              pedido_id: pedidoId,
+              amount: 0,
+              cancel_order_id: paymentIntentId,
+            },
+          })
+          .catch(() => {});
       } catch {
         // Best-effort
       }
@@ -200,16 +196,19 @@ export function PointPaymentModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v && stage !== 'sending') onOpenChange(false); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v && stage !== 'sending') onOpenChange(false);
+      }}
+    >
       <POSDialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Cobro con Point Smart</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4 py-6">
-          <p className="text-3xl font-bold text-primary">
-            $ {amount.toLocaleString('es-AR')}
-          </p>
+          <p className="text-3xl font-bold text-primary">$ {amount.toLocaleString('es-AR')}</p>
 
           {stage === 'sending' && (
             <>
@@ -230,7 +229,8 @@ export function PointPaymentModal({
               <p className="text-sm font-medium">Esperando pago en el Point Smart...</p>
               <p className="text-xs text-muted-foreground text-center">
                 El cliente puede pagar con tarjeta, QR o contactless.
-                <br />El cobro se confirma automáticamente.
+                <br />
+                El cobro se confirma automáticamente.
               </p>
             </>
           )}
@@ -272,7 +272,11 @@ export function PointPaymentModal({
                 Reintentar
               </Button>
               {canForceCancel && (
-                <Button variant="outline" className="text-amber-700 border-amber-300" onClick={() => createPaymentIntent(true)}>
+                <Button
+                  variant="outline"
+                  className="text-amber-700 border-amber-300"
+                  onClick={() => createPaymentIntent(true)}
+                >
                   <Zap className="h-4 w-4 mr-2" />
                   Forzar cancelación y reintentar
                 </Button>

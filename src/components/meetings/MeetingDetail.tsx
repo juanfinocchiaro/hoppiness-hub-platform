@@ -28,7 +28,6 @@ import {
   Target,
   Play,
   Trash2,
-  Edit,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -48,23 +47,28 @@ interface MeetingDetailProps {
   canManage?: boolean;
 }
 
-export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManage = false }: MeetingDetailProps) {
+export function MeetingDetail({
+  meeting,
+  onBack,
+  canTrackReads = false,
+  canManage = false,
+}: MeetingDetailProps) {
   const { user } = useAuth();
   const effectiveUser = useEffectiveUser();
   const markAsRead = useMarkMeetingAsRead();
   const startMeeting = useStartMeeting();
   const cancelMeeting = useCancelMeeting();
-  
+
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  
-  const areaLabel = MEETING_AREAS.find(a => a.value === meeting.area)?.label || meeting.area;
+
+  const areaLabel = MEETING_AREAS.find((a) => a.value === meeting.area)?.label || meeting.area;
   const meetingDate = meeting.scheduled_at || meeting.date;
-  
+
   // Find current user's participation
-  const myParticipation = meeting.participants.find(p => p.user_id === effectiveUser.id);
+  const myParticipation = meeting.participants.find((p) => p.user_id === effectiveUser.id);
   const isUnread = myParticipation && !myParticipation.read_at && meeting.status === 'cerrada';
   const isMeetingConvener = user?.id === meeting.created_by;
-  
+
   const handleMarkAsRead = async () => {
     try {
       await markAsRead.mutateAsync(meeting.id);
@@ -99,10 +103,10 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
   };
 
   // Participants stats
-  const presentParticipants = meeting.participants.filter(p => p.was_present === true);
-  const absentParticipants = meeting.participants.filter(p => p.was_present === false);
-  const pendingParticipants = meeting.participants.filter(p => p.was_present === null);
-  const readCount = meeting.participants.filter(p => p.read_at).length;
+  const presentParticipants = meeting.participants.filter((p) => p.was_present === true);
+  const absentParticipants = meeting.participants.filter((p) => p.was_present === false);
+  const pendingParticipants = meeting.participants.filter((p) => p.was_present === null);
+  const readCount = meeting.participants.filter((p) => p.read_at).length;
 
   return (
     <div className="space-y-4">
@@ -123,15 +127,15 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                <span>{format(new Date(meetingDate), "EEEE d 'de' MMMM, HH:mm", { locale: es })}</span>
+                <span>
+                  {format(new Date(meetingDate), "EEEE d 'de' MMMM, HH:mm", { locale: es })}
+                </span>
               </div>
               <Badge variant="secondary">{areaLabel}</Badge>
-              {meeting.branches && (
-                <Badge variant="outline">{meeting.branches.name}</Badge>
-              )}
+              {meeting.branches && <Badge variant="outline">{meeting.branches.name}</Badge>}
             </div>
           </div>
-          
+
           {/* Actions based on status */}
           <div className="flex items-center gap-2">
             {meeting.status === 'convocada' && canManage && (
@@ -152,7 +156,7 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
                 )}
               </>
             )}
-            
+
             {meeting.status === 'cerrada' && isUnread && (
               <Button size="sm" onClick={handleMarkAsRead} disabled={markAsRead.isPending}>
                 <CheckCircle2 className="w-4 h-4 mr-1" />
@@ -163,18 +167,13 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
         </div>
 
         {meeting.creator && (
-          <p className="text-sm text-muted-foreground">
-            Creada por {meeting.creator.full_name}
-          </p>
+          <p className="text-sm text-muted-foreground">Creada por {meeting.creator.full_name}</p>
         )}
       </div>
 
       {/* Content based on status */}
       {meeting.status === 'convocada' && (
-        <ConvocadaContent 
-          meeting={meeting} 
-          pendingParticipants={pendingParticipants}
-        />
+        <ConvocadaContent meeting={meeting} pendingParticipants={pendingParticipants} />
       )}
 
       {meeting.status === 'en_curso' && canManage && (
@@ -192,7 +191,7 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
       )}
 
       {meeting.status === 'cerrada' && (
-        <CerradaContent 
+        <CerradaContent
           meeting={meeting}
           presentParticipants={presentParticipants}
           absentParticipants={absentParticipants}
@@ -207,13 +206,13 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cancelar reunión?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará la reunión y notificará a los participantes. 
-              Esta acción no se puede deshacer.
+              Esta acción eliminará la reunión y notificará a los participantes. Esta acción no se
+              puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Mantener</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleCancelMeeting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
@@ -227,14 +226,14 @@ export function MeetingDetail({ meeting, onBack, canTrackReads = false, canManag
 }
 
 // Sub-component for CONVOCADA status
-function ConvocadaContent({ 
-  meeting, 
-  pendingParticipants 
-}: { 
+function ConvocadaContent({
+  meeting,
+  pendingParticipants,
+}: {
   meeting: MeetingWithDetails;
   pendingParticipants: MeetingWithDetails['participants'];
 }) {
-  const areaLabel = MEETING_AREAS.find(a => a.value === meeting.area)?.label;
+  const areaLabel = MEETING_AREAS.find((a) => a.value === meeting.area)?.label;
   const calendarUrl = generateGoogleCalendarLink({
     title: meeting.title,
     date: meeting.scheduled_at || meeting.date,
@@ -259,7 +258,7 @@ function ConvocadaContent({
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {pendingParticipants.map(p => (
+            {pendingParticipants.map((p) => (
               <div key={p.id} className="flex items-center gap-2 bg-muted/50 px-2 py-1 rounded-md">
                 <Avatar className="h-6 w-6">
                   <AvatarImage src={p.profile?.avatar_url} />
@@ -287,13 +286,13 @@ function ConvocadaContent({
 }
 
 // Sub-component for CERRADA status
-function CerradaContent({ 
-  meeting, 
+function CerradaContent({
+  meeting,
   presentParticipants,
   absentParticipants,
   readCount,
   canTrackReads,
-}: { 
+}: {
   meeting: MeetingWithDetails;
   presentParticipants: MeetingWithDetails['participants'];
   absentParticipants: MeetingWithDetails['participants'];
@@ -338,17 +337,23 @@ function CerradaContent({
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">Presentes</p>
               <div className="flex flex-wrap gap-2">
-                {presentParticipants.map(p => (
-                  <div key={p.id} className="flex items-center gap-2 bg-success/10 px-2 py-1 rounded-md">
+                {presentParticipants.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-2 bg-success/10 px-2 py-1 rounded-md"
+                  >
                     <CheckCircle2 className="w-3 h-3 text-success" />
                     <span className="text-sm">{p.profile?.full_name || 'Usuario'}</span>
-                    {canTrackReads && (
-                      p.read_at ? (
-                        <Badge variant="outline" className="text-[10px] px-1">Leyó</Badge>
+                    {canTrackReads &&
+                      (p.read_at ? (
+                        <Badge variant="outline" className="text-[10px] px-1">
+                          Leyó
+                        </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] px-1">Pendiente</Badge>
-                      )
-                    )}
+                        <Badge variant="secondary" className="text-[10px] px-1">
+                          Pendiente
+                        </Badge>
+                      ))}
                   </div>
                 ))}
               </div>
@@ -360,17 +365,22 @@ function CerradaContent({
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">Ausentes</p>
               <div className="flex flex-wrap gap-2">
-                {absentParticipants.map(p => (
+                {absentParticipants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2 bg-muted px-2 py-1 rounded-md">
                     <XCircle className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">{p.profile?.full_name || 'Usuario'}</span>
-                    {canTrackReads && (
-                      p.read_at ? (
-                        <Badge variant="outline" className="text-[10px] px-1">Leyó</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {p.profile?.full_name || 'Usuario'}
+                    </span>
+                    {canTrackReads &&
+                      (p.read_at ? (
+                        <Badge variant="outline" className="text-[10px] px-1">
+                          Leyó
+                        </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] px-1">Pendiente</Badge>
-                      )
-                    )}
+                        <Badge variant="secondary" className="text-[10px] px-1">
+                          Pendiente
+                        </Badge>
+                      ))}
                   </div>
                 ))}
               </div>
@@ -382,7 +392,9 @@ function CerradaContent({
             <div className="pt-2 border-t">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Confirmaciones de lectura</span>
-                <Badge variant={readCount === meeting.participants.length ? 'default' : 'secondary'}>
+                <Badge
+                  variant={readCount === meeting.participants.length ? 'default' : 'secondary'}
+                >
                   {readCount}/{meeting.participants.length}
                 </Badge>
               </div>
@@ -413,7 +425,7 @@ function CerradaContent({
                       <div className="flex items-center gap-2 mt-2">
                         <User className="w-3 h-3 text-muted-foreground" />
                         <div className="flex flex-wrap gap-1">
-                          {agreement.assignees.map(a => (
+                          {agreement.assignees.map((a) => (
                             <Badge key={a.id} variant="outline" className="text-xs">
                               {a.profile?.full_name || 'Usuario'}
                             </Badge>

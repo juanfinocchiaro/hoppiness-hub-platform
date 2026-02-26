@@ -1,14 +1,25 @@
 import { supabase } from '@/integrations/supabase/client';
 import { printRawBase64 } from '@/lib/qz-print';
-import { generateTicketCliente, generateTicketDelivery, generateArcaQrBitmap, type TicketClienteData, type DeliveryTicketData } from '@/lib/escpos';
+import {
+  generateTicketCliente,
+  generateTicketDelivery,
+  generateArcaQrBitmap,
+  type TicketClienteData,
+  type DeliveryTicketData,
+} from '@/lib/escpos';
 import type { BranchPrinter } from '@/hooks/useBranchPrinters';
 import type { PrintConfig } from '@/hooks/usePrintConfig';
 
 export function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;
-  if (err && typeof err === 'object' && 'message' in err) return String((err as Record<string, unknown>).message);
-  try { return JSON.stringify(err); } catch { return String(err); }
+  if (err && typeof err === 'object' && 'message' in err)
+    return String((err as Record<string, unknown>).message);
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
 }
 
 interface AfipLike {
@@ -107,12 +118,14 @@ export async function printReadyTicketByPedidoId(params: {
 
   const { data, error } = await supabase
     .from('pedidos')
-    .select(`
+    .select(
+      `
       id, numero_pedido, tipo_servicio, canal_venta, canal_app, numero_llamador, cliente_nombre, cliente_telefono, cliente_direccion, created_at, total, descuento,
       pedido_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id),
       pedido_pagos(metodo, monto, monto_recibido, vuelto, tarjeta_marca),
       facturas_emitidas(anulada, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, fecha_emision, neto, iva, total, receptor_cuit, receptor_razon_social, receptor_condicion_iva)
-    `)
+    `,
+    )
     .eq('id', pedidoId)
     .single();
   if (error) throw error;
@@ -142,11 +155,13 @@ export async function printReadyTicketByPedidoId(params: {
       descuento: pedido.descuento || 0,
     },
     branchName,
-    metodo_pago: (pedido.pedido_pagos || []).length > 1
-      ? `Mixto: ${(pedido.pedido_pagos || []).map((p) => formatMetodoPago(p.metodo) || p.metodo).join(' + ')}`
-      : formatMetodoPago(singlePayment?.metodo),
+    metodo_pago:
+      (pedido.pedido_pagos || []).length > 1
+        ? `Mixto: ${(pedido.pedido_pagos || []).map((p) => formatMetodoPago(p.metodo) || p.metodo).join(' + ')}`
+        : formatMetodoPago(singlePayment?.metodo),
     tarjeta_marca: singlePayment?.tarjeta_marca || undefined,
-    monto_recibido: singlePayment?.metodo === 'efectivo' ? singlePayment.monto_recibido || undefined : undefined,
+    monto_recibido:
+      singlePayment?.metodo === 'efectivo' ? singlePayment.monto_recibido || undefined : undefined,
     vuelto: singlePayment?.metodo === 'efectivo' ? singlePayment.vuelto || 0 : undefined,
     factura: activeInvoice
       ? {
@@ -183,7 +198,9 @@ export async function printReadyTicketByPedidoId(params: {
     try {
       const qr = await generateArcaQrBitmap(ticketData.factura);
       ticketData.factura = { ...ticketData.factura, qr_bitmap_b64: qr };
-    } catch { /* fallback sin QR */ }
+    } catch {
+      /* fallback sin QR */
+    }
   }
 
   const base64 = generateTicketCliente(ticketData, printer.paper_width);
@@ -237,12 +254,14 @@ export async function printDeliveryTicketByPedidoId(params: {
 
   const { data, error } = await supabase
     .from('pedidos')
-    .select(`
+    .select(
+      `
       id, numero_pedido, tipo_servicio, canal_venta, canal_app, numero_llamador,
       cliente_nombre, cliente_telefono, cliente_direccion,
       created_at, total, descuento,
       pedido_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id)
-    `)
+    `,
+    )
     .eq('id', pedidoId)
     .single();
   if (error) throw error;

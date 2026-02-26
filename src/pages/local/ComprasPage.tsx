@@ -2,11 +2,28 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataToolbar } from '@/components/ui/data-table-pro';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Trash2, ShoppingCart, ChevronDown, ChevronUp, Download, FileUp, FileText, Loader2 } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  ShoppingCart,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  FileUp,
+  FileText,
+  Loader2,
+} from 'lucide-react';
 import { exportToExcel } from '@/lib/exportExcel';
 import { useFacturas, useFacturaMutations } from '@/hooks/useCompras';
 import { useUploadFacturaPdf } from '@/hooks/useProveedorDocumentos';
@@ -36,7 +53,8 @@ export default function ComprasPage() {
   const [uploadingFacturaId, setUploadingFacturaId] = useState<string | null>(null);
 
   const filtered = facturas?.filter((f: any) => {
-    const matchesSearch = f.proveedores?.razon_social?.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch =
+      f.proveedores?.razon_social?.toLowerCase().includes(search.toLowerCase()) ||
       f.factura_numero?.includes(search);
     const matchesFrom = !dateFrom || (f.fecha_factura && f.fecha_factura >= dateFrom);
     const matchesTo = !dateTo || (f.fecha_factura && f.fecha_factura <= dateTo);
@@ -57,18 +75,30 @@ export default function ComprasPage() {
         actions={
           <div className="flex gap-2">
             {filtered && filtered.length > 0 && (
-              <Button variant="outline" onClick={() => exportToExcel(
-                filtered.map((f: any) => ({
-                  fecha: f.fecha_factura ? formatLocalDate(f.fecha_factura) : '-',
-                  proveedor: f.proveedores?.razon_social || '-',
-                  numero: f.factura_numero || '-',
-                  total: f.total || 0,
-                  estado: f.estado || '-',
-                  vencimiento: f.fecha_vencimiento ? formatLocalDate(f.fecha_vencimiento) : '-',
-                })),
-                { fecha: 'Fecha', proveedor: 'Proveedor', numero: 'Nº Factura', total: 'Total', estado: 'Estado', vencimiento: 'Vencimiento' },
-                { filename: 'compras' }
-              )}>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  exportToExcel(
+                    filtered.map((f: any) => ({
+                      fecha: f.fecha_factura ? formatLocalDate(f.fecha_factura) : '-',
+                      proveedor: f.proveedores?.razon_social || '-',
+                      numero: f.factura_numero || '-',
+                      total: f.total || 0,
+                      estado: f.estado || '-',
+                      vencimiento: f.fecha_vencimiento ? formatLocalDate(f.fecha_vencimiento) : '-',
+                    })),
+                    {
+                      fecha: 'Fecha',
+                      proveedor: 'Proveedor',
+                      numero: 'Nº Factura',
+                      total: 'Total',
+                      estado: 'Estado',
+                      vencimiento: 'Vencimiento',
+                    },
+                    { filename: 'compras' },
+                  )
+                }
+              >
                 <Download className="w-4 h-4 mr-2" /> Excel
               </Button>
             )}
@@ -83,7 +113,14 @@ export default function ComprasPage() {
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder="Buscar por proveedor o nº factura..."
-        filters={<DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />}
+        filters={
+          <DateRangeFilter
+            from={dateFrom}
+            to={dateTo}
+            onFromChange={setDateFrom}
+            onToChange={setDateTo}
+          />
+        }
       />
 
       <div className="rounded-md border">
@@ -105,14 +142,20 @@ export default function ComprasPage() {
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 8 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell key={j}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : !filtered?.length ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-40">
-                  <EmptyState icon={ShoppingCart} title="Sin compras" description="Registrá tu primera compra" />
+                  <EmptyState
+                    icon={ShoppingCart}
+                    title="Sin compras"
+                    description="Registrá tu primera compra"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -120,32 +163,59 @@ export default function ComprasPage() {
                 const isCanon = row.factura_numero?.startsWith('CANON-');
                 return (
                   <>
-                    <TableRow key={row.id} className="cursor-pointer" onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
+                    <TableRow
+                      key={row.id}
+                      className="cursor-pointer"
+                      onClick={() => setExpanded(expanded === row.id ? null : row.id)}
+                    >
                       <TableCell>
-                        {expanded === row.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {expanded === row.id ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
                       </TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{formatLocalDate(row.factura_fecha)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {formatLocalDate(row.factura_fecha)}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <Link
                           to={`/milocal/${branchId}/finanzas/proveedores/${row.proveedor_id}`}
                           className="text-primary hover:underline whitespace-nowrap"
-                          onClick={e => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {row.proveedores?.razon_social}
                         </Link>
-                        {isCanon && <Badge variant="outline" className="ml-2 text-xs">Automática</Badge>}
+                        {isCanon && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Automática
+                          </Badge>
+                        )}
                       </TableCell>
-                      <TableCell className="text-sm font-mono whitespace-nowrap">{row.factura_tipo ? `${row.factura_tipo}-` : ''}{row.factura_numero}</TableCell>
-                      <TableCell className="text-right font-mono whitespace-nowrap">$ {Number(row.total).toLocaleString('es-AR')}</TableCell>
+                      <TableCell className="text-sm font-mono whitespace-nowrap">
+                        {row.factura_tipo ? `${row.factura_tipo}-` : ''}
+                        {row.factura_numero}
+                      </TableCell>
+                      <TableCell className="text-right font-mono whitespace-nowrap">
+                        $ {Number(row.total).toLocaleString('es-AR')}
+                      </TableCell>
                       <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
                         {row.fecha_vencimiento ? formatLocalDate(row.fecha_vencimiento) : '-'}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
+                        <div
+                          className="flex gap-1 justify-end"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {(row as any).factura_pdf_url ? (
                             <Button variant="ghost" size="icon" asChild>
-                              <a href={(row as any).factura_pdf_url} target="_blank" rel="noopener noreferrer" title="Ver PDF">
+                              <a
+                                href={(row as any).factura_pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Ver PDF"
+                              >
                                 <FileText className="w-4 h-4 text-red-500" />
                               </a>
                             </Button>
@@ -163,9 +233,12 @@ export default function ComprasPage() {
                                   const file = (ev.target as HTMLInputElement).files?.[0];
                                   if (file) {
                                     setUploadingFacturaId(row.id);
-                                    uploadPdf.mutate({ facturaId: row.id, file }, {
-                                      onSettled: () => setUploadingFacturaId(null),
-                                    });
+                                    uploadPdf.mutate(
+                                      { facturaId: row.id, file },
+                                      {
+                                        onSettled: () => setUploadingFacturaId(null),
+                                      },
+                                    );
                                   }
                                 };
                                 input.click();
@@ -189,7 +262,7 @@ export default function ComprasPage() {
                     {expanded === row.id && row.items_factura?.length > 0 && (
                       <TableRow key={`${row.id}-items`}>
                         <TableCell colSpan={8} className="bg-muted/30 p-0">
-                        <Table>
+                          <Table>
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Concepto</TableHead>
@@ -203,14 +276,22 @@ export default function ComprasPage() {
                             <TableBody>
                               {row.items_factura.map((item: any) => (
                                 <TableRow key={item.id}>
-                                  <TableCell className="text-sm">{item.insumos?.nombre || item.conceptos_servicio?.nombre || '-'}</TableCell>
-                                  <TableCell className="text-right font-mono">{Number(item.cantidad)}</TableCell>
+                                  <TableCell className="text-sm">
+                                    {item.insumos?.nombre || item.conceptos_servicio?.nombre || '-'}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {Number(item.cantidad)}
+                                  </TableCell>
                                   <TableCell className="text-sm">{item.unidad || '-'}</TableCell>
-                                  <TableCell className="text-right font-mono">$ {Number(item.precio_unitario).toLocaleString('es-AR')}</TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    $ {Number(item.precio_unitario).toLocaleString('es-AR')}
+                                  </TableCell>
                                   <TableCell className="text-right font-mono text-muted-foreground">
                                     {item.alicuota_iva != null ? `${item.alicuota_iva}%` : '-'}
                                   </TableCell>
-                                  <TableCell className="text-right font-mono">$ {Number(item.subtotal).toLocaleString('es-AR')}</TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    $ {Number(item.subtotal).toLocaleString('es-AR')}
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>

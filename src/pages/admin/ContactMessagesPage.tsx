@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  MessageSquare, 
-  Download, 
-  Phone, 
-  Check, 
+import {
+  MessageSquare,
+  Download,
+  Phone,
+  Check,
   Archive,
   Building2,
   Briefcase,
@@ -15,7 +15,7 @@ import {
   ShoppingBag,
   HelpCircle,
   ExternalLink,
-  FileText
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,11 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  useContactMessages, 
+import {
+  useContactMessages,
   useMessageCounts,
   type MessageType,
-  type ContactMessage 
+  type ContactMessage,
 } from '@/hooks/useContactMessages';
 import { toast } from 'sonner';
 
@@ -40,12 +40,21 @@ const typeConfig: Record<string, { icon: typeof MessageSquare; label: string; co
   otro: { icon: MessageSquare, label: 'Otro', color: 'bg-gray-500' },
 };
 
-function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate }: { 
-  message: ContactMessage; 
+function MessageCard({
+  message,
+  onMarkRead,
+  onArchive,
+  branches,
+  resolveTemplate,
+}: {
+  message: ContactMessage;
   onMarkRead: (id: string) => void;
   onArchive: (id: string) => void;
   branches: Record<string, string>;
-  resolveTemplate: (subjectType: string, contact: { name: string; email: string; phone: string }) => string;
+  resolveTemplate: (
+    subjectType: string,
+    contact: { name: string; email: string; phone: string },
+  ) => string;
 }) {
   const isUnread = !message.read_at;
   const config = typeConfig[message.subject] || typeConfig.otro;
@@ -54,7 +63,11 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
   const handleWhatsApp = () => {
     const cleanPhone = message.phone.replace(/\D/g, '');
     const fullPhone = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`;
-    const text = resolveTemplate(message.subject, { name: message.name, email: message.email, phone: message.phone });
+    const text = resolveTemplate(message.subject, {
+      name: message.name,
+      email: message.email,
+      phone: message.phone,
+    });
     const url = text
       ? `whatsapp://send?phone=${fullPhone}&text=${encodeURIComponent(text)}`
       : `whatsapp://send?phone=${fullPhone}`;
@@ -78,20 +91,31 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
           <div className="space-y-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
               {message.franchise_has_zone && (
-                <div><span className="font-medium">Zona:</span> {message.franchise_has_zone}</div>
+                <div>
+                  <span className="font-medium">Zona:</span> {message.franchise_has_zone}
+                </div>
               )}
               {message.franchise_has_location && (
-                <div><span className="font-medium">Local:</span> {message.franchise_has_location}</div>
+                <div>
+                  <span className="font-medium">Local:</span> {message.franchise_has_location}
+                </div>
               )}
               {message.franchise_investment_capital && (
-                <div><span className="font-medium">Capital:</span> {message.franchise_investment_capital}</div>
+                <div>
+                  <span className="font-medium">Capital:</span>{' '}
+                  {message.franchise_investment_capital}
+                </div>
               )}
               {message.investment_range && (
-                <div><span className="font-medium">Rango inversión:</span> {message.investment_range}</div>
+                <div>
+                  <span className="font-medium">Rango inversión:</span> {message.investment_range}
+                </div>
               )}
             </div>
             {message.message && (
-              <p className="text-sm text-muted-foreground italic border-l-2 border-muted pl-3">{message.message}</p>
+              <p className="text-sm text-muted-foreground italic border-l-2 border-muted pl-3">
+                {message.message}
+              </p>
             )}
           </div>
         );
@@ -99,37 +123,46 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
         return (
           <div className="space-y-1 text-sm text-muted-foreground">
             {message.employment_branch_id && branches[message.employment_branch_id] && (
-              <div><span className="font-medium">Sucursal:</span> {branches[message.employment_branch_id]}</div>
+              <div>
+                <span className="font-medium">Sucursal:</span>{' '}
+                {branches[message.employment_branch_id]}
+              </div>
             )}
             {message.employment_position && (
-              <div><span className="font-medium">Puesto:</span> {message.employment_position}</div>
+              <div>
+                <span className="font-medium">Puesto:</span> {message.employment_position}
+              </div>
             )}
             {message.employment_motivation && (
-              <div><span className="font-medium">Motivación:</span> {message.employment_motivation}</div>
+              <div>
+                <span className="font-medium">Motivación:</span> {message.employment_motivation}
+              </div>
             )}
             {(message.employment_cv_link || message.attachment_url) && (
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 {message.attachment_url ? (
-                  <a 
-                    href={message.attachment_url} 
-                    target="_blank" 
+                  <a
+                    href={message.attachment_url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline flex items-center gap-1"
                   >
                     {message.attachment_name || 'CV Adjunto'}
                     <ExternalLink className="h-3 w-3" />
                   </a>
-                ) : message.employment_cv_link && (
-                  <a 
-                    href={message.employment_cv_link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-1"
-                  >
-                    Ver CV/LinkedIn
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                ) : (
+                  message.employment_cv_link && (
+                    <a
+                      href={message.employment_cv_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-1"
+                    >
+                      Ver CV/LinkedIn
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )
                 )}
               </div>
             )}
@@ -139,25 +172,33 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
         return (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
             {message.order_number && (
-              <div><span className="font-medium">Nro Pedido:</span> #{message.order_number}</div>
+              <div>
+                <span className="font-medium">Nro Pedido:</span> #{message.order_number}
+              </div>
             )}
             {message.order_date && (
-              <div><span className="font-medium">Fecha:</span> {message.order_date}</div>
+              <div>
+                <span className="font-medium">Fecha:</span> {message.order_date}
+              </div>
             )}
             {message.order_issue && (
-              <div className="md:col-span-3"><span className="font-medium">Problema:</span> {message.order_issue}</div>
+              <div className="md:col-span-3">
+                <span className="font-medium">Problema:</span> {message.order_issue}
+              </div>
             )}
           </div>
         );
       default:
-        return message.message && (
-          <p className="text-sm text-muted-foreground">{message.message}</p>
+        return (
+          message.message && <p className="text-sm text-muted-foreground">{message.message}</p>
         );
     }
   };
 
   return (
-    <Card className={`transition-all ${isUnread ? 'border-l-4 border-l-orange-500 bg-orange-50/50 dark:bg-orange-950/10' : ''}`}>
+    <Card
+      className={`transition-all ${isUnread ? 'border-l-4 border-l-orange-500 bg-orange-50/50 dark:bg-orange-950/10' : ''}`}
+    >
       <CardContent className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -177,10 +218,11 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
               {config.label}
             </Badge>
             <span>
-              {message.created_at && formatDistanceToNow(new Date(message.created_at), { 
-                addSuffix: true, 
-                locale: es 
-              })}
+              {message.created_at &&
+                formatDistanceToNow(new Date(message.created_at), {
+                  addSuffix: true,
+                  locale: es,
+                })}
             </span>
           </div>
         </div>
@@ -190,9 +232,9 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-2 border-t">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleWhatsApp}
             className="flex items-center gap-1"
           >
@@ -200,9 +242,9 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
             WhatsApp
           </Button>
           {isUnread && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleMarkRead}
               className="flex items-center gap-1"
             >
@@ -210,9 +252,9 @@ function MessageCard({ message, onMarkRead, onArchive, branches, resolveTemplate
               Marcar leído
             </Button>
           )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleArchive}
             className="flex items-center gap-1 text-muted-foreground"
           >
@@ -237,7 +279,7 @@ function ContactMessagesPageContent() {
     typeFilter,
     showOnlyUnread,
   });
-  
+
   const { data: counts } = useMessageCounts();
   const { resolveTemplate } = useWhatsAppTemplates();
 
@@ -248,7 +290,9 @@ function ContactMessagesPageContent() {
       const { data, error } = await supabase.from('branches').select('id, name');
       if (error) throw error;
       const map: Record<string, string> = {};
-      data?.forEach(b => { map[b.id] = b.name; });
+      data?.forEach((b) => {
+        map[b.id] = b.name;
+      });
       return map;
     },
   });
@@ -260,7 +304,7 @@ function ContactMessagesPageContent() {
     }
 
     const headers = ['Fecha', 'Nombre', 'Email', 'Teléfono', 'Tipo', 'Estado', 'Mensaje'];
-    const rows = messages.map(msg => [
+    const rows = messages.map((msg) => [
       msg.created_at ? new Date(msg.created_at).toLocaleDateString('es-AR') : '',
       msg.name,
       msg.email,
@@ -271,7 +315,7 @@ function ContactMessagesPageContent() {
     ]);
 
     const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -315,8 +359,8 @@ function ContactMessagesPageContent() {
         </Tabs>
 
         <div className="flex items-center gap-2">
-          <Checkbox 
-            id="unread-only" 
+          <Checkbox
+            id="unread-only"
             checked={showOnlyUnread}
             onCheckedChange={(checked) => setShowOnlyUnread(checked === true)}
           />
@@ -350,9 +394,9 @@ function ContactMessagesPageContent() {
           </Card>
         ) : (
           messages.map((message) => (
-            <MessageCard 
-              key={message.id} 
-              message={message} 
+            <MessageCard
+              key={message.id}
+              message={message}
               onMarkRead={markAsRead}
               onArchive={archive}
               branches={branchesMap ?? {}}

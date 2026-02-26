@@ -1,8 +1,8 @@
 /**
  * FichajeEmpleado - Página de fichaje con validación de reglamento
- * 
+ *
  * URL: /fichaje/:branchCode
- * 
+ *
  * Flujo:
  * 1. Empleado escanea QR estático del local
  * 2. Ingresa su PIN de 4 dígitos (auto-submit al completar)
@@ -22,16 +22,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { 
-  Camera, 
-  CheckCircle2, 
-  Clock, 
-  LogIn, 
-  LogOut, 
-  AlertCircle, 
+import {
+  Camera,
+  CheckCircle2,
+  Clock,
+  LogIn,
+  LogOut,
+  AlertCircle,
   Loader2,
   AlertTriangle,
-  FileWarning
+  FileWarning,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -72,12 +72,17 @@ export default function FichajeEmpleado() {
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   // Fetch branch data
-  const { data: branch, isLoading: loadingBranch, error: branchError } = useQuery({
+  const {
+    data: branch,
+    isLoading: loadingBranch,
+    error: branchError,
+  } = useQuery({
     queryKey: ['branch-by-code', branchCode],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('get_branch_for_clock', { _clock_code: branchCode });
-      
+      const { data, error } = await supabase.rpc('get_branch_for_clock', {
+        _clock_code: branchCode,
+      });
+
       if (error) throw error;
       if (!data || data.length === 0) return null;
       return data[0] as BranchData;
@@ -88,7 +93,7 @@ export default function FichajeEmpleado() {
   useEffect(() => {
     return () => {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
     };
   }, [stream]);
@@ -96,7 +101,7 @@ export default function FichajeEmpleado() {
   const startCamera = useCallback(async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 }
+        video: { facingMode: 'user', width: 640, height: 480 },
       });
       setStream(mediaStream);
       if (videoRef.current) {
@@ -110,7 +115,7 @@ export default function FichajeEmpleado() {
 
   const stopCamera = useCallback(() => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
   }, [stream]);
@@ -169,20 +174,22 @@ export default function FichajeEmpleado() {
         _branch_code: branchCode,
         _pin: pinValue,
       });
-      
+
       if (error) throw error;
       if (!data || data.length === 0) {
-        throw new Error('PIN incorrecto. Verificá que hayas configurado tu PIN para esta sucursal.');
+        throw new Error(
+          'PIN incorrecto. Verificá que hayas configurado tu PIN para esta sucursal.',
+        );
       }
-      
+
       return data[0] as ValidatedUser;
     },
     onSuccess: async (userData) => {
       setValidatedUser(userData);
-      
+
       const regStatus = await checkRegulationStatus(userData.user_id);
       setRegulationStatus(regStatus);
-      
+
       if (regStatus.isBlocked) {
         setStep('regulation-blocked');
       } else if (regStatus.hasPending) {
@@ -201,15 +208,15 @@ export default function FichajeEmpleado() {
   const clockMutation = useMutation({
     mutationFn: async ({ type }: { type: 'clock_in' | 'clock_out' }) => {
       if (!validatedUser) throw new Error('Usuario no validado');
-      
+
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
+
       const response = await fetch(`${supabaseUrl}/functions/v1/register-clock-entry`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseKey,
+          apikey: supabaseKey,
         },
         body: JSON.stringify({
           branch_code: branchCode,
@@ -218,13 +225,13 @@ export default function FichajeEmpleado() {
           user_agent: navigator.userAgent,
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Error al registrar fichaje');
       }
-      
+
       return type;
     },
     onSuccess: (type) => {
@@ -288,7 +295,7 @@ export default function FichajeEmpleado() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <img src={logoHoppiness} alt="Hoppiness" className="h-12 mb-6" />
-      
+
       <Card className="w-full max-w-md">
         <CardHeader className="text-center pb-2">
           <CardTitle className="flex items-center justify-center gap-2">
@@ -327,8 +334,8 @@ export default function FichajeEmpleado() {
                 />
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={pin.length !== 4 || validatePinMutation.isPending}
               >
@@ -347,7 +354,8 @@ export default function FichajeEmpleado() {
                 <AlertTriangle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold mb-2">Reglamento Pendiente</h2>
                 <p className="text-muted-foreground">
-                  Tenés <strong>{5 - regulationStatus.daysSinceUpload} días</strong> para firmar el nuevo reglamento.
+                  Tenés <strong>{5 - regulationStatus.daysSinceUpload} días</strong> para firmar el
+                  nuevo reglamento.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Contactá a tu encargado para firmarlo.
@@ -357,7 +365,8 @@ export default function FichajeEmpleado() {
               <Alert className="border-amber-500/50 bg-amber-500/10">
                 <FileWarning className="h-4 w-4 text-amber-500" />
                 <AlertDescription className="text-amber-700">
-                  Si no firmás el reglamento en {5 - regulationStatus.daysSinceUpload} días, no podrás fichar.
+                  Si no firmás el reglamento en {5 - regulationStatus.daysSinceUpload} días, no
+                  podrás fichar.
                 </AlertDescription>
               </Alert>
 
@@ -376,9 +385,7 @@ export default function FichajeEmpleado() {
                 No podés fichar hasta firmar el nuevo reglamento.
               </p>
               <Alert variant="destructive">
-                <AlertDescription>
-                  Contactá a tu encargado para poder fichar.
-                </AlertDescription>
+                <AlertDescription>Contactá a tu encargado para poder fichar.</AlertDescription>
               </Alert>
             </div>
           )}
@@ -387,7 +394,9 @@ export default function FichajeEmpleado() {
           {step === 'camera' && validatedUser && (
             <div className="space-y-4">
               <div className="text-center">
-                <p className="text-lg font-medium">¡Hola {validatedUser.full_name.split(' ')[0]}!</p>
+                <p className="text-lg font-medium">
+                  ¡Hola {validatedUser.full_name.split(' ')[0]}!
+                </p>
                 <p className="text-muted-foreground text-sm">Sacate una selfie para fichar</p>
               </div>
 
@@ -413,11 +422,7 @@ export default function FichajeEmpleado() {
                   </>
                 ) : (
                   <>
-                    <img 
-                      src={capturedPhoto} 
-                      alt="Selfie" 
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={capturedPhoto} alt="Selfie" className="w-full h-full object-cover" />
                     <Button
                       onClick={() => {
                         setCapturedPhoto(null);
@@ -468,7 +473,7 @@ export default function FichajeEmpleado() {
               )}
 
               <p className="text-center text-xs text-muted-foreground">
-                {format(new Date(), "HH:mm - EEE d MMM", { locale: es })}
+                {format(new Date(), 'HH:mm - EEE d MMM', { locale: es })}
               </p>
             </div>
           )}
@@ -498,9 +503,7 @@ export default function FichajeEmpleado() {
               ) : (
                 <div className="space-y-2">
                   <p className="text-primary font-medium">¡Gracias por tu trabajo hoy!</p>
-                  <p className="text-sm text-muted-foreground">
-                    Descansá bien, nos vemos pronto.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Descansá bien, nos vemos pronto.</p>
                 </div>
               )}
             </div>

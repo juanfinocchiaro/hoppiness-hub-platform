@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Camera, Check, X, MessageSquare, Loader2, Trash2, Image } from 'lucide-react';
+import { Camera, Check, X, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -17,10 +17,14 @@ interface InspectionItemRowProps {
   readOnly?: boolean;
 }
 
-export function InspectionItemRow({ item, inspectionId, readOnly = false }: InspectionItemRowProps) {
+export function InspectionItemRow({
+  item,
+  inspectionId,
+  readOnly = false,
+}: InspectionItemRowProps) {
   const [showObservations, setShowObservations] = useState(!!item.observations);
   const [observations, setObservations] = useState(item.observations || '');
-  
+
   const updateItem = useUpdateInspectionItem();
   const uploadPhoto = useUploadInspectionPhoto();
 
@@ -82,12 +86,14 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
       <div className="flex items-start gap-4">
         {/* Item label */}
         <div className="flex-1 min-w-0">
-          <p className={cn(
-            "text-sm",
-            item.complies === true && "text-green-700 dark:text-green-400",
-            item.complies === false && "text-destructive font-medium",
-            isPending && "text-muted-foreground"
-          )}>
+          <p
+            className={cn(
+              'text-sm',
+              item.complies === true && 'text-green-700 dark:text-green-400',
+              item.complies === false && 'text-destructive font-medium',
+              isPending && 'text-muted-foreground',
+            )}
+          >
             {item.item_label}
           </p>
         </div>
@@ -103,10 +109,10 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                 variant={item.complies === true ? 'default' : 'outline'}
                 size="icon"
                 className={cn(
-                  "h-10 w-10 transition-all",
-                  item.complies === true 
-                    ? "bg-green-600 hover:bg-green-700 text-white shadow-md" 
-                    : "hover:bg-green-50 hover:border-green-300 dark:hover:bg-green-950/30"
+                  'h-10 w-10 transition-all',
+                  item.complies === true
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-md'
+                    : 'hover:bg-green-50 hover:border-green-300 dark:hover:bg-green-950/30',
                 )}
                 onClick={() => handleComplianceToggle(true)}
                 disabled={readOnly}
@@ -120,10 +126,10 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
                 variant={item.complies === false ? 'destructive' : 'outline'}
                 size="icon"
                 className={cn(
-                  "h-10 w-10 transition-all",
-                  item.complies === false 
-                    ? "shadow-md" 
-                    : "hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-950/30"
+                  'h-10 w-10 transition-all',
+                  item.complies === false
+                    ? 'shadow-md'
+                    : 'hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-950/30',
                 )}
                 onClick={() => handleComplianceToggle(false)}
                 disabled={readOnly}
@@ -184,9 +190,9 @@ export function InspectionItemRow({ item, inspectionId, readOnly = false }: Insp
           {photos.map((url, idx) => (
             <div key={idx} className="relative group">
               <a href={url} target="_blank" rel="noopener noreferrer">
-                <img 
-                  src={url} 
-                  alt={`Foto ${idx + 1}`} 
+                <img
+                  src={url}
+                  alt={`Foto ${idx + 1}`}
                   className="h-16 w-16 object-cover rounded border border-border hover:opacity-80 transition-opacity"
                 />
               </a>

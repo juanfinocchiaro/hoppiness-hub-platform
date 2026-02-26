@@ -1,0 +1,12 @@
+{
+  "types": [
+    {"type": "feat", "section": "Nuevas funcionalidades"},
+    {"type": "fix", "section": "Correcciones"},
+    {"type": "docs", "section": "Documentación"},
+    {"type": "style", "section": "Estilos", "hidden": true},
+    {"type": "refactor", "section": "Refactoring"},
+    {"type": "perf", "section": "Performance"},
+    {"type": "test", "section": "Tests", "hidden": true},
+    {"type": "chore", "section": "Otros", "hidden": true}
+  ]
+}

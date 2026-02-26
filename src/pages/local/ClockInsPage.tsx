@@ -28,8 +28,18 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
-  Copy, ExternalLink, QrCode, Clock, LogIn, LogOut,
-  User, Calendar, Printer, AlertTriangle, ArrowRight, Timer,
+  Copy,
+  ExternalLink,
+  QrCode,
+  Clock,
+  LogIn,
+  LogOut,
+  User,
+  Calendar,
+  Printer,
+  AlertTriangle,
+  ArrowRight,
+  Timer,
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, addDays, subDays, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -108,7 +118,9 @@ function buildPersonSummaries(
           i += 1;
         }
       } else {
-        anomalies.push(`Salida a las ${format(new Date(cur.created_at), 'HH:mm')} sin entrada previa`);
+        anomalies.push(
+          `Salida a las ${format(new Date(cur.created_at), 'HH:mm')} sin entrada previa`,
+        );
         sessions.push({ clockIn: null, clockOut: cur, durationMin: null });
         i += 1;
       }
@@ -128,7 +140,7 @@ function buildPersonSummaries(
     const schedule = scheduleMap.get(userId) ?? null;
 
     if (schedule && !schedule.is_day_off && schedule.start_time && sessions.length > 0) {
-      const firstIn = sessions.find(s => s.clockIn)?.clockIn;
+      const firstIn = sessions.find((s) => s.clockIn)?.clockIn;
       if (firstIn) {
         const scheduledH = parseInt(schedule.start_time.split(':')[0], 10);
         const scheduledM = parseInt(schedule.start_time.split(':')[1], 10);
@@ -175,14 +187,18 @@ function PersonCard({ person, isToday }: { person: PersonSummary; isToday: boole
   const statusRing = person.isCurrentlyIn ? 'ring-emerald-500/20' : '';
 
   return (
-    <div className={`rounded-lg border p-4 ${person.isCurrentlyIn ? 'border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-900' : 'bg-muted/30'}`}>
+    <div
+      className={`rounded-lg border p-4 ${person.isCurrentlyIn ? 'border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-900' : 'bg-muted/30'}`}
+    >
       <div className="flex items-start gap-3">
         {/* Avatar + status dot */}
         <div className="relative flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="w-5 h-5 text-primary" />
           </div>
-          <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${statusColor} ${statusRing} ring-4`} />
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${statusColor} ${statusRing} ring-4`}
+          />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -190,18 +206,25 @@ function PersonCard({ person, isToday }: { person: PersonSummary; isToday: boole
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm truncate">{person.userName}</span>
             {person.isCurrentlyIn && isToday && (
-              <Badge variant="default" className="text-[10px] px-1.5 py-0 bg-emerald-600 hover:bg-emerald-600">
+              <Badge
+                variant="default"
+                className="text-[10px] px-1.5 py-0 bg-emerald-600 hover:bg-emerald-600"
+              >
                 En el local
               </Badge>
             )}
           </div>
 
           {/* Schedule info */}
-          {person.schedule && !person.schedule.is_day_off && person.schedule.start_time && person.schedule.end_time && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Horario programado: {person.schedule.start_time.slice(0, 5)} - {person.schedule.end_time.slice(0, 5)}
-            </p>
-          )}
+          {person.schedule &&
+            !person.schedule.is_day_off &&
+            person.schedule.start_time &&
+            person.schedule.end_time && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Horario programado: {person.schedule.start_time.slice(0, 5)} -{' '}
+                {person.schedule.end_time.slice(0, 5)}
+              </p>
+            )}
           {person.schedule?.is_day_off && (
             <p className="text-xs text-amber-600 mt-0.5 font-medium">Franco programado</p>
           )}
@@ -213,7 +236,9 @@ function PersonCard({ person, isToday }: { person: PersonSummary; isToday: boole
                 {s.clockIn && (
                   <span className="inline-flex items-center gap-1">
                     <LogIn className="w-3 h-3 text-emerald-600" />
-                    <span className="font-medium">{format(new Date(s.clockIn.created_at), 'HH:mm')}</span>
+                    <span className="font-medium">
+                      {format(new Date(s.clockIn.created_at), 'HH:mm')}
+                    </span>
                   </span>
                 )}
                 {s.clockIn && s.clockOut && (
@@ -222,7 +247,9 @@ function PersonCard({ person, isToday }: { person: PersonSummary; isToday: boole
                 {s.clockOut && (
                   <span className="inline-flex items-center gap-1">
                     <LogOut className="w-3 h-3 text-gray-500" />
-                    <span className="font-medium">{format(new Date(s.clockOut.created_at), 'HH:mm')}</span>
+                    <span className="font-medium">
+                      {format(new Date(s.clockOut.created_at), 'HH:mm')}
+                    </span>
                     {s.clockOut.isFromNextDay && (
                       <span className="text-[10px] text-muted-foreground">(día sig.)</span>
                     )}
@@ -235,13 +262,20 @@ function PersonCard({ person, isToday }: { person: PersonSummary; isToday: boole
                   </span>
                 )}
                 {!s.clockIn && s.clockOut && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-600"
+                  >
                     Sin entrada
                   </Badge>
                 )}
                 {s.clockIn && !s.clockOut && isToday && (
                   <span className="text-xs text-emerald-600 ml-1">
-                    (hace {formatDuration(differenceInMinutes(new Date(), new Date(s.clockIn.created_at)))})
+                    (hace{' '}
+                    {formatDuration(
+                      differenceInMinutes(new Date(), new Date(s.clockIn.created_at)),
+                    )}
+                    )
                   </span>
                 )}
               </div>
@@ -281,15 +315,11 @@ function GroupedEntriesView({
   isToday: boolean;
 }) {
   const people = useMemo(() => buildPersonSummaries(entries, scheduleMap), [entries, scheduleMap]);
-  const inNow = people.filter(p => p.isCurrentlyIn);
-  const done = people.filter(p => !p.isCurrentlyIn);
+  const inNow = people.filter((p) => p.isCurrentlyIn);
+  const done = people.filter((p) => !p.isCurrentlyIn);
 
   if (people.length === 0) {
-    return (
-      <p className="text-muted-foreground text-center py-8">
-        No hay fichajes registrados
-      </p>
-    );
+    return <p className="text-muted-foreground text-center py-8">No hay fichajes registrados</p>;
   }
 
   return (
@@ -304,7 +334,9 @@ function GroupedEntriesView({
             </span>
             <h3 className="text-sm font-semibold">En el local ahora ({inNow.length})</h3>
           </div>
-          {inNow.map(p => <PersonCard key={p.userId} person={p} isToday={isToday} />)}
+          {inNow.map((p) => (
+            <PersonCard key={p.userId} person={p} isToday={isToday} />
+          ))}
         </div>
       )}
 
@@ -312,9 +344,13 @@ function GroupedEntriesView({
       {done.length > 0 && (
         <div className="space-y-3">
           {isToday && inNow.length > 0 && (
-            <h3 className="text-sm font-semibold text-muted-foreground">Jornadas completadas ({done.length})</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground">
+              Jornadas completadas ({done.length})
+            </h3>
           )}
-          {done.map(p => <PersonCard key={p.userId} person={p} isToday={isToday} />)}
+          {done.map((p) => (
+            <PersonCard key={p.userId} person={p} isToday={isToday} />
+          ))}
         </div>
       )}
     </div>
@@ -323,7 +359,12 @@ function GroupedEntriesView({
 
 // ─── Data-fetching helpers ────────────────────────────────────────────────────
 
-function useClockEntries(branchId: string | undefined, date: Date, queryTag: string, refetchInterval?: number) {
+function useClockEntries(
+  branchId: string | undefined,
+  date: Date,
+  queryTag: string,
+  refetchInterval?: number,
+) {
   return useQuery({
     queryKey: ['clock-entries-grouped', queryTag, branchId, format(date, 'yyyy-MM-dd')],
     queryFn: async (): Promise<ClockEntry[]> => {
@@ -395,7 +436,7 @@ function useClockEntries(branchId: string | undefined, date: Date, queryTag: str
 
       const allEntries = [...filtered, ...nextDayOuts];
 
-      const userIds = [...new Set(allEntries.map(e => e.user_id))];
+      const userIds = [...new Set(allEntries.map((e) => e.user_id))];
       if (userIds.length === 0) return [];
 
       const { data: profiles } = await supabase
@@ -403,10 +444,10 @@ function useClockEntries(branchId: string | undefined, date: Date, queryTag: str
         .select('id, full_name')
         .in('id', userIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]));
+      const profileMap = new Map(profiles?.map((p) => [p.id, p.full_name]));
       const dayEnd = endOfDay(date).getTime();
 
-      return allEntries.map(entry => ({
+      return allEntries.map((entry) => ({
         ...entry,
         created_at: entry.created_at!,
         user_name: profileMap.get(entry.user_id) || 'Usuario',
@@ -686,11 +727,7 @@ export default function ClockInsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <GroupedEntriesView
-                entries={todayEntries}
-                scheduleMap={todaySchedules}
-                isToday
-              />
+              <GroupedEntriesView entries={todayEntries} scheduleMap={todaySchedules} isToday />
             </CardContent>
           </Card>
         </TabsContent>

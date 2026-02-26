@@ -67,11 +67,11 @@ export function resolveChannelMode(
   channel: Channel,
   priceLists: PriceList[],
 ): { mode: PricingMode; value: number; resolvedChannel: Channel } {
-  const list = priceLists.find(l => l.channel === channel);
+  const list = priceLists.find((l) => l.channel === channel);
   if (!list) return { mode: 'base', value: 0, resolvedChannel: channel };
 
   if (list.pricing_mode === 'mirror' && list.mirror_channel) {
-    const mirrorList = priceLists.find(l => l.channel === list.mirror_channel);
+    const mirrorList = priceLists.find((l) => l.channel === list.mirror_channel);
     if (mirrorList && mirrorList.pricing_mode !== 'mirror') {
       return {
         mode: mirrorList.pricing_mode,
@@ -141,7 +141,9 @@ export function useMenuItemsForPricing() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items_carta')
-        .select('id, nombre, orden, precio_base, activo, categoria_carta_id, menu_categorias(id, nombre, orden)')
+        .select(
+          'id, nombre, orden, precio_base, activo, categoria_carta_id, menu_categorias(id, nombre, orden)',
+        )
         .eq('activo', true)
         .order('orden');
       if (error) throw error;
@@ -187,7 +189,7 @@ export function useBulkUpdatePriceList() {
       price_list_id: string;
       items: Array<{ item_carta_id: string; precio: number }>;
     }) => {
-      const rows = params.items.map(i => ({
+      const rows = params.items.map((i) => ({
         price_list_id: params.price_list_id,
         item_carta_id: i.item_carta_id,
         precio: i.precio,
@@ -227,10 +229,7 @@ export function useDeletePriceOverride() {
 export function useUnifyPrices() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: {
-      source: 'default' | string;
-      targetChannels: Channel[];
-    }) => {
+    mutationFn: async (params: { source: 'default' | string; targetChannels: Channel[] }) => {
       let sourceItems: Array<{ id: string; precio_base: number }>;
 
       if (params.source === 'default') {
@@ -246,7 +245,7 @@ export function useUnifyPrices() {
           .select('item_carta_id, precio')
           .eq('price_list_id', params.source);
         if (error) throw error;
-        sourceItems = ((data || []) as any[]).map(d => ({
+        sourceItems = ((data || []) as any[]).map((d) => ({
           id: d.item_carta_id,
           precio_base: d.precio,
         }));
@@ -258,7 +257,7 @@ export function useUnifyPrices() {
         .in('channel', params.targetChannels);
 
       for (const list of (targetLists || []) as unknown as PriceList[]) {
-        const rows = sourceItems.map(s => ({
+        const rows = sourceItems.map((s) => ({
           price_list_id: list.id,
           item_carta_id: s.id,
           precio: s.precio_base,
@@ -283,9 +282,9 @@ export function useUnifyPrices() {
 
 export function useChannelPrice(channel: Channel | null | undefined, itemId: string) {
   const { data: lists } = usePriceLists();
-  const priceList = lists?.find(l => l.channel === channel && l.is_active);
+  const priceList = lists?.find((l) => l.channel === channel && l.is_active);
   const { data: items } = usePriceListItems(priceList?.id);
-  const item = items?.find(i => i.item_carta_id === itemId);
+  const item = items?.find((i) => i.item_carta_id === itemId);
   return item?.precio ?? null;
 }
 
@@ -293,25 +292,21 @@ export function useInitializePriceLists() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data: existing } = await supabase
-        .from('price_lists' as any)
-        .select('channel');
-      const existingChannels = new Set(((existing || []) as any[]).map(e => e.channel));
+      const { data: existing } = await supabase.from('price_lists' as any).select('channel');
+      const existingChannels = new Set(((existing || []) as any[]).map((e) => e.channel));
 
-      const toCreate = CHANNELS.filter(c => !existingChannels.has(c.value));
+      const toCreate = CHANNELS.filter((c) => !existingChannels.has(c.value));
       if (toCreate.length === 0) return;
 
-      const rows = toCreate.map(c => ({
+      const rows = toCreate.map((c) => ({
         name: `Lista ${c.label}`,
         channel: c.value,
         is_default: c.value === 'mostrador' || c.value === 'webapp',
-        pricing_mode: (c.value === 'mostrador' || c.value === 'webapp') ? 'base' : 'manual',
+        pricing_mode: c.value === 'mostrador' || c.value === 'webapp' ? 'base' : 'manual',
         pricing_value: 0,
       }));
 
-      const { error } = await supabase
-        .from('price_lists' as any)
-        .insert(rows);
+      const { error } = await supabase.from('price_lists' as any).insert(rows);
       if (error) throw error;
     },
     onSuccess: () => {

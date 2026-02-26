@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,7 +12,7 @@ import { CoachingStationSection } from './CoachingStationSection';
 import { CoachingGeneralSection } from './CoachingGeneralSection';
 import { useCompetencyConfig } from '@/hooks/useStationCompetencies';
 import { useCreateCoaching, useEmployeeCoachings } from '@/hooks/useCoachings';
-import type { CoachingFormData, CertificationLevel } from '@/types/coaching';
+
 
 interface Employee {
   id: string;
@@ -39,9 +39,14 @@ interface GeneralScore {
 }
 
 export function CoachingForm({ employee, branchId, onSuccess, onCancel }: CoachingFormProps) {
-  const { stations, competenciesByStation, generalCompetencies, isLoading: loadingConfig } = useCompetencyConfig();
+  const {
+    stations,
+    competenciesByStation,
+    generalCompetencies,
+    isLoading: loadingConfig,
+  } = useCompetencyConfig();
   const createCoaching = useCreateCoaching();
-  
+
   // Obtener coachings anteriores para mostrar el plan de acción previo
   const { data: previousCoachings } = useEmployeeCoachings(employee.id, branchId);
   const previousCoaching = previousCoachings?.[0]; // El más reciente
@@ -57,15 +62,20 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
   const [previousActionReview, setPreviousActionReview] = useState('');
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   // Handlers
   const handleToggleStation = (stationId: string) => {
-    setSelectedStations(prev => {
+    setSelectedStations((prev) => {
       if (prev.includes(stationId)) {
-        setStationScores(scores => scores.filter(s => s.stationId !== stationId));
-        return prev.filter(id => id !== stationId);
+        setStationScores((scores) => scores.filter((s) => s.stationId !== stationId));
+        return prev.filter((id) => id !== stationId);
       } else {
         return [...prev, stationId];
       }
@@ -73,26 +83,29 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
   };
 
   const handleStationScoreChange = (stationId: string, score: number) => {
-    setStationScores(prev => {
-      const existing = prev.find(s => s.stationId === stationId);
+    setStationScores((prev) => {
+      const existing = prev.find((s) => s.stationId === stationId);
       if (existing) {
-        return prev.map(s => s.stationId === stationId ? { ...s, score } : s);
+        return prev.map((s) => (s.stationId === stationId ? { ...s, score } : s));
       }
       return [...prev, { stationId, score, competencyScores: [] }];
     });
   };
 
   const handleCompetencyScoreChange = (stationId: string, competencyId: string, score: number) => {
-    setStationScores(prev => {
-      const existing = prev.find(s => s.stationId === stationId);
+    setStationScores((prev) => {
+      const existing = prev.find((s) => s.stationId === stationId);
       if (existing) {
-        const updatedCompetencies = existing.competencyScores.some(c => c.competencyId === competencyId)
-          ? existing.competencyScores.map(c => c.competencyId === competencyId ? { ...c, score } : c)
+        const updatedCompetencies = existing.competencyScores.some(
+          (c) => c.competencyId === competencyId,
+        )
+          ? existing.competencyScores.map((c) =>
+              c.competencyId === competencyId ? { ...c, score } : c,
+            )
           : [...existing.competencyScores, { competencyId, score }];
-        
-        return prev.map(s => s.stationId === stationId 
-          ? { ...s, competencyScores: updatedCompetencies } 
-          : s
+
+        return prev.map((s) =>
+          s.stationId === stationId ? { ...s, competencyScores: updatedCompetencies } : s,
         );
       }
       return [...prev, { stationId, score: 0, competencyScores: [{ competencyId, score }] }];
@@ -100,28 +113,29 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
   };
 
   const handleGeneralScoreChange = (competencyId: string, score: number) => {
-    setGeneralScores(prev => {
-      const existing = prev.find(s => s.competencyId === competencyId);
+    setGeneralScores((prev) => {
+      const existing = prev.find((s) => s.competencyId === competencyId);
       if (existing) {
-        return prev.map(s => s.competencyId === competencyId ? { ...s, score } : s);
+        return prev.map((s) => (s.competencyId === competencyId ? { ...s, score } : s));
       }
       return [...prev, { competencyId, score }];
     });
   };
 
   // Calculate averages for preview
-  const stationAvg = stationScores.length > 0
-    ? stationScores.reduce((sum, s) => sum + s.score, 0) / stationScores.length
-    : 0;
+  const stationAvg =
+    stationScores.length > 0
+      ? stationScores.reduce((sum, s) => sum + s.score, 0) / stationScores.length
+      : 0;
 
-  const generalFiltered = generalScores.filter(s => s.score > 0);
-  const generalAvg = generalFiltered.length > 0
-    ? generalFiltered.reduce((sum, s) => sum + s.score, 0) / generalFiltered.length
-    : 0;
+  const generalFiltered = generalScores.filter((s) => s.score > 0);
+  const generalAvg =
+    generalFiltered.length > 0
+      ? generalFiltered.reduce((sum, s) => sum + s.score, 0) / generalFiltered.length
+      : 0;
 
-  const overallAvg = stationAvg && generalAvg 
-    ? (stationAvg + generalAvg) / 2 
-    : stationAvg || generalAvg;
+  const overallAvg =
+    stationAvg && generalAvg ? (stationAvg + generalAvg) / 2 : stationAvg || generalAvg;
 
   // Submit
   const handleSubmit = async () => {
@@ -129,8 +143,8 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
       userId: employee.id,
       branchId,
       coachingDate: new Date(),
-      stationScores: stationScores.filter(s => s.score > 0),
-      generalScores: generalScores.filter(s => s.score > 0),
+      stationScores: stationScores.filter((s) => s.score > 0),
+      generalScores: generalScores.filter((s) => s.score > 0),
       strengths,
       areasToImprove,
       actionPlan,
@@ -143,7 +157,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
     onSuccess?.();
   };
 
-  const canSubmit = selectedStations.length > 0 && stationScores.some(s => s.score > 0);
+  const canSubmit = selectedStations.length > 0 && stationScores.some((s) => s.score > 0);
 
   if (loadingConfig) {
     return (
@@ -167,11 +181,12 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
               <div>
                 <h3 className="font-semibold">{employee.full_name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Coaching de {new Date().toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
+                  Coaching de{' '}
+                  {new Date().toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
             </div>
-            
+
             {overallAvg > 0 && (
               <div className="text-center">
                 <div className="flex items-center gap-1 text-2xl font-bold">
@@ -221,7 +236,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
                   {previousCoaching.action_plan}
                 </AlertDescription>
               </Alert>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="previousReview">¿Cómo fue el seguimiento del plan anterior?</Label>
                 <Textarea
@@ -232,7 +247,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
                   rows={2}
                 />
               </div>
-              
+
               <Separator />
             </>
           )}
@@ -240,7 +255,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
           {/* Notas cualitativas */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Feedback Cualitativo</Label>
-            
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="strengths">Fortalezas</Label>
@@ -252,7 +267,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
                   rows={3}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="areas">Áreas de Mejora</Label>
                 <Textarea
@@ -297,10 +312,7 @@ export function CoachingForm({ employee, branchId, onSuccess, onCancel }: Coachi
             Cancelar
           </Button>
         )}
-        <Button 
-          onClick={handleSubmit} 
-          disabled={!canSubmit || createCoaching.isPending}
-        >
+        <Button onClick={handleSubmit} disabled={!canSubmit || createCoaching.isPending}>
           {createCoaching.isPending ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

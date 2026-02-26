@@ -3,12 +3,7 @@
  * If item has no extras/removibles/opcionales, auto-adds to cart without showing modal.
  */
 import { useState, useMemo, useEffect, useRef } from 'react';
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -44,10 +39,13 @@ const MAX_EXTRA_QTY = 10;
 export function ModifiersModal({ open, onOpenChange, item, onConfirm }: ModifiersModalProps) {
   const itemId = item?.id;
   const promoPrice: number | undefined = item?._promoPrice;
-  const preconfigExtras: Array<{ extra_item_carta_id: string; cantidad: number; nombre?: string }> | undefined = item?._preconfigExtras;
+  const preconfigExtras:
+    | Array<{ extra_item_carta_id: string; cantidad: number; nombre?: string }>
+    | undefined = item?._preconfigExtras;
   const hasPreconfig = !!(preconfigExtras && preconfigExtras.length > 0);
   const promoId: string | undefined = item?._promoId;
-  const promoRestriccionPago: 'cualquiera' | 'solo_efectivo' | 'solo_digital' | undefined = item?._promoRestriccionPago;
+  const promoRestriccionPago: 'cualquiera' | 'solo_efectivo' | 'solo_digital' | undefined =
+    item?._promoRestriccionPago;
   const promoNombre: string | undefined = item?._promoNombre;
   const originalPrecioBase: number | undefined = item?._originalPrecioBase;
 
@@ -78,9 +76,11 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     preconfigAppliedRef.current = itemId;
     const preselected: Record<string, number> = {};
     for (const pc of preconfigExtras!) {
-      const match = extras.find(e => {
+      const match = extras.find((e) => {
         const source = e.preparaciones || e.insumos;
-        return source && (e.id === pc.extra_item_carta_id || e.item_carta_id === pc.extra_item_carta_id);
+        return (
+          source && (e.id === pc.extra_item_carta_id || e.item_carta_id === pc.extra_item_carta_id)
+        );
       });
       if (match) {
         preselected[match.id] = pc.cantidad;
@@ -93,21 +93,24 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
 
   const extrasList = useMemo(() => {
     if (!extras) return [];
-    return extras.map((e) => {
-      const source = e.preparaciones || e.insumos;
-      if (!source) return null;
-      return {
-        id: e.id,
-        nombre: source.nombre,
-        precio: source.precio_extra ?? 0,
-      };
-    }).filter(Boolean) as { id: string; nombre: string; precio: number }[];
+    return extras
+      .map((e) => {
+        const source = e.preparaciones || e.insumos;
+        if (!source) return null;
+        return {
+          id: e.id,
+          nombre: source.nombre,
+          precio: source.precio_extra ?? 0,
+        };
+      })
+      .filter(Boolean) as { id: string; nombre: string; precio: number }[];
   }, [extras]);
 
   const removiblesList = useMemo(() => {
     if (!removibles) return [];
     return removibles.map((r: any) => {
-      const nombre = r.nombre_display || r.insumos?.nombre || r.preparaciones?.nombre || 'Ingrediente';
+      const nombre =
+        r.nombre_display || r.insumos?.nombre || r.preparaciones?.nombre || 'Ingrediente';
       return { id: r.id, nombre };
     });
   }, [removibles]);
@@ -132,7 +135,8 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
   const nombre = item?.nombre_corto ?? item?.nombre ?? '';
 
   const isLoading = loadingExtras || loadingRemovibles || loadingGrupos;
-  const hasRegularContent = extrasList.length > 0 || removiblesList.length > 0 || parsedGroups.length > 0;
+  const hasRegularContent =
+    extrasList.length > 0 || removiblesList.length > 0 || parsedGroups.length > 0;
   const hasContent = hasRegularContent || hasPreconfig;
 
   // Auto-add: no modifiers and no preconfig → instant add
@@ -157,7 +161,9 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
         autoAddedRef.current = itemId;
         const origPrice = item._originalPrecioBase ?? precioBase;
         const discount = origPrice - (promoPrice ?? precioBase);
-        const notes = preconfigExtras!.map(e => `+${e.cantidad} ${e.nombre || 'extra'} (incl.)`).join(', ');
+        const notes = preconfigExtras!
+          .map((e) => `+${e.cantidad} ${e.nombre || 'extra'} (incl.)`)
+          .join(', ');
         onConfirm({
           item_carta_id: item.id,
           nombre: `${nombre} (PROMO)`,
@@ -174,11 +180,27 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
         onOpenChange(false);
       }
     }
-  }, [open, isLoading, hasContent, hasRegularContent, hasPreconfig, item, itemId, nombre, precioBase, promoPrice, preconfigExtras, hasDiscount, precioRef, onConfirm, onOpenChange]);
+  }, [
+    open,
+    isLoading,
+    hasContent,
+    hasRegularContent,
+    hasPreconfig,
+    item,
+    itemId,
+    nombre,
+    precioBase,
+    promoPrice,
+    preconfigExtras,
+    hasDiscount,
+    precioRef,
+    onConfirm,
+    onOpenChange,
+  ]);
 
   const preconfigExtraIds = useMemo(() => {
     if (!preconfigExtras) return new Set<string>();
-    return new Set(preconfigExtras.map(pe => pe.extra_item_carta_id));
+    return new Set(preconfigExtras.map((pe) => pe.extra_item_carta_id));
   }, [preconfigExtras]);
 
   const preconfigQtyMap = useMemo(() => {
@@ -212,7 +234,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
 
   // Validation: mandatory groups must have selections
   const missingRequired = parsedGroups.filter(
-    (g) => g.es_obligatorio && !(groupSelections[g.id]?.length > 0)
+    (g) => g.es_obligatorio && !(groupSelections[g.id]?.length > 0),
   );
   const canConfirm = missingRequired.length === 0;
 
@@ -324,7 +346,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
       promo_id: isPromo ? promoId : undefined,
       promo_restriccion_pago: isPromo ? promoRestriccionPago : undefined,
       promo_descuento: promoDescuento > 0 ? promoDescuento : undefined,
-      promo_nombre: isPromo ? (promoNombre || 'Promoción') : undefined,
+      promo_nombre: isPromo ? promoNombre || 'Promoción' : undefined,
     });
 
     onOpenChange(false);
@@ -340,8 +362,12 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
             <span className="truncate">{nombre}</span>
             {promoPrice != null ? (
               <span className="flex items-center gap-1.5 ml-2 shrink-0">
-                <span className="text-muted-foreground text-sm line-through">$ {(item._originalPrecioBase ?? precioBase).toLocaleString('es-AR')}</span>
-                <span className="text-green-600 font-semibold text-base">$ {promoPrice.toLocaleString('es-AR')}</span>
+                <span className="text-muted-foreground text-sm line-through">
+                  $ {(item._originalPrecioBase ?? precioBase).toLocaleString('es-AR')}
+                </span>
+                <span className="text-green-600 font-semibold text-base">
+                  $ {promoPrice.toLocaleString('es-AR')}
+                </span>
               </span>
             ) : (
               <span className="text-primary font-semibold text-base ml-2 shrink-0">
@@ -374,11 +400,15 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       {group.nombre}
                     </h4>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                      group.es_obligatorio
-                        ? isMissing ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        group.es_obligatorio
+                          ? isMissing
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-primary/10 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
                       {group.es_obligatorio ? 'Obligatorio' : 'Opcional'}
                       {isRadio ? ' · Elegí 1' : ` · Hasta ${group.max_selecciones}`}
                     </span>
@@ -396,13 +426,18 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                             ${isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}
                           `}
                         >
-                          <div className={`w-4.5 h-4.5 ${isRadio ? 'rounded-full' : 'rounded'} border-2 flex items-center justify-center shrink-0 transition-colors
-                            ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}>
-                            {isSelected && (
-                              isRadio
-                                ? <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
-                                : <span className="text-primary-foreground text-[10px] leading-none">✓</span>
-                            )}
+                          <div
+                            className={`w-4.5 h-4.5 ${isRadio ? 'rounded-full' : 'rounded'} border-2 flex items-center justify-center shrink-0 transition-colors
+                            ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'}`}
+                          >
+                            {isSelected &&
+                              (isRadio ? (
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                              ) : (
+                                <span className="text-primary-foreground text-[10px] leading-none">
+                                  ✓
+                                </span>
+                              ))}
                           </div>
                           <span className="text-sm font-medium">{option.nombre}</span>
                         </button>
@@ -450,11 +485,23 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                           )}
                         </div>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExtraQty(ex.id, -1)} disabled={qty <= 0}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleExtraQty(ex.id, -1)}
+                            disabled={qty <= 0}
+                          >
                             <Minus className="h-3.5 w-3.5" />
                           </Button>
                           <span className="text-sm font-medium w-6 text-center">{qty}</span>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleExtraQty(ex.id, 1)} disabled={qty >= MAX_EXTRA_QTY}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleExtraQty(ex.id, 1)}
+                            disabled={qty >= MAX_EXTRA_QTY}
+                          >
                             <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -472,9 +519,15 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
                 </h4>
                 <div className="space-y-2">
                   {removiblesList.map((r: any) => (
-                    <div key={r.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/50">
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/50"
+                    >
                       <span className="text-sm font-medium">{r.nombre}</span>
-                      <Switch checked={!!selectedRemovibles[r.id]} onCheckedChange={() => handleRemovibleToggle(r.id)} />
+                      <Switch
+                        checked={!!selectedRemovibles[r.id]}
+                        onCheckedChange={() => handleRemovibleToggle(r.id)}
+                      />
                     </div>
                   ))}
                 </div>
@@ -495,7 +548,9 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
               {additionalExtrasTotal > 0 && (
                 <div>Extras adicionales: +$ {additionalExtrasTotal.toLocaleString('es-AR')}</div>
               )}
-              <div className="text-green-600">Desc. promo: -$ {promoDescuento.toLocaleString('es-AR')}</div>
+              <div className="text-green-600">
+                Desc. promo: -$ {promoDescuento.toLocaleString('es-AR')}
+              </div>
             </div>
           )}
           <div className="flex gap-2 w-full">

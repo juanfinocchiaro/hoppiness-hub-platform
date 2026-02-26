@@ -9,8 +9,20 @@ export interface ItemExtra {
   insumo_id: string | null;
   orden: number;
   // Joined fields
-  preparaciones?: { id: string; nombre: string; costo_calculado: number; precio_extra: number | null; puede_ser_extra: boolean } | null;
-  insumos?: { id: string; nombre: string; costo_por_unidad_base: number; precio_extra: number | null; puede_ser_extra: boolean } | null;
+  preparaciones?: {
+    id: string;
+    nombre: string;
+    costo_calculado: number;
+    precio_extra: number | null;
+    puede_ser_extra: boolean;
+  } | null;
+  insumos?: {
+    id: string;
+    nombre: string;
+    costo_por_unidad_base: number;
+    precio_extra: number | null;
+    puede_ser_extra: boolean;
+  } | null;
 }
 
 export function useItemExtras(itemId: string | undefined) {
@@ -27,7 +39,7 @@ export function useItemExtras(itemId: string | undefined) {
 
       if (errAsig) throw errAsig;
 
-      const extraIds = (asignaciones as any[] || []).map((a: any) => a.extra_id);
+      const extraIds = ((asignaciones as any[]) || []).map((a: any) => a.extra_id);
 
       if (extraIds.length === 0) return [];
 
@@ -45,7 +57,13 @@ export function useItemExtras(itemId: string | undefined) {
         preparacion_id: null,
         insumo_id: null,
         orden: i,
-        preparaciones: { id: e.id, nombre: e.nombre, costo_calculado: 0, precio_extra: e.precio_base, puede_ser_extra: true },
+        preparaciones: {
+          id: e.id,
+          nombre: e.nombre,
+          costo_calculado: 0,
+          precio_extra: e.precio_base,
+          puede_ser_extra: true,
+        },
         insumos: null,
       })) as ItemExtra[];
     },
@@ -57,20 +75,26 @@ export function useItemExtrasMutations() {
   const qc = useQueryClient();
 
   const saveExtras = useMutation({
-    mutationFn: async ({ item_carta_id, extra_ids }: {
+    mutationFn: async ({
+      item_carta_id,
+      extra_ids,
+    }: {
       item_carta_id: string;
       extra_ids: string[];
     }) => {
-      const { error: delErr } = await supabase.from('item_extra_asignaciones' as any).delete().eq('item_carta_id', item_carta_id);
+      const { error: delErr } = await supabase
+        .from('item_extra_asignaciones' as any)
+        .delete()
+        .eq('item_carta_id', item_carta_id);
       if (delErr) throw delErr;
 
       if (extra_ids.length > 0) {
-        const { error } = await supabase
-          .from('item_extra_asignaciones' as any)
-          .insert(extra_ids.map((extra_id) => ({
+        const { error } = await supabase.from('item_extra_asignaciones' as any).insert(
+          extra_ids.map((extra_id) => ({
             item_carta_id,
             extra_id,
-          })));
+          })),
+        );
         if (error) throw error;
       }
     },
@@ -82,7 +106,11 @@ export function useItemExtrasMutations() {
   });
 
   const updatePrecioExtra = useMutation({
-    mutationFn: async ({ tipo, id, precio_extra }: {
+    mutationFn: async ({
+      tipo,
+      id,
+      precio_extra,
+    }: {
       tipo: 'preparacion' | 'insumo';
       id: string;
       precio_extra: number | null;

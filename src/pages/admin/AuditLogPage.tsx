@@ -6,18 +6,20 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/ui/page-header';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { History, Search, ChevronLeft, ChevronRight, Eye, Shield } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { EmptyState } from '@/components/ui/states/empty-state';
@@ -55,7 +57,8 @@ export default function AuditLogPage() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (tableFilter) q = q.eq('table_name', tableFilter);
-      if (debouncedSearch) q = q.or(`table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%`);
+      if (debouncedSearch)
+        q = q.or(`table_name.ilike.%${debouncedSearch}%,action.ilike.%${debouncedSearch}%`);
 
       const { data: logs, error, count } = await q;
       if (error) throw error;
@@ -66,12 +69,9 @@ export default function AuditLogPage() {
   const { data: tables } = useQuery({
     queryKey: ['audit-log-tables'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('table_name')
-        .limit(500);
+      const { data, error } = await supabase.from('audit_logs').select('table_name').limit(500);
       if (error) throw error;
-      const unique = [...new Set((data || []).map(d => d.table_name))].sort();
+      const unique = [...new Set((data || []).map((d) => d.table_name))].sort();
       return unique;
     },
     staleTime: 5 * 60 * 1000,
@@ -95,28 +95,44 @@ export default function AuditLogPage() {
           <Input
             placeholder="Buscar por tabla o acción..."
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(0); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
             className="pl-9"
           />
         </div>
         <select
           value={tableFilter}
-          onChange={e => { setTableFilter(e.target.value); setPage(0); }}
+          onChange={(e) => {
+            setTableFilter(e.target.value);
+            setPage(0);
+          }}
           className="h-10 rounded-md border bg-background px-3 text-sm"
         >
           <option value="">Todas las tablas</option>
-          {tables?.map(t => <option key={t} value={t}>{t}</option>)}
+          {tables?.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
         </select>
       </div>
 
       {isLoading ? (
         <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
         </div>
       ) : logs.length === 0 ? (
         <Card>
           <CardContent className="p-0">
-            <EmptyState icon={Shield} title="Sin registros" description="No se encontraron registros de auditoría para los filtros seleccionados." />
+            <EmptyState
+              icon={Shield}
+              title="Sin registros"
+              description="No se encontraron registros de auditoría para los filtros seleccionados."
+            />
           </CardContent>
         </Card>
       ) : (
@@ -137,7 +153,7 @@ export default function AuditLogPage() {
                   <TableRow key={log.id}>
                     <TableCell className="text-xs whitespace-nowrap">
                       {log.created_at
-                        ? format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: es })
+                        ? format(new Date(log.created_at), 'dd/MM/yy HH:mm', { locale: es })
                         : '-'}
                     </TableCell>
                     <TableCell>
@@ -147,7 +163,10 @@ export default function AuditLogPage() {
                     </TableCell>
                     <TableCell className="font-mono text-xs">{log.table_name}</TableCell>
                     <TableCell className="text-sm">
-                      {log.profiles?.full_name || log.profiles?.email || log.user_id?.substring(0, 8) || 'Sistema'}
+                      {log.profiles?.full_name ||
+                        log.profiles?.email ||
+                        log.user_id?.substring(0, 8) ||
+                        'Sistema'}
                     </TableCell>
                     <TableCell className="text-center">
                       <Button size="sm" variant="ghost" onClick={() => setSelectedLog(log)}>
@@ -165,10 +184,20 @@ export default function AuditLogPage() {
               Página {page + 1} de {totalPages || 1}
             </p>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+              >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+              >
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -177,7 +206,12 @@ export default function AuditLogPage() {
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!selectedLog} onOpenChange={(open) => { if (!open) setSelectedLog(null); }}>
+      <Dialog
+        open={!!selectedLog}
+        onOpenChange={(open) => {
+          if (!open) setSelectedLog(null);
+        }}
+      >
         <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalle del registro</DialogTitle>
@@ -185,10 +219,21 @@ export default function AuditLogPage() {
           {selectedLog && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="text-muted-foreground">Tabla:</span> <span className="font-mono">{selectedLog.table_name}</span></div>
-                <div><span className="text-muted-foreground">Acción:</span> {actionLabels[selectedLog.action] || selectedLog.action}</div>
-                <div><span className="text-muted-foreground">Registro:</span> <span className="font-mono text-xs">{selectedLog.record_id || '-'}</span></div>
-                <div><span className="text-muted-foreground">IP:</span> {selectedLog.ip_address || '-'}</div>
+                <div>
+                  <span className="text-muted-foreground">Tabla:</span>{' '}
+                  <span className="font-mono">{selectedLog.table_name}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Acción:</span>{' '}
+                  {actionLabels[selectedLog.action] || selectedLog.action}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Registro:</span>{' '}
+                  <span className="font-mono text-xs">{selectedLog.record_id || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">IP:</span> {selectedLog.ip_address || '-'}
+                </div>
               </div>
 
               {selectedLog.old_data && (

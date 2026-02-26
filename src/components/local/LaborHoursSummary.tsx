@@ -1,81 +1,72 @@
 /**
  * LaborHoursSummary Component
- * 
+ *
  * Resumen de horas trabajadas con cálculos según el convenio colectivo del
  * Sindicato de Trabajadores de Servicios Rápidos (Pasteleros CCT 301/75).
- * 
+ *
  * Incluye: horas extras, feriados, presentismo, y exportación a CSV.
  */
 import { useState } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Download, 
-  Clock, 
-  AlertTriangle,
-  User,
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Clock,
   CalendarDays,
-  CheckCircle,
-  XCircle,
   Scale,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Collapsible, 
-  CollapsibleContent, 
-  CollapsibleTrigger 
-} from '@/components/ui/collapsible';
-import { 
+
+import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  useLaborHours, 
-  formatHoursDecimal, 
+import {
+  useLaborHours,
+  formatHoursDecimal,
   generateLaborCSV,
-  type EmployeeLaborSummary 
+  type EmployeeLaborSummary,
 } from '@/hooks/useLaborHours';
-import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissionsV2';
+import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissions';
 
 interface LaborHoursSummaryProps {
   branchId: string;
 }
 
-function EmployeeRow({ summary, expanded, onToggle }: { 
+function EmployeeRow({
+  summary,
+  expanded,
+  onToggle,
+}: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const initials = summary.userName
     .split(' ')
-    .map(n => n[0])
+    .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
-  
+
   return (
     <>
-      <TableRow 
+      <TableRow
         className={`cursor-pointer hover:bg-muted/50 ${summary.hasUnpairedEntries ? 'bg-amber-50/50' : ''}`}
         onClick={onToggle}
       >
@@ -101,17 +92,17 @@ function EmployeeRow({ summary, expanded, onToggle }: {
         <TableCell className="text-center">
           <span className="font-bold">{summary.hsTrabajadasMes.toFixed(1)}</span>
         </TableCell>
-        <TableCell className="text-center">
-          {summary.faltasInjustificadas}
-        </TableCell>
-        <TableCell className="text-center">
-          {summary.faltasJustificadas}
-        </TableCell>
+        <TableCell className="text-center">{summary.faltasInjustificadas}</TableCell>
+        <TableCell className="text-center">{summary.faltasJustificadas}</TableCell>
         <TableCell className="text-center">
           {summary.presentismo ? (
-            <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">SI</Badge>
+            <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+              SI
+            </Badge>
           ) : (
-            <Badge variant="secondary" className="bg-red-100 text-red-700 text-xs">NO</Badge>
+            <Badge variant="secondary" className="bg-red-100 text-red-700 text-xs">
+              NO
+            </Badge>
           )}
         </TableCell>
         <TableCell className="text-center">
@@ -119,19 +110,27 @@ function EmployeeRow({ summary, expanded, onToggle }: {
         </TableCell>
         <TableCell className="text-center">
           {summary.hsExtrasDiaHabil > 0 ? (
-            <span className="text-amber-600 font-medium">{summary.hsExtrasDiaHabil.toFixed(1)}</span>
-          ) : '-'}
+            <span className="text-amber-600 font-medium">
+              {summary.hsExtrasDiaHabil.toFixed(1)}
+            </span>
+          ) : (
+            '-'
+          )}
         </TableCell>
         <TableCell className="text-center">
           {summary.hsExtrasFrancoFeriado > 0 ? (
-            <span className="text-primary font-medium">{summary.hsExtrasFrancoFeriado.toFixed(1)}</span>
-          ) : '-'}
+            <span className="text-primary font-medium">
+              {summary.hsExtrasFrancoFeriado.toFixed(1)}
+            </span>
+          ) : (
+            '-'
+          )}
         </TableCell>
         <TableCell className="text-center">
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </TableCell>
       </TableRow>
-      
+
       {expanded && (
         <TableRow>
           <TableCell colSpan={10} className="bg-muted/30 p-4">
@@ -142,20 +141,33 @@ function EmployeeRow({ summary, expanded, onToggle }: {
                   <p className="text-sm text-muted-foreground">Sin fichajes</p>
                 ) : (
                   summary.entries.map((entry, idx) => (
-                    <div 
+                    <div
                       key={idx}
                       className={`flex items-center justify-between text-sm p-2 rounded ${
-                        !entry.checkOut ? 'bg-amber-50 border border-amber-200' :
-                        entry.isHoliday ? 'bg-purple-50 border border-purple-200' :
-                        entry.isDayOff ? 'bg-blue-50 border border-blue-200' :
-                        'bg-background border'
+                        !entry.checkOut
+                          ? 'bg-amber-50 border border-amber-200'
+                          : entry.isHoliday
+                            ? 'bg-purple-50 border border-purple-200'
+                            : entry.isDayOff
+                              ? 'bg-blue-50 border border-blue-200'
+                              : 'bg-background border'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                        <span>{format(new Date(entry.date + 'T12:00:00'), 'EEE d MMM', { locale: es })}</span>
-                        {entry.isHoliday && <Badge variant="outline" className="text-xs">Feriado</Badge>}
-                        {entry.isDayOff && <Badge variant="outline" className="text-xs">Franco</Badge>}
+                        <span>
+                          {format(new Date(entry.date + 'T12:00:00'), 'EEE d MMM', { locale: es })}
+                        </span>
+                        {entry.isHoliday && (
+                          <Badge variant="outline" className="text-xs">
+                            Feriado
+                          </Badge>
+                        )}
+                        {entry.isDayOff && (
+                          <Badge variant="outline" className="text-xs">
+                            Franco
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-green-600">
@@ -181,7 +193,7 @@ function EmployeeRow({ summary, expanded, onToggle }: {
                   ))
                 )}
               </div>
-              
+
               {summary.alertasDiarias.length > 0 && (
                 <div className="mt-3 p-2 bg-amber-50 rounded border border-amber-200">
                   <p className="text-xs font-medium text-amber-700">
@@ -202,19 +214,15 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  
-  const { 
-    summaries, 
-    stats,
-    loading 
-  } = useLaborHours({ branchId, year, month });
-  
-  const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
-  const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
-  
+
+  const { summaries, stats, loading } = useLaborHours({ branchId, year, month });
+
+  const handlePrevMonth = () => setCurrentDate((prev) => subMonths(prev, 1));
+  const handleNextMonth = () => setCurrentDate((prev) => addMonths(prev, 1));
+
   const monthLabel = format(currentDate, 'MMMM yyyy', { locale: es });
   const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
-  
+
   const handleExportCSV = () => {
     const csv = generateLaborCSV(summaries, monthLabelCapitalized);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -223,7 +231,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
     link.download = `liquidacion-${format(currentDate, 'yyyy-MM')}.csv`;
     link.click();
   };
-  
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -236,7 +244,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-4">
       {/* Nota sobre convenio */}
@@ -244,12 +252,12 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
         <Scale className="h-4 w-4 text-blue-600" />
         <AlertTitle className="text-blue-800">Cálculos según convenio sindical</AlertTitle>
         <AlertDescription className="text-blue-700 text-sm">
-          Según <strong>CCT 329/00 – Servicios Rápidos</strong> y art. 201 LCT:{' '}
-          límite diario 9 hs, límite mensual 190 hs, recargo +50 % en todas las extras.{' '}
-          Horas en franco o feriado trabajado se computan siempre como extra.
+          Según <strong>CCT 329/00 – Servicios Rápidos</strong> y art. 201 LCT: límite diario 9 hs,
+          límite mensual 190 hs, recargo +50 % en todas las extras. Horas en franco o feriado
+          trabajado se computan siempre como extra.
         </AlertDescription>
       </Alert>
-      
+
       {/* Header con navegación de mes */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -259,22 +267,22 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
           <h2 className="text-lg font-semibold min-w-[160px] text-center">
             {monthLabelCapitalized}
           </h2>
-          <Button 
-            variant="outline" 
-            size="icon" 
+          <Button
+            variant="outline"
+            size="icon"
             onClick={handleNextMonth}
             disabled={month === new Date().getMonth() && year === new Date().getFullYear()}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <Button variant="outline" onClick={handleExportCSV} disabled={summaries.length === 0}>
           <Download className="h-4 w-4 mr-2" />
           Exportar Liquidación
         </Button>
       </div>
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card>
@@ -291,7 +299,9 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
         </Card>
         <Card>
           <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-amber-600">{stats.totalExtrasMes.toFixed(1)}h</div>
+            <div className="text-2xl font-bold text-amber-600">
+              {stats.totalExtrasMes.toFixed(1)}h
+            </div>
             <div className="text-xs text-muted-foreground">Horas extras</div>
           </CardContent>
         </Card>
@@ -308,7 +318,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Leyenda de columnas */}
       <Card className="p-3">
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
@@ -322,31 +332,35 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger className="flex items-center gap-1">
                 <Info className="h-3 w-3" /> HS Extras Franco/Feriado
               </TooltipTrigger>
               <TooltipContent>
-                <p className="max-w-xs">Horas trabajadas en franco o feriado — siempre extra (+50 %)</p>
+                <p className="max-w-xs">
+                  Horas trabajadas en franco o feriado — siempre extra (+50 %)
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger className="flex items-center gap-1">
                 <Info className="h-3 w-3" /> Presentismo
               </TooltipTrigger>
               <TooltipContent>
-                <p className="max-w-xs">SI = Sin faltas injustificadas. Bonificación según convenio.</p>
+                <p className="max-w-xs">
+                  SI = Sin faltas injustificadas. Bonificación según convenio.
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
       </Card>
-      
+
       {/* Tabla de empleados */}
       {summaries.length === 0 ? (
         <Card>
@@ -377,14 +391,14 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {summaries.map(summary => (
-                  <EmployeeRow 
+                {summaries.map((summary) => (
+                  <EmployeeRow
                     key={summary.userId}
                     summary={summary}
                     expanded={expandedUserId === summary.userId}
-                    onToggle={() => setExpandedUserId(
-                      expandedUserId === summary.userId ? null : summary.userId
-                    )}
+                    onToggle={() =>
+                      setExpandedUserId(expandedUserId === summary.userId ? null : summary.userId)
+                    }
                   />
                 ))}
               </TableBody>

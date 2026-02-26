@@ -142,17 +142,15 @@ export function ManualIncomeModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="concept">
-              Concepto {incomeType !== 'otro' && '(opcional)'}
-            </Label>
+            <Label htmlFor="concept">Concepto {incomeType !== 'otro' && '(opcional)'}</Label>
             <Input
               id="concept"
               placeholder={
                 incomeType === 'cuenta_corriente'
                   ? 'Ej: Pago de Juan Pérez'
                   : incomeType === 'devolucion_vuelto'
-                  ? 'Ej: Cliente devolvió $500'
-                  : 'Describir el ingreso...'
+                    ? 'Ej: Cliente devolvió $500'
+                    : 'Describir el ingreso...'
               }
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
@@ -174,9 +172,7 @@ export function ManualIncomeModal({
                 className="pl-8"
               />
             </div>
-            {amount && (
-              <p className="text-sm text-muted-foreground">{formatCurrency(amount)}</p>
-            )}
+            {amount && <p className="text-sm text-muted-foreground">{formatCurrency(amount)}</p>}
           </div>
 
           <div className="space-y-2">
@@ -192,7 +188,11 @@ export function ManualIncomeModal({
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={addMovement.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={addMovement.isPending}
+          >
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={!amount || addMovement.isPending}>

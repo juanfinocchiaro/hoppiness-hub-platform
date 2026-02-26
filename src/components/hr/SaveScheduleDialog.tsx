@@ -1,19 +1,23 @@
 /**
  * SaveScheduleDialog - Confirmation dialog before saving schedule changes
- * 
+ *
  * Shows affected employees and notification options
  */
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Mail, MessageSquare, Users, Calendar, AlertCircle } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
-
+import { Loader2, MessageSquare, Users, Calendar, AlertCircle } from 'lucide-react';
 interface AffectedEmployee {
   id: string;
   name: string;
@@ -40,7 +44,7 @@ export function SaveScheduleDialog({
   isPending = false,
 }: SaveScheduleDialogProps) {
   // Email disabled until hoppiness.com.ar domain is verified in Resend
-  const [notifyEmail, setNotifyEmail] = useState(false);
+  const [notifyEmail] = useState(false);
   const [notifyCommunication, setNotifyCommunication] = useState(true);
 
   const handleConfirm = async () => {
@@ -55,9 +59,7 @@ export function SaveScheduleDialog({
             <Calendar className="w-5 h-5 text-primary" />
             Publicar horarios
           </DialogTitle>
-          <DialogDescription>
-            Horarios de {monthLabel}
-          </DialogDescription>
+          <DialogDescription>Horarios de {monthLabel}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -95,7 +97,7 @@ export function SaveScheduleDialog({
           {/* Notification options */}
           <div className="space-y-3 pt-2 border-t">
             <Label className="text-xs text-muted-foreground">Notificaciones</Label>
-            
+
             {/* Email option hidden until domain is verified
             <div className="flex items-center space-x-2">
               <Checkbox

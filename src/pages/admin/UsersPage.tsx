@@ -15,7 +15,7 @@ export default function UsersPage() {
 
   // Filtered users
   const filteredUsers = useMemo(() => {
-    return users.filter(user => {
+    return users.filter((user) => {
       // Search
       if (search) {
         const q = search.toLowerCase();
@@ -78,11 +78,7 @@ export default function UsersPage() {
         Mostrando {filteredUsers.length} de {users.length} usuarios
       </div>
 
-      <UsersTable 
-        users={filteredUsers} 
-        branches={branches}
-        onUserUpdated={refetch}
-      />
+      <UsersTable users={filteredUsers} branches={branches} onUserUpdated={refetch} />
     </div>
   );
 }

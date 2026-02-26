@@ -8,14 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  CertificationMatrix, 
-  CoachingForm, 
+import {
+  CertificationMatrix,
+  CoachingForm,
   CertificationBadgeRow,
   CertificationLegend,
   CoachingHistoryTab,
   TeamAnalysisTab,
-  CoachingExpressModal,
   CoachingExportButton,
   MyManagerCoachingTab,
   MyOwnCoachingTab,
@@ -29,7 +28,20 @@ import { PageHelp } from '@/components/ui/PageHelp';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ClipboardList, Users, Award, CheckCircle, Clock, ChevronDown, ChevronRight, X, History, BarChart3, Zap, User, Star, Eye } from 'lucide-react';
+import {
+  Users,
+  Award,
+  CheckCircle,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  X,
+  History,
+  BarChart3,
+  User,
+  Star,
+  Eye,
+} from 'lucide-react';
 import type { CertificationLevel } from '@/types/coaching';
 import { useQuery as useReactQuery } from '@tanstack/react-query';
 
@@ -45,7 +57,7 @@ export default function CoachingPage() {
   const { id: currentUserId } = useEffectiveUser();
   const { local, isFranquiciado, isEncargado, isSuperadmin } = useDynamicPermissions(branchId);
   const [expandedEmployeeId, setExpandedEmployeeId] = useState<string | null>(null);
-  
+
   // Tab inicial según rol
   const getDefaultTab = () => {
     if (isFranquiciado) return 'manager';
@@ -53,26 +65,26 @@ export default function CoachingPage() {
     return 'team';
   };
   const [activeTab, setActiveTab] = useState(getDefaultTab());
-  const [expressModalOpen, setExpressModalOpen] = useState(false);
-  const [expressEmployee, setExpressEmployee] = useState<TeamMember | null>(null);
+  const [_expressModalOpen, _setExpressModalOpen] = useState(false);
+  const [_expressEmployee, _setExpressEmployee] = useState<TeamMember | null>(null);
 
   // Fetch branch name for export
   const { data: branchData } = useReactQuery({
     queryKey: ['branch-name', branchId],
     queryFn: async () => {
       if (!branchId) return null;
-      const { data } = await supabase
-        .from('branches')
-        .select('name')
-        .eq('id', branchId)
-        .single();
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId).single();
       return data;
     },
     enabled: !!branchId,
   });
 
   // Fetch empleados y cajeros (solo staff, sin encargados)
-  const { data: teamMembers, isLoading: loadingTeam, refetch: refetchTeam } = useQuery({
+  const {
+    data: teamMembers,
+    isLoading: loadingTeam,
+    refetch: refetchTeam,
+  } = useQuery({
     queryKey: ['team-members-coaching', branchId, currentUserId],
     queryFn: async (): Promise<TeamMember[]> => {
       if (!branchId) return [];
@@ -87,7 +99,7 @@ export default function CoachingPage() {
       if (rolesError) throw rolesError;
 
       // Exclude current user from the list (can't evaluate yourself)
-      const userIds = roles?.map(r => r.user_id).filter(id => id !== currentUserId) ?? [];
+      const userIds = roles?.map((r) => r.user_id).filter((id) => id !== currentUserId) ?? [];
       if (userIds.length === 0) return [];
 
       const { data: profiles, error: profilesError } = await supabase
@@ -97,10 +109,12 @@ export default function CoachingPage() {
 
       if (profilesError) throw profilesError;
 
-      return profiles?.map(p => ({
-        ...p,
-        local_role: roles.find(r => r.user_id === p.id)?.local_role || 'empleado',
-      })) ?? [];
+      return (
+        profiles?.map((p) => ({
+          ...p,
+          local_role: roles.find((r) => r.user_id === p.id)?.local_role || 'empleado',
+        })) ?? []
+      );
     },
     enabled: !!branchId,
   });
@@ -112,16 +126,25 @@ export default function CoachingPage() {
   const currentMonth = new Date().toLocaleString('es-AR', { month: 'long' });
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const getEmployeeCertifications = (userId: string) => {
     const userCerts = certData?.byUser[userId] || {};
-    return stations?.map(station => ({
-      stationKey: station.key,
-      stationName: station.name,
-      level: (userCerts[station.id]?.level ?? 0) as CertificationLevel,
-    })).filter(c => c.level > 0) ?? [];
+    return (
+      stations
+        ?.map((station) => ({
+          stationKey: station.key,
+          stationName: station.name,
+          level: (userCerts[station.id]?.level ?? 0) as CertificationLevel,
+        }))
+        .filter((c) => c.level > 0) ?? []
+    );
   };
 
   const hasCoachingThisMonth = (userId: string) => {
@@ -129,7 +152,7 @@ export default function CoachingPage() {
   };
 
   const handleToggleEmployee = (employeeId: string) => {
-    setExpandedEmployeeId(prev => prev === employeeId ? null : employeeId);
+    setExpandedEmployeeId((prev) => (prev === employeeId ? null : employeeId));
   };
 
   const handleCoachingSuccess = () => {
@@ -139,42 +162,46 @@ export default function CoachingPage() {
 
   const getRoleBadge = (role: string) => {
     if (role === 'cajero') {
-      return <Badge variant="outline" className="text-xs">Cajero</Badge>;
+      return (
+        <Badge variant="outline" className="text-xs">
+          Cajero
+        </Badge>
+      );
     }
     return null;
   };
 
   // Componente reutilizable para renderizar lista de miembros
   const renderMemberList = (
-    members: TeamMember[] | undefined, 
+    members: TeamMember[] | undefined,
     checkHasCoaching: (id: string) => boolean,
-    emptyMessage: string
+    emptyMessage: string,
   ) => {
     if (!members?.length) {
-      return (
-        <p className="text-center text-muted-foreground py-8">
-          {emptyMessage}
-        </p>
-      );
+      return <p className="text-center text-muted-foreground py-8">{emptyMessage}</p>;
     }
 
     return (
       <div className="space-y-2">
-        {members.map(member => {
+        {members.map((member) => {
           const hasCoaching = checkHasCoaching(member.id);
           const certs = getEmployeeCertifications(member.id);
           const isExpanded = expandedEmployeeId === member.id;
-          
+
           return (
             <Collapsible
               key={member.id}
               open={isExpanded}
               onOpenChange={() => !hasCoaching && handleToggleEmployee(member.id)}
             >
-              <div className={`border rounded-lg transition-colors ${isExpanded ? 'border-primary bg-muted/50' : ''}`}>
+              <div
+                className={`border rounded-lg transition-colors ${isExpanded ? 'border-primary bg-muted/50' : ''}`}
+              >
                 {/* Employee row */}
-                    <CollapsibleTrigger asChild disabled={hasCoaching || !local.canDoCoaching}>
-                      <div className={`flex items-center justify-between p-4 ${!hasCoaching && local.canDoCoaching ? 'cursor-pointer hover:bg-muted/30' : ''}`}>
+                <CollapsibleTrigger asChild disabled={hasCoaching || !local.canDoCoaching}>
+                  <div
+                    className={`flex items-center justify-between p-4 ${!hasCoaching && local.canDoCoaching ? 'cursor-pointer hover:bg-muted/30' : ''}`}
+                  >
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src={member.avatar_url || undefined} />
@@ -190,31 +217,31 @@ export default function CoachingPage() {
                         </div>
                       </div>
                     </div>
-                    
-                      <div className="flex items-center gap-2">
-                        {hasCoaching ? (
-                          <Badge variant="secondary" className="gap-1">
-                            <CheckCircle className="h-3 w-3" />
-                            Completado
-                          </Badge>
-                        ) : local.canDoCoaching ? (
-                          <>
-                            <span className="text-sm text-muted-foreground">
-                              {isExpanded ? 'Cerrar' : 'Evaluar'}
-                            </span>
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </>
-                        ) : (
-                          <Badge variant="outline" className="gap-1">
-                            <Clock className="h-3 w-3" />
-                            Pendiente
-                          </Badge>
-                        )}
-                      </div>
+
+                    <div className="flex items-center gap-2">
+                      {hasCoaching ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Completado
+                        </Badge>
+                      ) : local.canDoCoaching ? (
+                        <>
+                          <span className="text-sm text-muted-foreground">
+                            {isExpanded ? 'Cerrar' : 'Evaluar'}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="gap-1">
+                          <Clock className="h-3 w-3" />
+                          Pendiente
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CollapsibleTrigger>
 
@@ -223,11 +250,7 @@ export default function CoachingPage() {
                   <div className="border-t p-4 bg-background">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold">Coaching de {member.full_name}</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setExpandedEmployeeId(null)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setExpandedEmployeeId(null)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -266,9 +289,15 @@ export default function CoachingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader title="Coaching del Equipo" subtitle={`Evaluaciones de ${currentMonth}`} actions={
-        branchId && branchData?.name ? <CoachingExportButton branchId={branchId} branchName={branchData.name} /> : undefined
-      } />
+      <PageHeader
+        title="Coaching del Equipo"
+        subtitle={`Evaluaciones de ${currentMonth}`}
+        actions={
+          branchId && branchData?.name ? (
+            <CoachingExportButton branchId={branchId} branchName={branchData.name} />
+          ) : undefined
+        }
+      />
 
       {/* Stats Cards - Solo del staff */}
       {stats && stats.totalEmployees > 0 && (
@@ -322,9 +351,7 @@ export default function CoachingPage() {
                   <Award className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {stats.averageScore?.toFixed(1) || '-'}
-                  </p>
+                  <p className="text-2xl font-bold">{stats.averageScore?.toFixed(1) || '-'}</p>
                   <p className="text-xs text-muted-foreground">Promedio /5</p>
                 </div>
               </div>
@@ -343,7 +370,7 @@ export default function CoachingPage() {
               Mi Encargado
             </TabsTrigger>
           )}
-          
+
           {/* Tab Mi Evaluación - Solo Encargado */}
           {isEncargado && (
             <TabsTrigger value="own" className="gap-2">
@@ -351,8 +378,7 @@ export default function CoachingPage() {
               Mi Evaluación
             </TabsTrigger>
           )}
-          
-          
+
           {/* Tab Equipo - Todos los que pueden ver coaching */}
           {local.canViewCoaching && (
             <TabsTrigger value="team" className="gap-2">
@@ -360,7 +386,7 @@ export default function CoachingPage() {
               Equipo
             </TabsTrigger>
           )}
-          
+
           <TabsTrigger value="analysis" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Análisis
@@ -395,7 +421,7 @@ export default function CoachingPage() {
             <CardHeader>
               <CardTitle>Empleados del Local</CardTitle>
               <CardDescription>
-                {local.canDoCoaching 
+                {local.canDoCoaching
                   ? 'Seleccioná un empleado para realizar su coaching mensual'
                   : 'Coachings realizados a los empleados del local'}
               </CardDescription>
@@ -407,16 +433,16 @@ export default function CoachingPage() {
                   <Eye className="h-4 w-4" />
                   <AlertTitle>Modo lectura</AlertTitle>
                   <AlertDescription>
-                    Los coachings son realizados por el Encargado. 
-                    Aquí podés ver el estado de las evaluaciones.
+                    Los coachings son realizados por el Encargado. Aquí podés ver el estado de las
+                    evaluaciones.
                   </AlertDescription>
                 </Alert>
               )}
-              
+
               {renderMemberList(
-                teamMembers, 
+                teamMembers,
                 hasCoachingThisMonth,
-                'No hay empleados activos en este local'
+                'No hay empleados activos en este local',
               )}
             </CardContent>
           </Card>
@@ -432,12 +458,9 @@ export default function CoachingPage() {
           <Card className="p-4">
             <CertificationLegend />
           </Card>
-          
+
           {branchId && teamMembers && (
-            <CertificationMatrix 
-              branchId={branchId} 
-              employees={teamMembers}
-            />
+            <CertificationMatrix branchId={branchId} employees={teamMembers} />
           )}
         </TabsContent>
 

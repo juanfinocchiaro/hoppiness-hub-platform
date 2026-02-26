@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { BRAND } from "./brand-tokens";
-import logoSrc from "@/assets/logo-hoppiness-loader.png";
+import { useState, useEffect, useRef } from 'react';
+import { BRAND } from './brand-tokens';
+import logoSrc from '@/assets/logo-hoppiness-loader.png';
 
 interface SplashLoaderProps {
   onComplete: () => void;
@@ -31,7 +31,7 @@ export function SplashLoader({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
     const W = window.innerWidth;
@@ -39,8 +39,8 @@ export function SplashLoader({
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
-    canvas.style.width = W + "px";
-    canvas.style.height = H + "px";
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
 
     const cx = W / 2;
     const cy = H / 2;
@@ -49,13 +49,7 @@ export function SplashLoader({
     const particles = Array.from({ length: 24 }, () => {
       const angle = Math.random() * Math.PI * 2;
       const speed = 200 + Math.random() * 400;
-      const colors = [
-        BRAND.naranja,
-        BRAND.amarillo,
-        "#ffffff",
-        BRAND.naranja,
-        BRAND.amarillo,
-      ];
+      const colors = [BRAND.naranja, BRAND.amarillo, '#ffffff', BRAND.naranja, BRAND.amarillo];
       return {
         x: cx,
         y: cy,
@@ -85,21 +79,21 @@ export function SplashLoader({
           delay: 0,
           maxR: Math.max(W, H) * 0.5,
           dur: 0.6,
-          color: "255,82,29",
+          color: '255,82,29',
           width: 3,
         },
         {
           delay: 0.05,
           maxR: Math.max(W, H) * 0.55,
           dur: 0.7,
-          color: "255,212,31",
+          color: '255,212,31',
           width: 2,
         },
         {
           delay: 0.1,
           maxR: Math.max(W, H) * 0.6,
           dur: 0.8,
-          color: "255,255,255",
+          color: '255,255,255',
           width: 1.5,
         },
       ].forEach((ring) => {
@@ -120,7 +114,7 @@ export function SplashLoader({
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
         grad.addColorStop(0, `rgba(255,255,255,${a})`);
         grad.addColorStop(0.4, `rgba(255,82,29,${a * 0.5})`);
-        grad.addColorStop(1, "rgba(255,82,29,0)");
+        grad.addColorStop(1, 'rgba(255,82,29,0)');
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fillStyle = grad;
@@ -159,46 +153,45 @@ export function SplashLoader({
 
   const logoStyle = ((): React.CSSProperties => {
     const base: React.CSSProperties = {
-      position: "fixed",
+      position: 'fixed',
       zIndex: 20,
-      willChange: "transform, width, height, top, left",
+      willChange: 'transform, width, height, top, left',
     };
     if (step === 0)
       return {
         ...base,
-        width: "160px",
-        height: "160px",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%) scale(0)",
+        width: '160px',
+        height: '160px',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%) scale(0)',
         opacity: 0,
-        transition: "none",
+        transition: 'none',
       };
     if (step === 1)
       return {
         ...base,
-        width: "160px",
-        height: "160px",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%) scale(1)",
+        width: '160px',
+        height: '160px',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%) scale(1)',
         opacity: 1,
-        transition:
-          "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease",
+        transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease',
         filter:
-          "drop-shadow(0 0 40px rgba(255,82,29,0.4)) drop-shadow(0 0 80px rgba(255,212,31,0.15))",
+          'drop-shadow(0 0 40px rgba(255,82,29,0.4)) drop-shadow(0 0 80px rgba(255,212,31,0.15))',
       };
     if (step === 2)
       return {
         ...base,
-        width: "160px",
-        height: "160px",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%) scale(1)",
+        width: '160px',
+        height: '160px',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%) scale(1)',
         opacity: 1,
-        transition: "filter 0.4s ease",
-        filter: "drop-shadow(0 0 20px rgba(255,255,255,0.1))",
+        transition: 'filter 0.4s ease',
+        filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.1))',
       };
     return {
       ...base,
@@ -206,47 +199,44 @@ export function SplashLoader({
       height: `${navLogoSize}px`,
       top: `${navLogoPosition.top}px`,
       left: `${navLogoPosition.left}px`,
-      transform: "translate(0, 0) scale(1)",
+      transform: 'translate(0, 0) scale(1)',
       opacity: step >= 4 ? 0 : 1,
-      transition:
-        "all 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease 0.5s",
-      filter: "none",
+      transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease 0.5s',
+      filter: 'none',
     };
   })();
 
   return (
     <div
       style={{
-        position: "fixed",
+        position: 'fixed',
         inset: 0,
         zIndex: 9999,
         background: BRAND.heroBg,
         opacity: step >= 3 ? 0 : 1,
-        transition:
-          step >= 3 ? "opacity 0.7s cubic-bezier(0.4,0,0.2,1)" : "none",
-        pointerEvents: step >= 4 ? "none" : "auto",
+        transition: step >= 3 ? 'opacity 0.7s cubic-bezier(0.4,0,0.2,1)' : 'none',
+        pointerEvents: step >= 4 ? 'none' : 'auto',
       }}
     >
       <canvas
         ref={canvasRef}
         data-step={step}
         style={{
-          position: "fixed",
+          position: 'fixed',
           inset: 0,
           zIndex: 16,
-          pointerEvents: "none",
+          pointerEvents: 'none',
         }}
       />
       <img src={logoSrc} alt="Hoppiness Club" style={logoStyle} />
       <div
         style={{
-          position: "absolute",
+          position: 'absolute',
           inset: 0,
-          pointerEvents: "none",
-          background:
-            "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.4) 100%)",
+          pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.4) 100%)',
           opacity: step >= 3 ? 0 : 0.5,
-          transition: "opacity 0.5s ease",
+          transition: 'opacity 0.5s ease',
         }}
       />
     </div>

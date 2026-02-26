@@ -27,13 +27,13 @@ export default function MyRegulationsCard() {
         .select('local_role')
         .eq('user_id', userId)
         .eq('is_active', true);
-      return (data || []).map(r => r.local_role as LocalRole);
+      return (data || []).map((r) => r.local_role as LocalRole);
     },
     enabled: !!userId,
   });
 
-  const isOnlyFranquiciado = userLocalRoles.length > 0 && 
-    userLocalRoles.every(role => role === 'franquiciado');
+  const isOnlyFranquiciado =
+    userLocalRoles.length > 0 && userLocalRoles.every((role) => role === 'franquiciado');
 
   // Fetch latest regulation
   const { data: latestRegulation } = useQuery({
@@ -83,11 +83,11 @@ export default function MyRegulationsCard() {
 
   const handleDownloadRegulation = async () => {
     if (!latestRegulation?.pdf_url) return;
-    
+
     const { data } = await supabase.storage
       .from('regulations')
       .createSignedUrl(latestRegulation.pdf_url, 3600);
-    
+
     if (data?.signedUrl) {
       window.open(data.signedUrl, '_blank');
     }
@@ -97,7 +97,7 @@ export default function MyRegulationsCard() {
     const { data } = await supabase.storage
       .from('regulation-signatures')
       .createSignedUrl(url, 3600);
-    
+
     if (data?.signedUrl) {
       window.open(data.signedUrl, '_blank');
     }
@@ -124,8 +124,10 @@ export default function MyRegulationsCard() {
   }
 
   const isSigned = !!mySignature;
-  const daysSincePublished = latestRegulation.published_at 
-    ? Math.floor((Date.now() - new Date(latestRegulation.published_at).getTime()) / (1000 * 60 * 60 * 24))
+  const daysSincePublished = latestRegulation.published_at
+    ? Math.floor(
+        (Date.now() - new Date(latestRegulation.published_at).getTime()) / (1000 * 60 * 60 * 24),
+      )
     : 0;
   const daysRemaining = Math.max(0, 5 - daysSincePublished);
   const isOverdue = daysSincePublished > 5 && !isSigned;
@@ -162,12 +164,13 @@ export default function MyRegulationsCard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Versión {latestRegulation.version}</p>
-              <p className="text-sm text-muted-foreground">
-                {latestRegulation.title}
-              </p>
+              <p className="text-sm text-muted-foreground">{latestRegulation.title}</p>
               {latestRegulation.published_at && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Publicado {format(new Date(latestRegulation.published_at), "d 'de' MMMM yyyy", { locale: es })}
+                  Publicado{' '}
+                  {format(new Date(latestRegulation.published_at), "d 'de' MMMM yyyy", {
+                    locale: es,
+                  })}
                 </p>
               )}
             </div>
@@ -182,12 +185,13 @@ export default function MyRegulationsCard() {
         {isSigned && mySignature && (
           <div className="p-3 border rounded-lg bg-success/5 border-success/20">
             <p className="text-sm font-medium text-success">
-              ✓ Firmado el {format(new Date(mySignature.signed_at), "d/MM/yyyy 'a las' HH:mm", { locale: es })}
+              ✓ Firmado el{' '}
+              {format(new Date(mySignature.signed_at), "d/MM/yyyy 'a las' HH:mm", { locale: es })}
             </p>
             {mySignature.signed_document_url && (
-              <Button 
-                variant="link" 
-                size="sm" 
+              <Button
+                variant="link"
+                size="sm"
                 className="p-0 h-auto text-success"
                 onClick={() => handleViewSignature(mySignature.signed_document_url!)}
               >
@@ -199,23 +203,19 @@ export default function MyRegulationsCard() {
         )}
 
         {!isSigned && (
-          <div className={`p-3 border rounded-lg ${isOverdue ? 'bg-destructive/5 border-destructive/20' : 'bg-warning/10 border-warning/20'}`}>
+          <div
+            className={`p-3 border rounded-lg ${isOverdue ? 'bg-destructive/5 border-destructive/20' : 'bg-warning/10 border-warning/20'}`}
+          >
             <p className={`text-sm ${isOverdue ? 'text-destructive' : 'text-warning-foreground'}`}>
-              {isOverdue 
+              {isOverdue
                 ? '⚠️ Tu firma está vencida. Contactá a tu encargado para regularizar tu situación.'
-                : `📝 Tenés ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} para firmar el reglamento. Tu encargado debe cargar la foto del documento firmado.`
-              }
+                : `📝 Tenés ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} para firmar el reglamento. Tu encargado debe cargar la foto del documento firmado.`}
             </p>
           </div>
         )}
 
         {/* History Toggle */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full"
-          onClick={() => setExpanded(!expanded)}
-        >
+        <Button variant="ghost" size="sm" className="w-full" onClick={() => setExpanded(!expanded)}>
           {expanded ? 'Ocultar historial' : 'Ver historial de firmas'}
         </Button>
 
@@ -224,7 +224,10 @@ export default function MyRegulationsCard() {
           <ScrollArea className="h-40">
             <div className="space-y-2">
               {signatureHistory.map((sig) => (
-                <div key={sig.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                <div
+                  key={sig.id}
+                  className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
+                >
                   <div>
                     <span className="font-medium">v{sig.regulation_version || '?'}</span>
                     <span className="text-muted-foreground ml-2">
@@ -232,8 +235,8 @@ export default function MyRegulationsCard() {
                     </span>
                   </div>
                   {sig.signed_document_url && (
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleViewSignature(sig.signed_document_url!)}
                     >

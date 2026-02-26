@@ -11,7 +11,7 @@ interface MeetingStatusBadgeProps {
 
 export function MeetingStatusBadge({ status, className }: MeetingStatusBadgeProps) {
   const config = MEETING_STATUS_CONFIG[status];
-  
+
   return (
     <StatusBadge variant={config.variant} className={className}>
       {config.label}

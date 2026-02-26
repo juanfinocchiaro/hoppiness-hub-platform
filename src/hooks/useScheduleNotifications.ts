@@ -1,6 +1,6 @@
 /**
  * useScheduleNotifications - Helper for sending schedule notifications
- * 
+ *
  * Exported separately from useSchedules to allow usage in InlineScheduleEditor
  */
 import { supabase } from '@/integrations/supabase/client';
@@ -19,8 +19,18 @@ export interface NotificationInput {
 }
 
 const monthNames = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
 ];
 
 /**
@@ -29,17 +39,17 @@ const monthNames = [
  */
 export async function sendScheduleNotification(input: NotificationInput): Promise<void> {
   const monthName = monthNames[input.month - 1];
-  
+
   // Create internal communication
   if (input.notify_communication) {
     const title = input.is_modification
       ? `📅 Tu encargado modificó tu horario de ${monthName}`
       : `📅 Tu horario de ${monthName} ya está disponible`;
-    
+
     const body = input.is_modification
       ? `Se realizó una modificación sobre tu horario${input.modified_date ? ` del día ${input.modified_date}` : ''}. ${input.modification_reason ? `Motivo: ${input.modification_reason}` : ''} Revisalo en 'Mi Horario'.`
       : `Tu encargado publicó el horario del mes. Revisalo en 'Mi Horario'.`;
-    
+
     try {
       await supabase.from('communications').insert({
         title,
@@ -57,7 +67,7 @@ export async function sendScheduleNotification(input: NotificationInput): Promis
       if (import.meta.env.DEV) console.error('Failed to create communication:', e);
     }
   }
-  
+
   // Send email notification
   if (input.notify_email) {
     try {
@@ -82,7 +92,7 @@ export async function sendScheduleNotification(input: NotificationInput): Promis
  */
 export async function sendBulkScheduleNotifications(
   employees: Array<{ id: string; name: string }>,
-  params: Omit<NotificationInput, 'user_id'>
+  params: Omit<NotificationInput, 'user_id'>,
 ): Promise<void> {
   // For communications, we create one message targeting the branch
   if (params.notify_communication) {
@@ -90,11 +100,11 @@ export async function sendBulkScheduleNotifications(
     const title = params.is_modification
       ? `📅 Tu encargado modificó los horarios de ${monthName}`
       : `📅 Los horarios de ${monthName} ya están disponibles`;
-    
+
     const body = params.is_modification
       ? `Se realizó una modificación sobre los horarios del equipo${params.modified_date ? ` (${params.modified_date})` : ''}. ${params.modification_reason ? `Motivo: ${params.modification_reason}` : ''} Revisá tu horario en 'Mi Cuenta'.`
       : `Se publicaron los horarios del mes. Revisá tu horario en 'Mi Cuenta'.`;
-    
+
     try {
       await supabase.from('communications').insert({
         title,
@@ -111,7 +121,7 @@ export async function sendBulkScheduleNotifications(
       if (import.meta.env.DEV) console.error('Failed to create bulk communication:', e);
     }
   }
-  
+
   // For emails, send to each employee
   if (params.notify_email) {
     for (const employee of employees) {

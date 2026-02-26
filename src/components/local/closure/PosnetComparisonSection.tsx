@@ -3,10 +3,15 @@
  */
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { ChevronDown, CreditCard, HelpCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VentasLocalData, VentasAppsData, ComparacionPosnet } from '@/types/shiftClosure';
@@ -18,17 +23,25 @@ interface PosnetComparisonSectionProps {
   onPosnetChange: (data: ComparacionPosnet) => void;
 }
 
-export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChange }: PosnetComparisonSectionProps) {
+export function PosnetComparisonSection({
+  ventasLocal,
+  ventasApps,
+  onPosnetChange,
+}: PosnetComparisonSectionProps) {
   const comparacion = calcularDiferenciaPosnet(ventasLocal, ventasApps);
   const desglose = calcularDesgloseTarjetas(ventasLocal);
-  
+
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
-  
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(value);
+
   const handleChange = (value: number) => {
     onPosnetChange({ total_posnet: value });
   };
-  
+
   const parseNumber = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value) || 0;
     return Math.max(0, val);
@@ -46,19 +59,20 @@ export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChang
               </div>
               <div className="flex items-center gap-2">
                 {comparacion.posnet > 0 && (
-                  <span className={cn(
-                    "text-sm font-medium flex items-center gap-1",
-                    comparacion.tieneAlerta ? "text-destructive" : "text-green-600"
-                  )}>
+                  <span
+                    className={cn(
+                      'text-sm font-medium flex items-center gap-1',
+                      comparacion.tieneAlerta ? 'text-destructive' : 'text-green-600',
+                    )}
+                  >
                     {comparacion.tieneAlerta ? (
                       <AlertTriangle className="w-4 h-4" />
                     ) : (
                       <CheckCircle2 className="w-4 h-4" />
                     )}
-                    {comparacion.tieneAlerta 
+                    {comparacion.tieneAlerta
                       ? `Dif: ${formatCurrency(comparacion.diferencia)}`
-                      : "Coincide"
-                    }
+                      : 'Coincide'}
                   </span>
                 )}
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -83,21 +97,26 @@ export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChang
                 <div className="space-y-4 text-sm">
                   <p>Para obtener el total del Posnet:</p>
                   <ol className="list-decimal list-inside space-y-2">
-                    <li>En la terminal Posnet, hacé el <strong>cierre del turno</strong></li>
+                    <li>
+                      En la terminal Posnet, hacé el <strong>cierre del turno</strong>
+                    </li>
                     <li>El Posnet imprimirá un ticket con el total</li>
-                    <li>Ingresá el <strong>monto total de tarjetas</strong> (incluye Débito, Crédito y QR)</li>
+                    <li>
+                      Ingresá el <strong>monto total de tarjetas</strong> (incluye Débito, Crédito y
+                      QR)
+                    </li>
                   </ol>
                   <div className="bg-muted p-3 rounded-lg">
                     <p className="font-medium mb-1">¿Por qué comparar?</p>
                     <p className="text-muted-foreground">
-                      Si el total del Posnet no coincide con lo registrado en Núcleo, 
-                      puede haber ventas que no se cargaron correctamente o errores de cobro.
+                      Si el total del Posnet no coincide con lo registrado en Núcleo, puede haber
+                      ventas que no se cargaron correctamente o errores de cobro.
                     </p>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
-            
+
             {/* Comparison table */}
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
@@ -129,11 +148,13 @@ export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChang
                         placeholder="$0"
                       />
                     </td>
-                    <td className={cn(
-                      "py-3 px-3 text-right font-mono font-medium",
-                      comparacion.posnet > 0 && comparacion.tieneAlerta && "text-destructive",
-                      comparacion.posnet > 0 && !comparacion.tieneAlerta && "text-green-600"
-                    )}>
+                    <td
+                      className={cn(
+                        'py-3 px-3 text-right font-mono font-medium',
+                        comparacion.posnet > 0 && comparacion.tieneAlerta && 'text-destructive',
+                        comparacion.posnet > 0 && !comparacion.tieneAlerta && 'text-green-600',
+                      )}
+                    >
                       {comparacion.posnet > 0 ? (
                         <>
                           {comparacion.tieneAlerta ? (
@@ -153,14 +174,24 @@ export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChang
                 </tbody>
               </table>
             </div>
-            
+
             {/* Card breakdown */}
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground justify-center">
-              <span>Débito: <span className="font-mono text-foreground">{formatCurrency(desglose.debito)}</span></span>
-              <span>Crédito: <span className="font-mono text-foreground">{formatCurrency(desglose.credito)}</span></span>
-              <span>QR: <span className="font-mono text-foreground">{formatCurrency(desglose.qr)}</span></span>
+              <span>
+                Débito:{' '}
+                <span className="font-mono text-foreground">{formatCurrency(desglose.debito)}</span>
+              </span>
+              <span>
+                Crédito:{' '}
+                <span className="font-mono text-foreground">
+                  {formatCurrency(desglose.credito)}
+                </span>
+              </span>
+              <span>
+                QR: <span className="font-mono text-foreground">{formatCurrency(desglose.qr)}</span>
+              </span>
             </div>
-            
+
             {/* Warning if difference */}
             {comparacion.posnet > 0 && comparacion.tieneAlerta && (
               <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm flex items-start gap-2">
@@ -168,10 +199,10 @@ export function PosnetComparisonSection({ ventasLocal, ventasApps, onPosnetChang
                 <div>
                   <p className="font-medium">Se detectó una diferencia</p>
                   <p className="text-destructive/80 mt-1">
-                    {comparacion.diferencia > 0 
+                    {comparacion.diferencia > 0
                       ? `Núcleo tiene ${formatCurrency(comparacion.diferencia)} más que el Posnet`
-                      : `El Posnet tiene ${formatCurrency(Math.abs(comparacion.diferencia))} más que Núcleo`
-                    }. Revisá si hay ventas mal cargadas o cobros no procesados.
+                      : `El Posnet tiene ${formatCurrency(Math.abs(comparacion.diferencia))} más que Núcleo`}
+                    . Revisá si hay ventas mal cargadas o cobros no procesados.
                   </p>
                 </div>
               </div>

@@ -2,7 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type MessageType = 'all' | 'franquicia' | 'empleo' | 'proveedor' | 'pedidos' | 'consulta' | 'otro';
+export type MessageType =
+  | 'all'
+  | 'franquicia'
+  | 'empleo'
+  | 'proveedor'
+  | 'pedidos'
+  | 'consulta'
+  | 'otro';
 
 export interface ContactMessage {
   id: string;
@@ -131,7 +138,7 @@ export function useMessageCounts() {
         .from('contact_messages')
         .select('subject')
         .neq('status', 'archived');
-      
+
       if (error) throw error;
 
       const counts = {

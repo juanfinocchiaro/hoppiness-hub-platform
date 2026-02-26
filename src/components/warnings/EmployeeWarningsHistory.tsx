@@ -13,21 +13,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  MessageSquare,
-  FileText,
-  Clock,
-  UserX,
-  AlertTriangle,
-  CheckCircle,
-} from 'lucide-react';
+import { MessageSquare, FileText, Clock, UserX, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const WARNING_TYPES = [
-  { value: 'verbal', label: 'Llamado de atención verbal', icon: MessageSquare, color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'written', label: 'Apercibimiento escrito', icon: FileText, color: 'bg-orange-100 text-orange-800' },
+  {
+    value: 'verbal',
+    label: 'Llamado de atención verbal',
+    icon: MessageSquare,
+    color: 'bg-yellow-100 text-yellow-800',
+  },
+  {
+    value: 'written',
+    label: 'Apercibimiento escrito',
+    icon: FileText,
+    color: 'bg-orange-100 text-orange-800',
+  },
   { value: 'lateness', label: 'Llegada tarde', icon: Clock, color: 'bg-blue-100 text-blue-800' },
   { value: 'absence', label: 'Inasistencia', icon: UserX, color: 'bg-red-100 text-red-800' },
-  { value: 'suspension', label: 'Suspensión', icon: AlertTriangle, color: 'bg-red-200 text-red-900' },
+  {
+    value: 'suspension',
+    label: 'Suspensión',
+    icon: AlertTriangle,
+    color: 'bg-red-200 text-red-900',
+  },
   { value: 'other', label: 'Otro', icon: AlertTriangle, color: 'bg-gray-100 text-gray-800' },
 ];
 
@@ -57,27 +65,30 @@ export function EmployeeWarningsHistory({ teamMembers, warnings }: EmployeeWarni
 
   const employeeWarnings = useMemo(() => {
     if (!selectedUserId || !warnings) return [];
-    return warnings.filter(w => w.user_id === selectedUserId);
+    return warnings.filter((w) => w.user_id === selectedUserId);
   }, [selectedUserId, warnings]);
 
   const getEmployeeStats = (userId: string) => {
-    const userWarnings = warnings?.filter(w => w.user_id === userId) || [];
-    const byType = userWarnings.reduce((acc, w) => {
-      acc[w.warning_type] = (acc[w.warning_type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
+    const userWarnings = warnings?.filter((w) => w.user_id === userId) || [];
+    const byType = userWarnings.reduce(
+      (acc, w) => {
+        acc[w.warning_type] = (acc[w.warning_type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     return {
       total: userWarnings.length,
       byType,
       lastDate: userWarnings[0]?.warning_date,
-      pendingSignature: userWarnings.filter(w => !w.signed_document_url).length,
-      pendingAck: userWarnings.filter(w => !w.acknowledged_at).length,
+      pendingSignature: userWarnings.filter((w) => !w.signed_document_url).length,
+      pendingAck: userWarnings.filter((w) => !w.acknowledged_at).length,
     };
   };
 
   const getWarningTypeBadge = (type: string) => {
-    const config = WARNING_TYPES.find(t => t.value === type) || WARNING_TYPES[5];
+    const config = WARNING_TYPES.find((t) => t.value === type) || WARNING_TYPES[5];
     const Icon = config.icon;
     return (
       <Badge className={`${config.color} gap-1`}>
@@ -88,7 +99,7 @@ export function EmployeeWarningsHistory({ teamMembers, warnings }: EmployeeWarni
   };
 
   const stats = selectedUserId ? getEmployeeStats(selectedUserId) : null;
-  const selectedMember = teamMembers?.find(m => m.user_id === selectedUserId);
+  const selectedMember = teamMembers?.find((m) => m.user_id === selectedUserId);
 
   return (
     <div className="space-y-4">
@@ -98,11 +109,11 @@ export function EmployeeWarningsHistory({ teamMembers, warnings }: EmployeeWarni
           <SelectValue placeholder="Seleccionar empleado" />
         </SelectTrigger>
         <SelectContent>
-          {teamMembers?.map(member => {
+          {teamMembers?.map((member) => {
             const memberStats = getEmployeeStats(member.user_id);
             return (
               <SelectItem key={member.user_id} value={member.user_id}>
-                {member.full_name} 
+                {member.full_name}
                 {memberStats.total > 0 && (
                   <span className="text-muted-foreground ml-2">({memberStats.total})</span>
                 )}
@@ -117,9 +128,7 @@ export function EmployeeWarningsHistory({ teamMembers, warnings }: EmployeeWarni
           {/* Resumen del empleado */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">
-                Resumen de {selectedMember?.full_name}
-              </CardTitle>
+              <CardTitle className="text-lg">Resumen de {selectedMember?.full_name}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -136,7 +145,11 @@ export function EmployeeWarningsHistory({ teamMembers, warnings }: EmployeeWarni
                   <p className="text-xs text-muted-foreground">Sin firma</p>
                 </div>
                 <div>
-                  <p className="text-sm">{stats.lastDate ? format(new Date(stats.lastDate), "d MMM yyyy", { locale: es }) : '-'}</p>
+                  <p className="text-sm">
+                    {stats.lastDate
+                      ? format(new Date(stats.lastDate), 'd MMM yyyy', { locale: es })
+                      : '-'}
+                  </p>
                   <p className="text-xs text-muted-foreground">Último</p>
                 </div>
               </div>
@@ -167,7 +180,7 @@ export function EmployeeWarningsHistory({ teamMembers, warnings }: EmployeeWarni
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           {getWarningTypeBadge(warning.warning_type)}
                           <span className="text-sm text-muted-foreground">
-                            {format(new Date(warning.warning_date), "d MMM yyyy", { locale: es })}
+                            {format(new Date(warning.warning_date), 'd MMM yyyy', { locale: es })}
                           </span>
                           {warning.acknowledged_at && (
                             <Badge variant="outline" className="gap-1 text-xs">

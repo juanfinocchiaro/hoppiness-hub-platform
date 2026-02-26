@@ -1,6 +1,6 @@
 /**
  * RequestsPage - Solicitudes de días libres y justificativos
- * 
+ *
  * Separado de SchedulesPage para mejor organización.
  * Incluye:
  * - Tabs por estado: Pendientes, Aprobadas, Rechazadas, Todas
@@ -13,8 +13,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDynamicPermissions } from '@/hooks/useDynamicPermissions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,19 +28,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  CalendarOff, 
-  RefreshCw, 
-  FileWarning, 
+import {
+  CalendarOff,
+  RefreshCw,
+  FileWarning,
   HelpCircle,
-  CheckCircle2, 
+  CheckCircle2,
   XCircle,
   Clock,
   Loader2,
   FileText,
   ExternalLink,
   Eye,
-  ClipboardList,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -76,8 +75,10 @@ export default function RequestsPage() {
   const { user } = useAuth();
   const { isFranquiciado, local } = useDynamicPermissions(branchId);
   const queryClient = useQueryClient();
-  
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'all'>(
+    'pending',
+  );
   const [selectedRequest, setSelectedRequest] = useState<ScheduleRequest | null>(null);
   const [responseNote, setResponseNote] = useState('');
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
@@ -90,7 +91,8 @@ export default function RequestsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('schedule_requests')
-        .select(`
+        .select(
+          `
           id,
           user_id,
           request_type,
@@ -102,23 +104,24 @@ export default function RequestsPage() {
           response_note,
           evidence_url,
           absence_type
-        `)
+        `,
+        )
         .eq('branch_id', branchId!)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
 
       // Fetch profiles
       if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(r => r.user_id))];
+        const userIds = [...new Set(data.map((r) => r.user_id))];
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url')
           .in('id', userIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p]));
-        
-        return data.map(r => ({
+        const profileMap = new Map(profiles?.map((p) => [p.id, p]));
+
+        return data.map((r) => ({
           ...r,
           profile: profileMap.get(r.user_id),
         })) as ScheduleRequest[];
@@ -130,22 +133,31 @@ export default function RequestsPage() {
   });
 
   // Filter requests by tab
-  const filteredRequests = requests?.filter(r => {
-    if (activeTab === 'all') return true;
-    return r.status === activeTab;
-  }) || [];
+  const filteredRequests =
+    requests?.filter((r) => {
+      if (activeTab === 'all') return true;
+      return r.status === activeTab;
+    }) || [];
 
   // Counts by status
   const counts = {
-    pending: requests?.filter(r => r.status === 'pending').length || 0,
-    approved: requests?.filter(r => r.status === 'approved').length || 0,
-    rejected: requests?.filter(r => r.status === 'rejected').length || 0,
+    pending: requests?.filter((r) => r.status === 'pending').length || 0,
+    approved: requests?.filter((r) => r.status === 'approved').length || 0,
+    rejected: requests?.filter((r) => r.status === 'rejected').length || 0,
     all: requests?.length || 0,
   };
 
   // Respond mutation
   const respondToRequest = useMutation({
-    mutationFn: async ({ requestId, status, note }: { requestId: string; status: 'approved' | 'rejected'; note?: string }) => {
+    mutationFn: async ({
+      requestId,
+      status,
+      note,
+    }: {
+      requestId: string;
+      status: 'approved' | 'rejected';
+      note?: string;
+    }) => {
       const { error } = await supabase
         .from('schedule_requests')
         .update({
@@ -172,41 +184,70 @@ export default function RequestsPage() {
 
   const getTypeIcon = (type: RequestType) => {
     switch (type) {
-      case 'day_off': return CalendarOff;
-      case 'shift_change': return RefreshCw;
-      case 'absence_justification': return FileWarning;
-      default: return HelpCircle;
+      case 'day_off':
+        return CalendarOff;
+      case 'shift_change':
+        return RefreshCw;
+      case 'absence_justification':
+        return FileWarning;
+      default:
+        return HelpCircle;
     }
   };
 
   const getTypeLabel = (type: RequestType) => {
     switch (type) {
-      case 'day_off': return 'Día libre';
-      case 'shift_change': return 'Cambio turno';
-      case 'absence_justification': return 'Justificativo';
-      case 'other': return 'Otro';
-      default: return type;
+      case 'day_off':
+        return 'Día libre';
+      case 'shift_change':
+        return 'Cambio turno';
+      case 'absence_justification':
+        return 'Justificativo';
+      case 'other':
+        return 'Otro';
+      default:
+        return type;
     }
   };
 
   const getAbsenceTypeLabel = (type: AbsenceType | null) => {
     switch (type) {
-      case 'medical': return '🏥 Médico';
-      case 'personal': return '👤 Personal';
-      case 'emergency': return '🚨 Emergencia';
-      case 'other': return '📋 Otro';
-      default: return null;
+      case 'medical':
+        return '🏥 Médico';
+      case 'personal':
+        return '👤 Personal';
+      case 'emergency':
+        return '🚨 Emergencia';
+      case 'other':
+        return '📋 Otro';
+      default:
+        return null;
     }
   };
 
   const getStatusBadge = (status: StatusType) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="gap-1"><Clock className="w-3 h-3" />Pendiente</Badge>;
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Clock className="w-3 h-3" />
+            Pendiente
+          </Badge>
+        );
       case 'approved':
-        return <Badge className="gap-1 bg-success text-success-foreground"><CheckCircle2 className="w-3 h-3" />Aprobada</Badge>;
+        return (
+          <Badge className="gap-1 bg-success text-success-foreground">
+            <CheckCircle2 className="w-3 h-3" />
+            Aprobada
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" />Rechazada</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <XCircle className="w-3 h-3" />
+            Rechazada
+          </Badge>
+        );
     }
   };
 
@@ -218,7 +259,7 @@ export default function RequestsPage() {
 
   const confirmAction = () => {
     if (!selectedRequest || !actionType) return;
-    
+
     respondToRequest.mutate({
       requestId: selectedRequest.id,
       status: actionType === 'approve' ? 'approved' : 'rejected',
@@ -231,7 +272,7 @@ export default function RequestsPage() {
   return (
     <div className="space-y-6">
       <PageHelp pageId="local-requests" />
-      
+
       <PageHeader
         title="Solicitudes"
         subtitle="Solicitudes de días libres, cambios de turno y justificativos"
@@ -243,7 +284,8 @@ export default function RequestsPage() {
           <Eye className="h-4 w-4" />
           <AlertTitle>Modo lectura</AlertTitle>
           <AlertDescription>
-            Estás viendo las solicitudes en modo lectura. Solo el encargado puede aprobar o rechazar.
+            Estás viendo las solicitudes en modo lectura. Solo el encargado puede aprobar o
+            rechazar.
           </AlertDescription>
         </Alert>
       )}
@@ -255,18 +297,14 @@ export default function RequestsPage() {
             <Clock className="w-4 h-4" />
             Pendientes
             {counts.pending > 0 && (
-              <Badge variant="secondary" className="ml-1">{counts.pending}</Badge>
+              <Badge variant="secondary" className="ml-1">
+                {counts.pending}
+              </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved">
-            Aprobadas ({counts.approved})
-          </TabsTrigger>
-          <TabsTrigger value="rejected">
-            Rechazadas ({counts.rejected})
-          </TabsTrigger>
-          <TabsTrigger value="all">
-            Todas ({counts.all})
-          </TabsTrigger>
+          <TabsTrigger value="approved">Aprobadas ({counts.approved})</TabsTrigger>
+          <TabsTrigger value="rejected">Rechazadas ({counts.rejected})</TabsTrigger>
+          <TabsTrigger value="all">Todas ({counts.all})</TabsTrigger>
         </TabsList>
 
         {isLoading ? (
@@ -293,22 +331,31 @@ export default function RequestsPage() {
               const isJustification = request.request_type === 'absence_justification';
               const absenceLabel = getAbsenceTypeLabel(request.absence_type);
               const isPending = request.status === 'pending';
-              
+
               return (
-                <Card key={request.id} className={cn(
-                  isJustification && isPending && 'border-amber-200 dark:border-amber-800'
-                )}>
+                <Card
+                  key={request.id}
+                  className={cn(
+                    isJustification && isPending && 'border-amber-200 dark:border-amber-800',
+                  )}
+                >
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className={cn(
-                          'p-2 rounded-full',
-                          isJustification ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-muted'
-                        )}>
-                          <TypeIcon className={cn(
-                            'w-4 h-4',
-                            isJustification ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
-                          )} />
+                        <div
+                          className={cn(
+                            'p-2 rounded-full',
+                            isJustification ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-muted',
+                          )}
+                        >
+                          <TypeIcon
+                            className={cn(
+                              'w-4 h-4',
+                              isJustification
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-muted-foreground',
+                            )}
+                          />
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -326,7 +373,9 @@ export default function RequestsPage() {
                             {getStatusBadge(request.status)}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(request.request_date), "EEEE d 'de' MMMM", { locale: es })}
+                            {format(new Date(request.request_date), "EEEE d 'de' MMMM", {
+                              locale: es,
+                            })}
                           </p>
                           {request.reason && (
                             <p className="text-sm text-muted-foreground italic">
@@ -334,9 +383,9 @@ export default function RequestsPage() {
                             </p>
                           )}
                           {request.evidence_url && (
-                            <a 
-                              href={request.evidence_url} 
-                              target="_blank" 
+                            <a
+                              href={request.evidence_url}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                             >
@@ -347,11 +396,15 @@ export default function RequestsPage() {
                           )}
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span>
-                              Solicitado: {format(new Date(request.created_at), "d MMM HH:mm", { locale: es })}
+                              Solicitado:{' '}
+                              {format(new Date(request.created_at), 'd MMM HH:mm', { locale: es })}
                             </span>
                             {request.responded_at && (
                               <span>
-                                Respondido: {format(new Date(request.responded_at), "d MMM HH:mm", { locale: es })}
+                                Respondido:{' '}
+                                {format(new Date(request.responded_at), 'd MMM HH:mm', {
+                                  locale: es,
+                                })}
                               </span>
                             )}
                           </div>
@@ -362,7 +415,7 @@ export default function RequestsPage() {
                           )}
                         </div>
                       </div>
-                      
+
                       {isPending && canManage && (
                         <div className="flex gap-2 sm:flex-shrink-0">
                           <Button
@@ -394,7 +447,10 @@ export default function RequestsPage() {
       </Tabs>
 
       {/* Action Dialog */}
-      <Dialog open={!!selectedRequest && !!actionType} onOpenChange={() => setSelectedRequest(null)}>
+      <Dialog
+        open={!!selectedRequest && !!actionType}
+        onOpenChange={() => setSelectedRequest(null)}
+      >
         <DialogContent className="sm:max-w-md">
           {selectedRequest && actionType && (
             <>
@@ -403,8 +459,11 @@ export default function RequestsPage() {
                   {actionType === 'approve' ? 'Aprobar solicitud' : 'Rechazar solicitud'}
                 </DialogTitle>
                 <DialogDescription>
-                  {selectedRequest.profile?.full_name} - {getTypeLabel(selectedRequest.request_type)} para el{' '}
-                  {format(new Date(selectedRequest.request_date), "EEEE d 'de' MMMM", { locale: es })}
+                  {selectedRequest.profile?.full_name} -{' '}
+                  {getTypeLabel(selectedRequest.request_type)} para el{' '}
+                  {format(new Date(selectedRequest.request_date), "EEEE d 'de' MMMM", {
+                    locale: es,
+                  })}
                 </DialogDescription>
               </DialogHeader>
 
@@ -418,15 +477,18 @@ export default function RequestsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="responseNote">
-                    {actionType === 'reject' ? 'Motivo del rechazo (recomendado)' : 'Nota (opcional)'}
+                    {actionType === 'reject'
+                      ? 'Motivo del rechazo (recomendado)'
+                      : 'Nota (opcional)'}
                   </Label>
                   <Textarea
                     id="responseNote"
                     value={responseNote}
                     onChange={(e) => setResponseNote(e.target.value)}
-                    placeholder={actionType === 'reject' 
-                      ? 'Ej: No hay cobertura para ese día'
-                      : 'Nota adicional...'
+                    placeholder={
+                      actionType === 'reject'
+                        ? 'Ej: No hay cobertura para ese día'
+                        : 'Nota adicional...'
                     }
                     rows={3}
                   />

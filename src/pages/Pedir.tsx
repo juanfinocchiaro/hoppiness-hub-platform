@@ -21,7 +21,7 @@ interface BranchWithWebapp {
   opening_time: string | null;
   closing_time: string | null;
   public_hours: Record<string, { opens?: string; closes?: string; closed?: boolean }> | null;
-  
+
   webapp_activa: boolean;
   estado: string;
   delivery_habilitado: boolean;
@@ -38,7 +38,9 @@ function getMondayBasedDayIdx(): number {
 }
 
 /** Returns true if current time is within branch opening hours (for branches without webapp). */
-function isBranchOpenBySchedule(branch: Pick<BranchWithWebapp, 'opening_time' | 'closing_time' | 'public_hours'>): boolean {
+function isBranchOpenBySchedule(
+  branch: Pick<BranchWithWebapp, 'opening_time' | 'closing_time' | 'public_hours'>,
+): boolean {
   const now = new Date();
   const dayKey = String(getMondayBasedDayIdx());
   const toMinutes = (t: string) => {
@@ -55,8 +57,10 @@ function isBranchOpenBySchedule(branch: Pick<BranchWithWebapp, 'opening_time' | 
     : branch.public_hours?.[dayKey];
   if (ph && typeof ph === 'object') {
     if (ph.closed || (ph as any).cerrado) return false;
-    const opens = ph.opens ?? (ph as any).open ?? (ph as any).apertura ?? branch.opening_time ?? '09:00';
-    const closes = ph.closes ?? (ph as any).close ?? (ph as any).cierre ?? branch.closing_time ?? '23:00';
+    const opens =
+      ph.opens ?? (ph as any).open ?? (ph as any).apertura ?? branch.opening_time ?? '09:00';
+    const closes =
+      ph.closes ?? (ph as any).close ?? (ph as any).cierre ?? branch.closing_time ?? '23:00';
     const openMin = toMinutes(opens);
     let closeMin = toMinutes(closes);
     if (closeMin <= openMin) closeMin += 24 * 60;
@@ -80,7 +84,9 @@ function useBranchesForPedir() {
     queryFn: async () => {
       const { data: branches, error: bErr } = await supabase
         .from('branches_public')
-        .select('id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours')
+        .select(
+          'id, name, address, city, slug, public_status, cover_image_url, latitude, longitude, opening_time, closing_time, public_hours',
+        )
         .in('public_status', ['active', 'coming_soon'])
         .order('name');
       if (bErr) throw bErr;
@@ -90,10 +96,14 @@ function useBranchesForPedir() {
       if (branchIds.length > 0) {
         const { data: configs } = await supabase
           .from('webapp_config' as any)
-          .select('branch_id, webapp_activa, estado, delivery_habilitado, retiro_habilitado, delivery_costo, tiempo_estimado_retiro_min, tiempo_estimado_delivery_min')
+          .select(
+            'branch_id, webapp_activa, estado, delivery_habilitado, retiro_habilitado, delivery_costo, tiempo_estimado_retiro_min, tiempo_estimado_delivery_min',
+          )
           .in('branch_id', branchIds);
         if (configs) {
-          (configs as any[]).forEach((c) => { configMap[c.branch_id] = c; });
+          (configs as any[]).forEach((c) => {
+            configMap[c.branch_id] = c;
+          });
         }
       }
 
@@ -129,10 +139,6 @@ function useBranchesForPedir() {
   });
 }
 
-function formatPrice(n: number) {
-  return `$${n.toLocaleString('es-AR')}`;
-}
-
 export default function Pedir() {
   const { data: branches, isLoading, error, refetch } = useBranchesForPedir();
   const navigate = useNavigate();
@@ -145,11 +151,7 @@ export default function Pedir() {
         path="/pedir"
       />
 
-      <WebappHeader
-        title="Pedí Online"
-        showBack
-        onBack={() => navigate('/')}
-      />
+      <WebappHeader title="Pedí Online" showBack onBack={() => navigate('/')} />
 
       {/* Branch cards */}
       <main className="flex-1">
@@ -164,12 +166,7 @@ export default function Pedir() {
               <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                 Hubo un problema de conexión. Intentá de nuevo.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                className="gap-1.5"
-              >
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
                 <RefreshCw className="w-3.5 h-3.5" />
                 Reintentar
               </Button>
@@ -213,8 +210,8 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
   const openBySchedule = isBranchOpenBySchedule(branch);
   const hasCoords = branch.latitude != null && branch.longitude != null;
   const mapsUrl = hasCoords
-      ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
-      : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
+    ? `https://maps.google.com/?q=${branch.latitude},${branch.longitude}`
+    : `https://maps.google.com/?q=${encodeURIComponent(branch.address + ', ' + branch.city)}`;
 
   return (
     <div className="rounded-xl bg-card border shadow-soft overflow-hidden transition-shadow hover:shadow-card active:scale-[0.99]">
@@ -270,46 +267,42 @@ function BranchCard({ branch }: { branch: BranchWithWebapp }) {
           )}
         </div>
 
-        {todayLabel && (
-          <p className="text-xs text-muted-foreground font-medium">{todayLabel}</p>
-        )}
+        {todayLabel && <p className="text-xs text-muted-foreground font-medium">{todayLabel}</p>}
 
         <p className="text-muted-foreground text-sm flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 shrink-0" />
           {branch.address}, {branch.city}
         </p>
 
-        {hasWebapp && isOpen && (() => {
-          const services: string[] = [];
-          if (branch.retiro_habilitado) services.push('Retiro');
-          if (branch.delivery_habilitado) services.push('Delivery');
-          if (services.length === 0) return null;
-          return (
-            <p className="text-xs text-muted-foreground">
-              Servicios disponibles: {services.join(', ')}
-            </p>
-          );
-        })()}
-        {!hasWebapp && (
-          <p className="text-xs text-muted-foreground">
-            Disponible por Mas Delivery
-          </p>
-        )}
+        {hasWebapp &&
+          isOpen &&
+          (() => {
+            const services: string[] = [];
+            if (branch.retiro_habilitado) services.push('Retiro');
+            if (branch.delivery_habilitado) services.push('Delivery');
+            if (services.length === 0) return null;
+            return (
+              <p className="text-xs text-muted-foreground">
+                Servicios disponibles: {services.join(', ')}
+              </p>
+            );
+          })()}
+        {!hasWebapp && <p className="text-xs text-muted-foreground">Disponible por Mas Delivery</p>}
       </div>
 
       <div className="px-5 pb-5">
         {hasWebapp ? (
           <Link to={`/pedir/${branch.slug}`}>
-            <Button
-              className="w-full font-bold"
-              size="lg"
-              disabled={isClosed}
-            >
+            <Button className="w-full font-bold" size="lg" disabled={isClosed}>
               {isOpen ? 'Pedir acá' : isPaused ? 'Ver menú' : 'Cerrado'}
             </Button>
           </Link>
         ) : (
-          <a href="https://pedidos.masdelivery.com/hoppiness" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://pedidos.masdelivery.com/hoppiness"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <Button variant="outline" className="w-full" size="lg">
               Pedir por MasDelivery
             </Button>
