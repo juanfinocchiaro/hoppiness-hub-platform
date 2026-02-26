@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     const mpRes = await fetch(
-      "https://api.mercadopago.com/point/integration-api/devices",
+      "https://api.mercadopago.com/terminals/v1/list?limit=50",
       {
         headers: { Authorization: `Bearer ${config.access_token}` },
       },
@@ -92,14 +92,17 @@ Deno.serve(async (req) => {
 
     const mpData = await mpRes.json();
 
-    const devices = (mpData.devices ?? mpData ?? []).map(
-      (d: Record<string, unknown>) => ({
-        id: d.id,
-        pos_id: d.pos_id,
-        operating_mode: d.operating_mode,
-        external_pos_id: d.external_pos_id,
-      }),
-    );
+    // New API returns { data: { terminals: [...] }, paging: {...} }
+    const terminalList: Record<string, unknown>[] =
+      mpData?.data?.terminals ?? mpData?.devices ?? [];
+
+    const devices = terminalList.map((d) => ({
+      id: d.id,
+      pos_id: d.pos_id,
+      store_id: d.store_id,
+      operating_mode: d.operating_mode,
+      external_pos_id: d.external_pos_id,
+    }));
 
     return new Response(JSON.stringify({ devices }), {
       status: 200,
