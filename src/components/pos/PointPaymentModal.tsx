@@ -8,7 +8,7 @@ import {
 import { POSDialogContent } from './POSDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle, XCircle, Smartphone, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Smartphone, RefreshCw, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -61,11 +61,13 @@ export function PointPaymentModal({
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [confirmedPayment, setConfirmedPayment] = useState<ConfirmedPayment | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [canForceCancel, setCanForceCancel] = useState(false);
 
-  const createPaymentIntent = useCallback(async () => {
+  const createPaymentIntent = useCallback(async (forceCancel = false) => {
     setStage('sending');
     setErrorMsg(null);
     setConfirmedPayment(null);
+    setCanForceCancel(false);
 
     try {
       const { data, error } = await supabase.functions.invoke('mp-point-payment', {
@@ -74,16 +76,17 @@ export function PointPaymentModal({
           pedido_id: pedidoId,
           amount,
           ticket_number: ticketNumber,
+          force_cancel_pending: forceCancel,
         },
       });
 
       if (error) {
-        // Try to extract the real error message from the edge function response body
         let msg = error.message || 'Error al enviar cobro';
         try {
           if ((error as any).context) {
             const body = await (error as any).context.json();
             if (body?.error) msg = body.error;
+            if (body?.can_force_cancel) setCanForceCancel(true);
           }
         } catch { /* ignore */ }
         setErrorMsg(msg);
@@ -93,6 +96,7 @@ export function PointPaymentModal({
 
       if (data?.error) {
         setErrorMsg(data.error);
+        if (data.can_force_cancel) setCanForceCancel(true);
         setStage('error');
         return;
       }
@@ -114,6 +118,7 @@ export function PointPaymentModal({
       setPaymentIntentId(null);
       setConfirmedPayment(null);
       setStage('sending');
+      setCanForceCancel(false);
     };
   }, [open, pedidoId]);
 
@@ -146,7 +151,6 @@ export function PointPaymentModal({
       )
       .subscribe();
 
-    // Timeout
     const timer = setTimeout(() => {
       if (stage === 'waiting') {
         setStage('error');
@@ -174,24 +178,19 @@ export function PointPaymentModal({
   const handleCancel = async () => {
     setStage('cancelled');
 
+    // Cancel the order via API if we have the ID
     if (paymentIntentId) {
       try {
-        const { data: config } = await (supabase.from as any)('mercadopago_config')
-          .select('access_token, device_id')
-          .eq('branch_id', branchId)
-          .single();
-
-        if (config?.access_token && config?.device_id) {
-          await fetch(
-            `https://api.mercadopago.com/point/integration-api/devices/${config.device_id}/payment-intents/${paymentIntentId}`,
-            {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${config.access_token}` },
-            },
-          ).catch(() => {});
-        }
+        await supabase.functions.invoke('mp-point-payment', {
+          body: {
+            branch_id: branchId,
+            pedido_id: pedidoId,
+            amount: 0,
+            cancel_order_id: paymentIntentId,
+          },
+        }).catch(() => {});
       } catch {
-        // Best-effort cancellation
+        // Best-effort
       }
     }
 
@@ -208,12 +207,10 @@ export function PointPaymentModal({
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4 py-6">
-          {/* Amount */}
           <p className="text-3xl font-bold text-primary">
             $ {amount.toLocaleString('es-AR')}
           </p>
 
-          {/* Stage indicator */}
           {stage === 'sending' && (
             <>
               <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
@@ -260,19 +257,27 @@ export function PointPaymentModal({
           {stage === 'error' && (
             <>
               <XCircle className="h-12 w-12 text-amber-500" />
-              <p className="text-sm font-medium text-amber-700">
+              <p className="text-sm font-medium text-amber-700 text-center">
                 {errorMsg ?? 'Ocurrió un error'}
               </p>
             </>
           )}
         </div>
 
-        <DialogFooter className={cn('gap-2', stage === 'confirmed' && 'hidden')}>
+        <DialogFooter className={cn('gap-2 flex-wrap', stage === 'confirmed' && 'hidden')}>
           {(stage === 'error' || stage === 'rejected') && (
-            <Button variant="outline" onClick={createPaymentIntent}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Reintentar
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => createPaymentIntent(false)}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reintentar
+              </Button>
+              {canForceCancel && (
+                <Button variant="outline" className="text-amber-700 border-amber-300" onClick={() => createPaymentIntent(true)}>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Forzar cancelación y reintentar
+                </Button>
+              )}
+            </>
           )}
           {stage !== 'confirmed' && (
             <Button
