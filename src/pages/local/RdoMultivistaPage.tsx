@@ -38,9 +38,6 @@ const MEDIOS_DEFAULT = [
   { id: 'transferencia', label: 'Transferencia' },
 ];
 
-).format(value || 0);
-}
-
 function formatPercent(value: number): string {
   return `${(value || 0).toFixed(1)}%`;
 }
