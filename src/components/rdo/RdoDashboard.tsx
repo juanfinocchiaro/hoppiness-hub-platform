@@ -30,9 +30,6 @@ import type { RdoReportLine } from '@/types/rdo';
 import { useRdoUnifiedReport } from '@/hooks/useRdoUnifiedReport';
 import { formatCurrency } from '@/lib/formatters';
 
-).format(value || 0);
-}
-
 function RdoLine({
   label,
   value,
