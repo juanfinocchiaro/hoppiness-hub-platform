@@ -198,7 +198,6 @@ export function RosterMobileList({
                 <div key={subRow.rowKey} className="flex items-center gap-3 px-4 pb-2 border-l-2 border-primary/40 ml-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">{subRow.userName}</span>
                       <span className={`text-xs font-medium ${STATUS_COLOR[subRow.status]}`}>
                         {STATUS_LABEL[subRow.status]}
                       </span>
