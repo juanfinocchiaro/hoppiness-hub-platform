@@ -1,178 +1,192 @@
 
 
-# Auditoría Funcional End-to-End — Re-ejecución Post-Fixes
+# Auditoría UX/QA: Fichajes, Horarios, Equipo, Solicitudes, Liquidación
 
 ---
 
-## Resumen: Qué se hizo vs qué falta
+## 1. REDUNDANCIAS
 
-### Implementado correctamente
+### R1. Fichajes del empleado: 3 vistas con datos solapados
+| Ubicación | Componente | Datos | Editable |
+|---|---|---|---|
+| Sidebar → Equipo → Fichajes (`ClockInsPage`) | `RosterTable` + `RosterExpandedRow` | Roster diario + historial mensual expandible por empleado | SI (editar, agregar, eliminar) |
+| Sidebar → Equipo → clic en empleado → "Ver fichajes" | `EmployeeClockInsModal` | Lista plana del mes, total horas | NO (solo lectura, dice "usá pantalla de Fichajes") |
+| Sidebar → Equipo → clic en empleado → expandido → historial mes | `RosterExpandedRow` (dentro de `ClockInsPage`) | Historial del mes con inline edit | SI |
 
-| Item original | Estado |
-|---|---|
-| **BUG-004**: labor_config table (no hardcoded) | HECHO — `labor_config` + `useLaborConfig` hook |
-| **BUG-005**: Anti-duplicados edge function | HECHO — check 2 min en `register-clock-entry` |
-| **BUG-006**: `deleteClockEntry` recalcula state | HECHO — queries last entry y upsert state |
-| **BUG-008**: Duplicación solicitudes | HECHO — check antes de insert en `createLeaveRequest` |
-| **BUG-009**: Presentismo con tardanza acumulativa | HECHO — `tardanzaAcumuladaMin` + config |
-| **BUG-002**: Horas licencia columna separada | HECHO — `hsLicencia` en `useLaborHours` |
-| BUG-004b: Francos vs feriados desglose | HECHO — `hsFrancoTrabajado` + `feriadosHs` |
-| CSV export con columnas nuevas | HECHO |
+**Fuente única:** `ClockInsPage` ya tiene el historial completo del mes con edición. `EmployeeClockInsModal` es redundante, solo lectura, con su propio cálculo de horas (diferente al de `useLaborHours`). Debería eliminarse o reemplazarse con un link directo a Fichajes filtrado por empleado.
 
-### Pendiente o con bugs activos
+### R2. Horarios del empleado: 2 vistas
+| Ubicación | Componente | Datos | Editable |
+|---|---|---|---|
+| Sidebar → Equipo → Horarios (`SchedulesPage`) | `InlineScheduleEditor` (grilla Excel) | Todos los empleados, mes completo | SI |
+| Sidebar → Equipo → clic en empleado → "Ver horarios" | `EmployeeScheduleModal` | Un solo empleado, mes actual, lista vertical | NO (solo lectura) |
 
-| Item | Estado | Severidad |
+**Fuente única:** `InlineScheduleEditor`. El modal es una vista degradada sin edición. Eliminarlo o reemplazar con deep link.
+
+### R3. Edición de fichaje: 2 mecanismos distintos
+| Desde | Mecanismo | Campos |
 |---|---|---|
-| **Reconciliador stale + clock-out tardío** | BUG NUEVO CRITICO | Crítico |
-| **EditEntryDialog timezone bug** | BUG ACTIVO | Crítico |
-| **work_date asignación post-reconciliación** | BUG ACTIVO | Crítico |
-| **BUG-003**: Retiro anticipado autorizado UI | PARCIAL — columna DB existe, falta checkbox en UI | Alto |
-| **BUG-007**: Conflicto solicitud vs horario | NO HECHO | Alto |
-| **BUG-010**: Warning edición retroactiva | NO HECHO | Medio |
-| LATE_THRESHOLD en helpers.ts | PARCIAL — cambiado a 15 pero sigue hardcodeado | Medio |
+| `RosterTable` → hover → ícono lápiz | `EditEntryDialog` (dialog modal) | Tipo, Fecha, Hora, Motivo, Early Leave checkbox |
+| `RosterExpandedRow` → historial mes → expandir día → ícono lápiz | Inline edit dentro del `RosterExpandedRow` | Solo: Tipo, Hora, Motivo (SIN fecha, SIN early leave) |
+
+**Bug:** El inline edit de `RosterExpandedRow` (L54-77) usa `new Date(base)` derivado de `created_at`, no `work_date`. Y no tiene el campo `early_leave_authorized` ni el campo de fecha editable. Es decir, los fixes de BUG-012 y BUG-003 solo se aplicaron a `EditEntryDialog`, no al inline editor del expanded row.
+
+### R4. Agregar fichaje manual: 2 mecanismos
+| Desde | Componente | Campos |
+|---|---|---|
+| `RosterExpandedRow` → historial mes → expandir día → "+ Fichaje manual" | Inline form dentro de `RosterExpandedRow` | Tipo, Hora, Motivo (SIN early leave) |
+| `ClockInsPage` no tiene un botón "Agregar" a nivel de página | — | — |
+
+**Problema:** El `AddManualEntryForm` que tiene `early_leave_authorized` checkbox solo se usa en algún otro lugar (o no se usa). El inline form del expanded row es independiente y carece del campo.
+
+### R5. Dashboard → Pendientes → "Solicitudes de día libre" linkea a Horarios
+En `ManagerDashboard.tsx` L360: `<Link to={\`/milocal/${branch.id}/equipo/horarios\`}>` para "Solicitudes de día libre". Pero las solicitudes tienen su propia página en `/milocal/:id/tiempo/solicitudes` (`RequestsPage`). El link lleva al lugar equivocado.
 
 ---
 
-## (1) Mapa de Flujos — Estado Actual
+## 2. FRICCIONES UX
 
-```text
-FICHAJE REAL (QR/PIN)
-  └─ Edge Function: register-clock-entry
-       ├─ Valida PIN (RPC validate_clock_pin_v2)
-       ├─ Lee employee_time_state
-       │   └─ Si state=working y shift stale (>14h o >6h post midnight):
-       │       → AUTO-CIERRA con system_inferred clock_out
-       │       → state pasa a OFF
-       │       → El siguiente fichaje se lee como clock_in ← BUG: debería ser clock_out
-       ├─ Check duplicados (< 2 min) ✅
-       ├─ Empareja con schedule
-       ├─ Inserta clock_entries (work_date = fecha operativa)
-       └─ Actualiza employee_time_state
-```
+### F1. No hay botón "Agregar fichaje" a nivel de página
+En `ClockInsPage`, el encargado ve la tabla del día. Para agregar un fichaje manual debe: (1) encontrar al empleado en la tabla, (2) hacer clic para expandir, (3) dentro del historial del mes, encontrar el día, (4) expandir el día, (5) clic "+ Fichaje manual". Son 5 pasos. Debería haber un botón `+ Agregar fichaje` en el header de la página que abra un formulario con selector de empleado + fecha + hora + tipo.
 
----
+### F2. Editar fichaje desde la tabla: solo edita el ÚLTIMO entry
+En `RosterTable` → `ActionButtons` L42: `const editableEntry = allEntries[allEntries.length - 1]`. Si un empleado tiene entrada y salida, el botón de lápiz solo abre el último (la salida). No hay forma directa de editar la entrada desde la fila principal. El encargado debe expandir para acceder a editar la entrada.
 
-## (2) Lista de Bugs y Riesgos (priorizados)
+### F3. El inline edit del expanded row no tiene validación de motivo
+En `RosterExpandedRow` L57: `if (!editReason.trim()) throw new Error('Ingresá un motivo')`. Pero el `throw` dentro de `mutationFn` resulta en un error silencioso — no se muestra un toast claro al usuario. El botón "Guardar" debería estar `disabled` cuando `editReason` está vacío (como sí lo hace `EditEntryDialog`).
 
-### BUG-011 (NUEVO)
-- **Módulo:** Fichajes
-- **Severidad:** Crítico
-- **Probabilidad:** Alta (pasa TODAS las noches)
-- **Descripción:** Race condition entre stale reconciler y fichaje real. El auto-close genera un `clock_out system_inferred` a las 02:00 UTC (23:00 ARG). Cuando el empleado realmente sale a las 02:12 ARG (05:12 UTC), `employee_time_state` ya está en `off`, así que el sistema registra un nuevo `clock_in` en vez de `clock_out`.
-- **Reproducción:** Turno 19:00-02:00. Empleado sale a las 02:12 AR. El reconciliador ya cerró a las 02:00 UTC (23:00 AR, que es ANTES de las 02:00 AR reales). El empleado marca PIN → sistema crea clock_in para el 02/03.
-- **Dato real en DB:** Leandro Germanis: clock_in at 05:13 UTC con `work_date: 2026-03-02` y `schedule_id` del 02/03. Carolina Salas: clock_in at 05:12 UTC con `work_date: 2026-03-01` (misma schedule que su turno original).
-- **Impacto:** Operativo/financiero — turnos no cerrados, horas mal calculadas, datos corruptos.
-- **Causa:** El stale reconciler usa `02:00:00+00` (UTC) como hora de cierre. Para un turno que termina a las 02:00 AR (= 05:00 UTC), el cierre ocurre 3 horas antes de lo esperado. El cálculo de `estimatedOut` no considera timezone Argentina.
-- **Fix sugerido:**
-  - **Hotfix:** El `estimatedOut` en la Edge Function debe calcularse en hora Argentina, no UTC. Si `end_time = 02:00` y `schedule_date = 2026-03-01`, el cierre estimado debería ser `2026-03-02T05:00:00Z` (02:00 AR del 2 de marzo), no `2026-03-02T02:00:00Z`.
-  - **Estructural:** El stale check debería comparar elapsed time contra el horario programado en timezone local. Si el empleado está dentro de `end_time + afterMin` (ventana de captura), NO debe auto-cerrar. Solo auto-cerrar si pasan más de `afterMin` minutos después de `end_time` en hora Argentina.
+### F4. Labels confusos en sidebar
+- "Horarios" y "Fichajes" usan el mismo ícono (`Clock`) — pueden confundirse.
+- "Firmas" (para firmas de reglamento) no es autoexplicativo. Debería decir "Reglamento" o "Firmas de Reglamento".
+- "Advertencias" en el sidebar pero "Apercibimientos" en la página y modales — terminología inconsistente.
 
-### BUG-012 (NUEVO)
-- **Módulo:** Fichajes
-- **Severidad:** Crítico
-- **Probabilidad:** Alta
-- **Descripción:** `EditEntryDialog` construye el nuevo timestamp usando la fecha local del `created_at` sin ajustar timezone. `new Date(entry.created_at)` devuelve un Date en UTC. `format(date, 'yyyy-MM-dd')` formatea en timezone local del navegador. `new Date(\`${dateStr}T${time}:00\`).toISOString()` crea un timestamp interpretado como local y luego convertido a UTC. Esto puede desplazar la hora ±3 horas.
-- **Reproducción:** Carolina Salas tiene `created_at: 2026-03-02T05:12:46Z` (02:12 AR del 02/03). El dialog muestra "02:12" (correcto). Pero `format(date, 'yyyy-MM-dd')` da "2026-03-02" (fecha local). Al guardar con hora corregida, `new Date("2026-03-02T02:12:00")` se interpreta como hora local Argentina → `toISOString()` da `2026-03-02T05:12:00Z`. Esto funciona por accidente en AR, pero la fecha que se usa para `work_date` debería ser `work_date` del entry, no derivada de `created_at`.
-- **Fix sugerido:** Usar `entry.work_date` (si existe) como fecha base en lugar de derivarla de `created_at`. Agregar campo `date` editable que muestre `work_date`.
+### F5. `EmployeeClockInsModal` calcula horas de forma diferente a `useLaborHours`
+El modal tiene su propio `calculateHours()` (L57-105) que empareja entries por `schedule_id` o secuencialmente. `useLaborHours` tiene una lógica completamente diferente (con `pairClockEntries`, francos, feriados, etc.). Los totales pueden diferir, confundiendo al encargado.
 
-### BUG-013 (NUEVO)
-- **Módulo:** Fichajes
-- **Severidad:** Alto
-- **Probabilidad:** Alta
-- **Descripción:** Claribel Orlandi: su clock_out real a las 02:12 AR (05:12 UTC) tiene `work_date: 2026-03-02` y `schedule_id: null`, desconectado de su clock_in del 01/03. Esto se debe a que el estado ya estaba en `off` (por el auto-close), así que el sistema la trató como un fichaje independiente. En la vista del 01/03 aparece "Turno no cerrado" con salida "23:00" (el system_inferred). En la vista del 02/03 aparece un clock_out huérfano sin schedule.
-- **Impacto:** Datos corruptos — la vista del 01/03 muestra una hora de salida falsa (23:00 en vez de 02:12), y el 02/03 tiene una entrada fantasma.
-
-### BUG-003 (PENDIENTE)
-- **Módulo:** Liquidación
-- **Severidad:** Alto
-- **Probabilidad:** Alta
-- **Descripción:** La columna `early_leave_authorized` existe en DB, pero no hay checkbox en `EditEntryDialog` ni `AddManualEntryForm` para marcar un retiro como autorizado.
-- **Fix:** Agregar switch/checkbox "Retiro anticipado autorizado" en ambos formularios.
-
-### BUG-007 (PENDIENTE)
-- **Módulo:** Solicitudes
-- **Severidad:** Alto
-- **Probabilidad:** Media
-- **Descripción:** Aprobar un día libre no actualiza el horario. El calendario sigue mostrando turno programado.
-
-### BUG-010 (PENDIENTE)
-- **Módulo:** Liquidación
-- **Severidad:** Medio
-- **Probabilidad:** Media
-- **Descripción:** No hay warning al editar fichajes de meses anteriores.
-
-### BUG-014 (NUEVO)
-- **Módulo:** Fichajes (UI)
-- **Severidad:** Medio
-- **Probabilidad:** Alta
-- **Descripción:** `LATE_THRESHOLD = 15` en `helpers.ts:178` sigue hardcodeado. Aunque `useLaborHours` usa `labor_config`, la vista de roster diaria usa su propia constante para determinar si mostrar un fichaje como "tarde" visualmente.
-- **Fix:** Pasar el valor de `labor_config` al `buildDayRoster` o a `resolveRowStatus`.
+### F6. No hay confirmación al eliminar fichaje
+`DeleteEntryDialog` existe y tiene confirmación, pero solo se accede desde el ícono de papelera en hover en la tabla principal. Correcto. Sin embargo, dentro de `RosterExpandedRow` L400-411, el delete también usa `onDeleteEntry` que delegará al dialog. Esto es correcto.
 
 ---
 
-## (3) Fricciones UX
+## 3. FLUJO DE FICHAJES DEL ENCARGADO — Análisis exacto
 
-| Fricción | Solución |
-|---|---|
-| Encargado ve "Turno no cerrado" con salida 23:00, pero la salida real fue a las 02:12. No hay forma de distinguir system_inferred de real | Mostrar badge "Cierre automático" cuando `resolved_type = 'system_inferred'`. Mostrar la hora real del clock_out del empleado si existe uno posterior |
-| Al editar fichaje de ayer (overnight), el dialog no muestra la fecha, solo la hora. No queda claro qué fecha se está editando | Mostrar campo de fecha editable en EditEntryDialog, pre-llenado con `work_date` |
-| No hay checkbox de "Retiro anticipado autorizado" | Agregar en EditEntryDialog y AddManualEntryForm |
-| En el historial expandido (imagen 4), todos los días futuros muestran "Pendiente" sin indicación de que es normal | Ocultar días futuros o marcarlos con color gris tenue |
+### AGREGAR un fichaje inexistente
 
----
+**Ruta actual:**
+1. Sidebar → Equipo → **Fichajes** (`/milocal/:id/equipo/fichajes`)
+2. En la tabla, encontrar al empleado → clic en su fila para expandir
+3. En el panel expandido ("Historial del mes"), encontrar la fecha correcta → clic para expandir
+4. Clic **"+ Fichaje manual"** (botón dentro del expanded row)
+5. Campos: Tipo (Entrada/Salida), Hora, Motivo
+6. Clic "Guardar manual"
+7. Feedback: toast "Fichaje manual agregado" (si éxito) o silencio (si error de validación)
 
-## (4) Auditoría de Permisos — Sin cambios desde la auditoría anterior
+**Problema:** 5 clics hasta llegar al formulario. No hay forma de agregar un fichaje sin antes expandir la fila y el día. No hay botón global.
 
-Misma matriz. Los fixes implementados no alteraron permisos.
+**Campos faltantes:** No tiene `early_leave_authorized` checkbox. No tiene selector de empleado (ya está filtrado al expandir). No tiene campo de fecha (toma la fecha del día expandido).
 
----
+### EDITAR un fichaje existente
 
-## (5) Integridad de Datos
+**Ruta 1 (rápida, parcial):**
+1. Sidebar → Equipo → Fichajes
+2. Hover sobre la fila del empleado → aparece ícono lápiz (solo visible en hover, desktop only)
+3. Clic lápiz → abre `EditEntryDialog` (modal)
+4. Campos: Tipo, Fecha, Hora, Motivo, Early Leave (si salida)
+5. Warning retroactivo si mes anterior
+6. Guardar → toast "Fichaje corregido"
 
-| Área | Estado |
-|---|---|
-| `employee_time_state` sync on delete | CORREGIDO |
-| Anti-duplicados en edge function | CORREGIDO |
-| Duplicación solicitudes | CORREGIDO |
-| `labor_config` dinámica | CORREGIDO |
-| Auto-close timezone bug | **ACTIVO** — genera datos corruptos |
-| `work_date` assignment post-stale-close | **ACTIVO** — entries huérfanas |
-| `updateClockEntry` no actualiza `work_date` al cambiar fecha | **ACTIVO** |
+**Limitación:** Solo edita el ÚLTIMO entry del roster (puede ser la salida cuando querés editar la entrada).
 
----
-
-## (6) Plan de Fix Prioritario
-
-### Prioridad 1: Fix del motor de fichaje (stale reconciler timezone)
-
-En `register-clock-entry/index.ts`:
-
-1. **Calcular `estimatedOut` en timezone Argentina**, no UTC. Cuando `end_time = 02:00` y `schedule_date = 2026-03-01`, el cierre estimado debe ser `2026-03-02 02:00:00 AR` = `2026-03-02 05:00:00 UTC`.
-2. **No auto-cerrar si estamos dentro de la ventana de captura**. Si `now < end_time_argentina + afterMin`, el turno NO es stale, el empleado simplemente no ha fichado salida aún.
-3. **Cuando state=off y hay un auto-close reciente**, verificar si el fichaje entrante podría ser la salida real del turno auto-cerrado. Si `now` está dentro de `end_time + afterMin`, eliminar el auto-close y registrar un clock_out real en su lugar.
-
-### Prioridad 2: Fix EditEntryDialog
-
-1. Usar `work_date` del entry como fecha base (no derivar de `created_at`).
-2. Agregar campo fecha editable.
-3. Agregar checkbox "Retiro anticipado autorizado" (solo para clock_out).
-4. Agregar warning si `work_date` pertenece a un mes anterior.
-
-### Prioridad 3: LATE_THRESHOLD dinámico en helpers.ts
-
-Pasar `late_tolerance` como parámetro a `resolveRowStatus` / `buildDayRoster` en vez de usar constante.
-
-### Prioridad 4: Conflicto solicitud-horario
-
-Al aprobar solicitud, marcar automáticamente el horario como `is_day_off` o mostrar warning.
+**Ruta 2 (completa, buried):**
+1. Sidebar → Equipo → Fichajes
+2. Clic en fila para expandir historial
+3. Encontrar día → expandir
+4. Ver lista de entries del turno → clic lápiz en el entry específico
+5. Se abre inline edit (dentro del expanded row, no modal)
+6. Campos: Solo Tipo, Hora, Motivo. **SIN fecha, SIN early leave**.
+7. Guardar → mutación directa, sin toast explícito (el `editMutation` en expanded row no tiene `onSuccess` toast)
 
 ---
 
-## Preguntas de Cierre
+## 4. BOTONERA Y NAVEGACIÓN — Inventario completo
 
-1. **Stale reconciler timing:** Cuando el turno es 19:00-02:00 AR, ¿cuántos minutos DESPUÉS de las 02:00 AR se debe esperar antes de auto-cerrar? Actualmente afterMin es 60 del branch. ¿Está bien usar eso como ventana de gracia post-turno?
+### SIDEBAR (sección Equipo)
 
-2. **Clock-out tardío post auto-close:** Si el reconciliador ya cerró un turno y el empleado marca PIN 30 minutos después, ¿querés que el sistema (a) reemplace el auto-close con la salida real, o (b) ignore el fichaje tardío y deje el auto-close?
+| Item Sidebar | Ruta | Qué muestra | Acciones | Duplicado en |
+|---|---|---|---|---|
+| Equipo | `/equipo` | Lista de empleados | Invitar, expandir fila → ver datos, editar, fichajes, horarios, apercibir, desactivar | Panel expandido replica acceso a fichajes/horarios/liquidación |
+| Fichajes | `/equipo/fichajes` | Roster diario + QR + Ventana config | Editar/Eliminar/Agregar fichaje, Marcar licencia | — |
+| Horarios | `/equipo/horarios` | Grilla Excel mensual | Asignar turnos, francos, vacaciones | Modal "Ver horarios" en EmployeeExpandedRow |
+| Solicitudes | `/tiempo/solicitudes` | Lista de solicitudes por estado | Aprobar/Rechazar | Link erróneo desde Dashboard |
+| Liquidación | `/tiempo/liquidacion` | Tabla resumen mensual + CSV | Solo lectura + exportar | Modal "Ver liquidación" en EmployeeExpandedRow (dice "próximamente") |
+| Coaching | `/equipo/coaching` | Evaluaciones | Iniciar coaching | — |
+| Reuniones | `/equipo/reuniones` | Actas | — | — |
+| Adelantos | `/equipo/adelantos` | Lista de adelantos | Crear adelanto | — |
+| Advertencias | `/equipo/apercibimientos` | Lista de warnings | Crear warning | Botón "Nuevo apercibimiento" en EmployeeExpandedRow |
+| Firmas | `/equipo/reglamentos` | Estado de firma reglamento | Subir foto de firma | — |
 
-3. **Carolina/Leandro data fix:** ¿Querés que limpiemos los datos corruptos del 01/03 y 02/03 como parte del fix, o los encargados lo corrigen manualmente?
+### PANEL EXPANDIDO (EmployeeExpandedRow) al clic en un empleado en TeamPage
+
+| Botón | Qué hace | Duplicado en |
+|---|---|---|
+| Ver fichajes | Abre `EmployeeClockInsModal` (solo lectura) | ClockInsPage (con edición) |
+| Ver horarios | Abre `EmployeeScheduleModal` (solo lectura) | SchedulesPage (con edición) |
+| Ver liquidación | Toast "próximamente" | LiquidacionPage ya funciona |
+| Nuevo apercibimiento | Abre `WarningModal` | WarningsPage |
+| Editar datos | Abre `EmployeeDataModal` | Único lugar |
+| Desactivar empleado | AlertDialog + deactivate | Único lugar |
+
+**Conclusión:** 3 de 6 botones del panel expandido abren modales de solo lectura que replican pantallas completas del sidebar. "Ver liquidación" ni siquiera funciona.
+
+---
+
+## 5. RIESGOS PRIORIZADOS
+
+### P0 — Críticos (impacto alto + probabilidad alta)
+
+**P0-1: Inline edit en RosterExpandedRow no tiene los fixes de BUG-012/BUG-003**
+- Reproduce: Fichajes → expandir empleado → expandir día → clic editar en un entry → solo muestra Tipo/Hora/Motivo sin campo fecha ni early leave.
+- Impacto: Si el encargado edita desde el expanded row, pierde la corrección de timezone y no puede marcar retiros autorizados.
+- Fix: Eliminar el inline edit duplicado y reutilizar `EditEntryDialog` (que ya tiene todos los campos) para ambos flujos.
+
+**P0-2: Dashboard "Solicitudes" linkea a Horarios en vez de Solicitudes**
+- Reproduce: Dashboard → Pendientes → clic "Solicitudes de día libre" → lleva a `/equipo/horarios` en vez de `/tiempo/solicitudes`.
+- Impacto: El encargado no encuentra dónde aprobar solicitudes pendientes.
+- Fix: Cambiar link a `/tiempo/solicitudes`.
+
+### P1 — Altos (impacto alto + probabilidad media)
+
+**P1-1: No hay botón global "Agregar fichaje" en ClockInsPage**
+- Impacto: Fricción operativa diaria, el encargado necesita muchos clics.
+- Fix: Agregar botón `+ Fichaje manual` en el header de la página, abre `AddManualEntryForm` con selector de empleado + fecha.
+
+**P1-2: EmployeeClockInsModal calcula horas distinto a Liquidación**
+- Impacto: Confusión cuando el encargado ve un total en el modal y otro en Liquidación.
+- Fix: Eliminar modal o reemplazar con deep link a ClockInsPage filtrado.
+
+**P1-3: "Ver liquidación" en EmployeeExpandedRow muestra toast "próximamente"**
+- Impacto: Feature que ya existe pero no está conectada.
+- Fix: Navegar a `/tiempo/liquidacion` (la página ya funciona).
+
+### P2 — Medios
+
+**P2-1: Terminología inconsistente** — "Advertencias" (sidebar) vs "Apercibimientos" (todo el resto).
+
+**P2-2: Íconos duplicados** — "Fichajes" y "Horarios" usan `Clock`. Cambiar uno (ej: `CalendarClock` para horarios).
+
+**P2-3: AddManualEntryForm standalone** (`src/components/local/clockins/AddManualEntryForm.tsx`) tiene `early_leave_authorized` checkbox pero no se usa en ningún lugar visible. El inline form de `RosterExpandedRow` tiene su propia implementación sin ese campo.
+
+---
+
+## 6. PROPUESTA CONCRETA DE SIMPLIFICACIÓN
+
+1. **Eliminar los 3 modales duplicados** de `EmployeeExpandedRow`: `EmployeeClockInsModal`, `EmployeeScheduleModal`, y el toast de liquidación. Reemplazarlos con links de navegación directa a las páginas del sidebar.
+
+2. **Unificar edición de fichajes**: Eliminar el inline edit de `RosterExpandedRow` y siempre usar `EditEntryDialog` (que ya tiene fecha, early leave, y warning retroactivo).
+
+3. **Agregar botón "Fichaje manual"** en el header de `ClockInsPage` que abra `AddManualEntryForm` con selector de empleado.
+
+4. **Corregir link** del Dashboard pendientes: de `/equipo/horarios` a `/tiempo/solicitudes`.
+
+5. **Normalizar terminología**: "Apercibimientos" en todos lados (sidebar incluido).
 
