@@ -248,7 +248,7 @@ export function RosterTable({
                     onClick={() => setExpandedUserId(isExpanded ? null : group.userId)}
                   >
                     <td className="py-1.5 pl-4 pr-2 border-l-2 border-primary/40">
-                      <span className="text-sm text-muted-foreground">{subRow.userName}</span>
+                      <span className="text-sm text-muted-foreground/50">—</span>
                     </td>
                     <td className="py-1.5 px-2 text-muted-foreground font-mono text-xs">{subRow.shiftLabel}</td>
                     <td className={`py-1.5 px-2 font-mono ${subRow.isLate ? 'text-amber-600 font-semibold' : ''}`}>

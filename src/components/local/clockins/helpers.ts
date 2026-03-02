@@ -350,7 +350,7 @@ export function buildDayRoster(
       // ── New path: group by schedule_id ────────────────────────────
       const { bySchedule, unlinked } = groupEntriesBySchedule(sorted, workSchedules, _windowConfig);
 
-      // Unlinked entries (schedule_id = null) -> one "No programado" row per session
+      // Unlinked entries (schedule_id = null) -> try to rescue into empty schedules first
       if (unlinked.length > 0) {
         const sortedUnlinked = [...unlinked].sort(
           (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
@@ -358,8 +358,53 @@ export function buildDayRoster(
         const unlinkedSessions = buildSessionsFromEntries(sortedUnlinked);
         const realSessions = unlinkedSessions.filter((s) => s.clockIn !== null);
 
-        for (let si = 0; si < realSessions.length; si++) {
-          const session = realSessions[si];
+        // Rescue: try to assign unlinked sessions to empty schedules by time proximity
+        const rescuedToSchedule = new Set<number>();
+        const remainingUnlinked: SessionPair[] = [];
+
+        for (const session of realSessions) {
+          if (!session.clockIn) { remainingUnlinked.push(session); continue; }
+          const refMin =
+            new Date(session.clockIn.created_at).getHours() * 60 +
+            new Date(session.clockIn.created_at).getMinutes();
+
+          let bestIdx = -1;
+          let bestDist = Infinity;
+          for (let i = 0; i < workSchedules.length; i++) {
+            const sched = workSchedules[i];
+            if (!sched.start_time || !sched.end_time) continue;
+            // Skip schedules that already have linked entries or were already rescued into
+            const hasLinked = sched.id && (bySchedule.get(sched.id) ?? []).length > 0;
+            if (hasLinked || rescuedToSchedule.has(i)) continue;
+
+            const startMin = timeToMinutes(sched.start_time);
+            const endMin = timeToMinutes(sched.end_time);
+            const wStart = startMin - _windowConfig.beforeMin;
+            const wEnd = endMin + _windowConfig.afterMin;
+            if (!isInWindow(refMin, wStart, wEnd)) continue;
+
+            const dist = Math.min(
+              circularForward(startMin, refMin),
+              circularForward(refMin, startMin),
+            );
+            if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+          }
+
+          if (bestIdx >= 0) {
+            // Rescue: attach this session's entries to the schedule
+            const sched = workSchedules[bestIdx];
+            const entries = [session.clockIn, session.clockOut].filter(Boolean) as ClockEntry[];
+            const existing = (sched.id ? bySchedule.get(sched.id) : undefined) ?? [];
+            bySchedule.set(sched.id!, [...existing, ...entries]);
+            rescuedToSchedule.add(bestIdx);
+          } else {
+            remainingUnlinked.push(session);
+          }
+        }
+
+        // Only create "No programado" rows for truly unmatched sessions
+        for (let si = 0; si < remainingUnlinked.length; si++) {
+          const session = remainingUnlinked[si];
           const isOpen = !!session.clockIn && !session.clockOut;
           const status: RosterRowStatus = isOpen
             ? (getDayRelation(dayDate) === 'past' ? 'unclosed' : 'working')
