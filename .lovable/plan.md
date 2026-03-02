@@ -1,67 +1,43 @@
 
 
-# Bug: EditEntryDialog — Overnight timestamp miscalculation
+# Resumen Diario en ClockInsPage
 
-## Root Cause
+## Datos disponibles en `RosterRow`
+Cada fila ya tiene: `totalMinutes`, `isLate`, `lateMinutes`, `status`, `schedule`. No necesitamos queries adicionales, todo se calcula del array `rows` existente.
 
-In `EditEntryDialog.tsx` line 65:
-```js
-const newTimestamp = new Date(`${date}T${time}:00`).toISOString();
-```
+## Metricas propuestas
 
-The `date` field uses `work_date` (e.g. `2026-03-01`). When the user sets time to `00:58` (an exit after midnight for an 18:00-02:00 shift), the timestamp is built as:
+| Metrica | Calculo | Justificacion |
+|---|---|---|
+| Total horas del dia | Suma `totalMinutes` de todos los rows con status completado/working/unclosed/late | Metrica principal del dia |
+| Horas extras | Suma de `totalMinutes` que exceda el turno programado por empleado (comparar con duracion del schedule) | Solo si hay excedente real |
+| Llegadas tarde | Cuenta de rows con `isLate === true` + suma de `lateMinutes` | Frecuencia + magnitud |
+| Turnos no cerrados | Cuenta de `status === 'unclosed'` | Alerta operativa |
+| Ausencias | Cuenta de `status === 'absent'` | Alerta operativa |
 
-```
-new Date("2026-03-01T00:58:00") → 2026-03-01 03:58:00 UTC
-```
+## Ubicacion
 
-But the correct timestamp should be **March 2nd** at 00:58 AR = `2026-03-02T03:58:00Z`, because the exit happened after midnight of the **next calendar day**. The `work_date` is the operational date (March 1st), not the calendar date.
+Debajo de `RosterSummaryBar` y antes de la tabla (entre lineas 330-332 del ClockInsPage). Un componente nuevo `DaySummaryStats` con cards compactas tipo grid horizontal.
 
-## Evidence in DB
+## Diseño visual
 
-Guadalupe Malizia, work_date `2026-03-01`, schedule 18:00-02:00:
-- `clock_in` at `2026-03-01 20:44:19 UTC` (17:44 AR) — correct
-- `clock_out` at `2026-03-01 03:58:00 UTC` (00:58 AR **March 1st**) — wrong, should be `2026-03-02 03:58:00 UTC` (00:58 AR **March 2nd**)
+Grid de 4-5 chips/cards compactas en una sola fila:
+- `Total: 52h 30m` (icono Clock)
+- `Extras: 3h 15m` (icono TrendingUp, solo si > 0)
+- `Tardes: 2 (18 min)` (icono AlertTriangle, solo si > 0, color amber)
+- `No cerrados: 1` (solo si > 0, color amber)
+- `Ausentes: 1` (solo si > 0, color red)
 
-Since the clock_out timestamp is chronologically **before** the clock_in, `buildSessionsFromEntries` creates two orphaned sessions → "Turno no cerrado".
+Los que son 0 no se muestran para mantener limpio. Solo se muestra "Total" siempre.
 
-## Fix
+## Calculo de horas extras por empleado
 
-In `EditEntryDialog.tsx` line 65, apply the **inverse** of the operational date rule: if the entered time is between 00:00 and 04:59 (early morning / overnight), the calendar date is `work_date + 1 day`.
+Para cada row completado: si tiene schedule con start/end, calcular la duracion programada. Si `totalMinutes > scheduledMinutes`, la diferencia es extra. Sumar todas.
 
-```typescript
-// Before:
-const newTimestamp = new Date(`${date}T${time}:00`).toISOString();
+## Archivos a crear/modificar
 
-// After:
-const [hh] = time.split(':').map(Number);
-let calendarDate = date;
-if (hh < 5) {
-  // Overnight: time 00:00-04:59 belongs to work_date operationally,
-  // but calendar-wise it's the next day
-  const next = new Date(`${date}T12:00:00`);
-  next.setDate(next.getDate() + 1);
-  calendarDate = next.toISOString().slice(0, 10);
-}
-const newTimestamp = new Date(`${calendarDate}T${time}:00`).toISOString();
-```
-
-Same fix needed in `RosterExpandedRow.tsx` inline manual entry (lines ~73-76) which also builds timestamps from `dateStr + time`.
-
-## Data fix
-
-Update Guadalupe's corrupted clock_out to the correct timestamp:
-```sql
-UPDATE clock_entries
-SET created_at = '2026-03-02T03:58:00+00'
-WHERE id = 'bf36533d-3741-4f95-985f-cbf173e3f3ab';
-```
-
-## Files to change
-
-| File | Change |
+| Archivo | Cambio |
 |---|---|
-| `EditEntryDialog.tsx` L62-65 | Add overnight detection: if time < 05:00, use `work_date + 1 day` for calendar date |
-| `RosterExpandedRow.tsx` ~L73 | Same overnight detection in inline manual add mutation |
-| DB data fix | Correct Guadalupe's clock_out timestamp |
+| `src/components/local/clockins/DaySummaryStats.tsx` | Nuevo componente |
+| `src/pages/local/ClockInsPage.tsx` L330-331 | Importar y renderizar `DaySummaryStats` debajo de `RosterSummaryBar` |
 
