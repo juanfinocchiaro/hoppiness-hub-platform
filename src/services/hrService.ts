@@ -586,6 +586,19 @@ export async function createLeaveRequest(params: {
   reason?: string;
   respondedBy: string;
 }) {
+  // Check for duplicate: existing pending/approved request for same user+date
+  const { data: existing } = await supabase
+    .from('schedule_requests')
+    .select('id')
+    .eq('user_id', params.userId)
+    .eq('request_date', params.date)
+    .in('status', ['pending', 'approved'])
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    throw new Error('Ya existe una solicitud pendiente o aprobada para esta fecha.');
+  }
+
   const { error } = await supabase.from('schedule_requests').insert({
     branch_id: params.branchId,
     user_id: params.userId,
@@ -871,11 +884,59 @@ export async function updateClockEntry(
 }
 
 export async function deleteClockEntry(entryId: string) {
+  // First, fetch the entry to know user_id and branch_id before deleting
+  const { data: entry, error: fetchError } = await supabase
+    .from('clock_entries')
+    .select('user_id, branch_id')
+    .eq('id', entryId)
+    .single();
+  if (fetchError) throw fetchError;
+
   const { error } = await supabase
     .from('clock_entries')
     .delete()
     .eq('id', entryId);
   if (error) throw error;
+
+  // Recalculate employee_time_state from remaining entries
+  const { data: lastEntry } = await supabase
+    .from('clock_entries')
+    .select('id, entry_type, schedule_id')
+    .eq('user_id', entry.user_id)
+    .eq('branch_id', entry.branch_id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (lastEntry) {
+    const newState = lastEntry.entry_type === 'clock_in' ? 'working' : 'off';
+    await supabase.from('employee_time_state').upsert(
+      {
+        employee_id: entry.user_id,
+        branch_id: entry.branch_id,
+        current_state: newState,
+        last_event_id: lastEntry.id,
+        open_clock_in_id: lastEntry.entry_type === 'clock_in' ? lastEntry.id : null,
+        open_schedule_id: lastEntry.entry_type === 'clock_in' ? lastEntry.schedule_id : null,
+        last_updated: new Date().toISOString(),
+      },
+      { onConflict: 'employee_id' },
+    );
+  } else {
+    // No entries left — set state to off
+    await supabase.from('employee_time_state').upsert(
+      {
+        employee_id: entry.user_id,
+        branch_id: entry.branch_id,
+        current_state: 'off',
+        last_event_id: null,
+        open_clock_in_id: null,
+        open_schedule_id: null,
+        last_updated: new Date().toISOString(),
+      },
+      { onConflict: 'employee_id' },
+    );
+  }
 }
 
 // ── Fichaje (clock-in flow) ─────────────────────────────────────────

@@ -1354,6 +1354,7 @@ export type Database = {
           anomaly_type: string | null
           branch_id: string
           created_at: string | null
+          early_leave_authorized: boolean
           entry_type: string
           gps_message: string | null
           gps_status: string | null
@@ -1376,6 +1377,7 @@ export type Database = {
           anomaly_type?: string | null
           branch_id: string
           created_at?: string | null
+          early_leave_authorized?: boolean
           entry_type: string
           gps_message?: string | null
           gps_status?: string | null
@@ -1398,6 +1400,7 @@ export type Database = {
           anomaly_type?: string | null
           branch_id?: string
           created_at?: string | null
+          early_leave_authorized?: boolean
           entry_type?: string
           gps_message?: string | null
           gps_status?: string | null
@@ -4603,6 +4606,60 @@ export type Database = {
             columns: ["printer_id"]
             isOneToOne: false
             referencedRelation: "branch_printers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labor_config: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          daily_hours_limit: number
+          holiday_surcharge_pct: number
+          id: string
+          late_tolerance_per_entry_min: number | null
+          late_tolerance_total_min: number
+          monthly_hours_limit: number
+          overtime_surcharge_pct: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          daily_hours_limit?: number
+          holiday_surcharge_pct?: number
+          id?: string
+          late_tolerance_per_entry_min?: number | null
+          late_tolerance_total_min?: number
+          monthly_hours_limit?: number
+          overtime_surcharge_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          daily_hours_limit?: number
+          holiday_surcharge_pct?: number
+          id?: string
+          late_tolerance_per_entry_min?: number | null
+          late_tolerance_total_min?: number
+          monthly_hours_limit?: number
+          overtime_surcharge_pct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labor_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labor_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches_public"
             referencedColumns: ["id"]
           },
         ]
@@ -9131,6 +9188,21 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_clock_entry: {
+        Args: { _entry_id: string }
+        Returns: undefined
+      }
+      admin_update_clock_entry: {
+        Args: {
+          _created_at?: string
+          _entry_id: string
+          _entry_type?: string
+          _manual_by?: string
+          _manual_reason?: string
+          _original_created_at?: string
+        }
+        Returns: undefined
+      }
       asignar_llamador: {
         Args: { p_branch_id: string; p_pedido_id: string }
         Returns: number

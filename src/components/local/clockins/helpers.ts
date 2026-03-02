@@ -174,7 +174,8 @@ function lastExitTime(sessions: SessionPair[]): string | null {
 
 // ── Status resolution ───────────────────────────────────────────────
 
-const LATE_THRESHOLD = 10;
+// Default late threshold — overridden by labor_config.late_tolerance_total_min when available
+const LATE_THRESHOLD = 15;
 
 function resolveRowStatus(
   sessions: SessionPair[],

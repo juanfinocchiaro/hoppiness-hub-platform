@@ -1,10 +1,8 @@
 /**
  * LaborHoursSummary Component
  *
- * Resumen de horas trabajadas con cálculos según el convenio colectivo del
- * Sindicato de Trabajadores de Servicios Rápidos (Pasteleros CCT 301/75).
- *
- * Incluye: horas extras, feriados, presentismo, y exportación a CSV.
+ * Resumen de horas trabajadas con cálculos dinámicos desde labor_config.
+ * Incluye: horas extras, feriados, francos, licencias, tardanza, presentismo, y exportación a CSV.
  */
 import { useState } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
@@ -92,8 +90,18 @@ function EmployeeRow({
         <TableCell className="text-center">
           <span className="font-bold">{summary.hsTrabajadasMes.toFixed(1)}</span>
         </TableCell>
+        <TableCell className="text-center">
+          {summary.hsLicencia > 0 ? (
+            <span className="text-blue-600 font-medium">{summary.hsLicencia.toFixed(1)}</span>
+          ) : (
+            '-'
+          )}
+        </TableCell>
         <TableCell className="text-center">{summary.faltasInjustificadas}</TableCell>
         <TableCell className="text-center">{summary.faltasJustificadas}</TableCell>
+        <TableCell className="text-center">
+          <span className="text-xs text-muted-foreground">{summary.tardanzaAcumuladaMin}m</span>
+        </TableCell>
         <TableCell className="text-center">
           {summary.presentismo ? (
             <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
@@ -107,6 +115,15 @@ function EmployeeRow({
         </TableCell>
         <TableCell className="text-center">
           {summary.feriadosHs > 0 ? summary.feriadosHs.toFixed(1) : '-'}
+        </TableCell>
+        <TableCell className="text-center">
+          {summary.hsFrancoTrabajado > 0 ? (
+            <span className="text-blue-600 font-medium">
+              {summary.hsFrancoTrabajado.toFixed(1)}
+            </span>
+          ) : (
+            '-'
+          )}
         </TableCell>
         <TableCell className="text-center">
           {summary.hsExtrasDiaHabil > 0 ? (
@@ -133,7 +150,7 @@ function EmployeeRow({
 
       {expanded && (
         <TableRow>
-          <TableCell colSpan={10} className="bg-muted/30 p-4">
+          <TableCell colSpan={13} className="bg-muted/30 p-4">
             <div className="space-y-3">
               <h4 className="font-medium text-sm">Detalle de fichajes</h4>
               <div className="grid gap-1 max-h-48 overflow-y-auto">
@@ -168,6 +185,11 @@ function EmployeeRow({
                             Franco
                           </Badge>
                         )}
+                        {entry.earlyLeaveAuthorized && (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                            Retiro autorizado
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-green-600">
@@ -197,7 +219,7 @@ function EmployeeRow({
               {summary.alertasDiarias.length > 0 && (
                 <div className="mt-3 p-2 bg-amber-50 rounded border border-amber-200">
                   <p className="text-xs font-medium text-amber-700">
-                    ⚠️ {summary.diasConExceso} día(s) con más de 9 horas
+                    ⚠️ {summary.diasConExceso} día(s) con más de {summary.alertasDiarias.length > 0 ? 'el límite diario' : '9 horas'}
                   </p>
                 </div>
               )}
@@ -215,7 +237,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const { summaries, stats, loading } = useLaborHours({ branchId, year, month });
+  const { summaries, stats, config, loading } = useLaborHours({ branchId, year, month });
 
   const handlePrevMonth = () => setCurrentDate((prev) => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate((prev) => addMonths(prev, 1));
@@ -247,14 +269,15 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
 
   return (
     <div className="space-y-4">
-      {/* Nota sobre convenio */}
+      {/* Nota sobre configuración */}
       <Alert className="border-blue-200 bg-blue-50">
         <Scale className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-800">Cálculos según convenio sindical</AlertTitle>
+        <AlertTitle className="text-blue-800">Configuración laboral activa</AlertTitle>
         <AlertDescription className="text-blue-700 text-sm">
-          Según <strong>CCT 329/00 – Servicios Rápidos</strong> y art. 201 LCT: límite diario 9 hs,
-          límite mensual 190 hs, recargo +50 % en todas las extras. Horas en franco o feriado
-          trabajado se computan siempre como extra.
+          Límite mensual: <strong>{config.monthly_hours_limit} hs</strong> · 
+          Límite diario: <strong>{config.daily_hours_limit} hs</strong> · 
+          Recargo extras: <strong>+{config.overtime_surcharge_pct}%</strong> · 
+          Tolerancia tardanza: <strong>{config.late_tolerance_total_min} min acum.</strong>
         </AlertDescription>
       </Alert>
 
@@ -328,7 +351,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                 <Info className="h-3 w-3" /> HS Extras Día Hábil
               </TooltipTrigger>
               <TooltipContent>
-                <p className="max-w-xs">Horas hábiles que exceden las 190 mensuales (+50 %)</p>
+                <p className="max-w-xs">Horas hábiles que exceden las {config.monthly_hours_limit} mensuales (+{config.overtime_surcharge_pct}%)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -336,11 +359,11 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger className="flex items-center gap-1">
-                <Info className="h-3 w-3" /> HS Extras Franco/Feriado
+                <Info className="h-3 w-3" /> HS Franco Trabajado
               </TooltipTrigger>
               <TooltipContent>
                 <p className="max-w-xs">
-                  Horas trabajadas en franco o feriado — siempre extra (+50 %)
+                  Horas trabajadas en día de franco — siempre extra (+{config.overtime_surcharge_pct}%)
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -353,7 +376,20 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
               </TooltipTrigger>
               <TooltipContent>
                 <p className="max-w-xs">
-                  SI = Sin faltas injustificadas. Bonificación según convenio.
+                  SI = Sin faltas injustificadas y tardanza acumulada ≤ {config.late_tolerance_total_min} min.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center gap-1">
+                <Info className="h-3 w-3" /> HS Licencia
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs">
+                  Horas programadas de días con licencia aprobada. No se suman a horas trabajadas.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -381,10 +417,13 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                   <TableHead>Empleado</TableHead>
                   <TableHead className="text-center">CUIL</TableHead>
                   <TableHead className="text-center">HS Trabajadas</TableHead>
+                  <TableHead className="text-center">HS Licencia</TableHead>
                   <TableHead className="text-center">Faltas Inj.</TableHead>
                   <TableHead className="text-center">Lic. Enf.</TableHead>
+                  <TableHead className="text-center">Tardanza</TableHead>
                   <TableHead className="text-center">Present.</TableHead>
-                  <TableHead className="text-center">Feriados (hs)</TableHead>
+                  <TableHead className="text-center">Feriados</TableHead>
+                  <TableHead className="text-center">Franco Trab.</TableHead>
                   <TableHead className="text-center">Extras Hábil</TableHead>
                   <TableHead className="text-center">Extras Franco</TableHead>
                   <TableHead className="w-8"></TableHead>

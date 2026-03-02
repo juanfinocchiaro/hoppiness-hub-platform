@@ -318,6 +318,48 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Anti-duplicate check (same user + same entry_type within 2 min) ---
+    const twoMinAgo = new Date(now.getTime() - 2 * 60 * 1000).toISOString()
+    const { data: recentDup } = await db
+      .from('clock_entries')
+      .select('id, created_at')
+      .eq('user_id', user.user_id)
+      .eq('branch_id', user.branch_id)
+      .eq('entry_type', resolvedEntryType)
+      .gte('created_at', twoMinAgo)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (recentDup) {
+      // Return existing entry instead of inserting duplicate
+      let dupScheduleLabel: string | null = null
+      if (scheduleId) {
+        const { data: sched } = await db
+          .from('employee_schedules')
+          .select('start_time, end_time')
+          .eq('id', scheduleId)
+          .single()
+        if (sched?.start_time && sched?.end_time) {
+          dupScheduleLabel = `${sched.start_time.slice(0, 5)} - ${sched.end_time.slice(0, 5)}`
+        }
+      }
+      return jsonRes({
+        success: true,
+        user_id: user.user_id,
+        full_name: user.full_name,
+        branch_id: user.branch_id,
+        branch_name: user.branch_name,
+        entry_type: resolvedEntryType,
+        timestamp: recentDup.created_at,
+        clock_entry_id: recentDup.id,
+        schedule_label: dupScheduleLabel,
+        shift_duration_min: null,
+        auto_closed_stale: autoClosedId,
+        deduplicated: true,
+      })
+    }
+
     // --- Insert the clock entry ---
     const { data: clockEntry, error: insertError } = await db
       .from('clock_entries')
