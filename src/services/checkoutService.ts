@@ -1,5 +1,5 @@
-import { supabase } from './supabaseClient';
 import { fromUntyped } from '@/lib/supabase-helpers';
+import { supabase } from './supabaseClient';
 import type { SavedAddress } from '@/types/checkout';
 
 export async function fetchUserProfile(userId: string) {
@@ -12,9 +12,8 @@ export async function fetchUserProfile(userId: string) {
 }
 
 export async function fetchSavedAddresses(userId: string) {
-  const { data, error } = await supabase
-    .from('cliente_direcciones')
-    .select('id, etiqueta, direccion, piso, referencia')
+  const { data, error } = await fromUntyped('customer_addresses')
+    .select('id, label, address, floor, reference')
     .eq('user_id', userId)
     .order('is_primary', { ascending: false });
 

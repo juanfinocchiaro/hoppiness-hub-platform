@@ -2,6 +2,7 @@
  * POS Service — All database operations for the Point of Sale system.
  */
 import { supabase } from './supabaseClient';
+import { fromUntyped } from '@/lib/supabase-helpers';
 import { normalizePhone as _normalizePhone } from '@/lib/normalizePhone'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import type {} from '@/types/pos';
 
@@ -47,13 +48,13 @@ export async function insertPedidoPagos(pagos: Array<Record<string, unknown>>) {
 }
 
 export async function saveClienteAddress(userId: string, direccion: string) {
-  await supabase.from('cliente_direcciones').insert({
+  await fromUntyped('customer_addresses').insert({
     user_id: userId,
-    etiqueta: 'Otro',
-    direccion: direccion.trim(),
-    ciudad: 'Córdoba',
+    label: 'Otro',
+    address: direccion.trim(),
+    city: 'Córdoba',
     is_primary: false,
-  } as never);
+  });
 }
 
 export async function findOpenCashShift(branchId: string) {
@@ -355,7 +356,7 @@ export async function fetchFrequentItemSales(branchId: string, since: string) {
 
 export async function fetchActiveCadetes(branchId: string) {
   const { data } = await supabase
-    .from('cadetes')
+    .from('delivery_drivers')
     .select('*')
     .eq('branch_id', branchId)
     .eq('is_active', true);

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { fromUntyped } from '@/lib/supabase-helpers';
 import type { FacturaFormData, PagoProveedorFormData } from '@/types/compra';
 import type { InversionFormData } from '@/hooks/useInversiones';
 import type { ConsumoManualFormData } from '@/hooks/useConsumosManuales';
@@ -104,18 +105,18 @@ export async function createPagoCanon(data: PagoCanonFormData, userId?: string) 
 
 export async function fetchPeriodos(branchId: string) {
   const { data, error } = await supabase
-    .from('periodos')
+    .from('periods')
     .select('*')
     .eq('branch_id', branchId)
-    .order('periodo', { ascending: false });
+    .order('period', { ascending: false });
   if (error) throw error;
   return data;
 }
 
 export async function createPeriodo(branchId: string, periodo: string) {
   const { data, error } = await supabase
-    .from('periodos')
-    .insert({ branch_id: branchId, periodo, estado: 'abierto' })
+    .from('periods')
+    .insert({ branch_id: branchId, period: periodo, status: 'abierto' })
     .select()
     .single();
   if (error) throw error;
@@ -124,12 +125,12 @@ export async function createPeriodo(branchId: string, periodo: string) {
 
 export async function cerrarPeriodo(id: string, userId?: string, motivo?: string) {
   const { error } = await supabase
-    .from('periodos')
+    .from('periods')
     .update({
-      estado: 'cerrado',
-      fecha_cierre: new Date().toISOString(),
-      cerrado_por: userId,
-      motivo_cierre: motivo || null,
+      status: 'cerrado',
+      closed_at: new Date().toISOString(),
+      closed_by: userId,
+      close_reason: motivo || null,
     })
     .eq('id', id);
   if (error) throw error;
@@ -137,12 +138,12 @@ export async function cerrarPeriodo(id: string, userId?: string, motivo?: string
 
 export async function reabrirPeriodo(id: string, userId?: string, motivo?: string) {
   const { error } = await supabase
-    .from('periodos')
+    .from('periods')
     .update({
-      estado: 'abierto',
-      fecha_reapertura: new Date().toISOString(),
-      reabierto_por: userId,
-      motivo_reapertura: motivo,
+      status: 'abierto',
+      reopened_at: new Date().toISOString(),
+      reopened_by: userId,
+      reopen_reason: motivo,
     })
     .eq('id', id);
   if (error) throw error;
@@ -431,23 +432,21 @@ export async function softDeleteConsumoManual(id: string) {
 // ── Socios ──────────────────────────────────────────────────────────
 
 export async function fetchSocios(branchId: string) {
-  const { data, error } = await supabase
-    .from('socios')
+  const { data, error } = await fromUntyped('partners')
     .select('*')
     .eq('branch_id', branchId)
     .is('deleted_at', null)
-    .order('porcentaje_participacion', { ascending: false });
+    .order('ownership_percentage', { ascending: false });
   if (error) throw error;
   return data;
 }
 
 export async function fetchMovimientosSocio(branchId: string, socioId?: string) {
-  let q = supabase
-    .from('movimientos_socio')
+  let q = fromUntyped('partner_movements')
     .select('*')
     .eq('branch_id', branchId)
     .is('deleted_at', null)
-    .order('fecha', { ascending: false });
+    .order('date', { ascending: false });
 
   if (socioId) q = q.eq('socio_id', socioId);
 
@@ -457,8 +456,7 @@ export async function fetchMovimientosSocio(branchId: string, socioId?: string) 
 }
 
 export async function createSocio(data: SocioFormData, userId?: string) {
-  const { data: result, error } = await supabase
-    .from('socios')
+  const { data: result, error } = await fromUntyped('partners')
     .insert({ ...data, created_by: userId })
     .select()
     .single();
@@ -467,13 +465,12 @@ export async function createSocio(data: SocioFormData, userId?: string) {
 }
 
 export async function updateSocio(id: string, data: Partial<SocioFormData>) {
-  const { error } = await supabase.from('socios').update(data).eq('id', id);
+  const { error } = await fromUntyped('partners').update(data).eq('id', id);
   if (error) throw error;
 }
 
 export async function createMovimientoSocio(data: MovimientoSocioFormData, userId?: string) {
-  const { data: result, error } = await supabase
-    .from('movimientos_socio')
+  const { data: result, error } = await fromUntyped('partner_movements')
     .insert({ ...data, created_by: userId })
     .select()
     .single();

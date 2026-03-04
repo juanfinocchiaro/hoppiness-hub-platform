@@ -1,18 +1,17 @@
-import { supabase } from './supabaseClient';
+import { fromUntyped } from '@/lib/supabase-helpers';
 
 export interface ClienteAddress {
   id: string;
-  etiqueta: string;
-  direccion: string;
-  piso: string | null;
-  referencia: string | null;
-  ciudad: string | null;
+  label: string;
+  address: string;
+  floor: string | null;
+  reference: string | null;
+  city: string | null;
   is_primary: boolean;
 }
 
 export async function listAddresses(userId: string) {
-  const { data, error } = await supabase
-    .from('cliente_direcciones')
+  const { data, error } = await fromUntyped('customer_addresses')
     .select('*')
     .eq('user_id', userId)
     .order('is_primary', { ascending: false });
@@ -23,29 +22,27 @@ export async function listAddresses(userId: string) {
 export async function saveAddress(
   userId: string,
   payload: {
-    etiqueta: string;
-    direccion: string;
-    piso: string | null;
-    referencia: string | null;
-    ciudad: string | null;
+    label: string;
+    address: string;
+    floor: string | null;
+    reference: string | null;
+    city: string | null;
   },
   editId?: string | null,
 ) {
   if (editId) {
-    const { error } = await supabase
-      .from('cliente_direcciones')
+    const { error } = await fromUntyped('customer_addresses')
       .update({ ...payload, user_id: userId })
       .eq('id', editId);
     if (error) throw error;
   } else {
-    const { error } = await supabase
-      .from('cliente_direcciones')
+    const { error } = await fromUntyped('customer_addresses')
       .insert({ ...payload, user_id: userId });
     if (error) throw error;
   }
 }
 
 export async function deleteAddress(id: string) {
-  const { error } = await supabase.from('cliente_direcciones').delete().eq('id', id);
+  const { error } = await fromUntyped('customer_addresses').delete().eq('id', id);
   if (error) throw error;
 }
