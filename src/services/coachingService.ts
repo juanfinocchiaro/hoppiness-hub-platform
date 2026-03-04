@@ -324,18 +324,18 @@ export async function fetchCoachingStats(
   if (!branchId) return EMPTY_COACHING_STATS;
 
   const { data: employeeRoles, error: rolesError } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .in('local_role', ['empleado', 'cajero', 'encargado']);
+    .in('roles.key', ['empleado', 'cajero', 'encargado']);
 
   if (rolesError) throw rolesError;
 
   const employeeIds =
-    employeeRoles?.filter((r) => r.local_role !== 'encargado').map((r) => r.user_id) ?? [];
+    employeeRoles?.filter((r: any) => r.roles.key !== 'encargado').map((r: any) => r.user_id) ?? [];
   const managerIds =
-    employeeRoles?.filter((r) => r.local_role === 'encargado').map((r) => r.user_id) ?? [];
+    employeeRoles?.filter((r: any) => r.roles.key === 'encargado').map((r: any) => r.user_id) ?? [];
   const totalEmployees = employeeIds.length;
   const totalManagers = managerIds.length;
 
@@ -586,13 +586,13 @@ export async function fetchActiveBranches() {
 
 export async function fetchStaffRolesByBranches(branchIds: string[]) {
   const { data, error } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, branch_id')
+    .from('user_role_assignments')
+    .select('user_id, branch_id, roles!inner(key)')
     .in('branch_id', branchIds)
-    .in('local_role', ['empleado', 'cajero'])
+    .in('roles.key', ['empleado', 'cajero'])
     .eq('is_active', true);
   if (error) throw error;
-  return data || [];
+  return (data || []).map((d: any) => ({ user_id: d.user_id, branch_id: d.branch_id }));
 }
 
 export async function fetchCoachingsByBranchesAndMonth(
@@ -726,9 +726,9 @@ export async function fetchEmployeeCoachingComparison(userId: string, branchId: 
 
 export async function fetchManagerRoles(branchId?: string) {
   let query = supabase
-    .from('user_branch_roles')
-    .select('user_id, branch_id')
-    .eq('local_role', 'encargado')
+    .from('user_role_assignments')
+    .select('user_id, branch_id, roles!inner(key)')
+    .eq('roles.key', 'encargado')
     .eq('is_active', true);
 
   if (branchId) {
@@ -737,7 +737,7 @@ export async function fetchManagerRoles(branchId?: string) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+  return (data || []).map((d: any) => ({ user_id: d.user_id, branch_id: d.branch_id }));
 }
 
 export async function fetchBranchesByIds(branchIds: string[]) {
@@ -843,15 +843,15 @@ export async function fetchBranchNameForCoaching(branchId: string) {
 
 export async function fetchCoachingTeamMembers(branchId: string, excludeUserId?: string) {
   const { data: roles, error: rolesError } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .in('local_role', ['empleado', 'cajero']);
+    .in('roles.key', ['empleado', 'cajero']);
 
   if (rolesError) throw rolesError;
 
-  const userIds = roles?.map((r) => r.user_id).filter((id) => id !== excludeUserId) ?? [];
+  const userIds = roles?.map((r: any) => r.user_id).filter((id: string) => id !== excludeUserId) ?? [];
   if (userIds.length === 0) return [];
 
   const { data: profiles, error: profilesError } = await supabase
@@ -864,22 +864,22 @@ export async function fetchCoachingTeamMembers(branchId: string, excludeUserId?:
   return (
     profiles?.map((p) => ({
       ...p,
-      local_role: roles.find((r) => r.user_id === p.id)?.local_role || 'empleado',
+      local_role: (roles as any[]).find((r: any) => r.user_id === p.id)?.roles?.key || 'empleado',
     })) ?? []
   );
 }
 
 export async function fetchEmployeesWithCoachingCounts(branchId: string) {
   const { data: roles, error: rolesError } = await supabase
-    .from('user_branch_roles')
-    .select('user_id')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .in('local_role', ['empleado', 'cajero']);
+    .in('roles.key', ['empleado', 'cajero']);
 
   if (rolesError) throw rolesError;
 
-  const userIds = roles?.map((r) => r.user_id) ?? [];
+  const userIds = roles?.map((r: any) => r.user_id) ?? [];
   if (userIds.length === 0) return [];
 
   const { data: profiles, error: profilesError } = await supabase
@@ -949,10 +949,10 @@ export async function fetchOwnCoachings(userId: string, branchId: string) {
 
 export async function fetchBranchManager(branchId: string) {
   const { data: roles, error } = await supabase
-    .from('user_branch_roles')
-    .select('user_id')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
-    .eq('local_role', 'encargado')
+    .eq('roles.key', 'encargado')
     .eq('is_active', true)
     .limit(1);
 
@@ -961,7 +961,7 @@ export async function fetchBranchManager(branchId: string) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, full_name, avatar_url')
-    .eq('id', roles[0].user_id)
+    .eq('id', (roles[0] as any).user_id)
     .single();
 
   return profile;

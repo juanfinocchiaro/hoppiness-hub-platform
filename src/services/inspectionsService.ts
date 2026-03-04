@@ -247,15 +247,15 @@ export async function deleteInspection(inspectionId: string) {
 
 export async function fetchInspectionStaffMembers(branchId: string) {
   const { data: roles } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .in('local_role', ['cajero', 'empleado']);
+    .in('roles.key', ['cajero', 'empleado']);
 
   if (!roles?.length) return [];
 
-  const userIds = [...new Set(roles.map((r) => r.user_id))];
+  const userIds = [...new Set(roles.map((r: any) => r.user_id))];
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name')
@@ -263,11 +263,11 @@ export async function fetchInspectionStaffMembers(branchId: string) {
     .order('full_name');
 
   return (profiles || []).map((p) => {
-    const role = roles.find((r) => r.user_id === p.id);
+    const role = roles.find((r: any) => r.user_id === p.id);
     return {
       id: p.id,
       full_name: p.full_name,
-      local_role: role?.local_role || 'empleado',
+      local_role: role ? (role.roles as any).key : 'empleado',
     };
   });
 }

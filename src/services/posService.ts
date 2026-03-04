@@ -188,12 +188,14 @@ export async function callValidateSupervisorPin(branchId: string, pin: string) {
 
 export async function fetchUserRolesForVerification(userId: string) {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('brand_role, local_role')
+    .from('user_role_assignments')
+    .select('roles!inner(key, scope)')
     .eq('user_id', userId)
-    .eq('is_active', true)
-    .limit(1);
-  return data;
+    .eq('is_active', true);
+  return (data || []).map((d: any) => ({
+    brand_role: d.roles.scope === 'brand' ? d.roles.key : null,
+    local_role: d.roles.scope === 'branch' ? d.roles.key : null,
+  }));
 }
 
 export async function fetchProfileFullName(userId: string) {
@@ -760,11 +762,14 @@ export async function fetchItemRemovibles(itemId: string) {
 
 export async function fetchUserActiveRoles(userId: string) {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('brand_role, local_role')
+    .from('user_role_assignments')
+    .select('roles!inner(key, scope)')
     .eq('user_id', userId)
     .eq('is_active', true);
-  return data ?? [];
+  return (data || []).map((d: any) => ({
+    brand_role: d.roles.scope === 'brand' ? d.roles.key : null,
+    local_role: d.roles.scope === 'branch' ? d.roles.key : null,
+  }));
 }
 
 // ─── Payment Edit ───

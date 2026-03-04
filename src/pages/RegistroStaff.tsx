@@ -4,7 +4,6 @@ import { signUpWithInvitation } from '@/services/authService';
 import { updateStaffProfile } from '@/services/profileService';
 import {
   acceptInvitation,
-  syncLegacyRole,
   uploadStaffDocument,
   upsertBranchRole,
 } from '@/services/staffService';
@@ -230,8 +229,6 @@ export default function RegistroStaff() {
       const { error: branchRoleError } = await upsertBranchRole(userId, invitation.branch_id, localRole);
       if (branchRoleError) devWarn('Branch role error:', branchRoleError);
 
-      const { error: legacyError } = await syncLegacyRole(userId, invitation.branch_id, localRole);
-      if (legacyError) devWarn('Legacy role error:', legacyError);
 
       await acceptInvitation(invitation.id, userId);
 

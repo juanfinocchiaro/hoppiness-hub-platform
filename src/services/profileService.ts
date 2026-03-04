@@ -39,12 +39,20 @@ export async function fetchFullProfile(userId: string) {
 
 export async function fetchUserBranchRolesWithPins(userId: string) {
   const { data, error } = await supabase
-    .from('user_branch_roles')
-    .select('id, branch_id, local_role, clock_pin, branches!inner(id, name)')
+    .from('user_role_assignments')
+    .select('id, branch_id, clock_pin, roles!inner(key, scope), branches!inner(id, name)')
     .eq('user_id', userId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('roles.scope', 'branch')
+    .not('branch_id', 'is', null);
   if (error) throw error;
-  return data || [];
+  return (data || []).map((d: any) => ({
+    id: d.id,
+    branch_id: d.branch_id,
+    local_role: d.roles.key,
+    clock_pin: d.clock_pin,
+    branches: d.branches,
+  }));
 }
 
 export async function checkClockPinAvailability(
@@ -63,7 +71,7 @@ export async function checkClockPinAvailability(
 
 export async function updateBranchRoleClockPin(roleId: string, pin: string) {
   const { error } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .update({ clock_pin: pin })
     .eq('id', roleId);
   if (error) throw error;
@@ -71,7 +79,7 @@ export async function updateBranchRoleClockPin(roleId: string, pin: string) {
 
 export async function verifyBranchRoleClockPin(roleId: string) {
   const { data, error } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .select('clock_pin')
     .eq('id', roleId)
     .single();
@@ -134,13 +142,13 @@ export async function fetchBranchNameById(branchId: string) {
 
 export async function fetchBranchTeamRolesForRegulation(branchId: string) {
   const { data } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .neq('local_role', 'franquiciado')
-    .neq('local_role', 'contador_local');
-  return data || [];
+    .neq('roles.key', 'franquiciado')
+    .neq('roles.key', 'contador_local');
+  return (data || []).map((d: any) => ({ user_id: d.user_id, local_role: d.roles.key }));
 }
 
 export async function fetchProfilesByIds(userIds: string[]) {

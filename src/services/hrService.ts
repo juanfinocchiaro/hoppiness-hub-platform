@@ -58,8 +58,8 @@ export async function fetchLaborUsersData(branchId: string, userIds: string[]) {
   if (profilesError) throw profilesError;
 
   const { data: roles, error: rolesError } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .in('user_id', userIds)
     .eq('is_active', true);
@@ -72,13 +72,13 @@ export async function fetchLaborUsersData(branchId: string, userIds: string[]) {
     .in('user_id', userIds);
 
   return (profiles || []).map((p) => {
-    const role = roles?.find((r) => r.user_id === p.id);
+    const role = roles?.find((r: any) => r.user_id === p.id);
     const empData = employeeData?.find((e) => e.user_id === p.id);
     return {
       user_id: p.id,
       full_name: p.full_name,
       avatar_url: p.avatar_url,
-      local_role: role?.local_role || null,
+      local_role: role ? (role.roles as any).key : null,
       cuil: empData?.cuil || null,
       hire_date: empData?.hire_date || null,
       registered_hours: empData?.registered_hours ?? null,
@@ -616,7 +616,7 @@ export async function createLeaveRequest(params: {
 
 export async function fetchBranchStaffForClock(branchId: string) {
   const { data: roles } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .select('user_id')
     .eq('branch_id', branchId)
     .eq('is_active', true);
@@ -1008,12 +1008,13 @@ export async function fetchEmployeeBirthdays(branchId: string) {
 
 export async function fetchUserLocalRoles(userId: string) {
   const { data } = await supabase
-    .from('user_branch_roles')
-    .select('local_role')
+    .from('user_role_assignments')
+    .select('roles!inner(key, scope)')
     .eq('user_id', userId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('roles.scope', 'branch');
 
-  return (data || []).map((r) => r.local_role);
+  return (data || []).map((r: any) => r.roles.key);
 }
 
 export async function fetchLatestRegulation() {
