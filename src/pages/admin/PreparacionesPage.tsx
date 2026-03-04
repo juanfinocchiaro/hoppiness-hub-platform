@@ -117,7 +117,7 @@ export default function PreparacionesPage() {
     const newIndex = categorias.findIndex((c) => c.id === over.id);
     const reordered = arrayMove(categorias, oldIndex, newIndex);
     await catMutations.reorder.mutateAsync(
-      reordered.map((c, i) => ({ id: c.id, orden: i + 1 })),
+      reordered.map((c: any, i) => ({ id: c.id, orden: i + 1 })),
     );
   };
 
