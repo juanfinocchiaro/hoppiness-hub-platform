@@ -1,208 +1,406 @@
 
 
-# Auditoría Completa del Schema de Base de Datos — Hoppiness Hub
+# Auditoría de Idioma y Convenciones de Nombres — Schema Completo
 
-## Metodología
+## 7. AUDITORÍA DE IDIOMA
 
-Se auditaron 127 tablas reales + 10 vistas del schema `public`. Cada tabla fue verificada contra:
-- Queries directas (`.from('tabla')`) en frontend (`src/`) y Edge Functions (`supabase/functions/`)
-- Uso en DB functions/triggers
-- Conteo de filas real en producción
-- Políticas RLS existentes
+Se revisaron 127 tablas, ~1200 columnas, 17 enums y 151 políticas RLS. A continuación cada caso de español, spanglish o inconsistencia.
 
 ---
 
-## 1. TABLA RESUMEN
+### 7.1 TABLAS EN ESPAÑOL
 
-| # | Tabla | Clasificación | Filas | Origen dato | Leída por | Notas |
-|---|---|---|---|---|---|---|
-| 1 | `profiles` | 🟢 ACTIVA | 49 | Auth signup + profileService | Toda la app | Core identity |
-| 2 | `user_roles_v2` | 🟢 ACTIVA | 7 | Admin UsersPage | Permissions hooks | Brand+local roles |
-| 3 | `user_branch_roles` | 🟢 ACTIVA | 49 | Admin, invitations | profileService, fichaje, RLS helpers | Clock PIN, local_role per branch |
-| 4 | `branches` | 🟢 ACTIVA | 7 | Admin | Toda la app | 7 sucursales |
-| 5 | `branch_shifts` | 🟢 ACTIVA | 20 | ShiftConfigPage | ManagerDashboard, closures | Turnos por sucursal |
-| 6 | `clock_entries` | 🟢 ACTIVA | 555 | FichajeEmpleado, hrService | Fichajes, horas, dashboard | Fichaje empleados |
-| 7 | `employee_schedules` | 🟢 ACTIVA | 2129 | InlineScheduleEditor | CuentaDashboard, fichajes | Horarios programados |
-| 8 | `schedule_requests` | 🟢 ACTIVA | 7 | RequestDayOffModal | Manager, cuenta | Solicitudes días libres |
-| 9 | `special_days` | 🟢 ACTIVA | 37 | SchedulesPage | Calendario horarios | Feriados |
-| 10 | `salary_advances` | 🟢 ACTIVA | 19 | AdvancesPage | Cuenta, dashboard | Adelantos sueldo |
-| 11 | `warnings` | 🟡 CONECTADA VACÍA | 0 | WarningsPage | Cuenta, dashboard | Feature activa, sin datos aún |
-| 12 | `regulations` | 🟢 ACTIVA | 1 | RegulationsManager | Fichaje, cuenta | PDF reglamento |
-| 13 | `regulation_signatures` | 🟢 ACTIVA | 26 | RegulationsPage | Fichaje bloqueante, dashboard | Firmas reglamento |
-| 14 | `communications` | 🟢 ACTIVA | 35 | CommunicationsPage | Cuenta, dashboard | Comunicados |
-| 15 | `communication_reads` | 🟢 ACTIVA | 25 | Auto al leer comunicado | Dashboard conteo | Lecturas |
-| 16 | `shift_closures` | 🟢 ACTIVA | 112 | ShiftClosureModal | BrandDailySalesTable, dashboard | Cierre de turno |
-| 17 | `employee_data` | 🟢 ACTIVA | 15 | TeamPage, perfil | HR, coaching, horas | Datos laborales |
-| 18 | `employee_time_state` | 🟢 ACTIVA | 27 | hrService (auto en fichaje) | Dashboard trabajando ahora | Estado fichaje real-time |
-| 19 | `contact_messages` | 🟢 ACTIVA | 22 | Formularios contacto público | Edge function notifica | Contacto web |
-| 20 | `staff_invitations` | 🟢 ACTIVA | 5 | InviteEmployeeModal | send-staff-invitation edge fn | Invitaciones |
-| 21 | `permission_config` | 🟢 ACTIVA | 107 | SQL migration seed | PermissionsConfigPage, useDynamicPermissions | Config permisos |
-| 22 | `pedidos` | 🟢 ACTIVA | 91 | POS, webapp orders | Order history, fiscal, kitchen | Pedidos |
-| 23 | `pedido_items` | 🟢 ACTIVA | 123 | POS al crear pedido | Order detail, kitchen, RDO | Items de pedidos |
-| 24 | `pedido_pagos` | 🟢 ACTIVA | 63 | POS pago, MP webhook | Historial, fiscal, cashier | Pagos |
-| 25 | `pedido_item_modificadores` | 🟡 CONECTADA VACÍA | 0 | POS (posService) | Kitchen display | Modificadores en pedido |
-| 26 | `pedido_payment_edits` | 🟡 CONECTADA VACÍA | 0 | posService.insertPaymentEditAudit | Audit trail | Log edición pagos |
-| 27 | `items_carta` | 🟢 ACTIVA | 53 | Centro de costos UI | POS, webapp, promos | Carta actual |
-| 28 | `menu_categorias` | 🟢 ACTIVA | 12 | Centro costos | POS, carta, webapp | Categorías carta |
-| 29 | `item_carta_composicion` | 🟢 ACTIVA | 68 | Centro costos modal | Cálculo costo (DB fn) | Receta de items |
-| 30 | `item_carta_extras` | 🟡 CONECTADA VACÍA | 0 | posService.fetchExtrasForItems | POS extras | Extras asignados |
-| 31 | `item_carta_grupo_opcional` | 🟢 ACTIVA | 2 | Centro costos | POS, webapp | Grupos opcionales |
-| 32 | `item_carta_grupo_opcional_items` | 🟢 ACTIVA | 18 | Centro costos | POS selección | Items de grupo |
-| 33 | `item_carta_precios_historial` | 🟡 CONECTADA VACÍA | 0 | menuService al cambiar precio | HistorialInline component | Historial precios |
-| 34 | `item_extra_asignaciones` | 🟢 ACTIVA | 36 | Centro costos | POS extras | Asignación extras→items |
-| 35 | `item_modificadores` | 🟢 ACTIVA | 2 | Centro costos | POS modificadores | Modificadores carta |
-| 36 | `item_removibles` | 🟢 ACTIVA | 50 | Centro costos | POS removibles | Removibles carta |
-| 37 | `insumos` | 🟢 ACTIVA | 45 | Insumos CRUD | Stock, recetas, compras | Ingredientes/insumos |
-| 38 | `categorias_insumo` | 🟢 ACTIVA | 1 | Insumos UI | Filtros insumos | Categorías insumo |
-| 39 | `preparaciones` | 🟢 ACTIVA | 50 | Preparaciones UI | Composición items, costo | Recetas/preparaciones |
-| 40 | `preparacion_ingredientes` | 🟢 ACTIVA | 162 | Preparaciones modal | Cálculo costo (DB fn) | Ingredientes de receta |
-| 41 | `preparacion_opciones` | 🟡 CONECTADA VACÍA | 0 | Preparaciones modal | DB fn recalcular_costo | Opciones intercambiables |
-| 42 | `categorias_preparacion` | 🟢 ACTIVA | 6 | Preparaciones UI | Filtros | Categorías recetas |
-| 43 | `proveedores` | 🟢 ACTIVA | 13 | Proveedores CRUD | Compras, condiciones | Proveedores |
-| 44 | `proveedor_condiciones_local` | 🟡 CONECTADA VACÍA | 0 | proveedoresService | Condiciones por local | Condiciones negociadas |
-| 45 | `facturas_proveedores` | 🟢 ACTIVA | 15 | Compras modal | RDO, cuenta corriente | Facturas compra |
-| 46 | `items_factura` | 🟢 ACTIVA | 30 | Compras modal | Detalle factura, trigger costo | Items de factura |
-| 47 | `pagos_proveedores` | 🟢 ACTIVA | 38 | Pagos modal | Cuenta corriente, saldos | Pagos a proveedores |
-| 48 | `pago_factura` | 🟡 CONECTADA VACÍA | 0 | financialService | Junction pago↔factura | Relación M:N |
-| 49 | `facturas_emitidas` | 🟢 ACTIVA | 12 | emitir-factura edge fn | fiscalService, POS | AFIP facturas |
-| 50 | `afip_config` | 🟢 ACTIVA | 1 | AfipConfigPage | emitir-factura edge fn | Config AFIP |
-| 51 | `afip_errores_log` | 🟢 ACTIVA | 21 | Edge fn al fallar | AfipErrorsLog UI | Log errores AFIP |
-| 52 | `gastos` | 🟡 CONECTADA VACÍA | 0 | GastosPage, trigger sync | RDO, finanzas | Gastos operativos |
-| 53 | `inversiones` | 🟡 CONECTADA VACÍA | 0 | financialService CRUD | RDO CAPEX | Inversiones |
-| 54 | `periodos` | 🟢 ACTIVA | 1 | financialService | RDO cierre período | Períodos contables |
-| 55 | `conceptos_servicio` | 🟢 ACTIVA | 10 | ConceptosServicioPage | Compras (items factura) | Servicios recurrentes |
-| 56 | `rdo_categories` | 🟢 ACTIVA | 39 | Migration seed | RDO service, items factura | Categorías P&L |
-| 57 | `rdo_movimientos` | 🟢 ACTIVA | 195 | rdoService CRUD | RDO reportes | Movimientos manuales RDO |
-| 58 | `stock_actual` | 🟢 ACTIVA | 4 | useStock hooks | Dashboard stock | Stock actual por local |
-| 59 | `stock_movimientos` | 🟢 ACTIVA | 11 | useStock hooks | StockHistorial | Movimientos stock |
-| 60 | `stock_conteos` | 🟡 CONECTADA VACÍA | 0 | useStockConteo | Conteo físico UI | Cabecera conteos |
-| 61 | `stock_conteo_items` | 🟡 CONECTADA VACÍA | 0 | useStockConteo | Conteo físico UI | Items conteo |
-| 62 | `stock_cierre_mensual` | 🟡 CONECTADA VACÍA | 0 | posService CMV | CMV reportes | Cierre mensual stock |
-| 63 | `consumos_manuales` | 🟡 CONECTADA VACÍA | 0 | posService | CMV reportes | Consumos manuales CMV |
-| 64 | `cash_registers` | 🟢 ACTIVA | 21 | configService | POS apertura caja | Cajas registradoras |
-| 65 | `cash_register_shifts` | 🟢 ACTIVA | 18 | posService | POS turno caja | Turnos de caja |
-| 66 | `cash_register_movements` | 🟢 ACTIVA | 41 | POS movimientos | Cashier report, RDO | Movimientos caja |
-| 67 | `cashier_discrepancy_history` | 🟢 ACTIVA | 1 | rdoService | Cashier stats | Discrepancias cajero |
-| 68 | `turnos_caja` | 🟡 CONECTADA VACÍA | 0 | posService.fetchOpenRegister | useRegister | Legacy/paralelo a cash_register_shifts |
-| 69 | `pos_config` | 🟢 ACTIVA | 4 | POS config UI | POS operación | Config POS por local |
-| 70 | `print_config` | 🟢 ACTIVA | 1 | PrintersPage | POS impresión | Config impresión |
-| 71 | `print_jobs` | 🟢 ACTIVA | 172 | POS al imprimir | print-to-network edge fn | Cola impresión |
-| 72 | `branch_printers` | 🟢 ACTIVA | 2 | PrintersPage | POS, print config | Impresoras |
-| 73 | `kitchen_stations` | 🟡 CONECTADA VACÍA | 0 | configService CRUD | POS KDS, coaching | Estaciones cocina |
-| 74 | `llamadores` | 🟡 CONECTADA VACÍA | 0 | DB fn asignar_llamador | POS (DB fn) | Llamadores POS |
-| 75 | `cadetes` | 🟡 CONECTADA VACÍA | 0 | posService.fetchActiveCadetes | POS delivery | Repartidores |
-| 76 | `operator_session_logs` | 🟡 CONECTADA VACÍA | 0 | posService.logOperatorSwitch | Audit | Log cambio operador |
-| 77 | `mercadopago_config` | 🟢 ACTIVA | 1 | MercadoPago config UI | MP edge functions | Config MP |
-| 78 | `canales_venta` | 🟢 ACTIVA | 5 | Canales config UI | POS, precios | Canales de venta |
-| 79 | `promociones` | 🟢 ACTIVA | 7 | Promos UI | POS, webapp | Promociones |
-| 80 | `promocion_items` | 🟢 ACTIVA | 7 | Promos UI | POS aplicación promo | Items en promo |
-| 81 | `promocion_item_extras` | 🟢 ACTIVA | 5 | Promos UI | POS extras preconfig | Extras preconfigurados |
-| 82 | `codigos_descuento` | 🟢 ACTIVA | 1 | Promos UI | POS aplicación código | Códigos descuento |
-| 83 | `codigos_descuento_usos` | 🟡 CONECTADA VACÍA | 0 | promoService | Validación uso único | Log usos código |
-| 84 | `price_lists` | 🟢 ACTIVA | 5 | Precios UI | POS pricing por canal | Listas de precios |
-| 85 | `price_list_items` | 🟢 ACTIVA | 1 | Precios UI | POS precio override | Precios por item |
-| 86 | `delivery_pricing_config` | 🟢 ACTIVA | 1 | Delivery config | deliveryService cálculo | Config precios delivery |
-| 87 | `delivery_zones` | 🟢 ACTIVA | 1 | deliveryService CRUD | POS, webapp delivery | Zonas delivery |
-| 88 | `branch_delivery_config` | 🟢 ACTIVA | 6 | deliveryService | Radio, override | Config delivery por local |
-| 89 | `branch_delivery_neighborhoods` | 🟢 ACTIVA | 123 | deliveryService auto-assign | Webapp cobertura | Barrios por sucursal |
-| 90 | `city_neighborhoods` | 🟢 ACTIVA | 485 | Migration seed | delivery neighborhoods | Barrios Córdoba |
-| 91 | `delivery_radius_overrides_log` | 🟡 CONECTADA VACÍA | 0 | deliveryService.logRadiusOverride | Audit log | Log cambios radio |
-| 92 | `cliente_direcciones` | 🟡 CONECTADA VACÍA | 0 | addressService CRUD | Webapp checkout | Direcciones cliente |
-| 93 | `webapp_config` | 🟢 ACTIVA | 6 | useWebappConfig | Webapp, POS recepción | Config webapp pedidos |
-| 94 | `webapp_pedido_mensajes` | 🟢 ACTIVA | 4 | posService chat | POS chat pedido | Chat pedido webapp |
-| 95 | `branch_item_availability` | 🟢 ACTIVA | 321 | useWebappConfig | Webapp disponibilidad | Disponibilidad por local |
-| 96 | `branch_closure_config` | 🟡 CONECTADA VACÍA | 0 | closureService | Cierre turno config | Config cierre por local |
-| 97 | `brand_closure_config` | 🟢 ACTIVA | 16 | closureService | Config cierre marca | Config cierre marca |
-| 98 | `brand_sidebar_order` | 🟢 ACTIVA | 6 | configService | Sidebar Mi Marca | Orden sidebar |
-| 99 | `ventas_mensuales_local` | 🟢 ACTIVA | 16 | VentasPage | Canon, dashboard marca | Ventas mensuales |
-| 100 | `canon_liquidaciones` | 🟢 ACTIVA | 15 | Trigger sync_canon | Canon UI | Liquidaciones canon |
-| 101 | `pagos_canon` | 🟡 CONECTADA VACÍA | 0 | Canon pagos UI | Canon saldo | Pagos canon |
-| 102 | `socios` | 🟢 ACTIVA | 10 | Socios UI | Distribuciones, balance | Socios |
-| 103 | `movimientos_socio` | 🟡 CONECTADA VACÍA | 0 | Socios UI, trigger distribución | Balance socios | Movimientos socios |
-| 104 | `meetings` | 🟢 ACTIVA | 6 | Reuniones UI | Actas, notificaciones | Reuniones |
-| 105 | `meeting_participants` | 🟢 ACTIVA | 25 | Reuniones UI | Acta, edge fn notif | Participantes |
-| 106 | `meeting_agreements` | 🟢 ACTIVA | 8 | Reuniones UI | Acta, seguimiento | Acuerdos |
-| 107 | `meeting_agreement_assignees` | 🟢 ACTIVA | 15 | Reuniones UI | Acta | Asignados a acuerdos |
-| 108 | `coachings` | 🟢 ACTIVA | 3 | Coaching UI | Evaluaciones | Sesiones coaching |
-| 109 | `coaching_competency_scores` | 🟢 ACTIVA | 11 | coachingService | Coaching detalle | Puntajes competencias |
-| 110 | `coaching_station_scores` | 🟢 ACTIVA | 5 | coachingService | Coaching estaciones | Puntajes estaciones |
-| 111 | `general_competencies` | 🟢 ACTIVA | 10 | coachingService | Coaching template | Competencias generales |
-| 112 | `manager_competencies` | 🟢 ACTIVA | 8 | coachingService | Coaching managers | Competencias managers |
-| 113 | `station_competencies` | 🟢 ACTIVA | 20 | coachingService | Coaching estaciones | Competencias estación |
-| 114 | `work_stations` | 🟢 ACTIVA | 4 | coachingService | Coaching, certificaciones | Estaciones trabajo |
-| 115 | `work_positions` | 🟢 ACTIVA | 6 | HR schedules | Posición en horario | Posiciones trabajo |
-| 116 | `employee_certifications` | 🟡 CONECTADA VACÍA | 0 | coachingService CRUD | Certificaciones UI | Certificaciones empleado |
-| 117 | `branch_inspections` | 🟢 ACTIVA | 10 | inspectionsService | Inspecciones UI | Inspecciones locales |
-| 118 | `inspection_items` | 🟢 ACTIVA | 136 | inspectionsService | Detalle inspección | Items inspección |
-| 119 | `inspection_templates` | 🟢 ACTIVA | 41 | inspectionsService | Crear inspección (DB fn) | Templates inspección |
-| 120 | `inspection_staff_present` | 🟢 ACTIVA | 7 | inspectionsService | Inspección presencia | Personal presente |
-| 121 | `whatsapp_templates` | 🟢 ACTIVA | 6 | whatsappService | Templates WhatsApp | Templates WhatsApp |
-| 122 | `push_subscriptions` | 🟡 CONECTADA VACÍA | 0 | notificationsService | Edge fn push | Suscripciones push |
-| 123 | `labor_config` | 🟢 ACTIVA | 1 | useLaborConfig (fromUntyped) | Horas laborales | Config jornada laboral |
-| 124 | `audit_logs` | 🟢 ACTIVA | 131 | Trigger log_sensitive_access | Admin view | Logs auditoría |
-| 125 | `financial_audit_log` | 🟢 ACTIVA | 1573 | Trigger audit_financial_changes | Sin UI directa | Audit financiero (trigger) |
-| **126** | **`menu_productos`** | **🟡 LEGACY VACÍA** | **0** | **menuService (deprecated)** | **FichaTecnicaModal, v_menu_costos** | **Legacy — reemplazada por items_carta** |
-| **127** | **`menu_precios`** | **🟡 LEGACY VACÍA** | **0** | **menuService (deprecated)** | **v_menu_costos view** | **Legacy — reemplazada por items_carta** |
-| **128** | **`menu_precios_historial`** | **🔵 SOLO SCHEMA** | **0** | **Solo en types.ts** | **Sin queries directas** | **Legacy, sin uso** |
-| **129** | **`menu_combos`** | **🔵 SOLO SCHEMA** | **0** | **Solo en types.ts** | **Sin queries directas** | **Legacy, sin uso** |
-| **130** | **`menu_fichas_tecnicas`** | **🟡 LEGACY VACÍA** | **0** | **menuService (deprecated)** | **FichaTecnicaModal** | **Legacy — sin datos** |
-| 131 | `configuracion_impuestos` | 🟡 CONECTADA VACÍA | 0 | Sin UI directa | DB fn get_iibb_alicuota | Usada solo por DB function |
-| 132 | `devoluciones` | 🟡 CONECTADA VACÍA | 0 | Solo en types.ts | Sin queries frontend | Feature no implementada |
-| 133 | `distribuciones_utilidades` | 🟡 CONECTADA VACÍA | 0 | Solo trigger DB | procesar_distribucion | Feature no implementada |
-| 134 | `insumos_costos_historial` | 🟡 CONECTADA VACÍA | 0 | Trigger fn_actualizar_costo | Sin queries frontend | Solo trigger |
-| 135 | `webapp_customers` | 🔴 HUÉRFANA | 0 | Sin queries | Sin queries | Sin uso detectable |
-
----
-
-## 2. VISTAS (Views)
-
-| Vista | Clasificación | Leída por | Notas |
+| # | Nombre actual | Sugerido (inglés) | Breaking change |
 |---|---|---|---|
-| `balance_socios` | 🟡 CONECTADA VACÍA | Sin query directa frontend | Vista materializada de movimientos_socio |
-| `branches_public` | 🟢 ACTIVA | Webapp público | Vista pública de branches |
-| `profiles_public` | 🟢 ACTIVA | Webapp público | Vista pública de profiles |
-| `cuenta_corriente_proveedores` | 🟢 ACTIVA | proveedoresService | Vista agregada saldos proveedores |
-| `cuenta_corriente_marca` | 🟡 CONECTADA VACÍA | Solo en types.ts | Vista canon, sin query directa |
-| `v_menu_costos` | 🟡 LEGACY | Sin query directa | Vista del sistema menu legacy |
-| `webapp_menu_items` | 🟢 ACTIVA | Webapp pedidos | Vista items para webapp |
-| `rdo_multivista_items_base` | 🟢 ACTIVA | rdoService | Vista RDO items |
-| `rdo_multivista_ventas_base` | 🟢 ACTIVA | rdoService | Vista RDO ventas |
-| `rdo_report_data` | 🟢 ACTIVA | rdoService | Vista reportes RDO |
+| 1 | `canales_venta` | `sales_channels` | Sí — frontend + DB fns |
+| 2 | `canon_liquidaciones` | `canon_settlements` | Sí — triggers + frontend |
+| 3 | `categorias_insumo` | `supply_categories` | Sí |
+| 4 | `categorias_preparacion` | `recipe_categories` | Sí |
+| 5 | `cliente_direcciones` | `customer_addresses` | Sí |
+| 6 | `codigos_descuento` | `discount_codes` | Sí |
+| 7 | `codigos_descuento_usos` | `discount_code_uses` | Sí |
+| 8 | `conceptos_servicio` | `service_concepts` | Sí |
+| 9 | `configuracion_impuestos` | `tax_config` | Sí — DB fn `get_iibb_alicuota` |
+| 10 | `consumos_manuales` | `manual_consumptions` | Sí |
+| 11 | `devoluciones` | `returns` | Bajo — solo types.ts |
+| 12 | `distribuciones_utilidades` | `profit_distributions` | Bajo — solo trigger |
+| 13 | `facturas_emitidas` | `issued_invoices` | Sí — edge fn + fiscal |
+| 14 | `facturas_proveedores` | `supplier_invoices` | Sí — heavy use |
+| 15 | `gastos` | `expenses` | Sí — trigger + RDO |
+| 16 | `insumos` | `supplies` | Sí — core |
+| 17 | `insumos_costos_historial` | `supply_cost_history` | Bajo — trigger only |
+| 18 | `inversiones` | `investments` | Sí |
+| 19 | `items_carta` | `menu_items` | Sí — core |
+| 20 | `item_carta_composicion` | `menu_item_compositions` | Sí |
+| 21 | `item_carta_extras` | `menu_item_extras` | Sí |
+| 22 | `item_carta_grupo_opcional` | `menu_item_option_groups` | Sí |
+| 23 | `item_carta_grupo_opcional_items` | `menu_item_option_group_items` | Sí |
+| 24 | `item_carta_precios_historial` | `menu_item_price_history` | Sí |
+| 25 | `item_extra_asignaciones` | `extra_assignments` | Sí |
+| 26 | `item_modificadores` | `item_modifiers` | Sí |
+| 27 | `item_removibles` | `removable_items` | Sí |
+| 28 | `items_factura` | `invoice_items` | Sí |
+| 29 | `llamadores` | `pagers` | Bajo |
+| 30 | `cadetes` | `delivery_drivers` | Bajo |
+| 31 | `menu_categorias` | `menu_categories` | Sí |
+| 32 | `menu_combos` | `menu_combos` | No — orphaned |
+| 33 | `menu_fichas_tecnicas` | `menu_tech_sheets` | Bajo — legacy |
+| 34 | `menu_precios` | `menu_prices` | Bajo — legacy |
+| 35 | `menu_precios_historial` | `menu_price_history` | No — orphaned |
+| 36 | `menu_productos` | `menu_products` | Bajo — legacy |
+| 37 | `movimientos_socio` | `partner_movements` | Bajo |
+| 38 | `pago_factura` | `invoice_payments` | Bajo |
+| 39 | `pagos_canon` | `canon_payments` | Sí |
+| 40 | `pagos_proveedores` | `supplier_payments` | Sí |
+| 41 | `pedido_item_modificadores` | `order_item_modifiers` | Bajo |
+| 42 | `pedido_items` | `order_items` | Sí |
+| 43 | `pedido_pagos` | `order_payments` | Sí |
+| 44 | `pedido_payment_edits` | `order_payment_edits` | Bajo |
+| 45 | `pedidos` | `orders` | Sí — heavy use |
+| 46 | `periodos` | `periods` | Sí |
+| 47 | `preparacion_ingredientes` | `recipe_ingredients` | Sí |
+| 48 | `preparacion_opciones` | `recipe_options` | Bajo |
+| 49 | `preparaciones` | `recipes` | Sí — core |
+| 50 | `promocion_item_extras` | `promotion_item_extras` | Sí |
+| 51 | `promocion_items` | `promotion_items` | Sí |
+| 52 | `promociones` | `promotions` | Sí |
+| 53 | `proveedor_condiciones_local` | `supplier_branch_terms` | Bajo |
+| 54 | `proveedores` | `suppliers` | Sí |
+| 55 | `socios` | `partners` | Sí |
+| 56 | `turnos_caja` | `register_shifts_legacy` | Bajo — legacy |
+| 57 | `ventas_mensuales_local` | `branch_monthly_sales` | Sí |
+| 58 | `webapp_pedido_mensajes` | `webapp_order_messages` | Bajo |
+| 59 | `webapp_customers` | OK (inglés) | — |
+
+**Total tablas en español o spanglish: 58 de 127**
 
 ---
 
-## 3. TABLAS HUÉRFANAS O CANDIDATAS A ELIMINACIÓN
+### 7.2 COLUMNAS EN ESPAÑOL (selección representativa por tabla)
 
-| Tabla | Estado | Filas | Razón |
+| Tabla | Columna actual | Sugerido |
+|---|---|---|
+| `afip_config` | `razon_social` | `business_name` |
+| `afip_config` | `direccion_fiscal` | `fiscal_address` |
+| `afip_config` | `inicio_actividades` | `activity_start_date` |
+| `afip_config` | `clave_privada_enc` | `encrypted_private_key` |
+| `afip_config` | `estado_conexion` | `connection_status` |
+| `afip_config` | `ultimo_error` | `last_error` |
+| `afip_config` | `ultima_verificacion` | `last_verified_at` |
+| `afip_config` | `ultimo_nro_factura_a/b/c` | `last_invoice_number_a/b/c` |
+| `afip_config` | `es_produccion` | `is_production` |
+| `afip_config` | `estado_certificado` | `certificate_status` |
+| `afip_config` | `reglas_facturacion` | `billing_rules` |
+| `afip_errores_log` | `tipo_error` | `error_type` |
+| `afip_errores_log` | `codigo_afip` | `afip_code` |
+| `afip_errores_log` | `mensaje` | `message` |
+| `canales_venta` | `codigo` | `code` |
+| `canales_venta` | `nombre` | `name` |
+| `canales_venta` | `es_base` | `is_base` |
+| `canales_venta` | `activo` | `is_active` |
+| `canales_venta` | `orden` | `sort_order` |
+| `canon_liquidaciones` | `periodo` | `period` |
+| `canon_liquidaciones` | `porcentaje_ft` | `cash_percentage` |
+| `canon_liquidaciones` | `saldo_pendiente` | `pending_balance` |
+| `canon_liquidaciones` | `fecha_vencimiento` | `due_date` |
+| `canon_liquidaciones` | `observaciones` | `notes` |
+| `categorias_insumo` | `nombre` | `name` |
+| `categorias_insumo` | `descripcion` | `description` |
+| `categorias_insumo` | `activo` | `is_active` |
+| `categorias_insumo` | `orden` | `sort_order` |
+| `cliente_direcciones` | `etiqueta` | `label` |
+| `cliente_direcciones` | `direccion` | `address` |
+| `cliente_direcciones` | `piso` | `floor` |
+| `cliente_direcciones` | `referencia` | `reference` |
+| `cliente_direcciones` | `ciudad` | `city` |
+| `cliente_direcciones` | `latitud` | `latitude` |
+| `cliente_direcciones` | `longitud` | `longitude` |
+| `cliente_direcciones` | `es_principal` | `is_primary` |
+| `codigos_descuento` | `codigo` | `code` |
+| `codigos_descuento` | `activo` | `is_active` |
+| `items_carta` | `nombre` | `name` |
+| `items_carta` | `nombre_corto` | `short_name` |
+| `items_carta` | `descripcion` | `description` |
+| `items_carta` | `imagen_url` | `image_url` |
+| `items_carta` | `precio_base` | `base_price` |
+| `items_carta` | `activo` | `is_active` |
+| `items_carta` | `visible_carta` | `is_visible_menu` |
+| `items_carta` | `visible_pos` | `is_visible_pos` |
+| `items_carta` | `visible_webapp` | `is_visible_webapp` |
+| `insumos` | `nombre` | `name` |
+| `insumos` | `unidad_base` | `base_unit` |
+| `insumos` | `costo_por_unidad_base` | `base_unit_cost` |
+| `pedidos` | `numero_dia` | `daily_number` |
+| `pedidos` | `nombre_cliente` | `customer_name` |
+| `pedidos` | `telefono_cliente` | `customer_phone` |
+| `pedidos` | `direccion_entrega` | `delivery_address` |
+| `pedidos` | `tiempo_estimado` | `estimated_time` |
+| `pedidos` | `notas` | `notes` |
+| `pedido_items` | `nombre_item` | `item_name` |
+| `pedido_items` | `cantidad` | `quantity` |
+| `pedido_items` | `precio_unitario` | `unit_price` |
+| `pedido_pagos` | `metodo` | `method` |
+| `pedido_pagos` | `monto` | `amount` |
+| `preparaciones` | `nombre` | `name` |
+| `preparaciones` | `rendimiento` | `yield` |
+| `preparaciones` | `costo_calculado` | `calculated_cost` |
+| `preparaciones` | `costo_manual` | `manual_cost` |
+| `proveedores` | `nombre` | `name` |
+| `proveedores` | `telefono` | `phone` |
+| `proveedores` | `direccion` | `address` |
+| `proveedores` | `condicion_iva` | `tax_status` |
+| `promociones` | `nombre` | `name` |
+| `promociones` | `activa` | `is_active` |
+| `socios` | `nombre` | `name` |
+| `socios` | `porcentaje_participacion` | `ownership_percentage` |
+| `socios` | `activo` | `is_active` |
+| `gastos` | `concepto` | `concept` |
+| `gastos` | `monto` | `amount` |
+| `gastos` | `fecha` | `date` |
+| `gastos` | `medio_pago` | `payment_method` |
+| `gastos` | `observaciones` | `notes` |
+| `cadetes` | `nombre` | `name` |
+| `cadetes` | `telefono` | `phone` |
+| `cadetes` | `activo` | `is_active` |
+| `cadetes` | `disponible` | `is_available` |
+| `cadetes` | `pedidos_hoy` | `orders_today` |
+| `item_carta_precios_historial` | `precio_anterior` | `previous_price` |
+| `item_carta_precios_historial` | `precio_nuevo` | `new_price` |
+| `item_carta_precios_historial` | `motivo` | `reason` |
+| `item_carta_precios_historial` | `usuario_id` | `user_id` |
+| `item_modificadores` | `nombre` | `name` |
+| `item_modificadores` | `cantidad_ahorro` | `savings_quantity` |
+| `item_modificadores` | `unidad_ahorro` | `savings_unit` |
+| `item_modificadores` | `costo_ahorro` | `savings_cost` |
+| `item_modificadores` | `cantidad_extra` | `extra_quantity` |
+| `item_modificadores` | `unidad_extra` | `extra_unit` |
+| `item_modificadores` | `precio_extra` | `extra_price` |
+| `item_modificadores` | `costo_extra` | `extra_cost` |
+| `item_modificadores` | `activo` | `is_active` |
+| `item_modificadores` | `orden` | `sort_order` |
+| `item_removibles` | `nombre_display` | `display_name` |
+| `item_removibles` | `activo` | `is_active` |
+| `facturas_proveedores` | `factura_tipo` | `invoice_type` |
+| `facturas_proveedores` | `factura_numero` | `invoice_number` |
+| `facturas_proveedores` | `factura_fecha` | `invoice_date` |
+| `facturas_proveedores` | `condicion_pago` | `payment_terms` |
+| `facturas_proveedores` | `saldo_pendiente` | `pending_balance` |
+| `facturas_proveedores` | `motivo_extraordinaria` | `extraordinary_reason` |
+| `facturas_proveedores` | `observaciones` | `notes` |
+| `items_factura` | `cantidad` | `quantity` |
+| `items_factura` | `unidad` | `unit` |
+| `items_factura` | `precio_unitario` | `unit_price` |
+| `pagos_proveedores` | `fecha_pago` | `payment_date` |
+| `pagos_proveedores` | `monto` | `amount` |
+| `pagos_proveedores` | `medio_pago` | `payment_method` |
+| `pagos_proveedores` | `observaciones` | `notes` |
+| `pagos_proveedores` | `verificado` | `is_verified` |
+| `pagos_proveedores` | `fecha_vencimiento_pago` | `payment_due_date` |
+| `pagos_canon` | `fecha_pago` | `payment_date` |
+| `pagos_canon` | `monto` | `amount` |
+| `pagos_canon` | `medio_pago` | `payment_method` |
+| `pagos_canon` | `observaciones` | `notes` |
+| `pagos_canon` | `verificado` | `is_verified` |
+| `movimientos_socio` | `fecha` | `date` |
+| `movimientos_socio` | `monto` | `amount` |
+| `movimientos_socio` | `detalle` | `details` |
+| `movimientos_socio` | `saldo_acumulado` | `cumulative_balance` |
+| `ventas_mensuales_local` | `periodo` | `period` |
+| `ventas_mensuales_local` | `venta_total` | `total_sales` |
+| `ventas_mensuales_local` | `efectivo` | `cash` |
+| `ventas_mensuales_local` | `cargado_por` | `loaded_by` |
+| `shift_closures` | `fecha` | `date` |
+| `shift_closures` | `turno` | `shift` |
+| `shift_closures` | `notas` | `notes` |
+| `shift_closures` | `cerrado_por` | `closed_by` |
+| `shift_closures` | `fuente` | `source` |
+
+**(~150+ columnas en español en total — listado parcial por brevedad)**
+
+---
+
+### 7.3 ENUMS EN ESPAÑOL / SPANGLISH
+
+| Enum type | Valores en español | Sugerido |
+|---|---|---|
+| `brand_role_type` | `superadmin, coordinador, informes, contador_marca, community_manager` | `superadmin, coordinator, reports, brand_accountant, community_manager` |
+| `local_role_type` | `franquiciado, encargado, contador_local, cajero, empleado` | `franchisee, manager, local_accountant, cashier, employee` |
+| `payment_method` | `efectivo, tarjeta_debito, tarjeta_credito, mercadopago_qr, mercadopago_link, transferencia, vales` | `cash, debit_card, credit_card, mercadopago_qr, mercadopago_link, transfer, vouchers` |
+| `work_position_type` | `cajero, cocinero, barista, runner, lavacopas` | `cashier, cook, barista, runner, dishwasher` |
+| `stock_movement_type` | OK (inglés) | — |
+| `order_type` | OK (inglés) | — |
+| `order_area` | `salon, mostrador, delivery` | `dine_in, counter, delivery` |
+| `communication_type` | OK (inglés) | — |
+| `permission_scope` | OK (inglés) | — |
+
+---
+
+## 8. VIOLACIONES DE CONVENCIONES DE NOMBRES
+
+### 8.1 Tablas — Violaciones
+
+| Regla violada | Tabla | Problema |
+|---|---|---|
+| Idioma | 58 tablas listadas arriba | Nombres en español |
+| Singular vs plural | `pago_factura` | Singular, debería ser `invoice_payments` |
+| Sufijo `_v2` | `user_roles_v2` | Versioning en nombre de tabla |
+| Inconsistencia prefijo | `item_carta_*` vs `items_carta` | Singular/plural mezclados para mismo concepto |
+| Spanglish | `pedido_payment_edits` | Mezcla español (`pedido`) + inglés (`payment_edits`) |
+| Spanglish | `webapp_pedido_mensajes` | Mezcla inglés + español |
+
+### 8.2 Columnas — Violaciones recurrentes
+
+| Regla | Violación | Tablas afectadas | Corrección |
 |---|---|---|---|
-| `webapp_customers` | 🔴 HUÉRFANA | 0 | Sin queries en frontend ni edge functions |
-| `menu_combos` | 🔵 SOLO SCHEMA | 0 | Solo existe en types.ts, sin queries `.from()` |
-| `menu_precios_historial` | 🔵 SOLO SCHEMA | 0 | Solo existe en types.ts, sin queries `.from()` |
-| `menu_productos` | 🟡 LEGACY | 0 | Código activo en menuService pero vacía, reemplazada por items_carta |
-| `menu_precios` | 🟡 LEGACY | 0 | Usada solo por vista v_menu_costos, vacía |
-| `menu_fichas_tecnicas` | 🟡 LEGACY | 0 | Código activo en menuService pero vacía |
-| `devoluciones` | 🟡 SCHEMA ONLY | 0 | Sin queries frontend, solo types.ts |
-| `distribuciones_utilidades` | 🟡 SCHEMA ONLY | 0 | Solo trigger DB, sin UI |
-| `configuracion_impuestos` | 🟡 SCHEMA ONLY | 0 | Solo DB function get_iibb_alicuota |
+| Booleanos sin `is_`/`has_` | `activo` | ~15 tablas | `is_active` |
+| Booleanos sin `is_`/`has_` | `disponible` | `cadetes` | `is_available` |
+| Booleanos sin `is_`/`has_` | `verificado` | `pagos_proveedores`, `pagos_canon` | `is_verified` |
+| Booleanos sin `is_`/`has_` | `es_produccion` | `afip_config` | `is_production` |
+| Booleanos sin `is_`/`has_` | `es_base` | `canales_venta` | `is_base` |
+| Booleanos sin `is_`/`has_` | `es_principal` | `cliente_direcciones` | `is_primary` |
+| Booleanos sin `is_`/`has_` | `es_removible` | `item_carta_composicion` | `is_removable` |
+| Booleanos sin `is_`/`has_` | `es_obligatorio` | `item_carta_grupo_opcional` | `is_required` |
+| Booleanos sin `is_`/`has_` | `es_intercambiable` | `preparaciones` | `is_interchangeable` |
+| FK naming | `usuario_id` | `item_carta_precios_historial` | `user_id` |
+| FK naming | `cerrado_por` | `shift_closures` | `closed_by_user_id` |
+| FK naming | `cargado_por` | `ventas_mensuales_local` | `loaded_by_user_id` |
+| FK naming | `created_by` | Multiple | OK (convention accepted) |
+| Date suffix | `fecha` | `gastos`, `movimientos_socio` | `date` (or `expense_date`) |
+| Date suffix | `fecha_pago` | `pagos_*` | `paid_at` (timestamp) or `payment_date` |
+| Date suffix | `fecha_vencimiento` | Multiple | `due_date` |
+| Abreviación | `nro` | `afip_config` (`ultimo_nro_factura_*`) | `number` |
+| Abreviación | `desc` | Not found | — |
+| Column `orden` | Multiple tables | `sort_order` (descriptive) |
+| Column `metodo` | `pedido_pagos` | `payment_method` |
+| Column `monto` | ~10 tablas | `amount` |
+| Column `nombre` | ~20 tablas | `name` |
+| Column `telefono` | ~5 tablas | `phone` |
+| Column `direccion` | ~5 tablas | `address` |
+| Column `cantidad` | ~8 tablas | `quantity` |
 
----
+### 8.3 Enum values — Violaciones
 
-## 4. TABLAS CON DATOS PERO SIN LECTURA DIRECTA FRONTEND
-
-| Tabla | Filas | Cómo se llena | Cómo se consume |
+| Enum | Valor | Problema | Sugerido |
 |---|---|---|---|
-| `financial_audit_log` | 1573 | Trigger `audit_financial_changes` | Sin UI — solo audit trail en DB |
-| `insumos_costos_historial` | 0 | Trigger `fn_actualizar_costo_insumo_desde_compra` | Sin UI — historial en DB |
+| `brand_role_type` | `coordinador` | Español | `coordinator` |
+| `brand_role_type` | `informes` | Español | `reports` |
+| `brand_role_type` | `contador_marca` | Español | `brand_accountant` |
+| `local_role_type` | `franquiciado` | Español | `franchisee` |
+| `local_role_type` | `encargado` | Español | `manager` |
+| `local_role_type` | `contador_local` | Español | `local_accountant` |
+| `local_role_type` | `cajero` | Español | `cashier` |
+| `local_role_type` | `empleado` | Español | `employee` |
+| `payment_method` | `efectivo` | Español | `cash` |
+| `payment_method` | `tarjeta_debito` | Español | `debit_card` |
+| `payment_method` | `tarjeta_credito` | Español | `credit_card` |
+| `payment_method` | `transferencia` | Español | `transfer` |
+| `payment_method` | `vales` | Español | `vouchers` |
+| `order_area` | `salon` | Español | `dine_in` |
+| `order_area` | `mostrador` | Español | `counter` |
+| `work_position_type` | `cajero` | Español | `cashier` |
+| `work_position_type` | `cocinero` | Español | `cook` |
+| `work_position_type` | `lavacopas` | Español | `dishwasher` |
 
 ---
 
-## 5. OBSERVACIONES CLAVE
+## 9. PLAN DE MIGRACIÓN
 
-1. **Sistema de menú dual**: Existe un sistema legacy (`menu_productos`, `menu_precios`, `menu_fichas_tecnicas`, `menu_combos`) y el sistema actual (`items_carta`, `item_carta_composicion`, `preparaciones`). El legacy tiene código activo en `menuService.ts` pero 0 filas. La vista `v_menu_costos` depende de `menu_productos` y `menu_precios`.
+### ⚠️ ADVERTENCIA CRÍTICA
 
-2. **`turnos_caja` vs `cash_register_shifts`**: Ambas tablas cubren el mismo concepto. `turnos_caja` tiene 0 filas y solo se lee en `posService.fetchOpenRegister`. `cash_register_shifts` tiene 18 filas y es el sistema activo. Potencial duplicación.
+Esta migración es **masiva y de alto riesgo**. Renombrar 58 tablas, ~150 columnas y 18 enum values afectaría:
+- **Todas** las queries `.from('tabla')` en el frontend (~200+ archivos)
+- **Todas** las DB functions (~50 funciones)
+- **Todos** los triggers (~20 triggers)
+- **Todas** las RLS policies (~150 políticas)
+- **Todas** las Edge Functions (~15 funciones)
+- **Todos** los tipos generados en `types.ts`
+- **Todas** las vistas (~10 views)
 
-3. **Tablas con triggers escritores pero sin UI**: `financial_audit_log` (1573 filas), `insumos_costos_historial` (0 filas), `distribuciones_utilidades` (0 filas) — se llenan automáticamente por triggers pero no tienen pantalla para consultarlas.
+### Recomendación: NO migrar todo de golpe
 
-4. **Features construidas pero sin datos de producción**: Stock conteos, gastos, inversiones, pagos canon, movimientos socios, kitchen stations, cadetes — tienen código frontend completo pero 0 filas en producción.
+En lugar de ejecutar esto como una migración atómica, recomiendo:
+
+1. **Fase 0 — Limpiar tablas muertas** (bajo riesgo): DROP de `webapp_customers`, `menu_combos`, `menu_precios_historial`, `devoluciones`
+2. **Fase 1 — Booleanos** (medio riesgo): Renombrar `activo` → `is_active`, `verificado` → `is_verified`, etc. (~30 columnas, ~60 archivos frontend)
+3. **Fase 2 — Columnas comunes** (medio riesgo): `nombre` → `name`, `monto` → `amount`, `cantidad` → `quantity`, `orden` → `sort_order`
+4. **Fase 3 — Tablas core** (alto riesgo): `pedidos` → `orders`, `items_carta` → `menu_items`, `preparaciones` → `recipes`, `insumos` → `supplies`
+5. **Fase 4 — Enums** (muy alto riesgo): Requiere recrear tipos enum con valores nuevos, actualizar toda la lógica de roles
+
+### SQL de Migración — Fase 0 (Tablas muertas)
+
+```sql
+DROP TABLE IF EXISTS public.webapp_customers;
+DROP TABLE IF EXISTS public.menu_combos;
+DROP TABLE IF EXISTS public.menu_precios_historial;
+DROP TABLE IF EXISTS public.devoluciones;
+DROP VIEW IF EXISTS public.v_menu_costos;
+```
+
+### SQL de Migración — Fase 1 (Booleanos, ejemplo parcial)
+
+```sql
+-- canales_venta
+ALTER TABLE canales_venta RENAME COLUMN activo TO is_active;
+ALTER TABLE canales_venta RENAME COLUMN es_base TO is_base;
+
+-- items_carta
+ALTER TABLE items_carta RENAME COLUMN activo TO is_active;
+
+-- item_modificadores
+ALTER TABLE item_modificadores RENAME COLUMN activo TO is_active;
+
+-- item_removibles
+ALTER TABLE item_removibles RENAME COLUMN activo TO is_active;
+
+-- cadetes
+ALTER TABLE cadetes RENAME COLUMN activo TO is_active;
+ALTER TABLE cadetes RENAME COLUMN disponible TO is_available;
+
+-- preparaciones
+ALTER TABLE preparaciones RENAME COLUMN es_intercambiable TO is_interchangeable;
+
+-- pagos_proveedores
+ALTER TABLE pagos_proveedores RENAME COLUMN verificado TO is_verified;
+
+-- pagos_canon
+ALTER TABLE pagos_canon RENAME COLUMN verificado TO is_verified;
+
+-- afip_config
+ALTER TABLE afip_config RENAME COLUMN es_produccion TO is_production;
+
+-- cliente_direcciones
+ALTER TABLE cliente_direcciones RENAME COLUMN es_principal TO is_primary;
+
+-- item_carta_composicion
+ALTER TABLE item_carta_composicion RENAME COLUMN es_removible TO is_removable;
+
+-- item_carta_grupo_opcional
+ALTER TABLE item_carta_grupo_opcional RENAME COLUMN es_obligatorio TO is_required;
+```
+
+**Breaking changes de Fase 1:** Cada rename requiere actualizar:
+- Frontend queries que referencien la columna
+- DB functions que usen la columna
+- RLS policies que filtren por esa columna
+- Triggers que lean/escriban la columna
+
+### Fases 2-4: No incluyo el SQL completo aquí porque cada fase requiere un análisis de impacto archivo-por-archivo antes de ejecutar. Cada rename de tabla implica actualizar entre 5 y 50 archivos de código.
+
+---
+
+### RESUMEN EJECUTIVO
+
+| Dimensión | Cantidad de violaciones |
+|---|---|
+| Tablas en español | 58 / 127 |
+| Columnas en español | ~150+ |
+| Enum values en español | 18 / 53 |
+| Booleanos sin `is_`/`has_` | ~15 columnas |
+| FKs con naming inconsistente | ~5 columnas |
+| Tablas spanglish | 2 (`pedido_payment_edits`, `webapp_pedido_mensajes`) |
+| Archivos frontend impactados | ~200+ |
+| DB functions impactadas | ~50 |
+| Edge functions impactadas | ~15 |
+
+**La migración completa es un proyecto de varias semanas. Recomiendo fuertemente hacerlo por fases, empezando por la limpieza de tablas muertas (Fase 0) que no tiene breaking changes.**
 
