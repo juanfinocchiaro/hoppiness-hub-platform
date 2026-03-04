@@ -1,16 +1,19 @@
 import { supabase } from './supabaseClient';
 
-// ── Legacy functions (still used by usePermissions) ──────────────────
+// ── Legacy-compatible functions (used by usePermissions) ──────────────
 
 export async function fetchUserBrandRole(userId: string) {
   const { data, error } = await supabase
-    .from('user_roles_v2')
-    .select('id, user_id, brand_role, is_active')
+    .from('user_role_assignments')
+    .select('id, user_id, is_active, roles!inner(key, scope)')
     .eq('user_id', userId)
     .eq('is_active', true)
+    .eq('roles.scope', 'brand')
+    .is('branch_id', null)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  if (!data) return null;
+  return { id: data.id, user_id: data.user_id, brand_role: (data.roles as any).key, is_active: data.is_active };
 }
 
 export async function fetchUserBranchRoles(userId: string) {
@@ -25,34 +28,22 @@ export async function fetchUserBranchRoles(userId: string) {
     }));
   }
 
-  const { data: ubrData, error: ubrError } = await supabase
-    .from('user_branch_roles')
-    .select('branch_id, local_role')
-    .eq('user_id', userId)
-    .eq('is_active', true);
-
-  if (!ubrError && ubrData && ubrData.length > 0) {
-    return ubrData;
-  }
-
-  const { data: urv2, error: urv2Error } = await supabase
-    .from('user_roles_v2')
-    .select('branch_ids, local_role')
+  // Fallback: direct query
+  const { data: uraData, error: uraError } = await supabase
+    .from('user_role_assignments')
+    .select('branch_id, roles!inner(key, scope)')
     .eq('user_id', userId)
     .eq('is_active', true)
-    .not('branch_ids', 'is', null)
-    .not('local_role', 'is', null)
-    .maybeSingle();
+    .eq('roles.scope', 'branch')
+    .not('branch_id', 'is', null);
 
-  if (urv2Error || !urv2?.branch_ids?.length || !urv2.local_role) return [];
+  if (uraError || !uraData?.length) return [];
 
-  return urv2.branch_ids.map((branch_id: string) => ({
-    branch_id,
-    local_role: urv2.local_role as string,
+  return uraData.map((r: any) => ({
+    branch_id: r.branch_id,
+    local_role: r.roles.key,
   }));
 }
-
-// ── Permission Config (removed - table dropped, use permissions + role_permissions) ──
 
 // ── Normalized model (new tables) ────────────────────────────────────
 
@@ -138,26 +129,31 @@ export async function fetchUserProfile(userId: string) {
 
 export async function fetchImpersonationData(userId: string) {
   const { data: brandRoleData } = await supabase
-    .from('user_roles_v2')
-    .select('brand_role')
+    .from('user_role_assignments')
+    .select('roles!inner(key, scope)')
     .eq('user_id', userId)
     .eq('is_active', true)
+    .eq('roles.scope', 'brand')
+    .is('branch_id', null)
     .maybeSingle();
 
   const { data: branchRolesData } = await supabase
-    .from('user_branch_roles')
-    .select('branch_id, local_role')
+    .from('user_role_assignments')
+    .select('branch_id, roles!inner(key, scope)')
     .eq('user_id', userId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('roles.scope', 'branch')
+    .not('branch_id', 'is', null);
 
-  const branchRoles = (branchRolesData || []).map((r) => ({
+  const brandRole = brandRoleData ? (brandRoleData.roles as any).key : null;
+  const branchRoles = (branchRolesData || []).map((r: any) => ({
     branch_id: r.branch_id,
-    local_role: r.local_role,
+    local_role: r.roles.key,
   }));
 
   let branches: any[] = [];
 
-  if (brandRoleData?.brand_role === 'superadmin') {
+  if (brandRole === 'superadmin') {
     const { data } = await supabase
       .from('branches')
       .select('*')
@@ -165,7 +161,7 @@ export async function fetchImpersonationData(userId: string) {
       .order('name');
     branches = data || [];
   } else if (branchRoles.length > 0) {
-    const branchIds = branchRoles.map((r) => r.branch_id);
+    const branchIds = branchRoles.map((r: any) => r.branch_id);
     const { data } = await supabase
       .from('branches')
       .select('*')
@@ -176,7 +172,7 @@ export async function fetchImpersonationData(userId: string) {
   }
 
   return {
-    brandRole: brandRoleData?.brand_role || null,
+    brandRole,
     branchRoles,
     branches,
   };
@@ -184,12 +180,13 @@ export async function fetchImpersonationData(userId: string) {
 
 export async function checkIsSuperadmin(userId: string) {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('brand_role')
+    .from('user_role_assignments')
+    .select('id, roles!inner(key)')
     .eq('user_id', userId)
     .eq('is_active', true)
+    .eq('roles.key', 'superadmin')
     .maybeSingle();
-  return data?.brand_role === 'superadmin';
+  return !!data;
 }
 
 export async function fetchAccessibleBranches(

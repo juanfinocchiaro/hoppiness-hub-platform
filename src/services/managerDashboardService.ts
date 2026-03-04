@@ -83,13 +83,13 @@ export async function fetchPendingItems(branchId: string) {
     .eq('status', 'pending');
 
   const { data: roles } = await supabase
-    .from('user_roles_v2')
-    .select('user_id, branch_ids')
-    .not('local_role', 'is', null);
+    .from('user_role_assignments')
+    .select('user_id')
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .not('branch_id', 'is', null);
 
-  const userIds = (roles || [])
-    .filter((r) => Array.isArray(r.branch_ids) && r.branch_ids.includes(branchId))
-    .map((r) => r.user_id);
+  const userIds = (roles || []).map((r: any) => r.user_id);
 
   const { data: latestReg } = await supabase
     .from('regulations')

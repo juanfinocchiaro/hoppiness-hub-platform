@@ -7982,69 +7982,22 @@ export type Database = {
           },
         ]
       }
-      user_branch_roles: {
+      user_role_assignments: {
         Row: {
-          branch_id: string
+          branch_id: string | null
           clock_pin: string | null
           created_at: string | null
           default_position: string | null
           id: string
           is_active: boolean | null
-          local_role: Database["public"]["Enums"]["local_role_type"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          branch_id: string
-          clock_pin?: string | null
-          created_at?: string | null
-          default_position?: string | null
-          id?: string
-          is_active?: boolean | null
-          local_role: Database["public"]["Enums"]["local_role_type"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          branch_id?: string
-          clock_pin?: string | null
-          created_at?: string | null
-          default_position?: string | null
-          id?: string
-          is_active?: boolean | null
-          local_role?: Database["public"]["Enums"]["local_role_type"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_branch_roles_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_branch_roles_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_role_assignments: {
-        Row: {
-          branch_id: string | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
           role_id: string
           user_id: string
         }
         Insert: {
           branch_id?: string | null
+          clock_pin?: string | null
           created_at?: string | null
+          default_position?: string | null
           id?: string
           is_active?: boolean | null
           role_id: string
@@ -8052,7 +8005,9 @@ export type Database = {
         }
         Update: {
           branch_id?: string | null
+          clock_pin?: string | null
           created_at?: string | null
+          default_position?: string | null
           id?: string
           is_active?: boolean | null
           role_id?: string
@@ -8081,39 +8036,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_roles_v2: {
-        Row: {
-          branch_ids: string[] | null
-          brand_role: Database["public"]["Enums"]["brand_role_type"] | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          local_role: Database["public"]["Enums"]["local_role_type"] | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          branch_ids?: string[] | null
-          brand_role?: Database["public"]["Enums"]["brand_role_type"] | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          local_role?: Database["public"]["Enums"]["local_role_type"] | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          branch_ids?: string[] | null
-          brand_role?: Database["public"]["Enums"]["brand_role_type"] | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          local_role?: Database["public"]["Enums"]["local_role_type"] | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
       }
       ventas_mensuales_local: {
         Row: {
@@ -8886,10 +8808,7 @@ export type Database = {
           name: string
         }[]
       }
-      get_brand_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["brand_role_type"]
-      }
+      get_brand_role: { Args: { _user_id: string }; Returns: string }
       get_cashier_discrepancy_stats: {
         Args: { _branch_id?: string; _user_id: string }
         Returns: {
@@ -8928,13 +8847,10 @@ export type Database = {
         Args: { _branch_id: string; _fecha?: string }
         Returns: number
       }
-      get_local_role: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["local_role_type"]
-      }
+      get_local_role: { Args: { _user_id: string }; Returns: string }
       get_local_role_for_branch: {
         Args: { _branch_id: string; _user_id: string }
-        Returns: Database["public"]["Enums"]["local_role_type"]
+        Returns: string
       }
       get_rdo_financiero: {
         Args: { _branch_id: string; _periodo: string }
@@ -8981,7 +8897,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: {
           branch_id: string
-          local_role: Database["public"]["Enums"]["local_role_type"]
+          local_role: string
         }[]
       }
       has_any_brand_role: {
@@ -9154,19 +9070,7 @@ export type Database = {
       }
     }
     Enums: {
-      brand_role_type:
-        | "superadmin"
-        | "coordinador"
-        | "informes"
-        | "contador_marca"
-        | "community_manager"
       communication_type: "info" | "warning" | "urgent" | "celebration"
-      local_role_type:
-        | "franquiciado"
-        | "encargado"
-        | "contador_local"
-        | "cajero"
-        | "empleado"
       order_area: "salon" | "mostrador" | "delivery"
       order_type: "takeaway" | "delivery" | "dine_in"
       payment_method:
@@ -9324,21 +9228,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      brand_role_type: [
-        "superadmin",
-        "coordinador",
-        "informes",
-        "contador_marca",
-        "community_manager",
-      ],
       communication_type: ["info", "warning", "urgent", "celebration"],
-      local_role_type: [
-        "franquiciado",
-        "encargado",
-        "contador_local",
-        "cajero",
-        "empleado",
-      ],
       order_area: ["salon", "mostrador", "delivery"],
       order_type: ["takeaway", "delivery", "dine_in"],
       payment_method: [

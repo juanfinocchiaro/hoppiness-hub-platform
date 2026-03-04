@@ -132,17 +132,18 @@ export async function fetchBrandClosures(from: string, to: string) {
 // ── Central Team ────────────────────────────────────────────────────
 
 export async function fetchCentralTeamMembers() {
-  const { data: roles, error: rolesError } = await supabase
-    .from('user_roles_v2')
-    .select('id, user_id, brand_role, created_at')
-    .not('brand_role', 'is', null)
+  const { data: assignments, error: rolesError } = await supabase
+    .from('user_role_assignments')
+    .select('id, user_id, created_at, roles!inner(key, scope)')
+    .eq('roles.scope', 'brand')
+    .is('branch_id', null)
     .eq('is_active', true)
     .order('created_at');
 
   if (rolesError) throw rolesError;
-  if (!roles || roles.length === 0) return [];
+  if (!assignments || assignments.length === 0) return [];
 
-  const userIds = roles.map((r) => r.user_id);
+  const userIds = assignments.map((r) => r.user_id);
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
     .select('id, full_name, email')
@@ -151,14 +152,14 @@ export async function fetchCentralTeamMembers() {
 
   const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-  return roles.map((role) => {
+  return assignments.map((role) => {
     const profile = profileMap.get(role.user_id);
     return {
       id: role.id,
       user_id: role.user_id,
       email: profile?.email || '',
       full_name: profile?.full_name || null,
-      brand_role: role.brand_role,
+      brand_role: (role.roles as any).key,
       created_at: role.created_at,
     };
   });
@@ -166,13 +167,14 @@ export async function fetchCentralTeamMembers() {
 
 export async function removeCentralTeamMember(userId: string) {
   const { error } = await supabase
-    .from('user_roles_v2')
-    .update({ brand_role: null })
-    .eq('user_id', userId);
+    .from('user_role_assignments')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .is('branch_id', null);
   if (error) throw error;
 }
 
-export async function inviteCentralTeamMember(email: string, role: string) {
+export async function inviteCentralTeamMember(email: string, roleKey: string) {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id')
@@ -185,26 +187,35 @@ export async function inviteCentralTeamMember(email: string, role: string) {
 
   const userId = profile.id;
 
+  // Look up the role_id from the roles table
+  const { data: roleRow, error: roleError } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('key', roleKey)
+    .eq('scope', 'brand')
+    .single();
+  if (roleError || !roleRow) throw new Error(`Rol '${roleKey}' no encontrado`);
+
   const { data: existing } = await supabase
-    .from('user_roles_v2')
+    .from('user_role_assignments')
     .select('id')
     .eq('user_id', userId)
+    .is('branch_id', null)
     .maybeSingle();
 
   if (existing) {
     const { error } = await supabase
-      .from('user_roles_v2')
-      .update({ brand_role: role as any })
-      .eq('user_id', userId);
+      .from('user_role_assignments')
+      .update({ role_id: roleRow.id, is_active: true })
+      .eq('id', existing.id);
     if (error) throw error;
   } else {
-    const { error } = await supabase.from('user_roles_v2').insert({
+    const { error } = await supabase.from('user_role_assignments').insert({
       user_id: userId,
-      brand_role: role as any,
-      local_role: null,
-      branch_ids: [],
+      role_id: roleRow.id,
+      branch_id: null,
       is_active: true,
-    } as any);
+    });
     if (error) throw error;
   }
 }
@@ -213,8 +224,8 @@ export async function inviteCentralTeamMember(email: string, role: string) {
 
 export async function fetchBranchTeam(branchId: string) {
   const { data: teamRoles, error: teamError } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role, default_position')
+    .from('user_role_assignments')
+    .select('user_id, default_position, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true);
 
@@ -231,7 +242,7 @@ export async function fetchBranchTeam(branchId: string) {
 
   return teamRoles.map((t) => ({
     user_id: t.user_id,
-    local_role: t.local_role,
+    local_role: (t.roles as any).key,
     default_position: t.default_position,
     profile: profileMap.get(t.user_id) ?? null,
   }));
@@ -250,13 +261,22 @@ export async function searchUsersByEmail(email: string, limit = 5) {
 export async function updateBranchMemberRole(
   userId: string,
   branchId: string,
-  newRole: string,
+  newRoleKey: string,
 ) {
+  const { data: roleRow } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('key', newRoleKey)
+    .eq('scope', 'branch')
+    .single();
+  if (!roleRow) throw new Error(`Rol '${newRoleKey}' no encontrado`);
+
   const { error } = await supabase
-    .from('user_branch_roles')
-    .update({ local_role: newRole as any, updated_at: new Date().toISOString() })
+    .from('user_role_assignments')
+    .update({ role_id: roleRow.id })
     .eq('user_id', userId)
-    .eq('branch_id', branchId);
+    .eq('branch_id', branchId)
+    .eq('is_active', true);
   if (error) throw error;
 }
 
@@ -266,32 +286,41 @@ export async function updateBranchMemberPosition(
   position: string | null,
 ) {
   const { error } = await supabase
-    .from('user_branch_roles')
-    .update({ default_position: position as any, updated_at: new Date().toISOString() })
+    .from('user_role_assignments')
+    .update({ default_position: position })
     .eq('user_id', userId)
-    .eq('branch_id', branchId);
+    .eq('branch_id', branchId)
+    .eq('is_active', true);
   if (error) throw error;
 }
 
 export async function addBranchMember(
   userId: string,
   branchId: string,
-  role: string,
+  roleKey: string,
   position: string | null,
 ) {
-  const { error } = await supabase.from('user_branch_roles').insert({
+  const { data: roleRow } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('key', roleKey)
+    .eq('scope', 'branch')
+    .single();
+  if (!roleRow) throw new Error(`Rol '${roleKey}' no encontrado`);
+
+  const { error } = await supabase.from('user_role_assignments').insert({
     user_id: userId,
     branch_id: branchId,
-    local_role: role,
-    default_position: position as any,
+    role_id: roleRow.id,
+    default_position: position,
     is_active: true,
-  } as any);
+  });
   if (error) throw error;
 }
 
 export async function removeBranchMember(userId: string, branchId: string) {
   const { error } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .update({ is_active: false })
     .eq('user_id', userId)
     .eq('branch_id', branchId);
@@ -302,15 +331,15 @@ export async function removeBranchMember(userId: string, branchId: string) {
 
 export async function fetchBranchManagers(branchId: string) {
   const { data: roles } = await supabase
-    .from('user_branch_roles')
-    .select('user_id')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .eq('local_role', 'encargado');
+    .eq('roles.key', 'encargado');
 
   if (!roles?.length) return [];
 
-  const userIds = [...new Set(roles.map((r) => r.user_id))];
+  const userIds = [...new Set(roles.map((r: any) => r.user_id))];
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name')
@@ -322,15 +351,15 @@ export async function fetchBranchManagers(branchId: string) {
 
 export async function fetchBranchStaffMembers(branchId: string) {
   const { data: roles } = await supabase
-    .from('user_branch_roles')
-    .select('user_id')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .neq('local_role', 'franquiciado');
+    .neq('roles.key', 'franquiciado');
 
   if (!roles?.length) return [];
 
-  const userIds = [...new Set(roles.map((r) => r.user_id))];
+  const userIds = [...new Set(roles.map((r: any) => r.user_id))];
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name')
@@ -422,10 +451,10 @@ export async function fetchAllRegulations() {
 
 export async function fetchRegulationSignatureStats(regulationId: string) {
   const { data: employeeRoles } = await supabase
-    .from('user_branch_roles')
-    .select('user_id')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
     .eq('is_active', true)
-    .neq('local_role', 'franquiciado');
+    .neq('roles.key', 'franquiciado');
 
   const uniqueEmployees = new Set(employeeRoles?.map((r) => r.user_id) || []);
   const totalEmployees = uniqueEmployees.size;
@@ -463,16 +492,17 @@ export async function getRegulationSignedUrl(pdfUrl: string) {
 
 export async function fetchBrandRoleUserIds() {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('user_id')
-    .not('brand_role', 'is', null)
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(scope)')
+    .eq('roles.scope', 'brand')
+    .is('branch_id', null)
     .eq('is_active', true);
   return data?.map((u) => u.user_id) || [];
 }
 
 export async function fetchBranchRoleUserIds(branchId: string) {
   const { data } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .select('user_id')
     .eq('branch_id', branchId)
     .eq('is_active', true);
@@ -481,9 +511,9 @@ export async function fetchBranchRoleUserIds(branchId: string) {
 
 export async function fetchOperationalStaffUserIds() {
   const { data } = await supabase
-    .from('user_branch_roles')
-    .select('user_id')
-    .in('local_role', ['empleado', 'cajero', 'encargado'])
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
+    .in('roles.key', ['empleado', 'cajero', 'encargado'])
     .eq('is_active', true);
   const unique = [...new Set(data?.map((u) => u.user_id) || [])];
   return unique;
@@ -491,9 +521,9 @@ export async function fetchOperationalStaffUserIds() {
 
 export async function fetchSuperadminUserIds() {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('user_id')
-    .eq('brand_role', 'superadmin')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key)')
+    .eq('roles.key', 'superadmin')
     .eq('is_active', true);
   return data?.map((u) => u.user_id) || [];
 }
@@ -522,44 +552,65 @@ export async function fetchProfilesForImpersonation(params: {
 
 export async function fetchBrandRolesForUsers(userIds: string[]) {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('user_id, brand_role')
+    .from('user_role_assignments')
+    .select('user_id, roles!inner(key, scope)')
     .in('user_id', userIds)
-    .eq('is_active', true);
-  return data || [];
+    .eq('is_active', true)
+    .eq('roles.scope', 'brand')
+    .is('branch_id', null);
+  return (data || []).map((d) => ({ user_id: d.user_id, brand_role: (d.roles as any).key }));
 }
 
 export async function fetchBranchRolesForUsers(userIds: string[]) {
   const { data } = await supabase
-    .from('user_branch_roles')
-    .select('user_id, local_role, branch_id, branches!inner(name)')
+    .from('user_role_assignments')
+    .select('user_id, branch_id, roles!inner(key, scope), branches!inner(name)')
     .in('user_id', userIds)
-    .eq('is_active', true);
-  return data || [];
+    .eq('is_active', true)
+    .eq('roles.scope', 'branch');
+  return (data || []).map((d) => ({
+    user_id: d.user_id,
+    local_role: (d.roles as any).key,
+    branch_id: d.branch_id,
+    branches: d.branches,
+  }));
 }
 
 // ── User Role Modal ─────────────────────────────────────────────────
 
-export async function updateBrandRole(roleRecordId: string, brandRole: string | null) {
+export async function updateBrandRole(roleRecordId: string, brandRoleKey: string | null) {
+  if (!brandRoleKey) {
+    const { error } = await supabase
+      .from('user_role_assignments')
+      .update({ is_active: false })
+      .eq('id', roleRecordId);
+    if (error) throw error;
+    return;
+  }
+  const { data: roleRow } = await supabase.from('roles').select('id').eq('key', brandRoleKey).eq('scope', 'brand').single();
+  if (!roleRow) throw new Error(`Rol '${brandRoleKey}' no encontrado`);
   const { error } = await supabase
-    .from('user_roles_v2')
-    .update({ brand_role: brandRole as any })
+    .from('user_role_assignments')
+    .update({ role_id: roleRow.id, is_active: true })
     .eq('id', roleRecordId);
   if (error) throw error;
 }
 
-export async function insertBrandRole(userId: string, brandRole: string) {
-  const { error } = await supabase.from('user_roles_v2').insert({
+export async function insertBrandRole(userId: string, brandRoleKey: string) {
+  const { data: roleRow } = await supabase.from('roles').select('id').eq('key', brandRoleKey).eq('scope', 'brand').single();
+  if (!roleRow) throw new Error(`Rol '${brandRoleKey}' no encontrado`);
+  const { error } = await supabase.from('user_role_assignments').insert({
     user_id: userId,
-    brand_role: brandRole as any,
+    role_id: roleRow.id,
+    branch_id: null,
     is_active: true,
-  } as any);
+  });
   if (error) throw error;
 }
 
 export async function deactivateBranchRole(roleRecordId: string) {
   const { error } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .update({ is_active: false })
     .eq('id', roleRecordId);
   if (error) throw error;
@@ -567,12 +618,14 @@ export async function deactivateBranchRole(roleRecordId: string) {
 
 export async function updateBranchRoleById(
   roleRecordId: string,
-  localRole: string,
+  localRoleKey: string,
   defaultPosition: string | null,
 ) {
+  const { data: roleRow } = await supabase.from('roles').select('id').eq('key', localRoleKey).eq('scope', 'branch').single();
+  if (!roleRow) throw new Error(`Rol '${localRoleKey}' no encontrado`);
   const { error } = await supabase
-    .from('user_branch_roles')
-    .update({ local_role: localRole as any, default_position: defaultPosition as any })
+    .from('user_role_assignments')
+    .update({ role_id: roleRow.id, default_position: defaultPosition })
     .eq('id', roleRecordId);
   if (error) throw error;
 }
@@ -580,16 +633,18 @@ export async function updateBranchRoleById(
 export async function insertBranchRole(
   userId: string,
   branchId: string,
-  localRole: string,
+  localRoleKey: string,
   defaultPosition: string | null,
 ) {
-  const { error } = await supabase.from('user_branch_roles').insert({
+  const { data: roleRow } = await supabase.from('roles').select('id').eq('key', localRoleKey).eq('scope', 'branch').single();
+  if (!roleRow) throw new Error(`Rol '${localRoleKey}' no encontrado`);
+  const { error } = await supabase.from('user_role_assignments').insert({
     user_id: userId,
     branch_id: branchId,
-    local_role: localRole,
-    default_position: defaultPosition as any,
+    role_id: roleRow.id,
+    default_position: defaultPosition,
     is_active: true,
-  } as any);
+  });
   if (error) throw error;
 }
 
@@ -606,20 +661,31 @@ export async function fetchAllProfiles() {
 
 export async function fetchAllBrandRoles(profileIds: string[]) {
   const { data } = await supabase
-    .from('user_roles_v2')
-    .select('id, user_id, brand_role')
+    .from('user_role_assignments')
+    .select('id, user_id, roles!inner(key, scope)')
     .eq('is_active', true)
+    .eq('roles.scope', 'brand')
+    .is('branch_id', null)
     .in('user_id', profileIds);
-  return data || [];
+  return (data || []).map((d) => ({ id: d.id, user_id: d.user_id, brand_role: (d.roles as any).key }));
 }
 
 export async function fetchAllBranchRoles(profileIds: string[]) {
   const { data } = await supabase
-    .from('user_branch_roles')
-    .select('id, user_id, branch_id, local_role, default_position, clock_pin, is_active')
+    .from('user_role_assignments')
+    .select('id, user_id, branch_id, default_position, clock_pin, is_active, roles!inner(key, scope)')
     .eq('is_active', true)
+    .eq('roles.scope', 'branch')
     .in('user_id', profileIds);
-  return data || [];
+  return (data || []).map((d) => ({
+    id: d.id,
+    user_id: d.user_id,
+    branch_id: d.branch_id,
+    local_role: (d.roles as any).key,
+    default_position: d.default_position,
+    clock_pin: d.clock_pin,
+    is_active: d.is_active,
+  }));
 }
 
 // ── Closure Config (full admin CRUD) ────────────────────────────────

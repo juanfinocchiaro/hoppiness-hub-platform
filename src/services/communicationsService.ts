@@ -51,15 +51,17 @@ export async function listUserCommunications(userId: string): Promise<{
   local: CommunicationWithSource[];
 }> {
   const { data: userBranches, error: branchError } = await supabase
-    .from('user_branch_roles')
-    .select('branch_id, local_role')
+    .from('user_role_assignments')
+    .select('branch_id, roles!inner(key, scope)')
     .eq('user_id', userId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('roles.scope', 'branch')
+    .not('branch_id', 'is', null);
 
   if (branchError) throw branchError;
 
-  const userBranchIds = new Set(userBranches?.map((b) => b.branch_id) || []);
-  const userLocalRoles = new Set<string>(userBranches?.map((b) => b.local_role).filter(Boolean) || []);
+  const userBranchIds = new Set(userBranches?.map((b: any) => b.branch_id) || []);
+  const userLocalRoles = new Set<string>(userBranches?.map((b: any) => b.roles.key).filter(Boolean) || []);
 
   const { data: comms, error: commsError } = await supabase
     .from('communications')
@@ -155,7 +157,7 @@ export async function fetchBranchForComms(branchId: string) {
 
 export async function fetchBranchTeamForComms(branchId: string) {
   const { data, error } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .select('user_id')
     .eq('branch_id', branchId)
     .eq('is_active', true);

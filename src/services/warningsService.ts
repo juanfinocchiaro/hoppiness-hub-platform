@@ -4,7 +4,7 @@ import { supabase } from './supabaseClient';
 
 export async function fetchBranchTeamMembersBasic(branchId: string) {
   const { data, error } = await supabase
-    .from('user_branch_roles')
+    .from('user_role_assignments')
     .select('user_id')
     .eq('branch_id', branchId)
     .eq('is_active', true);
@@ -145,16 +145,17 @@ export async function fetchWarningEmployeeProfile(userId: string, branchId: stri
     .maybeSingle();
 
   const { data: role } = await supabase
-    .from('user_branch_roles')
-    .select('local_role')
+    .from('user_role_assignments')
+    .select('roles!inner(key)')
     .eq('user_id', userId)
     .eq('branch_id', branchId)
+    .eq('is_active', true)
     .maybeSingle();
 
   return {
     fullName: profile?.full_name || 'Sin nombre',
     dni: empData?.dni || undefined,
-    role: role?.local_role || 'empleado',
+    role: role ? (role.roles as any).key : 'empleado',
   };
 }
 
