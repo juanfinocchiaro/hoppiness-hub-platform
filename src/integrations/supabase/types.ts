@@ -5808,6 +5808,36 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_editable: boolean | null
+          key: string
+          label: string
+          scope: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          is_editable?: boolean | null
+          key: string
+          label: string
+          scope: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_editable?: boolean | null
+          key?: string
+          label?: string
+          scope?: string
+        }
+        Relationships: []
+      }
       pos_config: {
         Row: {
           acepta_credito: boolean | null
@@ -7043,6 +7073,66 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          hierarchy_level: number
+          id: string
+          is_system: boolean
+          key: string
+          scope: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          hierarchy_level?: number
+          id?: string
+          is_system?: boolean
+          key: string
+          scope: string
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          hierarchy_level?: number
+          id?: string
+          is_system?: boolean
+          key?: string
+          scope?: string
+        }
+        Relationships: []
+      }
       salary_advances: {
         Row: {
           amount: number
@@ -7972,6 +8062,55 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_role_assignments: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_role_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_role_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_role_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
             referencedColumns: ["id"]
           },
         ]

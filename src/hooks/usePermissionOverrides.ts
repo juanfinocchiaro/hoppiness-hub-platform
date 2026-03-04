@@ -1,43 +1,43 @@
 /**
- * usePermissionOverrides - Lee la configuración de permisos desde permission_config
+ * usePermissionOverrides - Lee permisos normalizados desde role_permissions
  *
- * Este hook:
- * 1. Lee la tabla permission_config
- * 2. Permite verificar si un rol tiene un permiso específico
- * 3. Se usa como override de los permisos hardcodeados en usePermissions
+ * Consulta las tablas: roles, permissions, role_permissions
+ * Permite verificar si un rol tiene un permiso específico
  */
 import { useQuery } from '@tanstack/react-query';
-import { fetchPermissionConfig } from '@/services/permissionsService';
+import {
+  fetchRoles,
+  fetchPermissions,
+  fetchRolePermissions,
+} from '@/services/permissionsService';
 import type { BrandRole, LocalRole } from './usePermissions';
 
-interface PermissionConfig {
-  id: string;
-  permission_key: string;
-  permission_label: string;
-  scope: 'brand' | 'local';
-  category: string;
-  allowed_roles: string[];
-  is_editable: boolean;
-}
-
-/**
- * Hook que lee la configuración de permisos desde la base de datos
- */
 export function usePermissionOverrides() {
-  const { data: configs = [], isLoading } = useQuery({
-    queryKey: ['permission-config-overrides'],
-    queryFn: async () => {
-      return (await fetchPermissionConfig()) as PermissionConfig[];
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutos
+  const { data: roles = [], isLoading: loadingRoles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: fetchRoles,
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
+  const { data: permissions = [], isLoading: loadingPerms } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: fetchPermissions,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: rolePermissions = [], isLoading: loadingRP } = useQuery({
+    queryKey: ['role-permissions'],
+    queryFn: fetchRolePermissions,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const isLoading = loadingRoles || loadingPerms || loadingRP;
+
   /**
-   * Verifica si un rol tiene un permiso específico según la configuración
-   * @param permissionKey - Ej: 'brand.viewDashboard', 'local.createWarnings'
-   * @param role - El rol a verificar (brand_role o local_role)
-   * @returns true si tiene el permiso, false si no, undefined si no existe la config
+   * Verifica si un rol tiene un permiso específico según la configuración normalizada
    */
   const hasConfiguredPermission = (
     permissionKey: string,
@@ -45,17 +45,19 @@ export function usePermissionOverrides() {
   ): boolean | undefined => {
     if (!role) return false;
 
-    const config = configs.find((c) => c.permission_key === permissionKey);
-    if (!config) return undefined; // No hay config, usar fallback
+    const permission = permissions.find((p) => p.key === permissionKey);
+    if (!permission) return undefined; // No hay config, usar fallback
 
-    return config.allowed_roles.includes(role);
+    const roleObj = roles.find((r) => r.key === role);
+    if (!roleObj) return false;
+
+    return rolePermissions.some(
+      (rp) => rp.role_id === roleObj.id && rp.permission_id === permission.id,
+    );
   };
 
   /**
    * Obtiene un permiso con fallback al valor hardcodeado
-   * @param permissionKey - Clave del permiso
-   * @param role - Rol a verificar
-   * @param fallback - Valor por defecto si no hay config
    */
   const getPermission = (
     permissionKey: string,
@@ -70,11 +72,13 @@ export function usePermissionOverrides() {
    * Obtiene todos los permisos configurados para un scope
    */
   const getConfigsForScope = (scope: 'brand' | 'local') => {
-    return configs.filter((c) => c.scope === scope);
+    return permissions.filter((p) => p.scope === scope);
   };
 
   return {
-    configs,
+    roles,
+    permissions,
+    rolePermissions,
     isLoading,
     hasConfiguredPermission,
     getPermission,

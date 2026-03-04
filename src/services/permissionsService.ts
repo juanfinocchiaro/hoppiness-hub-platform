@@ -1,5 +1,7 @@
 import { supabase } from './supabaseClient';
 
+// ── Legacy functions (still used by usePermissions) ──────────────────
+
 export async function fetchUserBrandRole(userId: string) {
   const { data, error } = await supabase
     .from('user_roles_v2')
@@ -50,7 +52,7 @@ export async function fetchUserBranchRoles(userId: string) {
   }));
 }
 
-// ── Permission Config ────────────────────────────────────────────────
+// ── Permission Config (legacy - kept for backward compat) ────────────
 
 export async function fetchPermissionConfig() {
   const { data, error } = await supabase
@@ -70,6 +72,78 @@ export async function updatePermissionRoles(permissionId: string, newRoles: stri
     .eq('id', permissionId);
   if (error) throw error;
 }
+
+// ── Normalized model (new tables) ────────────────────────────────────
+
+export interface RoleRow {
+  id: string;
+  key: string;
+  display_name: string;
+  scope: 'brand' | 'branch';
+  hierarchy_level: number;
+  is_system: boolean;
+}
+
+export interface PermissionRow {
+  id: string;
+  key: string;
+  label: string;
+  scope: 'brand' | 'local';
+  category: string;
+  is_editable: boolean;
+}
+
+export interface RolePermissionRow {
+  role_id: string;
+  permission_id: string;
+}
+
+export async function fetchRoles(): Promise<RoleRow[]> {
+  const { data, error } = await supabase
+    .from('roles')
+    .select('id, key, display_name, scope, hierarchy_level, is_system')
+    .order('scope')
+    .order('hierarchy_level', { ascending: false });
+  if (error) throw error;
+  return (data || []) as RoleRow[];
+}
+
+export async function fetchPermissions(): Promise<PermissionRow[]> {
+  const { data, error } = await supabase
+    .from('permissions')
+    .select('id, key, label, scope, category, is_editable')
+    .order('scope')
+    .order('category')
+    .order('label');
+  if (error) throw error;
+  return (data || []) as PermissionRow[];
+}
+
+export async function fetchRolePermissions(): Promise<RolePermissionRow[]> {
+  const { data, error } = await supabase
+    .from('role_permissions')
+    .select('role_id, permission_id');
+  if (error) throw error;
+  return (data || []) as RolePermissionRow[];
+}
+
+export async function addRolePermission(roleId: string, permissionId: string) {
+  const { error } = await supabase
+    .from('role_permissions')
+    .insert({ role_id: roleId, permission_id: permissionId });
+  if (error) throw error;
+}
+
+export async function removeRolePermission(roleId: string, permissionId: string) {
+  const { error } = await supabase
+    .from('role_permissions')
+    .delete()
+    .eq('role_id', roleId)
+    .eq('permission_id', permissionId);
+  if (error) throw error;
+}
+
+// ── Profile & Impersonation ──────────────────────────────────────────
 
 export async function fetchUserProfile(userId: string) {
   const { data, error } = await supabase
