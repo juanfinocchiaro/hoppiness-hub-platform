@@ -285,7 +285,7 @@ export async function fetchActiveItemsPrices() {
   const { data, error } = await supabase
     .from('items_carta')
     .select('id, precio_base')
-    .eq('activo', true);
+    .eq('is_active', true);
   if (error) throw error;
   return data || [];
 }
