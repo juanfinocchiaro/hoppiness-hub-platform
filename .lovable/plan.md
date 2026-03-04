@@ -1,99 +1,44 @@
 
 
-## Plan: Eliminación completa del código legacy de roles
+## Estado: NADA del plan se ha ejecutado aún
 
-### Resumen
+El plan completo de 4 fases está pendiente. Ningún archivo del frontend ha sido migrado — `user_role_assignments` solo existe en el `types.ts` autogenerado pero **ningún service, hook ni edge function lo usa todavía**.
 
-Migrar **todas** las queries del frontend de `user_branch_roles` y `user_roles_v2` a `user_role_assignments` + `roles`. Agregar `clock_pin` y `default_position` a `user_role_assignments`. Actualizar la edge function. Eliminar `syncLegacyRole`. Al final, DROP de las tablas y ENUMs legacy.
+### Lo que falta (todo):
 
----
+**Fase 1 — SQL Migration**
+- Agregar `clock_pin` y `default_position` a `user_role_assignments`
+- Migrar datos desde `user_branch_roles`
+- Reescribir funciones de PIN (`validate_clock_pin_v2`, `is_clock_pin_available`)
+- Reescribir `get_user_branches` RPC
+- Actualizar helpers RLS que referencien tablas legacy
+- DROP `user_branch_roles`, `user_roles_v2`, ENUMs `brand_role_type`, `local_role_type`
 
-### Fase 1 — Migración SQL
+**Fase 2 — 8 Service files** (todos siguen usando tablas legacy)
+| Archivo | Refs legacy |
+|---------|-------------|
+| `adminService.ts` | ~20 funciones con `user_roles_v2` y `user_branch_roles` |
+| `staffService.ts` | 8 funciones + `syncLegacyRole` (a eliminar) |
+| `permissionsService.ts` | 4 funciones con `user_roles_v2` |
+| `profileService.ts` | 4 funciones con `user_branch_roles` |
+| `posService.ts` | 2 funciones con `user_roles_v2` |
+| `meetingsService.ts` | 2 funciones con `user_branch_roles` |
+| `warningsService.ts` | 2 funciones con `user_branch_roles` |
+| `inspectionsService.ts` | 1 función con `user_branch_roles` |
 
-Una sola migración que:
+**Fase 3 — Components/Hooks** (5 archivos)
+- `useUsersData.ts` — usa `fetchAllBrandRoles`/`fetchAllBranchRoles` legacy
+- `types.ts` — comentarios referenciando `user_roles_v2`
+- `RegistroStaff.tsx` — llama a `syncLegacyRole`
+- `PinManagementModal.tsx` — depende de signatures de profileService
 
-1. **Agrega columnas operativas** a `user_role_assignments`:
-   - `clock_pin TEXT`
-   - `default_position TEXT`
-   - Migra datos desde `user_branch_roles` (matching por `user_id + branch_id`)
+**Fase 4 — Edge Functions** (2 archivos)
+- `send-staff-invitation/index.ts` — escribe en `user_branch_roles`
+- `mp-point-payment/index.ts` — comentario legacy
 
-2. **Reescribe funciones de PIN** (`validate_clock_pin_v2`, `is_clock_pin_available`) para leer de `user_role_assignments` en vez de `user_branch_roles`
+### Recomendación
 
-3. **Reescribe `get_user_branches`** RPC para leer de `user_role_assignments` + `roles`
+Dado el volumen (~20 archivos, ~40 funciones), sugiero ejecutar por fases empezando por la **Fase 1 (SQL)** que es prerequisito de todo lo demás. Una vez aplicada la migración SQL, se pueden ejecutar las fases 2-4 del frontend en paralelo.
 
-4. **DROP tables y ENUMs legacy**:
-   - `DROP TABLE user_branch_roles`
-   - `DROP TABLE user_roles_v2`
-   - `DROP TYPE brand_role_type`
-   - `DROP TYPE local_role_type`
-
-5. **Actualizar helpers RLS** que aún referencian las tablas eliminadas (revisión de `get_brand_role`, `get_local_role` para que ya no hagan cast a ENUM y retornen TEXT puro)
-
----
-
-### Fase 2 — Frontend Services (13 archivos)
-
-Cada archivo que hace `.from('user_branch_roles')` o `.from('user_roles_v2')` se migra a `.from('user_role_assignments')` con JOIN a `roles` cuando necesite filtrar por `key`.
-
-| Archivo | Funciones a migrar |
-|---------|-------------------|
-| `src/services/permissionsService.ts` | `fetchUserBrandRole`, `fetchUserBranchRoles`, `fetchImpersonationData`, `checkIsSuperadmin` |
-| `src/services/adminService.ts` | `fetchCentralTeamMembers`, `removeCentralTeamMember`, `inviteCentralTeamMember`, `fetchBranchTeam`, `updateBranchMemberRole`, `updateBranchMemberPosition`, `addBranchMember`, `removeBranchMember`, `fetchBranchManagers`, `fetchBranchStaffMembers`, `fetchBrandRoleUserIds`, `fetchBranchRoleUserIds`, `fetchOperationalStaffUserIds`, `fetchSuperadminUserIds`, `fetchBrandRolesForUsers`, `fetchBranchRolesForUsers`, `updateBrandRole`, `insertBrandRole`, `deactivateBranchRole`, `updateBranchRoleById`, `insertBranchRole`, `fetchAllBrandRoles`, `fetchAllBranchRoles`, `fetchRegulationSignatureStats` |
-| `src/services/staffService.ts` | `findBranchRole`, `reactivateBranchMember`, `upsertBranchRole`, `syncLegacyRole` (ELIMINAR), `fetchBranchTeamData`, `updateBranchRole`, `deactivateBranchRole`, `fetchProfileClockPin` |
-| `src/services/profileService.ts` | `fetchUserBranchRolesWithPins`, `updateBranchRoleClockPin`, `verifyBranchRoleClockPin`, `fetchBranchTeamRolesForRegulation` |
-| `src/services/hrService.ts` | `fetchLaborUsersData`, `fetchBranchStaffForClock`, `fetchUserLocalRoles` |
-| `src/services/coachingService.ts` | `fetchCoachingStats` (l.326), `fetchStaffRolesByBranches`, `fetchManagerRoles`, `fetchCoachingTeamMembers`, `fetchEmployeesWithCoachingCounts`, `fetchBranchManager` |
-| `src/services/meetingsService.ts` | `fetchBranchTeamMembers`, `fetchNetworkMembers` |
-| `src/services/communicationsService.ts` | `listUserCommunications` |
-| `src/services/inspectionsService.ts` | `fetchInspectionStaffMembers` |
-| `src/services/posService.ts` | `fetchUserRolesForVerification`, `fetchUserActiveRoles` |
-| `src/services/warningsService.ts` | `fetchBranchTeamMembersBasic` |
-| `src/services/managerDashboardService.ts` | `fetchPendingItems` (lee `user_roles_v2.branch_ids`) |
-
-**Patrón de migración** para queries de branch roles:
-```typescript
-// ANTES:
-.from('user_branch_roles').select('user_id, local_role').eq('branch_id', X).eq('is_active', true)
-
-// DESPUÉS:
-.from('user_role_assignments').select('user_id, role_id, roles!inner(key)').eq('branch_id', X).eq('is_active', true)
-```
-
-Para queries de brand roles:
-```typescript
-// ANTES:
-.from('user_roles_v2').select('user_id, brand_role').eq('is_active', true)
-
-// DESPUÉS:
-.from('user_role_assignments').select('user_id, role_id, roles!inner(key, scope)').eq('is_active', true).eq('roles.scope', 'brand').is('branch_id', null)
-```
-
----
-
-### Fase 3 — Frontend: Hooks, Types, Components (5 archivos)
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/admin/users/useUsersData.ts` | Migrar `fetchAllBrandRoles`/`fetchAllBranchRoles` al nuevo modelo |
-| `src/components/admin/users/types.ts` | Actualizar comentarios, eliminar `getHighestRoleLegacy` |
-| `src/components/cuenta/PinManagementModal.tsx` | Ya usa service functions (solo actualizar si cambian signatures) |
-| `src/pages/RegistroStaff.tsx` | Eliminar llamada a `syncLegacyRole`, mantener `upsertBranchRole` migrado |
-| `src/pages/local/WarningsPage.tsx` | Solo actualizar comentario |
-
----
-
-### Fase 4 — Edge Function
-
-`supabase/functions/send-staff-invitation/index.ts`: Cambiar todas las queries de `user_branch_roles` a `user_role_assignments` + lookup de `role_id` desde `roles`.
-
----
-
-### Resumen de impacto
-
-- **1 migración SQL**: agregar columnas, migrar datos, reescribir 3+ funciones, DROP 2 tablas + 2 ENUMs
-- **13 service files** actualizados
-- **5 component/page files** actualizados  
-- **1 edge function** actualizada
-- **1 función eliminada** (`syncLegacyRole`)
-- **0 cambios funcionales**
+¿Confirmo para arrancar con la Fase 1 (migración SQL)?
 
