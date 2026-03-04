@@ -1,146 +1,99 @@
 
 
-## Plan: Normalización del modelo de roles y permisos
+## Plan: Eliminación completa del código legacy de roles
 
-### Contexto actual
+### Resumen
 
-**Tablas actuales:**
-- `user_roles_v2` — brand_role (ENUM `brand_role_type`), legacy `local_role` y `branch_ids[]`
-- `user_branch_roles` — local_role (ENUM `local_role_type`), branch_id, clock_pin
-- `permission_config` — allowed_roles (text[]), array desnormalizado
-
-**Helpers RLS (SECURITY DEFINER):**
-- `is_superadmin` → lee `user_roles_v2.brand_role = 'superadmin'`
-- `get_brand_role` → lee `user_roles_v2.brand_role`
-- `get_local_role` → lee `user_roles_v2.local_role` (legacy)
-- `has_branch_access_v2` → lee `user_roles_v2.branch_ids[]` (legacy!)
-- `can_access_branch` → lee `user_branch_roles`
-- `is_hr_role` → lee `user_branch_roles`
-- `is_branch_manager_v2` → lee `user_branch_roles`
-- `is_financial_for_branch` → lee `user_roles_v2` (legacy)
-
-**Datos:** 7 brand roles activos, 48 branch roles activos, 107 registros en permission_config.
+Migrar **todas** las queries del frontend de `user_branch_roles` y `user_roles_v2` a `user_role_assignments` + `roles`. Agregar `clock_pin` y `default_position` a `user_role_assignments`. Actualizar la edge function. Eliminar `syncLegacyRole`. Al final, DROP de las tablas y ENUMs legacy.
 
 ---
 
-### Fase A — Crear tablas nuevas y migrar datos (una sola migración SQL)
+### Fase 1 — Migración SQL
 
-**1. Tabla `roles`**
-```sql
-CREATE TABLE public.roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  key TEXT UNIQUE NOT NULL,
-  display_name TEXT NOT NULL,
-  scope TEXT NOT NULL CHECK (scope IN ('brand', 'branch')),
-  hierarchy_level INTEGER NOT NULL DEFAULT 0,
-  is_system BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
+Una sola migración que:
 
-Insertar 10 roles (5 brand + 5 branch) con hierarchy_level coherente con `ROLE_PRIORITY` existente.
+1. **Agrega columnas operativas** a `user_role_assignments`:
+   - `clock_pin TEXT`
+   - `default_position TEXT`
+   - Migra datos desde `user_branch_roles` (matching por `user_id + branch_id`)
 
-**2. Tabla `permissions`**
-```sql
-CREATE TABLE public.permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  key TEXT UNIQUE NOT NULL,
-  label TEXT NOT NULL,
-  scope TEXT NOT NULL CHECK (scope IN ('brand', 'local')),
-  category TEXT NOT NULL,
-  is_editable BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
+2. **Reescribe funciones de PIN** (`validate_clock_pin_v2`, `is_clock_pin_available`) para leer de `user_role_assignments` en vez de `user_branch_roles`
 
-Migrar los 107 registros de `permission_config` (sin `allowed_roles`).
+3. **Reescribe `get_user_branches`** RPC para leer de `user_role_assignments` + `roles`
 
-**3. Tabla `role_permissions` (many-to-many)**
-```sql
-CREATE TABLE public.role_permissions (
-  role_id UUID REFERENCES public.roles(id) ON DELETE CASCADE,
-  permission_id UUID REFERENCES public.permissions(id) ON DELETE CASCADE,
-  PRIMARY KEY (role_id, permission_id)
-);
-```
+4. **DROP tables y ENUMs legacy**:
+   - `DROP TABLE user_branch_roles`
+   - `DROP TABLE user_roles_v2`
+   - `DROP TYPE brand_role_type`
+   - `DROP TYPE local_role_type`
 
-Migrar datos expandiendo cada `permission_config.allowed_roles[]` en filas individuales, haciendo JOIN por `roles.key`.
-
-**4. Tabla `user_role_assignments`**
-```sql
-CREATE TABLE public.user_role_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role_id UUID NOT NULL REFERENCES public.roles(id) ON DELETE CASCADE,
-  branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE (user_id, role_id, branch_id)
-);
-```
-
-Migrar:
-- `user_roles_v2` (brand_role activo) → assignment con `branch_id = NULL`
-- `user_branch_roles` (activos) → assignment con `branch_id` correspondiente
-
-**5. RLS para las 4 tablas nuevas**
-- `roles` y `permissions`: SELECT para authenticated, ALL solo superadmin
-- `role_permissions`: SELECT para authenticated, ALL solo superadmin
-- `user_role_assignments`: SELECT propio + HR/superadmin, INSERT/UPDATE para superadmin y managers
+5. **Actualizar helpers RLS** que aún referencian las tablas eliminadas (revisión de `get_brand_role`, `get_local_role` para que ya no hagan cast a ENUM y retornen TEXT puro)
 
 ---
 
-### Fase B — Reescribir helpers RLS para leer del nuevo modelo
+### Fase 2 — Frontend Services (13 archivos)
 
-Reescribir las 8 funciones SECURITY DEFINER para que consulten `user_role_assignments + roles` en lugar de ENUMs directamente:
+Cada archivo que hace `.from('user_branch_roles')` o `.from('user_roles_v2')` se migra a `.from('user_role_assignments')` con JOIN a `roles` cuando necesite filtrar por `key`.
 
-- **`is_superadmin(_user_id)`** → EXISTS en `user_role_assignments` JOIN `roles` WHERE `key = 'superadmin'`
-- **`get_brand_role(_user_id)`** → SELECT `r.key` FROM `user_role_assignments ura` JOIN `roles r` WHERE `scope = 'brand'` ORDER BY `hierarchy_level DESC` LIMIT 1
-- **`get_local_role(_user_id)`** → igual, scope = 'branch' (mantener compatibilidad de retorno TEXT)
-- **`has_branch_access_v2(_user_id, _branch_id)`** → is_superadmin OR EXISTS en `user_role_assignments` WHERE branch_id matches
-- **`can_access_branch`** → similar a has_branch_access_v2
-- **`is_hr_role`** → EXISTS en `user_role_assignments` JOIN `roles` WHERE key IN ('franquiciado','encargado') AND branch_id matches
-- **`is_branch_manager_v2`** → igual que is_hr_role
-- **`is_financial_for_branch`** → superadmin OR key IN ('contador_marca') OR branch-level ('franquiciado','encargado','contador_local')
+| Archivo | Funciones a migrar |
+|---------|-------------------|
+| `src/services/permissionsService.ts` | `fetchUserBrandRole`, `fetchUserBranchRoles`, `fetchImpersonationData`, `checkIsSuperadmin` |
+| `src/services/adminService.ts` | `fetchCentralTeamMembers`, `removeCentralTeamMember`, `inviteCentralTeamMember`, `fetchBranchTeam`, `updateBranchMemberRole`, `updateBranchMemberPosition`, `addBranchMember`, `removeBranchMember`, `fetchBranchManagers`, `fetchBranchStaffMembers`, `fetchBrandRoleUserIds`, `fetchBranchRoleUserIds`, `fetchOperationalStaffUserIds`, `fetchSuperadminUserIds`, `fetchBrandRolesForUsers`, `fetchBranchRolesForUsers`, `updateBrandRole`, `insertBrandRole`, `deactivateBranchRole`, `updateBranchRoleById`, `insertBranchRole`, `fetchAllBrandRoles`, `fetchAllBranchRoles`, `fetchRegulationSignatureStats` |
+| `src/services/staffService.ts` | `findBranchRole`, `reactivateBranchMember`, `upsertBranchRole`, `syncLegacyRole` (ELIMINAR), `fetchBranchTeamData`, `updateBranchRole`, `deactivateBranchRole`, `fetchProfileClockPin` |
+| `src/services/profileService.ts` | `fetchUserBranchRolesWithPins`, `updateBranchRoleClockPin`, `verifyBranchRoleClockPin`, `fetchBranchTeamRolesForRegulation` |
+| `src/services/hrService.ts` | `fetchLaborUsersData`, `fetchBranchStaffForClock`, `fetchUserLocalRoles` |
+| `src/services/coachingService.ts` | `fetchCoachingStats` (l.326), `fetchStaffRolesByBranches`, `fetchManagerRoles`, `fetchCoachingTeamMembers`, `fetchEmployeesWithCoachingCounts`, `fetchBranchManager` |
+| `src/services/meetingsService.ts` | `fetchBranchTeamMembers`, `fetchNetworkMembers` |
+| `src/services/communicationsService.ts` | `listUserCommunications` |
+| `src/services/inspectionsService.ts` | `fetchInspectionStaffMembers` |
+| `src/services/posService.ts` | `fetchUserRolesForVerification`, `fetchUserActiveRoles` |
+| `src/services/warningsService.ts` | `fetchBranchTeamMembersBasic` |
+| `src/services/managerDashboardService.ts` | `fetchPendingItems` (lee `user_roles_v2.branch_ids`) |
 
-**Cambio de tipo de retorno clave:** `get_brand_role` y `get_local_role` actualmente retornan ENUM types. Se cambiarán a retornar `TEXT` y se actualizarán las políticas RLS que hacen cast a ENUM (ej: `= 'coordinador'::brand_role_type` → `= 'coordinador'`).
+**Patrón de migración** para queries de branch roles:
+```typescript
+// ANTES:
+.from('user_branch_roles').select('user_id, local_role').eq('branch_id', X).eq('is_active', true)
 
----
-
-### Fase C — Adaptar frontend
-
-**1. `usePermissionOverrides.ts`** — Reescribir para leer de `role_permissions` + `permissions` + `roles` en lugar de `permission_config.allowed_roles[]`.
-
-**2. `usePermissionConfig.ts`** — Adaptar la UI de admin para leer/escribir `role_permissions` (INSERT/DELETE) en lugar de UPDATE de arrays.
-
-**3. `permissionsService.ts`** — Nuevas funciones:
-- `fetchPermissions()` (tabla `permissions`)
-- `fetchRolePermissions()` (JOIN)
-- `toggleRolePermission(roleId, permissionId)` (INSERT/DELETE en `role_permissions`)
-
-**4. `PermissionsConfigPage.tsx`** — Adaptar para usar las nuevas funciones y mostrar roles desde la tabla `roles`.
-
-**5. Sin cambios en:** guards, `useDynamicPermissions`, `usePermissions`, `useRoleLanding` — estos siguen funcionando porque consumen los helpers que ya fueron reescritos.
-
----
-
-### Lo que NO se cambia
-
-- No se eliminan ENUMs (`brand_role_type`, `local_role_type`)
-- No se eliminan tablas legacy (`user_roles_v2`, `user_branch_roles`, `permission_config`)
-- No se tocan políticas RLS existentes (solo los helpers que invocan)
-- No cambia el comportamiento funcional
-
-### Resumen de archivos
-
-```text
-MIGRACIÓN SQL (1 archivo):
-  - 4 tablas nuevas + RLS + datos migrados + 8 helpers reescritos
-
-FRONTEND (4 archivos):
-  - src/services/permissionsService.ts (nuevas funciones)
-  - src/hooks/usePermissionOverrides.ts (leer role_permissions)
-  - src/hooks/usePermissionConfig.ts (admin UI)
-  - src/pages/admin/PermissionsConfigPage.tsx (adaptar UI)
+// DESPUÉS:
+.from('user_role_assignments').select('user_id, role_id, roles!inner(key)').eq('branch_id', X).eq('is_active', true)
 ```
+
+Para queries de brand roles:
+```typescript
+// ANTES:
+.from('user_roles_v2').select('user_id, brand_role').eq('is_active', true)
+
+// DESPUÉS:
+.from('user_role_assignments').select('user_id, role_id, roles!inner(key, scope)').eq('is_active', true).eq('roles.scope', 'brand').is('branch_id', null)
+```
+
+---
+
+### Fase 3 — Frontend: Hooks, Types, Components (5 archivos)
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/admin/users/useUsersData.ts` | Migrar `fetchAllBrandRoles`/`fetchAllBranchRoles` al nuevo modelo |
+| `src/components/admin/users/types.ts` | Actualizar comentarios, eliminar `getHighestRoleLegacy` |
+| `src/components/cuenta/PinManagementModal.tsx` | Ya usa service functions (solo actualizar si cambian signatures) |
+| `src/pages/RegistroStaff.tsx` | Eliminar llamada a `syncLegacyRole`, mantener `upsertBranchRole` migrado |
+| `src/pages/local/WarningsPage.tsx` | Solo actualizar comentario |
+
+---
+
+### Fase 4 — Edge Function
+
+`supabase/functions/send-staff-invitation/index.ts`: Cambiar todas las queries de `user_branch_roles` a `user_role_assignments` + lookup de `role_id` desde `roles`.
+
+---
+
+### Resumen de impacto
+
+- **1 migración SQL**: agregar columnas, migrar datos, reescribir 3+ funciones, DROP 2 tablas + 2 ENUMs
+- **13 service files** actualizados
+- **5 component/page files** actualizados  
+- **1 edge function** actualizada
+- **1 función eliminada** (`syncLegacyRole`)
+- **0 cambios funcionales**
 
