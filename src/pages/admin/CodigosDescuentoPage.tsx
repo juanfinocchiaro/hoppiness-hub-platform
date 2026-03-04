@@ -41,7 +41,7 @@ const EMPTY_FORM: CodigoDescuentoFormData = {
   monto_minimo_pedido: null,
   fecha_inicio: new Date().toISOString().slice(0, 10),
   fecha_fin: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-  activo: true,
+  is_active: true,
   branch_ids: [],
 };
 
@@ -70,7 +70,7 @@ export default function CodigosDescuentoPage() {
       monto_minimo_pedido: code.monto_minimo_pedido,
       fecha_inicio: code.fecha_inicio,
       fecha_fin: code.fecha_fin,
-      activo: code.is_active,
+      is_active: code.is_active,
       branch_ids: code.branch_ids,
     });
     setFormOpen(true);
