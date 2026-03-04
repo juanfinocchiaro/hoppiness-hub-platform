@@ -58,11 +58,11 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
       await saveAddress(
         user!.id,
         {
-          etiqueta,
-          direccion: direccion.trim(),
-          piso: piso.trim() || null,
-          referencia: referencia.trim() || null,
-          ciudad: ciudad.trim() || 'Córdoba',
+          label: etiqueta,
+          address: direccion.trim(),
+          floor: piso.trim() || null,
+          reference: referencia.trim() || null,
+          city: ciudad.trim() || 'Córdoba',
         },
         editId,
       );
@@ -97,11 +97,11 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
 
   function openEdit(addr: Direccion) {
     setEditId(addr.id);
-    setEtiqueta(addr.etiqueta);
-    setDireccion(addr.direccion);
-    setPiso(addr.piso || '');
-    setReferencia(addr.referencia || '');
-    setCiudad(addr.ciudad || 'Córdoba');
+    setEtiqueta(addr.label);
+    setDireccion(addr.address);
+    setPiso(addr.floor || '');
+    setReferencia(addr.reference || '');
+    setCiudad(addr.city || 'Córdoba');
     setShowForm(true);
   }
 
@@ -225,14 +225,14 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
                   <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-sm">{addr.etiqueta}</span>
+                      <span className="font-semibold text-sm">{addr.label}</span>
                       {addr.is_primary && (
                         <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{addr.direccion}</p>
-                    {addr.piso && (
-                      <p className="text-[11px] text-muted-foreground">Piso: {addr.piso}</p>
+                    <p className="text-xs text-muted-foreground truncate">{addr.address}</p>
+                    {addr.floor && (
+                      <p className="text-[11px] text-muted-foreground">Piso: {addr.floor}</p>
                     )}
                   </div>
                 </div>

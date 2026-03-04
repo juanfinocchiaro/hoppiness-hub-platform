@@ -732,96 +732,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cadetes: {
-        Row: {
-          branch_id: string
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          is_available: boolean | null
-          nombre: string
-          pedidos_hoy: number | null
-          telefono: string | null
-          user_id: string | null
-        }
-        Insert: {
-          branch_id: string
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_available?: boolean | null
-          nombre: string
-          pedidos_hoy?: number | null
-          telefono?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          branch_id?: string
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_available?: boolean | null
-          nombre?: string
-          pedidos_hoy?: number | null
-          telefono?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cadetes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cadetes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      canales_venta: {
-        Row: {
-          ajuste_valor: number | null
-          codigo: string
-          created_at: string | null
-          es_base: boolean | null
-          id: string
-          is_active: boolean | null
-          nombre: string
-          orden: number | null
-          tipo_ajuste: string
-          updated_at: string | null
-        }
-        Insert: {
-          ajuste_valor?: number | null
-          codigo: string
-          created_at?: string | null
-          es_base?: boolean | null
-          id?: string
-          is_active?: boolean | null
-          nombre: string
-          orden?: number | null
-          tipo_ajuste?: string
-          updated_at?: string | null
-        }
-        Update: {
-          ajuste_valor?: number | null
-          codigo?: string
-          created_at?: string | null
-          es_base?: boolean | null
-          id?: string
-          is_active?: boolean | null
-          nombre?: string
-          orden?: number | null
-          tipo_ajuste?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       canon_liquidaciones: {
         Row: {
           branch_id: string
@@ -2124,6 +2034,57 @@ export type Database = {
           {
             foreignKeyName: "contact_messages_order_branch_id_fkey"
             columns: ["order_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_drivers: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_available: boolean | null
+          name: string
+          orders_today: number | null
+          phone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_available?: boolean | null
+          name: string
+          orders_today?: number | null
+          phone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_available?: boolean | null
+          name?: string
+          orders_today?: number | null
+          phone?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadetes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadetes_branch_id_fkey"
+            columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches_public"
             referencedColumns: ["id"]
@@ -4541,62 +4502,6 @@ export type Database = {
           },
         ]
       }
-      llamadores: {
-        Row: {
-          asignado_at: string | null
-          branch_id: string
-          en_uso: boolean | null
-          id: string
-          numero: number
-          pedido_id: string | null
-        }
-        Insert: {
-          asignado_at?: string | null
-          branch_id: string
-          en_uso?: boolean | null
-          id?: string
-          numero: number
-          pedido_id?: string | null
-        }
-        Update: {
-          asignado_at?: string | null
-          branch_id?: string
-          en_uso?: boolean | null
-          id?: string
-          numero?: number
-          pedido_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "llamadores_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "llamadores_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches_public"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "llamadores_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "pedidos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "llamadores_pedido_id_fkey"
-            columns: ["pedido_id"]
-            isOneToOne: false
-            referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
-          },
-        ]
-      }
       manager_competencies: {
         Row: {
           category: string | null
@@ -5034,6 +4939,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "branches_public"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagers: {
+        Row: {
+          assigned_at: string | null
+          branch_id: string
+          en_uso: boolean | null
+          id: string
+          number: number
+          order_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          branch_id: string
+          en_uso?: boolean | null
+          id?: string
+          number: number
+          order_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          branch_id?: string
+          en_uso?: boolean | null
+          id?: string
+          number?: number
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "llamadores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "llamadores_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "llamadores_pedido_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "llamadores_pedido_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "rdo_multivista_ventas_base"
+            referencedColumns: ["pedido_id"]
           },
         ]
       }
@@ -5706,56 +5667,56 @@ export type Database = {
           },
         ]
       }
-      periodos: {
+      periods: {
         Row: {
-          aprobado_por: string | null
+          approved_at: string | null
+          approved_by: string | null
           branch_id: string
-          cerrado_por: string | null
+          close_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
           created_at: string | null
-          estado: string | null
-          fecha_aprobacion: string | null
-          fecha_cierre: string | null
-          fecha_reapertura: string | null
           id: string
-          motivo_cierre: string | null
-          motivo_reapertura: string | null
-          observaciones: string | null
-          periodo: string
-          reabierto_por: string | null
+          notes: string | null
+          period: string
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
-          aprobado_por?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id: string
-          cerrado_por?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string | null
-          estado?: string | null
-          fecha_aprobacion?: string | null
-          fecha_cierre?: string | null
-          fecha_reapertura?: string | null
           id?: string
-          motivo_cierre?: string | null
-          motivo_reapertura?: string | null
-          observaciones?: string | null
-          periodo: string
-          reabierto_por?: string | null
+          notes?: string | null
+          period: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
-          aprobado_por?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string
-          cerrado_por?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string | null
-          estado?: string | null
-          fecha_aprobacion?: string | null
-          fecha_cierre?: string | null
-          fecha_reapertura?: string | null
           id?: string
-          motivo_cierre?: string | null
-          motivo_reapertura?: string | null
-          observaciones?: string | null
-          periodo?: string
-          reabierto_por?: string | null
+          notes?: string | null
+          period?: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -7189,6 +7150,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_channels: {
+        Row: {
+          adjustment_type: string
+          adjustment_value: number | null
+          code: string
+          created_at: string | null
+          es_base: boolean | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          adjustment_type?: string
+          adjustment_value?: number | null
+          code: string
+          created_at?: string | null
+          es_base?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          adjustment_type?: string
+          adjustment_value?: number | null
+          code?: string
+          created_at?: string | null
+          es_base?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       schedule_requests: {
         Row: {

@@ -97,20 +97,20 @@ export default function PeriodosPage() {
             ) : (
               periodos.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-mono font-medium">{p.periodo}</TableCell>
+                  <TableCell className="font-mono font-medium">{p.period}</TableCell>
                   <TableCell>
-                    <Badge variant={p.estado === 'abierto' ? 'default' : 'secondary'}>
-                      {p.estado === 'abierto' ? '🟢 Abierto' : '🔒 Cerrado'}
+                    <Badge variant={p.status === 'abierto' ? 'default' : 'secondary'}>
+                      {p.status === 'abierto' ? '🟢 Abierto' : '🔒 Cerrado'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm">
-                    {p.fecha_cierre ? new Date(p.fecha_cierre).toLocaleDateString('es-AR') : '-'}
+                    {p.closed_at ? new Date(p.closed_at).toLocaleDateString('es-AR') : '-'}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                    {p.motivo_cierre || p.motivo_reapertura || '-'}
+                    {p.close_reason || p.reopen_reason || '-'}
                   </TableCell>
                   <TableCell>
-                    {p.estado === 'abierto' ? (
+                    {p.status === 'abierto' ? (
                       <Button
                         variant="outline"
                         size="sm"

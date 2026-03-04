@@ -30,7 +30,7 @@ export default function SociosPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const totalPorcentaje =
-    socios?.reduce((sum, s) => sum + Number(s.porcentaje_participacion), 0) || 0;
+    socios?.reduce((sum: number, s: any) => sum + Number(s.porcentaje_participacion || s.ownership_percentage || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -90,7 +90,7 @@ export default function SociosPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              socios.map((socio) => (
+              (socios as any[]).map((socio: any) => (
                 <>
                   <TableRow
                     key={socio.id}
@@ -104,10 +104,10 @@ export default function SociosPage() {
                         <ChevronDown className="w-4 h-4" />
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{socio.nombre}</TableCell>
+                    <TableCell className="font-medium">{socio.name || socio.nombre}</TableCell>
                     <TableCell className="text-sm">{socio.cuit || '-'}</TableCell>
                     <TableCell className="text-right font-mono">
-                      {Number(socio.porcentaje_participacion).toFixed(1)}%
+                      {Number(socio.ownership_percentage || socio.porcentaje_participacion || 0).toFixed(1)}%
                     </TableCell>
                     <TableCell className="text-sm">
                       {new Date(socio.fecha_ingreso).toLocaleDateString('es-AR')}
@@ -203,19 +203,19 @@ function SocioMovimientosSubtable({ branchId, socioId }: { branchId: string; soc
         </TableRow>
       </TableHeader>
       <TableBody>
-        {movimientos.map((m) => (
+        {(movimientos as any[]).map((m: any) => (
           <TableRow key={m.id}>
             <TableCell className="text-sm">
-              {new Date(m.fecha).toLocaleDateString('es-AR')}
+              {new Date(m.date || m.fecha).toLocaleDateString('es-AR')}
             </TableCell>
             <TableCell>
               <Badge variant="outline">{getTipoLabel(m.tipo)}</Badge>
             </TableCell>
             <TableCell className="text-right font-mono">
-              $ {Number(m.monto).toLocaleString('es-AR')}
+              $ {Number(m.amount || m.monto).toLocaleString('es-AR')}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-              {m.observaciones || '-'}
+              {m.notes || m.observaciones || '-'}
             </TableCell>
           </TableRow>
         ))}
