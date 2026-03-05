@@ -580,7 +580,7 @@ export async function insertExpenseMovement(params: {
       amount: params.amount,
       concept: params.concept,
       recorded_by: params.userId,
-      categoria_gasto: params.categoriaGasto || null,
+      expense_category: params.categoriaGasto || null,
       rdo_category_code: params.rdoCategoryCode || null,
       observaciones: params.observaciones || null,
       estado_aprobacion: params.estadoAprobacion || 'aprobado',
