@@ -37,10 +37,21 @@ import * as closureCalcs from '@/types/shiftClosure';
 function parseShiftClosure(row: any): ShiftClosure {
   return {
     ...row,
-    hamburguesas: row.hamburguesas as HamburguesasData,
-    ventas_local: row.ventas_local as VentasLocalData,
-    ventas_apps: row.ventas_apps as VentasAppsData,
-    arqueo_caja: (row.arqueo_caja as ArqueoCaja) || { diferencia_caja: 0 },
+    // Map new DB column names to existing TS interface names
+    hamburguesas: row.burgers as HamburguesasData,
+    ventas_local: row.local_sales as VentasLocalData,
+    ventas_apps: row.app_sales as VentasAppsData,
+    arqueo_caja: (row.register_reconciliation as ArqueoCaja) || { diferencia_caja: 0 },
+    total_facturado: row.total_invoiced,
+    total_hamburguesas: row.total_burgers,
+    total_vendido: row.total_sold,
+    total_efectivo: row.total_cash,
+    tiene_alerta_facturacion: row.has_invoicing_alert,
+    tiene_alerta_posnet: row.has_posnet_alert,
+    tiene_alerta_apps: row.has_apps_alert,
+    tiene_alerta_caja: row.has_register_alert,
+    diferencia_posnet: row.posnet_difference,
+    diferencia_apps: row.apps_difference,
   };
 }
 
