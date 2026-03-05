@@ -170,7 +170,7 @@ export async function savePreparacionIngredientes(
     if (error) throw error;
   }
 
-  await supabase.rpc('recalcular_costo_preparacion', { _prep_id: preparacion_id });
+  await supabase.rpc('recalculate_recipe_cost', { _prep_id: preparacion_id });
 }
 
 export async function savePreparacionOpciones(
