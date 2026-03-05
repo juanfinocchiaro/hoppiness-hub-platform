@@ -455,8 +455,7 @@ export async function fetchStockMovimientosHistory(
   insumoId: string,
   limit = 10,
 ) {
-  const { data, error } = await supabase
-    .from('stock_movimientos')
+  const { data, error } = await fromUntyped('stock_movements')
     .select('*')
     .eq('branch_id', branchId)
     .eq('insumo_id', insumoId)

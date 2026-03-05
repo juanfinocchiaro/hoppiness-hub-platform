@@ -792,7 +792,7 @@ export async function fetchFiscalBranchData(
     name: branchRes.data.name,
     cuit: afipRes.data.cuit || '',
     address: afipRes.data.fiscal_address || branchRes.data.address || '',
-    punto_venta: afipRes.data.punto_venta || 0,
+    punto_venta: (afipRes.data as any).point_of_sale || 0,
     razon_social: afipRes.data.business_name || branchRes.data.name || '',
     iibb: afipRes.data.cuit || '',
     condicion_iva: 'IVA Responsable Inscripto',
