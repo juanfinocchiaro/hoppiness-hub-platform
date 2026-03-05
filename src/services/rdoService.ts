@@ -783,7 +783,7 @@ export async function fetchFiscalBranchData(
     supabase.from('branches').select('name, address').eq('id', branchId).single(),
     supabase
       .from('afip_config')
-      .select('cuit, punto_venta, fiscal_address, business_name, activity_start_date')
+      .select('cuit, point_of_sale, fiscal_address, business_name, activity_start_date')
       .eq('branch_id', branchId)
       .single(),
   ]);
