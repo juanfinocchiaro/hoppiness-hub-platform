@@ -103,8 +103,7 @@ export async function fetchStockData(branchId: string) {
       .neq('is_active', false)
       .order('name'),
     supabase.from('stock_actual').select('*').eq('branch_id', branchId),
-    supabase
-      .from('stock_movimientos')
+    fromUntyped('stock_movements')
       .select('insumo_id, created_at, type, reason')
       .eq('branch_id', branchId)
       .order('created_at', { ascending: false }),
