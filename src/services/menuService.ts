@@ -303,7 +303,7 @@ export async function saveItemCartaComposicion(
     if (error) throw error;
   }
 
-  await supabase.rpc('recalcular_costo_item_carta', { _item_id: item_carta_id });
+  await supabase.rpc('recalculate_menu_item_cost', { _item_id: item_carta_id });
 }
 
 export async function cambiarPrecioItemCarta(params: {
