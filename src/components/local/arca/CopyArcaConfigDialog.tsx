@@ -36,7 +36,7 @@ export function CopyArcaConfigDialog({
     queryKey: ['arca-configured-branches-fiscal', targetBranchId],
     queryFn: async () => {
       const { data, error } = await (fromUntyped('afip_config')
-        .select('branch_id, cuit, razon_social, direccion_fiscal, inicio_actividades, punto_venta')
+        .select('branch_id, cuit, business_name, direccion_fiscal, inicio_actividades, punto_venta')
         .not('cuit', 'is', null)
         .neq('branch_id', targetBranchId) as any);
       if (error) throw error;
@@ -69,7 +69,7 @@ export function CopyArcaConfigDialog({
       const payload = {
         branch_id: targetBranchId,
         cuit: source.cuit,
-        razon_social: source.razon_social,
+        business_name: source.business_name,
         direccion_fiscal: source.direccion_fiscal,
         inicio_actividades: source.inicio_actividades,
       };
@@ -134,7 +134,7 @@ export function CopyArcaConfigDialog({
                   <div>
                     <p className="text-sm font-medium">{b.branch_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      CUIT: {b.cuit} · {b.razon_social}
+                      CUIT: {b.cuit} · {b.business_name}
                     </p>
                   </div>
                   {selectedBranchId === b.branch_id && (

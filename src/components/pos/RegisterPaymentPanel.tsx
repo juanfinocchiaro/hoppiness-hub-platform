@@ -21,19 +21,19 @@ const METODOS: {
   selectedStyle: string;
 }[] = [
   {
-    value: 'efectivo',
+    value: 'cash',
     label: 'Efectivo',
     icon: Banknote,
     selectedStyle: 'border-emerald-500 bg-emerald-500/10 text-emerald-700',
   },
   {
-    value: 'tarjeta_debito',
+    value: 'debit_card',
     label: 'Débito',
     icon: CreditCard,
     selectedStyle: 'border-blue-500 bg-blue-500/10 text-blue-700',
   },
   {
-    value: 'tarjeta_credito',
+    value: 'credit_card',
     label: 'Crédito',
     icon: CreditCard,
     selectedStyle: 'border-violet-500 bg-violet-500/10 text-violet-700',
@@ -45,7 +45,7 @@ const METODOS: {
     selectedStyle: 'border-sky-500 bg-sky-500/10 text-sky-700',
   },
   {
-    value: 'transferencia',
+    value: 'transfer',
     label: 'Transferencia',
     icon: ArrowRightLeft,
     selectedStyle: 'border-indigo-500 bg-indigo-500/10 text-indigo-700',
@@ -89,11 +89,11 @@ export function RegisterPaymentPanel({
   const { data: mpConfig } = useMercadoPagoConfig(branchId);
   const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
 
-  const [metodo, setMetodo] = useState<MetodoPago>('efectivo');
+  const [metodo, setMetodo] = useState<MetodoPago>('cash');
   const [monto, setMonto] = useState('');
   const [montoRecibido, setMontoRecibido] = useState('');
 
-  const esEfectivo = metodo === 'efectivo';
+  const esEfectivo = metodo === 'cash';
   const montoNum = parseFloat(monto) || 0;
   const recibidoNum = parseFloat(montoRecibido) || 0;
   const vuelto = esEfectivo ? Math.max(0, recibidoNum - montoNum) : 0;
@@ -114,24 +114,24 @@ export function RegisterPaymentPanel({
       const preferCash = maxNonCash <= 0 && maxCash > 0;
       const preferNonCash = maxCash <= 0 && maxNonCash > 0;
       const defaultMetodo: MetodoPago = preferNonCash
-        ? 'tarjeta_debito'
+        ? 'debit_card'
         : preferCash
-          ? 'efectivo'
-          : 'efectivo';
-      const defaultMax = defaultMetodo === 'efectivo' ? maxCash : maxNonCash;
+          ? 'cash'
+          : 'cash';
+      const defaultMax = defaultMetodo === 'cash' ? maxCash : maxNonCash;
       setMetodo(defaultMetodo);
       setMonto(String(defaultMax));
-      setMontoRecibido(defaultMetodo === 'efectivo' ? String(defaultMax) : '');
+      setMontoRecibido(defaultMetodo === 'cash' ? String(defaultMax) : '');
     }
   }, [open, saldoPendiente, maxCash, maxNonCash]);
 
   // When switching payment method, auto-fill or clear received amount
   const handleMetodoChange = (m: MetodoPago) => {
-    const nextIsCash = m === 'efectivo';
+    const nextIsCash = m === 'cash';
     const nextMax = nextIsCash ? maxCash : maxNonCash;
     setMetodo(m);
     setMonto(String(nextMax));
-    if (m === 'efectivo') {
+    if (m === 'cash') {
       setMontoRecibido(String(nextMax));
     } else {
       setMontoRecibido('');
@@ -148,7 +148,7 @@ export function RegisterPaymentPanel({
       vuelto: esEfectivo ? vuelto : undefined,
       createdAt: Date.now(),
     });
-    setMetodo('efectivo');
+    setMetodo('cash');
     setMonto('');
     setMontoRecibido('');
     onOpenChange(false);
@@ -199,7 +199,7 @@ export function RegisterPaymentPanel({
               {METODOS.map((m) => {
                 const Icon = m.icon;
                 const isSelected = metodo === m.value;
-                const isCash = m.value === 'efectivo';
+                const isCash = m.value === 'cash';
                 const allowed = (isCash ? maxCash : maxNonCash) > 0;
                 return (
                   <button

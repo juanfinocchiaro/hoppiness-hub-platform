@@ -14,10 +14,10 @@ import { formatCurrency } from '@/lib/formatters';
 interface Props {
   item: {
     id: string;
-    nombre: string;
-    descripcion?: string | null;
-    precio_base: number;
-    imagen_url?: string | null;
+    name: string;
+    description?: string | null;
+    base_price: number;
+    image_url?: string | null;
   };
 }
 
@@ -39,11 +39,11 @@ export function ProductPreviewPanel({ item }: Props) {
 
   // Active extras with name and price
   const activeExtras = (asignaciones || [])
-    .filter((a: any) => (a.extra?.is_active ?? a.extra?.activo) !== false)
+    .filter((a: any) => a.extra?.is_active !== false)
     .map((a: any) => ({
       id: a.extra?.id,
-      nombre: a.extra?.nombre || 'Extra',
-      precio: Number(a.extra?.precio_base) || 0,
+      nombre: a.extra?.name || 'Extra',
+      precio: Number(a.extra?.base_price) || 0,
     }));
 
   const extrasSinPrecio = activeExtras.filter((e) => e.precio <= 0);
@@ -54,8 +54,8 @@ export function ProductPreviewPanel({ item }: Props) {
   const alerts: string[] = [];
   if (extrasSinPrecio.length > 0)
     alerts.push(`${extrasSinPrecio.length} extras sin precio â€” configurar en Control de Costos`);
-  if (!item.imagen_url) alerts.push('Sin foto');
-  if (!item.descripcion) alerts.push('Sin descripción');
+  if (!item.image_url) alerts.push('Sin foto');
+  if (!item.description) alerts.push('Sin descripción');
 
   // Upload handler
   const handleUpload = async (file: File) => {
@@ -101,9 +101,9 @@ export function ProductPreviewPanel({ item }: Props) {
               e.target.value = '';
             }}
           />
-          {item.imagen_url ? (
+          {item.image_url ? (
             <div className="relative group w-40 h-32 rounded-lg overflow-hidden border">
-              <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" />
+              <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
@@ -134,11 +134,11 @@ export function ProductPreviewPanel({ item }: Props) {
         {/* Name, desc, price */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start justify-between gap-4">
-            <h3 className="font-semibold text-base">{item.nombre}</h3>
-            <span className="font-mono font-bold text-base shrink-0">{formatCurrency(item.precio_base)}</span>
+            <h3 className="font-semibold text-base">{item.name}</h3>
+            <span className="font-mono font-bold text-base shrink-0">{formatCurrency(item.base_price)}</span>
           </div>
-          {item.descripcion ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">{item.descripcion}</p>
+          {item.description ? (
+            <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
           ) : (
             <p className="text-sm text-muted-foreground/50 italic">Sin descripción</p>
           )}
@@ -148,7 +148,7 @@ export function ProductPreviewPanel({ item }: Props) {
       {/* Personalization preview */}
       {hasPersonalization ? (
         <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
-          <p className="font-semibold text-sm">Personalizá tu {item.nombre.split(' ')[0]}</p>
+          <p className="font-semibold text-sm">Personalizá tu {item.name.split(' ')[0]}</p>
 
           {/* Extras */}
           {activeExtras.length > 0 && (
@@ -180,7 +180,7 @@ export function ProductPreviewPanel({ item }: Props) {
               <p className="text-xs font-medium text-muted-foreground">¿Sacar algo?</p>
               {(removibles || []).map((r: any) => {
                 const nombre =
-                  r.nombre_display || `Sin ${r.insumos?.nombre || r.preparaciones?.nombre || '?'}`;
+                  r.display_name || `Sin ${r.insumos?.name || r.preparaciones?.name || '?'}`;
                 return (
                   <div key={r.id} className="flex items-center justify-between text-sm pl-2">
                     <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ export function ProductPreviewPanel({ item }: Props) {
             <div key={g.id} className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">{g.nombre} · Elegí 1</p>
               {(g.items || []).map((opt: any) => {
-                const nombre = opt.insumos?.nombre || opt.preparaciones?.nombre || '?';
+                const nombre = opt.insumos?.name || opt.preparaciones?.name || '?';
                 const delta = opt.costo_unitario || 0;
                 return (
                   <div key={opt.id} className="flex items-center justify-between text-sm pl-2">

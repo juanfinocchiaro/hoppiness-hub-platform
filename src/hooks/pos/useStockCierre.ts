@@ -88,7 +88,7 @@ export function useStockCierrePeriod(branchId: string, periodo: string | null) {
       const insumoInfo = new Map(
         insumos.map((i: any) => [
           i.id,
-          { nombre: i.name ?? i.id, unidad: i.unidad_base ?? 'un' },
+          { nombre: i.name ?? i.id, unidad: i.base_unit ?? 'un' },
         ]),
       );
 
@@ -153,12 +153,12 @@ export function useSaveCierreMensual(branchId: string) {
           merma,
         });
         const actualRow = await fetchStockActualRow(branchId, it.insumo_id);
-        const cantidadAnterior = Number((actualRow as any)?.cantidad ?? (actualRow as any)?.quantity ?? 0);
+        const cantidadAnterior = Number((actualRow as any)?.quantity ?? 0);
         await upsertStockActual(
           branchId,
           it.insumo_id,
           it.stock_cierre_fisico,
-          (actualRow as any)?.unit ?? (actualRow as any)?.unidad ?? 'un',
+          (actualRow as any)?.unit ?? 'un',
         );
         if (merma > 0) {
           await insertStockMovimiento({
@@ -171,7 +171,7 @@ export function useSaveCierreMensual(branchId: string) {
             motivo: `Cierre mensual ${p.periodo}`,
           });
           const insumo = await fetchInsumoCostInfo(it.insumo_id);
-          const costo = Number(insumo?.costo_por_unidad_base ?? 0);
+          const costo = Number(insumo?.base_unit_cost ?? 0);
           const montoConsumo = merma * costo;
           const catPl =
             insumo?.categoria_pl &&

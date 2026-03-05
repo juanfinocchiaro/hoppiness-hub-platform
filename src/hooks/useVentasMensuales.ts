@@ -10,10 +10,10 @@ import { toast } from 'sonner';
 
 export interface VentaMensualPayload {
   branch_id?: string;
-  periodo?: string;
-  venta_total?: number;
-  efectivo?: number;
-  observaciones?: string;
+  period?: string;
+  total_sales?: number;
+  cash?: number;
+  notes?: string;
 }
 
 export function useVentasMensuales(branchId: string) {

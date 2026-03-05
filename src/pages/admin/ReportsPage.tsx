@@ -43,7 +43,7 @@ export default function ReportsPage() {
       const data = await fetchGastosSummary(month);
       const byBranch: Record<string, number> = {};
       data.forEach((g) => {
-        byBranch[g.branch_id] = (byBranch[g.branch_id] || 0) + Number(g.monto || 0);
+        byBranch[g.branch_id] = (byBranch[g.branch_id] || 0) + Number(g.amount || 0);
       });
       return byBranch;
     },

@@ -36,30 +36,30 @@ interface AfipLike {
 }
 
 interface PedidoItemRow {
-  nombre: string;
-  cantidad: number;
-  notas: string | null;
-  precio_unitario: number;
+  name: string;
+  quantity: number;
+  notes: string | null;
+  unit_price: number;
   subtotal: number;
   categoria_carta_id?: string | null;
 }
 
 interface PedidoPagoRow {
-  metodo: string;
-  monto: number;
-  monto_recibido: number | null;
+  method: string;
+  amount: number;
+  received_amount: number | null;
   vuelto: number | null;
   tarjeta_marca: string | null;
 }
 
 interface FacturaEmitidaRow {
   anulada: boolean | null;
-  tipo_comprobante: string;
-  punto_venta: number;
-  numero_comprobante: number;
+  receipt_type: string;
+  point_of_sale: number;
+  receipt_number: number;
   cae: string | null;
   cae_vencimiento: string | null;
-  fecha_emision: string;
+  issue_date: string;
   neto: number;
   iva: number;
   total: number;
@@ -70,15 +70,15 @@ interface FacturaEmitidaRow {
 
 interface PedidoRow {
   id: string;
-  numero_pedido: number;
-  tipo_servicio: string | null;
+  order_number: number;
+  service_type: string | null;
   canal_venta: string | null;
   canal_app: string | null;
-  numero_llamador: number | null;
-  cliente_nombre: string | null;
+  caller_number: number | null;
+  customer_name: string | null;
   referencia_app?: string | null;
-  cliente_telefono: string | null;
-  cliente_direccion: string | null;
+  customer_phone: string | null;
+  customer_address: string | null;
   created_at: string;
   total: number;
   descuento: number | null;
@@ -89,15 +89,15 @@ interface PedidoRow {
 
 function formatMetodoPago(method?: string): string | undefined {
   switch (method) {
-    case 'efectivo':
+    case 'cash':
       return 'Efectivo';
-    case 'tarjeta_debito':
+    case 'debit_card':
       return 'Tarjeta debito';
-    case 'tarjeta_credito':
+    case 'credit_card':
       return 'Tarjeta credito';
     case 'mercadopago_qr':
       return 'QR Mercado Pago';
-    case 'transferencia':
+    case 'transfer':
       return 'Transferencia';
     default:
       return undefined;
@@ -128,19 +128,19 @@ export async function printReadyTicketByPedidoId(params: {
 
   const ticketData: TicketClienteData = {
     order: {
-      numero_pedido: pedido.numero_pedido,
-      tipo_servicio: pedido.tipo_servicio,
+      order_number: pedido.order_number,
+      service_type: pedido.service_type,
       canal_venta: pedido.canal_app || pedido.canal_venta,
-      numero_llamador: pedido.numero_llamador,
-      cliente_nombre: pedido.cliente_nombre,
+      caller_number: pedido.caller_number,
+      customer_name: pedido.customer_name,
       referencia_app: pedido.referencia_app ?? null,
       created_at: pedido.created_at,
       items: (pedido.order_items || []).map((i) => ({
-        nombre: i.nombre,
-        cantidad: i.cantidad,
-        notas: i.notas,
+        name: i.name,
+        quantity: i.quantity,
+        notes: i.notes,
         estacion: 'armado',
-        precio_unitario: i.precio_unitario,
+        unit_price: i.unit_price,
         subtotal: i.subtotal,
       })),
       total: pedido.total,
@@ -149,18 +149,18 @@ export async function printReadyTicketByPedidoId(params: {
     branchName,
     metodo_pago:
       (pedido.order_payments || []).length > 1
-        ? `Mixto: ${(pedido.order_payments || []).map((p) => formatMetodoPago(p.metodo) || p.metodo).join(' + ')}`
-        : formatMetodoPago(singlePayment?.metodo),
+        ? `Mixto: ${(pedido.order_payments || []).map((p) => formatMetodoPago(p.method) || p.method).join(' + ')}`
+        : formatMetodoPago(singlePayment?.method),
     tarjeta_marca: singlePayment?.tarjeta_marca || undefined,
     monto_recibido:
-      singlePayment?.metodo === 'efectivo' ? singlePayment.monto_recibido || undefined : undefined,
-    vuelto: singlePayment?.metodo === 'efectivo' ? singlePayment.vuelto || 0 : undefined,
+      singlePayment?.method === 'cash' ? singlePayment.received_amount || undefined : undefined,
+    vuelto: singlePayment?.method === 'cash' ? singlePayment.vuelto || 0 : undefined,
     factura: activeInvoice
       ? {
-          tipo: (activeInvoice.tipo_comprobante === 'A' ? 'A' : 'B') as 'A' | 'B',
-          codigo: activeInvoice.tipo_comprobante === 'A' ? '01' : '06',
-          numero: `${String(activeInvoice.punto_venta).padStart(5, '0')}-${String(activeInvoice.numero_comprobante).padStart(8, '0')}`,
-          fecha: activeInvoice.fecha_emision,
+          tipo: (activeInvoice.receipt_type === 'A' ? 'A' : 'B') as 'A' | 'B',
+          codigo: activeInvoice.receipt_type === 'A' ? '01' : '06',
+          numero: `${String(activeInvoice.point_of_sale).padStart(5, '0')}-${String(activeInvoice.receipt_number).padStart(8, '0')}`,
+          fecha: activeInvoice.issue_date,
           emisor: {
             razon_social: afipConfig?.razon_social || '',
             cuit: afipConfig?.cuit || '',
@@ -170,7 +170,7 @@ export async function printReadyTicketByPedidoId(params: {
             inicio_actividades: afipConfig?.inicio_actividades || '',
           },
           receptor: {
-            nombre: activeInvoice.receptor_razon_social || pedido.cliente_nombre || undefined,
+            nombre: activeInvoice.receptor_razon_social || pedido.customer_name || undefined,
             documento_tipo: activeInvoice.receptor_cuit ? 'CUIT' : 'DNI',
             documento_numero: activeInvoice.receptor_cuit || undefined,
             condicion_iva: activeInvoice.receptor_condicion_iva || 'Consumidor Final',
@@ -247,24 +247,24 @@ export async function printDeliveryTicketByPedidoId(params: {
 
   const deliveryData: DeliveryTicketData = {
     order: {
-      numero_pedido: pedido.numero_pedido,
-      tipo_servicio: pedido.tipo_servicio,
+      order_number: pedido.order_number,
+      service_type: pedido.service_type,
       canal_venta: pedido.canal_app || pedido.canal_venta,
-      numero_llamador: pedido.numero_llamador,
-      cliente_nombre: pedido.cliente_nombre,
+      caller_number: pedido.caller_number,
+      customer_name: pedido.customer_name,
       referencia_app: pedido.referencia_app ?? null,
       created_at: pedido.created_at,
       items: (pedido.order_items || []).map((i) => ({
-        nombre: i.nombre,
-        cantidad: i.cantidad,
-        notas: i.notas,
+        name: i.name,
+        quantity: i.quantity,
+        notes: i.notes,
         estacion: 'armado',
-        precio_unitario: i.precio_unitario,
+        unit_price: i.unit_price,
         subtotal: i.subtotal,
       })),
       total: pedido.total,
-      cliente_telefono: pedido.cliente_telefono,
-      cliente_direccion: pedido.cliente_direccion,
+      customer_phone: pedido.customer_phone,
+      customer_address: pedido.customer_address,
     },
     branchName,
   };

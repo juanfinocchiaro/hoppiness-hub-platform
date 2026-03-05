@@ -39,8 +39,8 @@ interface ExtendedFormData extends InsumoFormData {
 }
 
 const EMPTY: ExtendedFormData = {
-  nombre: '',
-  unidad_base: 'g',
+  name: '',
+  base_unit: 'g',
   nivel_control: 'libre',
   tipo_item: 'insumo',
   tracks_stock: false,
@@ -78,23 +78,23 @@ export function InsumoFormModal({
   useEffect(() => {
     if (insumo) {
       setForm({
-        nombre: insumo.nombre,
+        name: insumo.name,
         categoria_id: insumo.categoria_id || undefined,
-        unidad_base: insumo.unidad_base,
+        base_unit: insumo.base_unit,
         categoria_pl: insumo.categoria_pl || undefined,
-        precio_referencia: insumo.precio_referencia || undefined,
+        precio_referencia: (insumo as any).reference_price || undefined,
         proveedor_sugerido_id: insumo.proveedor_sugerido_id || undefined,
-        descripcion: insumo.descripcion || undefined,
+        description: insumo.description || undefined,
         nivel_control: (insumo as any).nivel_control || defaultNivel,
         proveedor_obligatorio_id: (insumo as any).proveedor_obligatorio_id || undefined,
-        precio_maximo_sugerido: (insumo as any).precio_maximo_sugerido || undefined,
+        precio_maximo_sugerido: (insumo as any).max_suggested_price || undefined,
         motivo_control: (insumo as any).motivo_control || undefined,
-        tipo_item: (insumo as any).tipo_item || 'insumo',
+        tipo_item: (insumo as any).item_type || 'insumo',
         rdo_category_code: (insumo as any).rdo_category_code || undefined,
         tracks_stock: (insumo as any).tracks_stock || false,
-        unidad_compra: (insumo as any).unidad_compra || 'kg',
-        unidad_compra_contenido: (insumo as any).unidad_compra_contenido || undefined,
-        unidad_compra_precio: (insumo as any).unidad_compra_precio || undefined,
+        unidad_compra: (insumo as any).purchase_unit || 'kg',
+        unidad_compra_contenido: (insumo as any).purchase_unit_content || undefined,
+        unidad_compra_precio: (insumo as any).purchase_unit_price || undefined,
         default_alicuota_iva: (insumo as any).default_alicuota_iva ?? null,
       });
     } else {
@@ -110,7 +110,7 @@ export function InsumoFormModal({
     const opt = PRESENTACION_OPTIONS.find((o) => o.value === v);
     set('unidad_compra', v);
     if (opt) {
-      set('unidad_base', opt.unidadBase);
+      set('base_unit', opt.unidadBase);
       if (opt.contenidoDefault) {
         set('unidad_compra_contenido', opt.contenidoDefault);
       }
@@ -141,18 +141,18 @@ export function InsumoFormModal({
   }, [costoUnidadBase, form.default_alicuota_iva, form.unidad_compra_precio]);
 
   const unidadBaseLabel =
-    UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
+    UNIDAD_BASE_OPTIONS.find((u) => u.value === form.base_unit)?.label || form.base_unit;
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim()) return;
+    if (!form.name.trim()) return;
 
     const payload: any = {
-      nombre: form.nombre,
+      name: form.name,
       categoria_id: form.categoria_id || null,
-      unidad_base: form.unidad_base,
+      base_unit: form.base_unit,
       categoria_pl: form.categoria_pl || null,
       precio_referencia: costoUnidadBase || form.precio_referencia || null,
-      descripcion: form.descripcion || null,
+      description: form.description || null,
       nivel_control: isBrand ? form.nivel_control : isLocal ? 'libre' : form.nivel_control,
       motivo_control: form.motivo_control || null,
       precio_maximo_sugerido: form.precio_maximo_sugerido || null,
@@ -198,8 +198,8 @@ export function InsumoFormModal({
           <div className="space-y-4">
             <FormRow label="Nombre" required>
               <Input
-                value={form.nombre}
-                onChange={(e) => set('nombre', e.target.value)}
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
                 placeholder="Ej: Salsa Hoppiness"
               />
             </FormRow>
@@ -209,7 +209,7 @@ export function InsumoFormModal({
               <div className="grid grid-cols-3 gap-3">
                 <FormRow label="Presentación" required>
                   <Select
-                    value={form.unidad_compra || 'kg'}
+                    value={form.unidad_compra || 'kg'} 
                     onValueChange={handlePresentacionChange}
                   >
                     <SelectTrigger>
@@ -224,7 +224,7 @@ export function InsumoFormModal({
                     </SelectContent>
                   </Select>
                 </FormRow>
-                <FormRow label="Contenido" required hint={form.unidad_base}>
+                <FormRow label="Contenido" required hint={form.base_unit}>
                   <Input
                     type="number"
                     step="1"
@@ -281,7 +281,7 @@ export function InsumoFormModal({
 
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-xs text-muted-foreground">Unidad base:</span>
-                <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
+                <Select value={form.base_unit} onValueChange={(v) => set('base_unit', v)}>
                   <SelectTrigger className="h-7 w-auto text-xs px-2">
                     <SelectValue />
                   </SelectTrigger>
@@ -398,7 +398,7 @@ export function InsumoFormModal({
                   )}
                   {proveedores?.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.razon_social}
+                      {p.business_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -407,8 +407,8 @@ export function InsumoFormModal({
 
             <FormRow label="Descripción / Notas">
               <Textarea
-                value={form.descripcion || ''}
-                onChange={(e) => set('descripcion', e.target.value)}
+                value={form.description || ''}
+                onChange={(e) => set('description', e.target.value)}
                 placeholder="Observaciones sobre el ingrediente, especificaciones, etc."
                 rows={3}
               />
@@ -440,8 +440,8 @@ export function InsumoFormModal({
           <div className="space-y-4">
             <FormRow label="Nombre" required>
               <Input
-                value={form.nombre}
-                onChange={(e) => set('nombre', e.target.value)}
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
                 placeholder="Nombre del insumo"
               />
             </FormRow>
@@ -465,7 +465,7 @@ export function InsumoFormModal({
                 </Select>
               </FormRow>
               <FormRow label="Unidad base" required>
-                <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
+                <Select value={form.base_unit} onValueChange={(v) => set('base_unit', v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -482,8 +482,8 @@ export function InsumoFormModal({
 
             <FormRow label="Descripción">
               <Textarea
-                value={form.descripcion || ''}
-                onChange={(e) => set('descripcion', e.target.value)}
+                value={form.description || ''}
+                onChange={(e) => set('description', e.target.value)}
                 rows={2}
                 placeholder="Opcional"
               />
@@ -516,8 +516,8 @@ export function InsumoFormModal({
             <FormLayout columns={1}>
               <FormRow label="Nombre" required>
                 <Input
-                  value={form.nombre}
-                  onChange={(e) => set('nombre', e.target.value)}
+                  value={form.name}
+                  onChange={(e) => set('name', e.target.value)}
                   placeholder="Nombre del insumo"
                 />
               </FormRow>
@@ -540,7 +540,7 @@ export function InsumoFormModal({
                   </Select>
                 </FormRow>
                 <FormRow label="Unidad base" required>
-                  <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
+                  <Select value={form.base_unit} onValueChange={(v) => set('base_unit', v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -606,7 +606,7 @@ export function InsumoFormModal({
                     <SelectContent>
                       {proveedores?.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.razon_social}
+                          {p.business_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -631,7 +631,7 @@ export function InsumoFormModal({
                       <SelectItem value="none">Ninguno</SelectItem>
                       {proveedores?.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.razon_social}
+                          {p.business_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -679,8 +679,8 @@ export function InsumoFormModal({
 
           <FormRow label="Descripción">
             <Textarea
-              value={form.descripcion || ''}
-              onChange={(e) => set('descripcion', e.target.value)}
+              value={form.description || ''}
+              onChange={(e) => set('description', e.target.value)}
               rows={2}
             />
           </FormRow>

@@ -31,8 +31,8 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
   const isEdit = !!producto;
 
   const [form, setForm] = useState({
-    nombre: '',
-    unidad_base: 'un' as string,
+    name: '',
+    base_unit: 'un' as string,
     unidad_compra: 'pack' as string,
     unidad_compra_contenido: 1,
     unidad_compra_precio: 0,
@@ -41,14 +41,14 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
     proveedor_obligatorio_id: '',
     proveedor_sugerido_id: '',
     rdo_category_code: '',
-    descripcion: '',
+    description: '',
   });
 
   useEffect(() => {
     if (producto) {
       setForm({
-        nombre: producto.nombre || '',
-        unidad_base: producto.unidad_base || 'un',
+        name: producto.name || '',
+        base_unit: producto.base_unit || 'un',
         unidad_compra: producto.unidad_compra || 'pack',
         unidad_compra_contenido: producto.unidad_compra_contenido || 1,
         unidad_compra_precio: producto.unidad_compra_precio || 0,
@@ -57,12 +57,12 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         proveedor_obligatorio_id: producto.proveedor_obligatorio_id || '',
         proveedor_sugerido_id: producto.proveedor_sugerido_id || '',
         rdo_category_code: producto.rdo_category_code || '',
-        descripcion: producto.descripcion || '',
+        description: producto.description || '',
       });
     } else {
       setForm({
-        nombre: '',
-        unidad_base: 'un',
+        name: '',
+        base_unit: 'un',
         unidad_compra: 'pack',
         unidad_compra_contenido: 1,
         unidad_compra_precio: 0,
@@ -71,7 +71,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         proveedor_obligatorio_id: '',
         proveedor_sugerido_id: '',
         rdo_category_code: '',
-        descripcion: '',
+        description: '',
       });
     }
   }, [producto, open]);
@@ -82,7 +82,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
     const opt = PRESENTACION_OPTIONS.find((o) => o.value === v);
     set('unidad_compra', v);
     if (opt) {
-      set('unidad_base', opt.unidadBase);
+      set('base_unit', opt.unidadBase);
       if (opt.contenidoDefault) {
         set('unidad_compra_contenido', opt.contenidoDefault);
       }
@@ -109,15 +109,15 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
   }, [costoUnidadBase, form.default_alicuota_iva, form.unidad_compra_precio]);
 
   const unidadBaseLabel =
-    UNIDAD_BASE_OPTIONS.find((u) => u.value === form.unidad_base)?.label || form.unidad_base;
+    UNIDAD_BASE_OPTIONS.find((u) => u.value === form.base_unit)?.label || form.base_unit;
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim()) return;
+    if (!form.name.trim()) return;
 
     const payload: any = {
-      nombre: form.nombre,
+      name: form.name,
       tipo_item: 'producto',
-      unidad_base: form.unidad_base,
+      base_unit: form.base_unit,
       unidad_compra: form.unidad_compra,
       unidad_compra_contenido: form.unidad_compra_contenido,
       unidad_compra_precio: form.unidad_compra_precio,
@@ -128,7 +128,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
       proveedor_sugerido_id:
         form.nivel_control === 'semi_libre' ? form.proveedor_sugerido_id || null : null,
       rdo_category_code: form.rdo_category_code || null,
-      descripcion: form.descripcion || null,
+      description: form.description || null,
     };
 
     if (isEdit) {
@@ -151,8 +151,8 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
         <div className="space-y-4">
           <FormRow label="Nombre del producto" required>
             <Input
-              value={form.nombre}
-              onChange={(e) => set('nombre', e.target.value)}
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
               placeholder="Ej: Coca-Cola Lata 354ml"
             />
           </FormRow>
@@ -174,7 +174,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                   </SelectContent>
                 </Select>
               </FormRow>
-              <FormRow label="Contenido" required hint={form.unidad_base}>
+              <FormRow label="Contenido" required hint={form.base_unit}>
                 <Input
                   type="number"
                   value={form.unidad_compra_contenido || ''}
@@ -220,7 +220,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
 
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs text-muted-foreground">Unidad base:</span>
-              <Select value={form.unidad_base} onValueChange={(v) => set('unidad_base', v)}>
+              <Select value={form.base_unit} onValueChange={(v) => set('base_unit', v)}>
                 <SelectTrigger className="h-7 w-auto text-xs px-2">
                   <SelectValue />
                 </SelectTrigger>
@@ -334,7 +334,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
                 )}
                 {proveedores?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.razon_social}
+                    {p.business_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -343,8 +343,8 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
 
           <FormRow label="Descripción / Notas">
             <Textarea
-              value={form.descripcion || ''}
-              onChange={(e) => set('descripcion', e.target.value)}
+              value={form.description || ''}
+              onChange={(e) => set('description', e.target.value)}
               placeholder="Observaciones sobre el producto"
               rows={2}
             />
@@ -354,7 +354,7 @@ export function ProductoFormModal({ open, onOpenChange, producto }: Props) {
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.nombre}>
+            <LoadingButton loading={isPending} onClick={handleSubmit} disabled={!form.name}>
               {isEdit ? 'Guardar' : 'Crear Producto'}
             </LoadingButton>
           </StickyActions>

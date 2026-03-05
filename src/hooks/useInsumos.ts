@@ -65,18 +65,7 @@ export function useInsumos() {
   return useQuery({
     queryKey: ['insumos'],
     queryFn: async () => {
-      const data = await fetchInsumosSvc();
-      return (data || []).map((ins: any) => ({
-        ...ins,
-        activo: ins.is_active ?? ins.activo,
-        nombre: ins.name ?? ins.nombre,
-        supply_categories: ins.supply_categories
-          ? { ...ins.supply_categories, nombre: ins.supply_categories.name ?? ins.supply_categories.nombre }
-          : ins.supply_categories,
-        categorias_insumo: ins.categorias_insumo
-          ? { ...ins.categorias_insumo, nombre: ins.categorias_insumo.name ?? ins.categorias_insumo.nombre }
-          : ins.categorias_insumo,
-      }));
+      return (await fetchInsumosSvc()) || [];
     },
     enabled: !!user,
   });
@@ -90,9 +79,9 @@ export function useInsumoMutations() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['insumos'] });
       const label =
-        variables.tipo_item === 'producto'
+        variables.item_type === 'producto'
           ? 'Producto'
-          : variables.tipo_item === 'ingrediente'
+          : variables.item_type === 'ingrediente'
             ? 'Ingrediente'
             : 'Insumo';
       toast.success(`${label} creado`);
@@ -105,7 +94,7 @@ export function useInsumoMutations() {
       updateInsumo(id, data),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['insumos'] });
-      const tipo = variables.data.tipo_item;
+      const tipo = variables.data.item_type;
       const label =
         tipo === 'producto' ? 'Producto' : tipo === 'ingrediente' ? 'Ingrediente' : 'Insumo';
       toast.success(`${label} actualizado`);

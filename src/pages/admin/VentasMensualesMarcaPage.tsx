@@ -72,8 +72,8 @@ export default function VentasMensualesMarcaPage() {
   const rows =
     branches?.map((branch) => {
       const venta = ventas?.find((v) => v.branch_id === branch.id);
-      const ventaTotal = Number(venta?.venta_total ?? 0);
-      const efectivo = Number(venta?.efectivo ?? 0);
+      const ventaTotal = Number(venta?.total_sales ?? 0);
+      const efectivo = Number(venta?.cash ?? 0);
       const online = ventaTotal - efectivo;
       const pctEf = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '-';
       const canonEfectivo = efectivo * 0.05;
@@ -305,8 +305,8 @@ export default function VentasMensualesMarcaPage() {
                               </p>
                             </div>
                           </div>
-                          {venta.observaciones && (
-                            <p className="text-muted-foreground">Obs: {venta.observaciones}</p>
+                          {venta.notes && (
+                            <p className="text-muted-foreground">Obs: {venta.notes}</p>
                           )}
                           <p className="text-xs text-muted-foreground">
                             Cargado: {new Date(venta.created_at).toLocaleDateString('es-AR')}

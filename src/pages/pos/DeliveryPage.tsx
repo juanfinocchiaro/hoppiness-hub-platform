@@ -44,7 +44,7 @@ export default function DeliveryPage() {
   if (isLoading) return <Skeleton className="h-64 w-full" />;
 
   const list = pedidos ?? [];
-  const listos = list.filter((p: any) => p.estado === 'listo');
+  const listos = list.filter((p: any) => p.status === 'listo');
 
   return (
     <div className="space-y-6">
@@ -62,16 +62,16 @@ export default function DeliveryPage() {
               <Card key={p.id}>
                 <CardContent className="pt-4">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold">#{p.numero_pedido}</span>
-                    <Badge>{p.estado}</Badge>
+                    <span className="font-bold">#{p.order_number}</span>
+                    <Badge>{p.status}</Badge>
                   </div>
-                  {p.cliente_direccion && (
-                    <p className="text-sm text-muted-foreground mb-2">{p.cliente_direccion}</p>
+                  {p.customer_address && (
+                    <p className="text-sm text-muted-foreground mb-2">{p.customer_address}</p>
                   )}
                   <ul className="text-sm mb-3">
                     {(p.order_items ?? []).map((it: any, i: number) => (
                       <li key={i}>
-                        {it.cantidad}Ã— {it.nombre}
+                        {it.quantity}× {it.name}
                       </li>
                     ))}
                   </ul>
@@ -102,16 +102,16 @@ export default function DeliveryPage() {
         </div>
       )}
 
-      {list.filter((p: any) => p.estado === 'en_camino').length > 0 && (
+      {list.filter((p: any) => p.status === 'en_camino').length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">En camino</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {list
-              .filter((p: any) => p.estado === 'en_camino')
+              .filter((p: any) => p.status === 'en_camino')
               .map((p: any) => (
                 <Card key={p.id}>
                   <CardContent className="pt-4">
-                    <span className="font-bold">#{p.numero_pedido}</span>
+                    <span className="font-bold">#{p.order_number}</span>
                     <Badge variant="secondary" className="ml-2">
                       En camino
                     </Badge>

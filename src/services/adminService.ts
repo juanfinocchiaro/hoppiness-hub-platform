@@ -409,10 +409,10 @@ export async function fetchAuditLogTables() {
 
 export async function fetchGastosSummary(periodo: string) {
   const { data, error } = await fromUntyped('expenses')
-    .select('branch_id, monto')
-    .eq('periodo', periodo)
+    .select('branch_id, amount')
+    .eq('period', periodo)
     .is('deleted_at', null)
-    .neq('estado', 'pendiente_aprobacion');
+    .neq('status', 'pendiente_aprobacion');
   if (error) throw error;
   return data || [];
 }
@@ -432,7 +432,7 @@ export async function fetchClockEntriesSummary(startDate: string, endDate: strin
 export async function fetchVentasMensualesMarca(periodo: string) {
   const { data, error } = await fromUntyped('branch_monthly_sales')
     .select('*')
-    .eq('periodo', periodo)
+    .eq('period', periodo)
     .is('deleted_at', null);
   if (error) throw error;
   return (data as any[]) || [];
@@ -693,7 +693,7 @@ export async function fetchAllClosureConfig() {
   const { data, error } = await supabase
     .from('brand_closure_config')
     .select('*')
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data || [];
 }
@@ -765,28 +765,28 @@ export async function recalcularTodosLosCostos() {
 
 export async function fetchPromoItemsWithExtras(promoId: string) {
   const { data } = await fromUntyped('promotion_items')
-    .select('*, menu_items!inner(nombre, imagen_url, precio_base)')
+    .select('*, menu_items!inner(name, image_url, base_price)')
     .eq('promocion_id', promoId);
 
   const promoItemIds = (data || []).map((d: any) => d.id as string);
-  const extrasMap = new Map<string, Array<{ extra_item_carta_id: string; cantidad: number; nombre: string; precio_extra: number }>>();
+  const extrasMap = new Map<string, Array<{ extra_item_carta_id: string; quantity: number; nombre: string; precio_extra: number }>>();
 
   if (promoItemIds.length > 0) {
     const { data: extrasData } = await fromUntyped('promotion_item_extras')
-      .select('promocion_item_id, extra_item_carta_id, cantidad')
+      .select('promocion_item_id, extra_item_carta_id, quantity')
       .in('promocion_item_id', promoItemIds);
 
     if (extrasData && (extrasData as any[]).length > 0) {
       const extraItemIds = [...new Set((extrasData as any[]).map((e: any) => e.extra_item_carta_id as string))];
-      const { data: extraInfo } = await fromUntyped('menu_items').select('id, name, precio_base').in('id', extraItemIds);
-      const infoMap = new Map((extraInfo as any[] || []).map((n: any) => [n.id, { nombre: n.name, precio: Number(n.precio_base ?? 0) }]));
+      const { data: extraInfo } = await fromUntyped('menu_items').select('id, name, base_price').in('id', extraItemIds);
+      const infoMap = new Map((extraInfo as any[] || []).map((n: any) => [n.id, { nombre: n.name, precio: Number(n.base_price ?? 0) }]));
 
       for (const e of extrasData as any[]) {
         const info = infoMap.get(e.extra_item_carta_id as string);
         const list = extrasMap.get(e.promocion_item_id as string) || [];
         list.push({
           extra_item_carta_id: e.extra_item_carta_id as string,
-          cantidad: e.cantidad as number,
+          quantity: e.quantity as number,
           nombre: info?.nombre || '',
           precio_extra: info?.precio || 0,
         });
@@ -796,13 +796,13 @@ export async function fetchPromoItemsWithExtras(promoId: string) {
   }
 
   return ((data as any[]) || []).map((d: any) => {
-    const ic = d.menu_items as { name: string; imagen_url?: string | null; precio_base: number } | null;
+    const ic = d.menu_items as { name: string; image_url?: string | null; base_price: number } | null;
     return {
       item_carta_id: d.item_carta_id as string,
       nombre: ic?.name || '',
-      imagen_url: ic?.imagen_url,
-      precio_base: Number(ic?.precio_base || 0),
-      precio_promo: Number(d.precio_promo),
+      imagen_url: ic?.image_url,
+      precio_base: Number(ic?.base_price || 0),
+      precio_promo: Number(d.promo_price),
       preconfigExtras: extrasMap.get(d.id as string) || undefined,
     };
   });

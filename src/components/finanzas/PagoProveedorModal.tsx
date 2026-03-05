@@ -60,7 +60,7 @@ function parseCanonObservaciones(obs: string | null) {
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
-const EMPTY_LINE = (): PagoLine => ({ monto: '', medio_pago: 'transferencia', fecha: todayStr() });
+const EMPTY_LINE = (): PagoLine => ({ monto: '', medio_pago: 'transfer', fecha: todayStr() });
 
 export function PagoProveedorModal({
   open,
@@ -79,13 +79,13 @@ export function PagoProveedorModal({
   const [hasImputacion, setHasImputacion] = useState(false);
 
   const isAccountLevel = !factura;
-  const saldoPendiente = Number(factura?.saldo_pendiente ?? 0);
+  const saldoPendiente = Number(factura?.pending_balance ?? 0);
   const effectiveProveedorId = factura?.proveedor_id || proveedorId || '';
   const effectiveBranchId = factura?.branch_id || branchId || '';
   const isHoppiness = proveedorNombre?.toLowerCase().includes('hoppiness');
   const canonInfo = useMemo(() => {
     if (!isHoppiness || !factura) return null;
-    return parseCanonObservaciones(factura.observaciones as string);
+    return parseCanonObservaciones(factura.notes as string);
   }, [isHoppiness, factura]);
 
   const totalPagos = lines.reduce((s, l) => s + (parseFloat(l.monto) || 0), 0);
@@ -147,11 +147,11 @@ export function PagoProveedorModal({
             : undefined,
           proveedor_id: effectiveProveedorId,
           branch_id: effectiveBranchId,
-          monto: parseFloat(line.monto),
-          fecha_pago: line.fecha,
-          medio_pago: line.medio_pago,
+          amount: parseFloat(line.monto),
+          payment_date: line.fecha,
+          payment_method: line.medio_pago,
           referencia: isImputacion ? 'Imputación saldo a favor' : referencia || undefined,
-          observaciones: isImputacion
+          notes: isImputacion
             ? `Imputación de saldo a favor de cuenta corriente. Monto: $${line.monto}`
             : observaciones || undefined,
         });
@@ -175,10 +175,10 @@ export function PagoProveedorModal({
     const imputacionLines = lines.filter((l) => l.locked);
     setLines([
       ...imputacionLines,
-      { monto: efectivo.toFixed(2), medio_pago: 'efectivo', fecha: hoy },
+      { monto: efectivo.toFixed(2), medio_pago: 'cash', fecha: hoy },
       {
         monto: transferencia > 0 ? transferencia.toFixed(2) : '0',
-        medio_pago: 'transferencia',
+        medio_pago: 'transfer',
         fecha: hoy,
       },
     ]);

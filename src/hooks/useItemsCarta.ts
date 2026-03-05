@@ -18,16 +18,6 @@ export function useItemsCarta(branchId?: string) {
     refetchOnMount: 'always',
     staleTime: 0,
     queryFn: async () => {
-      const addCompat = (items: any[]) =>
-        (items || []).map((it: any) => ({
-          ...it,
-          activo: it.is_active ?? it.activo,
-          nombre: it.name ?? it.nombre,
-          menu_categories: it.menu_categories
-            ? { ...it.menu_categories, nombre: it.menu_categories.name ?? it.menu_categories.nombre }
-            : it.menu_categories,
-        }));
-
       if (branchId) {
         const availability = await fetchBranchItemAvailability(branchId);
         const data = await fetchItemsCartaSvc();
@@ -36,16 +26,14 @@ export function useItemsCarta(branchId?: string) {
           (availability || []).map((row: any) => [row.item_carta_id, row]),
         );
 
-        return addCompat(
-          (data || []).filter((item: any) => {
-            const row = availabilityMap.get(item.id);
-            if (!row) return true;
-            return !!(row as any).available && !!(row as any).available_salon && !(row as any).out_of_stock;
-          }),
-        );
+        return (data || []).filter((item: any) => {
+          const row = availabilityMap.get(item.id);
+          if (!row) return true;
+          return !!(row as any).available && !!(row as any).available_salon && !(row as any).out_of_stock;
+        });
       }
 
-      return addCompat(await fetchItemsCartaSvc());
+      return await fetchItemsCartaSvc();
     },
   });
 }
@@ -55,14 +43,7 @@ export function useItemCartaComposicion(itemId: string | undefined) {
     queryKey: ['item-carta-composicion', itemId],
     queryFn: async () => {
       if (!itemId) return [];
-      const data = await fetchItemCartaComposicion(itemId);
-      return (data || []).map((comp: any) => ({
-        ...comp,
-        recipes: comp.recipes ? { ...comp.recipes, nombre: comp.recipes.name ?? comp.recipes.nombre } : comp.recipes,
-        supplies: comp.supplies ? { ...comp.supplies, nombre: comp.supplies.name ?? comp.supplies.nombre } : comp.supplies,
-        preparaciones: comp.preparaciones ? { ...comp.preparaciones, nombre: comp.preparaciones.name ?? comp.preparaciones.nombre } : comp.preparaciones,
-        insumos: comp.insumos ? { ...comp.insumos, nombre: comp.insumos.name ?? comp.insumos.nombre } : comp.insumos,
-      }));
+      return (await fetchItemCartaComposicion(itemId)) || [];
     },
     enabled: !!itemId,
   });
@@ -85,7 +66,7 @@ export function useItemCartaMutations() {
   const create = useMutation({
     mutationFn: (data: {
       nombre: string;
-      nombre_corto?: string;
+      short_name?: string;
       descripcion?: string;
       categoria_carta_id?: string | null;
       rdo_category_code?: string;

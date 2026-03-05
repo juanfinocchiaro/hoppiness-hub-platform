@@ -39,10 +39,10 @@ function ProductDetailContent({
   onAdd: Props['onAdd'];
   onClose: () => void;
 }) {
-  const [cantidad, setCantidad] = useState(1);
+  const [quantity, setQuantity] = useState(1);
   const [extraQty, setExtraQty] = useState<Record<string, number>>({});
   const [removidos, setRemovidos] = useState<string[]>([]);
-  const [notas, setNotas] = useState('');
+  const [notes, setNotes] = useState('');
   const [groupSelections, setGroupSelections] = useState<Record<string, CartItemModifier[]>>({});
 
   const sourceItemId = item.source_item_id ?? item.id;
@@ -54,8 +54,8 @@ function ProductDetailContent({
     const map = new Map<string, number>();
     if (item.is_promo_article && item.promo_included_modifiers && extrasList) {
       for (const inc of item.promo_included_modifiers) {
-        const match = (extrasList as Array<Record<string, unknown>>).find((e: any) => e.nombre === inc.nombre);
-        if (match) map.set(match.id as string, inc.cantidad);
+        const match = (extrasList as Array<Record<string, unknown>>).find((e: any) => e.name === inc.name);
+        if (match) map.set(match.id as string, inc.quantity);
       }
     }
     return map;
@@ -88,10 +88,10 @@ function ProductDetailContent({
   }, [extraQty, extrasList, freeQtyMap, groupExtras]);
 
   const effectivePrice =
-    item.precio_promo != null && item.precio_promo < item.precio_base
+    item.precio_promo != null && item.precio_promo < item.base_price
       ? item.precio_promo
-      : item.precio_base;
-  const total = (effectivePrice + extrasTotal) * cantidad;
+      : item.base_price;
+  const total = (effectivePrice + extrasTotal) * quantity;
 
   const missingRequired = (optionalGroups || []).filter(
     (g) => g.is_required && !(groupSelections[g.id]?.length > 0),
@@ -108,9 +108,9 @@ function ProductDetailContent({
       return next;
     });
 
-  const toggleRemovido = (nombre: string) => {
+  const toggleRemovido = (displayName: string) => {
     setRemovidos((prev) =>
-      prev.includes(nombre) ? prev.filter((r) => r !== nombre) : [...prev, nombre],
+      prev.includes(displayName) ? prev.filter((r) => r !== displayName) : [...prev, displayName],
     );
   };
 
@@ -148,10 +148,10 @@ function ProductDetailContent({
       if (chargeableQty > 0) {
         chargedExtras.push({
           id,
-          nombre: extra.nombre as string,
+          name: extra.name as string,
           precio: extra.precio as number,
           tipo: 'extra',
-          cantidad: chargeableQty,
+          quantity: chargeableQty,
         });
       }
     }
@@ -164,27 +164,27 @@ function ProductDetailContent({
       promocionId: item.promocion_id ?? null,
       promocionItemId: item.promocion_item_id ?? null,
       includedModifiers: item.promo_included_modifiers,
-      nombre: item.nombre,
-      imagen_url: item.imagen_url,
+      name: item.name,
+      image_url: item.image_url,
       precioUnitario: effectivePrice,
-      cantidad,
+      quantity,
       extras: allExtras,
       removidos,
-      notas,
+      notes,
     });
-    setCantidad(1);
+    setQuantity(1);
     setExtraQty({});
     setRemovidos([]);
     setGroupSelections({});
-    setNotas('');
+    setNotes('');
   };
 
   return (
     <div className="flex flex-col h-full">
       {/* Product image */}
-      {item.imagen_url ? (
+      {item.image_url ? (
         <div className="w-full h-48 lg:h-64 overflow-hidden shrink-0">
-          <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" />
+          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
         </div>
       ) : (
         <div className="w-full h-32 bg-muted flex items-center justify-center shrink-0">
@@ -195,32 +195,32 @@ function ProductDetailContent({
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
         <div>
-          <h2 className="font-brand text-xl font-black text-foreground">{item.nombre}</h2>
-          {item.descripcion && (
-            <p className="text-sm text-muted-foreground mt-1">{item.descripcion}</p>
+          <h2 className="font-brand text-xl font-black text-foreground">{item.name}</h2>
+          {item.description && (
+            <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
           )}
           {(item.promo_included_modifiers?.length ?? 0) > 0 && (
             <p className="text-xs text-accent font-semibold mt-1">
               Incluye:{' '}
               {item
                 .promo_included_modifiers!.map(
-                  (m) => `${m.cantidad > 1 ? `${m.cantidad}x ` : ''}${m.nombre}`,
+                  (m) => `${m.quantity > 1 ? `${m.quantity}x ` : ''}${m.name}`,
                 )
                 .join(', ')}
             </p>
           )}
           <div className="mt-2">
-            {item.precio_promo != null && item.precio_promo < item.precio_base ? (
+            {item.precio_promo != null && item.precio_promo < item.base_price ? (
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-accent">
                   {formatPrice(item.precio_promo)}
                 </span>
                 <span className="text-sm text-muted-foreground line-through">
-                  {formatPrice(item.precio_base)}
+                  {formatPrice(item.base_price)}
                 </span>
               </div>
             ) : (
-              <p className="text-lg font-bold text-primary">{formatPrice(item.precio_base)}</p>
+              <p className="text-lg font-bold text-primary">{formatPrice(item.base_price)}</p>
             )}
           </div>
         </div>
@@ -237,7 +237,7 @@ function ProductDetailContent({
             return (
               <div key={group.id}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-bold text-foreground">{group.nombre}</h3>
+                  <h3 className="text-sm font-bold text-foreground">{group.name}</h3>
                   <span
                     className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
                       group.is_required
@@ -262,7 +262,7 @@ function ProductDetailContent({
                             group.id,
                             {
                               id: option.id,
-                              nombre: option.nombre,
+                              name: option.name,
                               precio: option.precio_extra,
                               tipo: 'extra',
                             },
@@ -286,7 +286,7 @@ function ProductDetailContent({
                                 <span className="text-primary-foreground text-xs">✓</span>
                               ))}
                           </div>
-                          <span className="text-sm">{option.nombre}</span>
+                          <span className="text-sm">{option.name}</span>
                         </div>
                         {option.precio_extra > 0 && (
                           <span className="text-xs text-muted-foreground">
@@ -317,7 +317,7 @@ function ProductDetailContent({
                       ${qty > 0 ? 'border-primary bg-primary/5' : 'border-border'}`}
                   >
                     <div className="min-w-0">
-                      <span className="text-sm">{extra.nombre}</span>
+                      <span className="text-sm">{extra.name}</span>
                       {extra.precio > 0 && (
                         <span className="text-xs text-muted-foreground ml-1">
                           +{formatPrice(extra.precio)}
@@ -362,8 +362,8 @@ function ProductDetailContent({
             <h3 className="text-sm font-bold text-foreground mb-2">¿Querés sacar algo?</h3>
             <div className="space-y-2">
               {removables.map((comp: any) => {
-                const nombre = comp.nombre;
-                const isRemoved = removidos.includes(nombre);
+                const displayName = comp.display_name;
+                const isRemoved = removidos.includes(displayName);
                 return (
                   <div
                     key={comp.id}
@@ -374,9 +374,9 @@ function ProductDetailContent({
                     <span
                       className={`text-sm ${isRemoved ? 'line-through text-muted-foreground' : ''}`}
                     >
-                      {nombre}
+                      {displayName}
                     </span>
-                    <Switch checked={!isRemoved} onCheckedChange={() => toggleRemovido(nombre)} />
+                    <Switch checked={!isRemoved} onCheckedChange={() => toggleRemovido(displayName)} />
                   </div>
                 );
               })}
@@ -388,8 +388,8 @@ function ProductDetailContent({
         <div>
           <h3 className="text-sm font-bold text-foreground mb-2">Notas</h3>
           <Textarea
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             placeholder="¿Algún pedido especial?"
             className="resize-none h-20 text-sm"
             maxLength={200}
@@ -417,7 +417,7 @@ function ProductDetailContent({
                   <div key={id} className="flex justify-between">
                     <span>
                       + {chargeable > 1 ? `${chargeable}× ` : ''}
-                      {extra.nombre as string}
+                      {extra.name as string}
                     </span>
                     <span>{formatPrice((extra.precio as number) * chargeable)}</span>
                   </div>
@@ -425,13 +425,13 @@ function ProductDetailContent({
               })}
             {groupExtras.map((e) => (
               <div key={e.id} className="flex justify-between">
-                <span>+ {e.nombre}</span>
+                <span>+ {e.name}</span>
                 <span>{formatPrice(e.precio)}</span>
               </div>
             ))}
-            {cantidad > 1 && (
+            {quantity > 1 && (
               <div className="flex justify-between font-medium text-foreground pt-0.5 border-t border-dashed">
-                <span>× {cantidad}</span>
+                <span>× {quantity}</span>
                 <span>{formatPrice(total)}</span>
               </div>
             )}
@@ -440,15 +440,15 @@ function ProductDetailContent({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCantidad((q) => Math.max(1, q - 1))}
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
               className="w-9 h-9 rounded-full bg-muted flex items-center justify-center active:scale-95"
               aria-label="Quitar uno"
             >
               <Minus className="w-4 h-4" />
             </button>
-            <span className="w-8 text-center font-bold text-lg">{cantidad}</span>
+            <span className="w-8 text-center font-bold text-lg">{quantity}</span>
             <button
-              onClick={() => setCantidad((q) => q + 1)}
+              onClick={() => setQuantity((q) => q + 1)}
               className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95"
               aria-label="Agregar uno"
             >
@@ -459,7 +459,7 @@ function ProductDetailContent({
         {!canAdd && missingRequired.length > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-destructive mb-2">
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>Seleccioná: {missingRequired.map((g) => g.nombre).join(', ')}</span>
+            <span>Seleccioná: {missingRequired.map((g) => g.name).join(', ')}</span>
           </div>
         )}
         <Button

@@ -105,7 +105,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
   const addItem = useCallback((item: CartItem) => {
     setCart((prev) => {
       const hasNoMods =
-        !item.notas &&
+        !item.notes &&
         (!item.extras || item.extras.length === 0) &&
         (!item.removibles || item.removibles.length === 0) &&
         (!item.opcionales || item.opcionales.length === 0);
@@ -113,15 +113,15 @@ function POSPageContent({ branchId }: { branchId: string }) {
         const idx = prev.findIndex(
           (i) =>
             i.item_carta_id === item.item_carta_id &&
-            !i.notas &&
+            !i.notes &&
             (!i.extras || i.extras.length === 0) &&
             (!i.removibles || i.removibles.length === 0) &&
             (!i.opcionales || i.opcionales.length === 0),
         );
         if (idx >= 0) {
           const copy = [...prev];
-          const n = copy[idx].cantidad + 1;
-          copy[idx] = { ...copy[idx], cantidad: n, subtotal: copy[idx].precio_unitario * n };
+          const n = copy[idx].quantity + 1;
+          copy[idx] = { ...copy[idx], quantity: n, subtotal: copy[idx].unit_price * n };
           return copy;
         }
       }
@@ -141,8 +141,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
   const updateQty = useCallback((index: number, delta: number) => {
     setCart((prev) => {
       const copy = [...prev];
-      const n = Math.max(1, copy[index].cantidad + delta);
-      copy[index] = { ...copy[index], cantidad: n, subtotal: copy[index].precio_unitario * n };
+      const n = Math.max(1, copy[index].quantity + delta);
+      copy[index] = { ...copy[index], quantity: n, subtotal: copy[index].unit_price * n };
       return copy;
     });
   }, []);
@@ -224,13 +224,13 @@ function POSPageContent({ branchId }: { branchId: string }) {
     try {
       const items = cart.map((c) => ({
         item_carta_id: c.item_carta_id,
-        nombre: c.nombre,
-        cantidad: c.cantidad,
-        precio_unitario: c.precio_unitario,
+        name: c.name,
+        quantity: c.quantity,
+        unit_price: c.unit_price,
         subtotal: c.subtotal,
-        notas: c.notas,
+        notes: c.notes,
         estacion: 'armado' as const,
-        precio_referencia: c.precio_referencia,
+        reference_price: c.reference_price,
         categoria_carta_id: c.categoria_carta_id,
       }));
 
@@ -250,8 +250,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
   };
 
   const handlePointPaymentConfirmed = (_payment: {
-    metodo: string;
-    monto: number;
+    method: string;
+    amount: number;
     mp_payment_id: string;
   }) => {
     toast.success('Pago confirmado', {
@@ -274,15 +274,15 @@ function POSPageContent({ branchId }: { branchId: string }) {
 
   const formatMetodoPago = (method?: string) => {
     switch (method) {
-      case 'efectivo':
+      case 'cash':
         return 'Efectivo';
-      case 'tarjeta_debito':
+      case 'debit_card':
         return 'Tarjeta debito';
-      case 'tarjeta_credito':
+      case 'credit_card':
         return 'Tarjeta credito';
       case 'mercadopago_qr':
         return 'QR Mercado Pago';
-      case 'transferencia':
+      case 'transfer':
         return 'Transferencia';
       default:
         return 'Otro';
@@ -309,13 +309,13 @@ function POSPageContent({ branchId }: { branchId: string }) {
     onProgress?.('creating');
     const items = cart.map((c) => ({
       item_carta_id: c.item_carta_id,
-      nombre: c.nombre,
-      cantidad: c.cantidad,
-      precio_unitario: c.precio_unitario,
+      name: c.name,
+      quantity: c.quantity,
+      unit_price: c.unit_price,
       subtotal: c.subtotal,
-      notas: c.notas,
+      notes: c.notes,
       estacion: 'armado' as const,
-      precio_referencia: c.precio_referencia,
+      reference_price: c.reference_price,
       categoria_carta_id: c.categoria_carta_id,
       promo_descuento: c.promo_descuento,
     }));
@@ -325,7 +325,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
       payments: payments.map((p) => ({
         method: p.method,
         amount: p.amount,
-        montoRecibido: p.method === 'efectivo' ? p.montoRecibido : undefined,
+        montoRecibido: p.method === 'cash' ? p.montoRecibido : undefined,
       })),
       orderConfig,
     });
@@ -381,17 +381,17 @@ function POSPageContent({ branchId }: { branchId: string }) {
             const numStr = String(invoiceResult.numero).padStart(8, '0');
             const neto = result.invoiceableAmount / IVA;
             const iva = result.invoiceableAmount - neto;
-            const afipExtra = afipConfig as unknown as { iibb?: string; condicion_iva?: string };
+            const afipExtra = afipConfig as unknown as { iibb?: string; tax_status?: string };
             facturaData = {
               tipo: tipoFactura as 'A' | 'B',
               codigo: tipoFactura === 'A' ? '01' : '06',
               numero: `${pvStr}-${numStr}`,
               fecha: new Date().toLocaleDateString('es-AR'),
               emisor: {
-                razon_social: afipConfig.razon_social || '',
+                razon_social: afipConfig.business_name || '',
                 cuit: afipConfig.cuit || '',
                 iibb: afipExtra.iibb || afipConfig.cuit || '',
-                condicion_iva: afipExtra.condicion_iva || 'Responsable Inscripto',
+                condicion_iva: afipExtra.tax_status || 'Responsable Inscripto',
                 domicilio: afipConfig.direccion_fiscal || '',
                 inicio_actividades: afipConfig.inicio_actividades || '',
               },
@@ -425,25 +425,25 @@ function POSPageContent({ branchId }: { branchId: string }) {
         : { ...printConfig, ticket_enabled: false };
       const esSalon = orderConfig.tipoServicio === 'comer_aca';
       const printableOrder = {
-        numero_pedido: pedido.numero_pedido ?? 0,
-        tipo_servicio: orderConfig.tipoServicio ?? null,
+        order_number: pedido.order_number ?? 0,
+        service_type: orderConfig.tipoServicio ?? null,
         canal_venta:
           orderConfig.canalVenta === 'apps'
             ? orderConfig.canalApp
             : (orderConfig.canalVenta ?? null),
-        numero_llamador: orderConfig.numeroLlamador
+        caller_number: orderConfig.numeroLlamador
           ? parseInt(orderConfig.numeroLlamador, 10)
           : null,
-        cliente_nombre: orderConfig.clienteNombre ?? null,
+        customer_name: orderConfig.clienteNombre ?? null,
         referencia_app: orderConfig.referenciaApp ?? null,
         created_at: new Date().toISOString(),
         items: cart.map((c) => ({
-          nombre: c.nombre,
-          cantidad: c.cantidad,
-          notas: c.notas,
+          name: c.name,
+          quantity: c.quantity,
+          notes: c.notes,
           estacion: 'armado',
           categoria_carta_id: c.categoria_carta_id,
-          precio_unitario: c.precio_unitario,
+          unit_price: c.unit_price,
           subtotal: c.subtotal,
         })),
         total: totalToPay,
@@ -451,8 +451,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
         voucher_codigo: orderConfig.voucherCodigo,
         voucher_descuento: orderConfig.voucherDescuento,
         costo_delivery: costoEnvio > 0 ? costoEnvio : undefined,
-        cliente_telefono: orderConfig.clienteTelefono ?? null,
-        cliente_direccion: orderConfig.clienteDireccion ?? null,
+        customer_phone: orderConfig.clienteTelefono ?? null,
+        customer_address: orderConfig.clienteDireccion ?? null,
       };
 
       const singlePayment = payments.length === 1 ? payments[0] : null;
@@ -462,9 +462,9 @@ function POSPageContent({ branchId }: { branchId: string }) {
             ? `Mixto: ${payments.map((p) => formatMetodoPago(p.method)).join(' + ')}`
             : formatMetodoPago(singlePayment?.method),
         monto_recibido:
-          singlePayment?.method === 'efectivo' ? singlePayment.montoRecibido : undefined,
+          singlePayment?.method === 'cash' ? singlePayment.montoRecibido : undefined,
         vuelto:
-          singlePayment?.method === 'efectivo'
+          singlePayment?.method === 'cash'
             ? Math.max(0, (singlePayment.montoRecibido || 0) - singlePayment.amount)
             : undefined,
       };
@@ -477,7 +477,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
           menuCategorias as {
             id: string;
             name: string;
-            tipo_impresion: 'comanda' | 'vale' | 'no_imprimir';
+            print_type: 'comanda' | 'vale' | 'no_imprimir';
           }[],
           branchInfo?.name ?? 'Hoppiness',
           esSalon,
@@ -528,7 +528,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
       <div className="flex flex-col h-[calc(100vh-6rem)] pb-16 lg:pb-0">
         {/* Pending orders bar â€” always visible */}
         <PendingOrdersBar
-          pedidos={(kitchenPedidos ?? []).filter((p) => p.origen !== 'webapp')}
+          pedidos={(kitchenPedidos ?? []).filter((p) => p.source !== 'webapp')}
           branchId={branchId!}
           shiftOpenedAt={shiftStatus.activeCashShift?.opened_at ?? null}
         />
@@ -622,7 +622,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
           <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t bg-background px-4 py-3 flex items-center justify-between gap-3 shadow-elevated">
             <div className="text-sm">
               <span className="text-muted-foreground">
-                {cart.reduce((s, i) => s + i.cantidad, 0)} items
+                {cart.reduce((s, i) => s + i.quantity, 0)} items
               </span>
               <span className="ml-2 font-semibold text-foreground">
                 $ {totalToPay.toLocaleString('es-AR')}

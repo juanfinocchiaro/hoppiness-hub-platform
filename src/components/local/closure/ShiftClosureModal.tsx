@@ -107,7 +107,7 @@ export function ShiftClosureModal({
       setVentasApps(migrateVentasApps(existingClosure.ventas_apps));
       setArqueoCaja(existingClosure.arqueo_caja || getDefaultArqueoCaja());
       setTotalFacturado(Number(existingClosure.total_facturado) || 0);
-      setNotas(existingClosure.notas || '');
+      setNotas(existingClosure.notes || '');
     } else {
       // Reset to defaults when switching to a new shift
       setHamburguesas(getDefaultHamburguesas());
@@ -180,14 +180,14 @@ export function ShiftClosureModal({
   const handleSave = async () => {
     await saveMutation.mutateAsync({
       branch_id: branchId,
-      fecha: fechaStr,
-      turno,
+      date: fechaStr,
+      shift: turno,
       hamburguesas,
       ventas_local: ventasLocal,
       ventas_apps: ventasApps,
       arqueo_caja: arqueoCaja,
       total_facturado: totalFacturado,
-      notas: notas || undefined,
+      notes: notas || undefined,
       reglas_facturacion: reglasFacturacion,
     });
     onOpenChange(false);

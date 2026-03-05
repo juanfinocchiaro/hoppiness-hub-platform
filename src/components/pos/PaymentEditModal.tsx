@@ -44,17 +44,17 @@ const METODOS: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { value: 'efectivo', label: 'Efectivo', icon: Banknote },
-  { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
-  { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
+  { value: 'cash', label: 'Efectivo', icon: Banknote },
+  { value: 'debit_card', label: 'Débito', icon: CreditCard },
+  { value: 'credit_card', label: 'Crédito', icon: CreditCard },
   { value: 'mercadopago_qr', label: 'QR MP', icon: QrCode },
-  { value: 'transferencia', label: 'Transf.', icon: ArrowRightLeft },
+  { value: 'transfer', label: 'Transf.', icon: ArrowRightLeft },
 ];
 
 interface PaymentRow {
   id: string;
-  metodo: MetodoPago;
-  monto: number;
+  method: MetodoPago;
+  amount: number;
   isNew?: boolean;
 }
 
@@ -64,7 +64,7 @@ interface Props {
   pedidoId: string;
   pedidoTotal: number;
   branchId: string;
-  currentPayments: { id: string; metodo: string; monto: number }[];
+  currentPayments: { id: string; method: string; amount: number }[];
 }
 
 export function PaymentEditModal({
@@ -92,26 +92,26 @@ export function PaymentEditModal({
       setRows(
         currentPayments.map((p) => ({
           id: p.id,
-          metodo: p.metodo as MetodoPago,
-          monto: p.monto,
+          method: p.method as MetodoPago,
+          amount: p.amount,
         })),
       );
       setMotivo('');
     }
   }, [open, currentPayments]);
 
-  const totalPaid = rows.reduce((s, r) => s + r.monto, 0);
+  const totalPaid = rows.reduce((s, r) => s + r.amount, 0);
   const diff = Math.abs(totalPaid - pedidoTotal);
   const isBalanced = diff < 0.01;
   const canSave = isBalanced && motivo.trim().length > 0 && rows.length > 0;
 
-  const updateRow = (idx: number, field: 'metodo' | 'monto', value: any) => {
+  const updateRow = (idx: number, field: 'method' | 'amount', value: any) => {
     setRows((prev) => {
       const copy = [...prev];
-      if (field === 'monto') {
-        copy[idx] = { ...copy[idx], monto: parseFloat(value) || 0 };
+      if (field === 'amount') {
+        copy[idx] = { ...copy[idx], amount: parseFloat(value) || 0 };
       } else {
-        copy[idx] = { ...copy[idx], metodo: value };
+        copy[idx] = { ...copy[idx], method: value };
       }
       return copy;
     });
@@ -123,8 +123,8 @@ export function PaymentEditModal({
       ...prev,
       {
         id: crypto.randomUUID(),
-        metodo: 'efectivo',
-        monto: Math.max(0, remaining),
+        method: 'cash',
+        amount: Math.max(0, remaining),
         isNew: true,
       },
     ]);
@@ -141,24 +141,24 @@ export function PaymentEditModal({
       const user = await getAuthUser();
       if (!user) throw new Error('No autenticado');
 
-      const pagosBefore = currentPayments.map((p) => ({ metodo: p.metodo, monto: p.monto }));
-      const pagosAfter = rows.map((r) => ({ metodo: r.metodo, monto: r.monto }));
+      const pagosBefore = currentPayments.map((p) => ({ method: p.method, amount: p.amount }));
+      const pagosAfter = rows.map((r) => ({ method: r.method, amount: r.amount }));
 
       const cashBefore = currentPayments
-        .filter((p) => p.metodo === 'efectivo')
-        .reduce((s, p) => s + p.monto, 0);
+        .filter((p) => p.method === 'cash')
+        .reduce((s, p) => s + p.amount, 0);
       const cashAfter = rows
-        .filter((r) => r.metodo === 'efectivo')
-        .reduce((s, r) => s + r.monto, 0);
+        .filter((r) => r.method === 'cash')
+        .reduce((s, r) => s + r.amount, 0);
       const cashDelta = cashAfter - cashBefore;
 
       await deletePedidoPagos(pedidoId);
 
       const insertRows = rows.map((row) => ({
         pedido_id: pedidoId,
-        metodo: row.metodo,
-        monto: row.monto,
-        monto_recibido: row.monto,
+        method: row.method,
+        amount: row.amount,
+        monto_recibido: row.amount,
         vuelto: 0,
         created_by: user.id,
       }));
@@ -180,7 +180,7 @@ export function PaymentEditModal({
             shift_id: openShift.id,
             branch_id: branchId,
             type: cashDelta > 0 ? 'income' : 'expense',
-            payment_method: 'efectivo',
+            payment_method: 'cash',
             amount: Math.abs(cashDelta),
             concept: `Ajuste pago pedido (${motivo.trim()})`,
             order_id: pedidoId,
@@ -225,10 +225,10 @@ export function PaymentEditModal({
                       <button
                         key={m.value}
                         type="button"
-                        onClick={() => updateRow(idx, 'metodo', m.value)}
+                        onClick={() => updateRow(idx, 'method', m.value)}
                         className={cn(
                           'p-2 rounded border transition-colors',
-                          row.metodo === m.value
+                          row.method === m.value
                             ? 'border-primary bg-primary/10 text-primary'
                             : 'border-transparent text-muted-foreground hover:text-foreground',
                         )}
@@ -245,8 +245,8 @@ export function PaymentEditModal({
                   </span>
                   <Input
                     type="number"
-                    value={row.monto || ''}
-                    onChange={(e) => updateRow(idx, 'monto', e.target.value)}
+                    value={row.amount || ''}
+                    onChange={(e) => updateRow(idx, 'amount', e.target.value)}
                     className="pl-6 h-9"
                   />
                 </div>

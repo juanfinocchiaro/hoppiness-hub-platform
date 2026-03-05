@@ -50,12 +50,12 @@ export function CmvDrillDown({ rdoCategoryCode }: CmvDrillDownProps) {
       </div>
       {items.map((item: any) => (
         <div key={item.id} className="flex justify-between items-center py-0.5 text-xs">
-          <span className="text-muted-foreground truncate max-w-[200px]">{item.nombre}</span>
+          <span className="text-muted-foreground truncate max-w-[200px]">{item.name}</span>
           <div className="flex items-center gap-2">
             <span className="font-mono text-muted-foreground">
               {formatCurrency(item.costo_total)}
             </span>
-            <span className="font-mono">{formatCurrency(item.precio_base)}</span>
+            <span className="font-mono">{formatCurrency(item.base_price)}</span>
             {item.fc_actual != null && (
               <Badge
                 variant={

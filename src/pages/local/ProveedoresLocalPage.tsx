@@ -69,7 +69,7 @@ export default function ProveedoresLocalPage() {
   );
 
   const filtered = proveedores?.filter(
-    (p) => p.razon_social.toLowerCase().includes(search.toLowerCase()) || p.cuit?.includes(search),
+    (p) => p.business_name.toLowerCase().includes(search.toLowerCase()) || p.cuit?.includes(search),
   );
 
   const isLocalProvider = (p: any) => p.ambito === 'local' && p.branch_id === branchId;
@@ -164,7 +164,7 @@ export default function ProveedoresLocalPage() {
                     onClick={() => navigate(`/milocal/${branchId}/finanzas/proveedores/${row.id}`)}
                   >
                     <TableCell>
-                      <p className="font-medium">{row.razon_social}</p>
+                      <p className="font-medium">{row.business_name}</p>
                       {row.cuit && <p className="text-xs text-muted-foreground">{row.cuit}</p>}
                     </TableCell>
                     <TableCell>
@@ -182,8 +182,8 @@ export default function ProveedoresLocalPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {row.contacto && <p>{row.contacto}</p>}
-                        {row.telefono && <p className="text-muted-foreground">{row.telefono}</p>}
+                      {row.contacto && <p>{row.contacto}</p>}
+                      {row.phone && <p className="text-muted-foreground">{row.phone}</p>}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -228,7 +228,7 @@ export default function ProveedoresLocalPage() {
                           className="h-8 w-8"
                           title="Configurar condiciones"
                           onClick={() =>
-                            setCondicionesTarget({ id: row.id, name: row.razon_social })
+                            setCondicionesTarget({ id: row.id, name: row.business_name })
                           }
                         >
                           <Settings className="w-3.5 h-3.5" />
@@ -275,7 +275,7 @@ export default function ProveedoresLocalPage() {
         open={!!deleting}
         onOpenChange={() => setDeleting(null)}
         title="Eliminar proveedor"
-        description={`¿Estás seguro de eliminar a "${deleting?.razon_social}"? Las facturas asociadas no se eliminarán.`}
+        description={`¿Estás seguro de eliminar a "${deleting?.business_name}"? Las facturas asociadas no se eliminarán.`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

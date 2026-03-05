@@ -65,22 +65,22 @@ import { formatCurrency } from '@/lib/formatters';
 
 interface WebappOrder {
   id: string;
-  numero_pedido: number;
-  tipo_servicio: string | null;
-  cliente_nombre: string | null;
-  cliente_telefono: string | null;
-  cliente_direccion: string | null;
+  order_number: number;
+  service_type: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_address: string | null;
   cliente_user_id: string | null;
   canal_venta: string | null;
   total: number;
-  estado: string;
+  status: string;
   created_at: string;
   webapp_tracking_code: string | null;
   order_items: Array<{
     id: string;
-    nombre: string;
-    cantidad: number;
-    precio_unitario: number;
+    name: string;
+    quantity: number;
+    unit_price: number;
     subtotal: number;
   }>;
 }
@@ -202,7 +202,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         sendOrderPushNotification({
           pedidoId: orderId,
           estado: 'confirmado',
-          numeroPedido: order.numero_pedido,
+          numeroPedido: order.order_number,
           clienteUserId: order.cliente_user_id,
         });
     },
@@ -220,7 +220,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         sendOrderPushNotification({
           pedidoId: orderId,
           estado: 'cancelado',
-          numeroPedido: order.numero_pedido,
+          numeroPedido: order.order_number,
           clienteUserId: order.cliente_user_id,
         });
     },
@@ -243,7 +243,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         sendOrderPushNotification({
           pedidoId: orderId,
           estado,
-          numeroPedido: order.numero_pedido,
+          numeroPedido: order.order_number,
           clienteUserId: order.cliente_user_id,
         });
       }
@@ -254,7 +254,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         estado === 'listo_mesa' ||
         estado === 'listo_envio'
       ) {
-        const isDelivery = order?.tipo_servicio === 'delivery' || order?.canal_venta === 'apps';
+        const isDelivery = order?.service_type === 'delivery' || order?.canal_venta === 'apps';
         if (isDelivery) {
           try {
             await printDeliveryTicketByPedidoId({
@@ -281,12 +281,12 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
               printConfig,
               printers: allPrinters,
               afipConfig: afipConfig as unknown as {
-                razon_social?: string | null;
+                business_name?: string | null;
                 cuit?: string | null;
                 direccion_fiscal?: string | null;
                 inicio_actividades?: string | null;
                 iibb?: string | null;
-                condicion_iva?: string | null;
+                tax_status?: string | null;
               } | null,
             });
             toast.success('Ticket impreso al marcar listo');
@@ -314,7 +314,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
   }, [pendingCount]);
 
   const renderOrderCard = (order: WebappOrder, actions: React.ReactNode) => {
-    const ServiceIcon = SERVICIO_ICONS[order.tipo_servicio || ''] || ShoppingBag;
+    const ServiceIcon = SERVICIO_ICONS[order.service_type || ''] || ShoppingBag;
     const minutesAgo = Math.round((Date.now() - new Date(order.created_at).getTime()) / 60000);
 
     return (
@@ -322,11 +322,11 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono">
-              #{order.numero_pedido}
+              #{order.order_number}
             </Badge>
             <Badge variant="secondary" className="gap-1">
               <ServiceIcon className="w-3 h-3" />
-              {SERVICIO_LABELS[order.tipo_servicio || ''] || 'Retiro'}
+              {SERVICIO_LABELS[order.service_type || ''] || 'Retiro'}
             </Badge>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
@@ -336,15 +336,15 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
           <span className="font-bold text-sm">{formatCurrency(order.total)}</span>
         </div>
 
-        {order.cliente_nombre && <p className="text-sm">{order.cliente_nombre}</p>}
-        {order.cliente_direccion && (
-          <p className="text-xs text-muted-foreground">{order.cliente_direccion}</p>
+        {order.customer_name && <p className="text-sm">{order.customer_name}</p>}
+        {order.customer_address && (
+          <p className="text-xs text-muted-foreground">{order.customer_address}</p>
         )}
 
         <div className="text-xs text-muted-foreground">
           {order.order_items.map((item) => (
             <span key={item.id} className="mr-2">
-              {item.cantidad}x {item.nombre}
+              {item.quantity}x {item.name}
             </span>
           ))}
         </div>
@@ -355,8 +355,8 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
             pedidoId={order.id}
             branchId={branchId}
             branchName={branchName}
-            numeroPedido={order.numero_pedido}
-            clienteNombre={order.cliente_nombre}
+            numeroPedido={order.order_number}
+            clienteNombre={order.customer_name}
           />
         </div>
       </div>
@@ -438,8 +438,8 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
                 🔥 En curso
               </p>
               {activeOrders.map((order) => {
-                const nextConfig = ESTADO_NEXT[order.estado];
-                const estadoBadge = ESTADO_BADGE[order.estado];
+                const nextConfig = ESTADO_NEXT[order.status];
+                const estadoBadge = ESTADO_BADGE[order.status];
                 return renderOrderCard(
                   order,
                   <>
@@ -474,15 +474,15 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
               {recentOrders.map((o) => (
                 <div key={o.id} className="flex items-center justify-between text-xs py-1">
                   <span>
-                    #{o.numero_pedido} {o.cliente_nombre || ''}
+                    #{o.order_number} {o.customer_name || ''}
                   </span>
                   <div className="flex items-center gap-2">
                     <span>{formatCurrency(o.total)}</span>
                     <Badge
-                      variant={o.estado === 'cancelado' ? 'destructive' : 'secondary'}
+                      variant={o.status === 'cancelado' ? 'destructive' : 'secondary'}
                       className="text-[10px]"
                     >
-                      {o.estado}
+                      {o.status}
                     </Badge>
                   </div>
                 </div>

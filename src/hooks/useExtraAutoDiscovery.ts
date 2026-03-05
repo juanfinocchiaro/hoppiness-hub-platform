@@ -10,14 +10,14 @@ import {
 export interface DiscoveredExtra {
   tipo: 'preparacion' | 'insumo';
   ref_id: string;
-  nombre: string;
+  name: string;
   costo: number;
   cantidad: number;
   origen: string;
   extra_id: string | null;
-  extra_nombre: string;
-  extra_precio: number;
-  activo: boolean;
+  extra_name: string;
+  extra_price: number;
+  is_active: boolean;
 }
 
 /**
@@ -40,7 +40,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
     const discovered: {
       tipo: 'preparacion' | 'insumo';
       ref_id: string;
-      nombre: string;
+      name: string;
       costo: number;
       cantidad: number;
       origen: string;
@@ -52,8 +52,8 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
         discovered.push({
           tipo: 'insumo',
           ref_id: ing.insumo_id,
-          nombre: ing.nombre,
-          costo: (ing.costo_por_unidad_base || 0) * (ing.cantidad || 1),
+          name: ing.name,
+          costo: (ing.base_unit_cost || 0) * (ing.cantidad || 1),
           cantidad: ing.cantidad || 1,
           origen: group.receta_nombre,
         });
@@ -62,7 +62,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
         discovered.push({
           tipo: 'preparacion',
           ref_id: sp.preparacion_id,
-          nombre: sp.nombre,
+          name: sp.name,
           costo: 0,
           cantidad: 1,
           origen: group.receta_nombre,
@@ -78,7 +78,7 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
     }
 
     // Cross with existing extras (items_carta tipo='extra')
-    const extras = (allItems || []).filter((e: Record<string, unknown>) => e.tipo === 'extra');
+    const extras = (allItems || []).filter((e: Record<string, unknown>) => e.type === 'extra');
     const asigSet = new Set((asignaciones || []).map((a: Record<string, unknown>) => a.extra_id));
 
     return Array.from(unique.values()).map((d) => {
@@ -91,9 +91,9 @@ export function useExtraAutoDiscovery(itemId: string | undefined) {
         ...d,
         cantidad: d.cantidad,
         extra_id: (existing as Record<string, unknown>)?.id as string || null,
-        extra_nombre: ((existing as Record<string, unknown>)?.name as string) || `Extra ${d.nombre}`,
-        extra_precio: ((existing as Record<string, unknown>)?.precio_base as number) || 0,
-        activo: existing ? asigSet.has((existing as Record<string, unknown>).id) : false,
+        extra_name: ((existing as Record<string, unknown>)?.name as string) || `Extra ${d.name}`,
+        extra_price: ((existing as Record<string, unknown>)?.base_price as number) || 0,
+        is_active: existing ? asigSet.has((existing as Record<string, unknown>).id) : false,
       };
     });
   }, [deepGroups, composicion, allItems, asignaciones]);
@@ -114,7 +114,7 @@ export function useExtraAssignableItems(extraItem: Record<string, unknown> | und
 
   const productItems = useMemo(() => {
     return (allItems || []).filter(
-      (i: Record<string, unknown>) => i.tipo !== 'extra' && (i.activo ?? i.is_active),
+      (i: Record<string, unknown>) => i.type !== 'extra' && i.is_active,
     );
   }, [allItems]);
 

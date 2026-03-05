@@ -84,7 +84,7 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
   // Pending items (solo para no-cajeros)
   const { data: pending, isLoading: loadingPending } = usePendingDashboardItems(branch.id);
 
-  const loadedShifts = todayClosures?.map((c) => c.turno) || [];
+  const loadedShifts = todayClosures?.map((c) => c.shift) || [];
   const todayTotal = todayClosures?.reduce((sum, c) => sum + Number(c.total_vendido || 0), 0) || 0;
 
   
@@ -191,7 +191,7 @@ export function ManagerDashboard({ branch, posEnabled = false }: ManagerDashboar
             <>
               <div className="grid grid-cols-2 gap-3">
                 {shifts.map((shiftDef) => {
-                  const closure = todayClosures?.find((c) => c.turno === shiftDef.value);
+                  const closure = todayClosures?.find((c) => c.shift === shiftDef.value);
                   const isLoaded = !!closure;
 
                   return (

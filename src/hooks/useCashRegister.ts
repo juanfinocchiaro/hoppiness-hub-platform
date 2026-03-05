@@ -275,7 +275,7 @@ export function useAddExpenseMovement(branchId: string) {
       userId,
       categoriaGasto,
       rdoCategoryCode,
-      observaciones,
+      notes,
       estadoAprobacion,
     }: {
       shiftId: string;
@@ -285,7 +285,7 @@ export function useAddExpenseMovement(branchId: string) {
       userId: string;
       categoriaGasto?: string;
       rdoCategoryCode?: string;
-      observaciones?: string;
+      notes?: string;
       estadoAprobacion?: string;
     }) =>
       insertExpenseMovement({
@@ -297,7 +297,7 @@ export function useAddExpenseMovement(branchId: string) {
         userId,
         categoriaGasto,
         rdoCategoryCode,
-        observaciones,
+        notes,
         estadoAprobacion,
       }),
     onSuccess: (_, v) => {
@@ -316,9 +316,7 @@ export function calculateExpectedCash(
   if (shift.current_balance != null) return Number(shift.current_balance);
   let amount = Number(shift.opening_amount);
   for (const mov of movements) {
-    const isCash =
-      mov.payment_method?.toLowerCase() === 'efectivo' ||
-      mov.payment_method?.toLowerCase() === 'cash';
+    const isCash = mov.payment_method?.toLowerCase() === 'cash';
     if (!isCash) continue;
     if (mov.type === 'income' || mov.type === 'deposit') amount += Number(mov.amount);
     else amount -= Number(mov.amount);

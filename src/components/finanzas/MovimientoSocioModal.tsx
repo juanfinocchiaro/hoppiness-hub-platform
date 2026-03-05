@@ -33,33 +33,33 @@ export function MovimientoSocioModal({ open, onOpenChange, branchId, socio }: Pr
 
   const [form, setForm] = useState({
     tipo: 'retiro',
-    monto: '',
+    amount: '',
     fecha: new Date().toISOString().split('T')[0],
     periodo: getCurrentPeriodo(),
-    observaciones: '',
+    notes: '',
   });
 
   const handleSubmit = async () => {
-    if (!form.monto) return;
+    if (!form.amount) return;
 
     const payload: MovimientoSocioFormData = {
       branch_id: branchId,
       socio_id: socio.id,
       tipo: form.tipo,
-      monto: parseFloat(form.monto),
+      amount: parseFloat(form.amount),
       fecha: form.fecha,
       periodo: form.periodo,
-      observaciones: form.observaciones || undefined,
+      notes: form.notes || undefined,
     };
 
     await createMovimiento.mutateAsync(payload);
     onOpenChange(false);
     setForm({
       tipo: 'retiro',
-      monto: '',
+      amount: '',
       fecha: new Date().toISOString().split('T')[0],
       periodo: getCurrentPeriodo(),
-      observaciones: '',
+      notes: '',
     });
   };
 
@@ -94,8 +94,8 @@ export function MovimientoSocioModal({ open, onOpenChange, branchId, socio }: Pr
                 type="number"
                 min="0"
                 step="0.01"
-                value={form.monto}
-                onChange={(e) => setForm({ ...form, monto: e.target.value })}
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
@@ -120,8 +120,8 @@ export function MovimientoSocioModal({ open, onOpenChange, branchId, socio }: Pr
           <div className="grid gap-2">
             <Label>Observaciones</Label>
             <Textarea
-              value={form.observaciones}
-              onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
               rows={2}
             />
           </div>
@@ -131,7 +131,7 @@ export function MovimientoSocioModal({ open, onOpenChange, branchId, socio }: Pr
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={!form.monto || createMovimiento.isPending}>
+          <Button onClick={handleSubmit} disabled={!form.amount || createMovimiento.isPending}>
             Registrar
           </Button>
         </div>

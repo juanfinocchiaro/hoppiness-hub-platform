@@ -24,27 +24,27 @@ export function ItemRow({
     <div className="p-2 rounded-lg bg-muted/50">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{item.nombre}</p>
+          <p className="text-sm font-medium truncate">{item.name}</p>
           <p className="text-xs text-muted-foreground">
-            {item.precio_referencia && item.precio_referencia > item.precio_unitario ? (
+            {item.reference_price && item.reference_price > item.unit_price ? (
               <>
                 <span className="line-through mr-1">
-                  $ {item.precio_referencia.toLocaleString('es-AR')}
+                  $ {item.reference_price.toLocaleString('es-AR')}
                 </span>
                 <span className="text-destructive font-semibold">
-                  $ {item.precio_unitario.toLocaleString('es-AR')}
+                  $ {item.unit_price.toLocaleString('es-AR')}
                 </span>
-                <span className="ml-1"> × {item.cantidad}</span>
+                <span className="ml-1"> × {item.quantity}</span>
               </>
             ) : (
               <>
-                $ {item.precio_unitario.toLocaleString('es-AR')} × {item.cantidad}
+                $ {item.unit_price.toLocaleString('es-AR')} × {item.quantity}
               </>
             )}
           </p>
-          {item.notas && editingNoteIdx !== index && (
+          {item.notes && editingNoteIdx !== index && (
             <div className="mt-0.5 space-y-0">
-              {item.notas.split(/[,|]/).map((note, ni) => {
+              {item.notes.split(/[,|]/).map((note, ni) => {
                 const trimmed = note.trim();
                 return trimmed ? (
                   <p key={ni} className="text-xs text-primary truncate">
@@ -61,11 +61,11 @@ export function ItemRow({
             size="icon"
             className="h-8 w-8"
             onClick={() => onUpdateQty(index, -1)}
-            disabled={item.cantidad <= 1}
+            disabled={item.quantity <= 1}
           >
             <Minus className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-sm font-medium w-6 text-center">{item.cantidad}</span>
+          <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
           <Button
             variant="ghost"
             size="icon"
@@ -98,7 +98,7 @@ export function ItemRow({
         <div className="flex items-center gap-1.5 mt-1.5">
           <Input
             placeholder="Ej: sin lechuga, bien cocida..."
-            value={item.notas || ''}
+            value={item.notes || ''}
             onChange={(e) => onUpdateNotes(index, e.target.value)}
             className="h-8 text-xs flex-1"
             autoFocus

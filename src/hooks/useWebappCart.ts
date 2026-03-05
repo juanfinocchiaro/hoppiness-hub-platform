@@ -38,9 +38,9 @@ export function useWebappCart() {
     (
       menuItems: Array<{
         id: string;
-        nombre: string;
-        precio_base: number;
-        imagen_url: string | null;
+        name: string;
+        base_price: number;
+        image_url: string | null;
       }>,
     ) => {
       try {
@@ -50,21 +50,20 @@ export function useWebappCart() {
         const reorderItems: CartItem[] = JSON.parse(raw);
         if (!Array.isArray(reorderItems) || reorderItems.length === 0) return false;
 
-        // Match reorder items to current menu by name
         const matchedItems: CartItem[] = [];
         for (const ri of reorderItems) {
-          const menuItem = menuItems.find((m) => m.nombre === ri.nombre);
+          const menuItem = menuItems.find((m) => m.name === ri.name);
           if (menuItem) {
             matchedItems.push({
               cartId: crypto.randomUUID(),
               itemId: menuItem.id,
-              nombre: menuItem.nombre,
-              imagen_url: menuItem.imagen_url,
-              precioUnitario: menuItem.precio_base,
-              cantidad: ri.cantidad,
+              name: menuItem.name,
+              image_url: menuItem.image_url,
+              precioUnitario: menuItem.base_price,
+              quantity: ri.quantity,
               extras: [],
               removidos: [],
-              notas: '',
+              notes: '',
             });
           }
         }
@@ -98,37 +97,37 @@ export function useWebappCart() {
     setItems((prev) => prev.filter((i) => i.cartId !== cartId));
   }, []);
 
-  const updateQuantity = useCallback((cartId: string, cantidad: number) => {
-    if (cantidad <= 0) {
+  const updateQuantity = useCallback((cartId: string, quantity: number) => {
+    if (quantity <= 0) {
       setItems((prev) => prev.filter((i) => i.cartId !== cartId));
       return;
     }
-    setItems((prev) => prev.map((i) => (i.cartId === cartId ? { ...i, cantidad } : i)));
+    setItems((prev) => prev.map((i) => (i.cartId === cartId ? { ...i, quantity } : i)));
   }, []);
 
   /** Quick add: if item has no extras/removidos, merge quantities */
   const quickAdd = useCallback(
     (
       itemId: string,
-      nombre: string,
+      itemName: string,
       precio: number,
-      imagenUrl: string | null,
+      imageUrl: string | null,
       meta?: {
         sourceItemId?: string;
         isPromoArticle?: boolean;
         promocionId?: string | null;
         promocionItemId?: string | null;
-        includedModifiers?: Array<{ nombre: string; cantidad: number }>;
+        includedModifiers?: Array<{ name: string; quantity: number }>;
       },
     ) => {
       setItems((prev) => {
         const existing = prev.find(
           (i) =>
-            i.itemId === itemId && i.extras.length === 0 && i.removidos.length === 0 && !i.notas,
+            i.itemId === itemId && i.extras.length === 0 && i.removidos.length === 0 && !i.notes,
         );
         if (existing) {
           return prev.map((i) =>
-            i.cartId === existing.cartId ? { ...i, cantidad: i.cantidad + 1 } : i,
+            i.cartId === existing.cartId ? { ...i, quantity: i.quantity + 1 } : i,
           );
         }
         return [
@@ -141,13 +140,13 @@ export function useWebappCart() {
             promocionId: meta?.promocionId ?? null,
             promocionItemId: meta?.promocionItemId ?? null,
             includedModifiers: meta?.includedModifiers,
-            nombre,
-            imagen_url: imagenUrl,
+            name: itemName,
+            image_url: imageUrl,
             precioUnitario: precio,
-            cantidad: 1,
+            quantity: 1,
             extras: [],
             removidos: [],
-            notas: '',
+            notes: '',
           },
         ];
       });
@@ -160,13 +159,13 @@ export function useWebappCart() {
     localStorage.removeItem(CART_STORAGE_KEY);
   }, []);
 
-  const totalItems = useMemo(() => items.reduce((s, i) => s + i.cantidad, 0), [items]);
+  const totalItems = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items]);
 
   const totalPrecio = useMemo(
     () =>
       items.reduce((s, i) => {
-        const extrasTotal = i.extras.reduce((e, x) => e + x.precio * (x.cantidad ?? 1), 0);
-        return s + (i.precioUnitario + extrasTotal) * i.cantidad;
+        const extrasTotal = i.extras.reduce((e, x) => e + x.precio * (x.quantity ?? 1), 0);
+        return s + (i.precioUnitario + extrasTotal) * i.quantity;
       }, 0),
     [items],
   );
@@ -174,7 +173,7 @@ export function useWebappCart() {
   /** Get quantity of an item in cart (all entries combined) */
   const getItemQty = useCallback(
     (itemId: string) =>
-      items.filter((i) => i.itemId === itemId).reduce((s, i) => s + i.cantidad, 0),
+      items.filter((i) => i.itemId === itemId).reduce((s, i) => s + i.quantity, 0),
     [items],
   );
 

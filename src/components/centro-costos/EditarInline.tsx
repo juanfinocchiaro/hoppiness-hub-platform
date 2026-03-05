@@ -28,42 +28,42 @@ export function EditarInline({
 }) {
   const { data: categorias } = useMenuCategorias();
   const [form, setForm] = useState({
-    nombre: item.nombre || '',
-    nombre_corto: item.nombre_corto || '',
-    descripcion: item.descripcion || '',
+    name: item.name || '',
+    short_name: item.short_name || '',
+    description: item.description || '',
     categoria_carta_id: item.categoria_carta_id || '',
-    precio_base: item.precio_base || 0,
-    precio_referencia: item.precio_referencia ? Number(item.precio_referencia) : '',
+    base_price: item.base_price || 0,
+    reference_price: item.reference_price ? Number(item.reference_price) : '',
     fc_objetivo: item.fc_objetivo || 32,
-    disponible_delivery: item.disponible_delivery ?? true,
+    available_delivery: item.available_delivery ?? true,
   });
   const set = (k: string, v: string | number | boolean) => setForm((p) => ({ ...p, [k]: v }));
 
   const submit = async () => {
-    if (!form.nombre || !form.precio_base) return;
+    if (!form.name || !form.base_price) return;
     const p = {
       ...form,
       categoria_carta_id: form.categoria_carta_id || null,
-      precio_referencia: form.precio_referencia ? Number(form.precio_referencia) : null,
+      reference_price: form.reference_price ? Number(form.reference_price) : null,
     };
     await mutations.update.mutateAsync({ id: item.id, data: p });
     onSaved();
   };
 
-  const hasDiscount = form.precio_referencia && Number(form.precio_referencia) > form.precio_base;
-  const descuento = hasDiscount ? Number(form.precio_referencia) - form.precio_base : 0;
+  const hasDiscount = form.reference_price && Number(form.reference_price) > form.base_price;
+  const descuento = hasDiscount ? Number(form.reference_price) - form.base_price : 0;
   const descuentoPct = hasDiscount
-    ? Math.round((descuento / Number(form.precio_referencia)) * 100)
+    ? Math.round((descuento / Number(form.reference_price)) * 100)
     : 0;
 
   return (
     <div className="space-y-4 max-w-lg">
       <FormRow label="Nombre" required>
-        <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
+        <Input value={form.name} onChange={(e) => set('name', e.target.value)} />
       </FormRow>
       <div className="grid grid-cols-2 gap-3">
         <FormRow label="Nombre corto" hint="Para tickets">
-          <Input value={form.nombre_corto} onChange={(e) => set('nombre_corto', e.target.value)} />
+          <Input value={form.short_name} onChange={(e) => set('short_name', e.target.value)} />
         </FormRow>
         <FormRow label="Categoría carta">
           <Select
@@ -77,7 +77,7 @@ export function EditarInline({
               <SelectItem value="none">Sin categoría</SelectItem>
               {categorias?.map((c: any) => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.nombre}
+                  {c.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -85,9 +85,9 @@ export function EditarInline({
         </FormRow>
       </div>
       <FormRow label="Descripción">
-        <Textarea
-          value={form.descripcion}
-          onChange={(e) => set('descripcion', e.target.value)}
+          <Textarea
+          value={form.description}
+          onChange={(e) => set('description', e.target.value)}
           rows={2}
         />
       </FormRow>
@@ -95,8 +95,8 @@ export function EditarInline({
         <FormRow label="Precio carta (con IVA)" required>
           <Input
             type="number"
-            value={form.precio_base || ''}
-            onChange={(e) => set('precio_base', Number(e.target.value))}
+            value={form.base_price || ''}
+            onChange={(e) => set('base_price', Number(e.target.value))}
           />
         </FormRow>
         <FormRow
@@ -105,8 +105,8 @@ export function EditarInline({
         >
           <Input
             type="number"
-            value={form.precio_referencia}
-            onChange={(e) => set('precio_referencia', e.target.value ? Number(e.target.value) : '')}
+            value={form.reference_price}
+            onChange={(e) => set('reference_price', e.target.value ? Number(e.target.value) : '')}
             placeholder="Sin promo"
           />
         </FormRow>
@@ -128,8 +128,8 @@ export function EditarInline({
       )}
       <div className="flex items-center gap-2">
         <Switch
-          checked={form.disponible_delivery}
-          onCheckedChange={(v) => set('disponible_delivery', v)}
+          checked={form.available_delivery}
+          onCheckedChange={(v) => set('available_delivery', v)}
         />
         <span className="text-sm text-muted-foreground">Disponible en delivery</span>
       </div>

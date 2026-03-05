@@ -10,11 +10,11 @@ import {
 
 export interface ConsumoManualFormData {
   branch_id: string;
-  periodo: string;
+  period: string;
   categoria_pl: string;
   monto_consumido: number;
   tipo?: string;
-  observaciones?: string;
+  notes?: string;
 }
 
 export const CATEGORIA_PL_OPTIONS = [
@@ -33,12 +33,12 @@ export const TIPO_CONSUMO_OPTIONS = [
   { value: 'calculado', label: 'Desde stock (cierre)' },
 ] as const;
 
-export function useConsumosManuales(branchId: string, periodo?: string) {
+export function useConsumosManuales(branchId: string, period?: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['consumos_manuales', branchId, periodo],
-    queryFn: () => fetchConsumosManuales(branchId, periodo),
+    queryKey: ['consumos_manuales', branchId, period],
+    queryFn: () => fetchConsumosManuales(branchId, period),
     enabled: !!user && !!branchId,
   });
 }

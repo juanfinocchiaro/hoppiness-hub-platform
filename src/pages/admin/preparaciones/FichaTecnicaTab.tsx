@@ -34,7 +34,7 @@ export function FichaTecnicaTab({
 
   const ingredientesDisponibles = useMemo(() => {
     return (
-      insumos?.filter((i) => i.tipo_item === 'ingrediente' || i.tipo_item === 'insumo') || []
+      insumos?.filter((i) => i.item_type === 'ingrediente' || i.item_type === 'insumo') || []
     );
   }, [insumos]);
 
@@ -51,20 +51,20 @@ export function FichaTecnicaTab({
         tipo_linea: item.sub_preparacion_id ? 'preparacion' : 'insumo',
         insumo_id: item.insumo_id || '',
         sub_preparacion_id: item.sub_preparacion_id || '',
-        cantidad: item.cantidad,
-        unidad: item.unidad,
-        insumo: item.insumos,
-        sub_preparacion: item.preparaciones,
+        cantidad: item.quantity,
+        unidad: item.unit,
+        insumo: item.supplies,
+        sub_preparacion: item.recipes,
       }));
       mapped.sort((a, b) => {
         const costA =
           a.tipo_linea === 'preparacion'
-            ? (a.cantidad || 0) * (a.sub_preparacion?.costo_calculado || 0)
-            : calcSubtotal(a.cantidad, a.insumo?.costo_por_unidad_base || 0, a.unidad);
+            ? (a.cantidad || 0) * (a.sub_preparacion?.calculated_cost || 0)
+            : calcSubtotal(a.cantidad, a.insumo?.base_unit_cost || 0, a.unidad);
         const costB =
           b.tipo_linea === 'preparacion'
-            ? (b.cantidad || 0) * (b.sub_preparacion?.costo_calculado || 0)
-            : calcSubtotal(b.cantidad, b.insumo?.costo_por_unidad_base || 0, b.unidad);
+            ? (b.cantidad || 0) * (b.sub_preparacion?.calculated_cost || 0)
+            : calcSubtotal(b.cantidad, b.insumo?.base_unit_cost || 0, b.unidad);
         return costB - costA;
       });
       setItems(mapped);
@@ -104,7 +104,7 @@ export function FichaTecnicaTab({
     if (field === 'insumo_id') {
       const ins = ingredientesDisponibles.find((i) => i.id === value);
       newItems[index].insumo = ins ?? null;
-      newItems[index].unidad = ins?.unidad_base || 'g';
+      newItems[index].unidad = ins?.base_unit || 'g';
     }
     if (field === 'sub_preparacion_id') {
       const prep = preparacionesDisponibles.find((p) => p.id === value);
@@ -119,10 +119,10 @@ export function FichaTecnicaTab({
     () =>
       items.reduce((t, item) => {
         if (item.tipo_linea === 'preparacion') {
-          return t + (item.cantidad || 0) * (item.sub_preparacion?.costo_calculado || 0);
+          return t + (item.cantidad || 0) * (item.sub_preparacion?.calculated_cost || 0);
         }
         return (
-          t + calcSubtotal(item.cantidad, item.insumo?.costo_por_unidad_base || 0, item.unidad)
+          t + calcSubtotal(item.cantidad, item.insumo?.base_unit_cost || 0, item.unidad)
         );
       }, 0),
     [items],
@@ -136,8 +136,8 @@ export function FichaTecnicaTab({
         .map((i) => ({
           insumo_id: i.tipo_linea === 'insumo' ? i.insumo_id : null,
           sub_preparacion_id: i.tipo_linea === 'preparacion' ? i.sub_preparacion_id : null,
-          cantidad: i.cantidad,
-          unidad: i.unidad,
+          quantity: i.cantidad,
+          unit: i.unidad,
         })),
     });
     setHasChanges(false);
@@ -154,8 +154,8 @@ export function FichaTecnicaTab({
           {items.map((item, index) => {
             const isPrep = item.tipo_linea === 'preparacion';
             const costoUnit = isPrep
-              ? item.sub_preparacion?.costo_calculado || 0
-              : item.insumo?.costo_por_unidad_base || 0;
+              ? item.sub_preparacion?.calculated_cost || 0
+              : item.insumo?.base_unit_cost || 0;
             const subtotal = isPrep
               ? (item.cantidad || 0) * costoUnit
               : calcSubtotal(item.cantidad, costoUnit, item.unidad);
@@ -205,7 +205,7 @@ export function FichaTecnicaTab({
                         <SelectItem value="none">Seleccionar...</SelectItem>
                         {filteredPreps.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.nombre} ({formatCurrency(p.costo_calculado || 0)})
+                            {p.name} ({formatCurrency(p.calculated_cost || 0)})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -222,7 +222,7 @@ export function FichaTecnicaTab({
                         <SelectItem value="none">Seleccionar...</SelectItem>
                         {filteredInsumos.map((ing) => (
                           <SelectItem key={ing.id} value={ing.id}>
-                            {ing.nombre} (${ing.costo_por_unidad_base?.toFixed(2)}/{ing.unidad_base}
+                            {ing.name} (${ing.base_unit_cost?.toFixed(2)}/{ing.base_unit}
                             )
                           </SelectItem>
                         ))}

@@ -19,17 +19,17 @@ export function InlineNombre({
   prep: Preparacion;
   mutations: PreparacionMutations;
 }) {
-  const [value, setValue] = useState(prep.nombre || '');
+  const [value, setValue] = useState(prep.name || '');
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setValue(prep.nombre || '');
+    setValue(prep.name || '');
     setDirty(false);
-  }, [prep.nombre]);
+  }, [prep.name]);
 
   const save = async () => {
     if (!dirty || !value.trim()) return;
-    await mutations.update.mutateAsync({ id: prep.id, data: { nombre: value.trim() } });
+    await mutations.update.mutateAsync({ id: prep.id, data: { name: value.trim() } });
     setDirty(false);
   };
 
@@ -50,7 +50,7 @@ export function InlineNombre({
             save();
           }
           if (e.key === 'Escape') {
-            setValue(prep.nombre);
+            setValue(prep.name);
             setDirty(false);
           }
         }}
@@ -77,17 +77,17 @@ export function InlineDescripcion({
   prep: Preparacion;
   mutations: PreparacionMutations;
 }) {
-  const [value, setValue] = useState(prep.descripcion || '');
+  const [value, setValue] = useState(prep.description || '');
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setValue(prep.descripcion || '');
+    setValue(prep.description || '');
     setDirty(false);
-  }, [prep.descripcion]);
+  }, [prep.description]);
 
   const save = async () => {
     if (!dirty) return;
-    await mutations.update.mutateAsync({ id: prep.id, data: { descripcion: value } });
+    await mutations.update.mutateAsync({ id: prep.id, data: { description: value } });
     setDirty(false);
   };
 
@@ -151,7 +151,7 @@ export function InlineCategoria({
           <SelectItem value="_none">Sin categoría</SelectItem>
           {categorias?.map((c) => (
             <SelectItem key={c.id} value={c.id}>
-              {c.nombre}
+              {c.name}
             </SelectItem>
           ))}
         </SelectContent>

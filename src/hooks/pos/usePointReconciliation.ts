@@ -32,8 +32,8 @@ export function usePointReconciliation(
       };
 
       for (const pago of data) {
-        const metodo = pago.metodo as string;
-        const monto = Number(pago.monto);
+        const metodo = pago.method as string;
+        const monto = Number(pago.amount);
         const isConciliado = pago.conciliado === true;
 
         if (!summary.byMetodo[metodo]) {

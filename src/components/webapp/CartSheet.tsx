@@ -71,7 +71,7 @@ interface Props {
 }
 
 type Step = 'cart' | 'checkout' | 'tracking';
-type MetodoPago = 'mercadopago' | 'efectivo';
+type MetodoPago = 'mercadopago' | 'cash';
 type ServiceKey = 'retiro' | 'delivery';
 
 // Inline validation helper
@@ -175,9 +175,9 @@ export function CartSheet({
   const handleAddressSelect = (result: AddressResult | null) => {
     setDeliveryAddress(result);
     if (result) {
-      setDireccion(result.formatted_address);
+      setAddress(result.formatted_address);
     } else {
-      setDireccion('');
+      setAddress('');
       setDeliveryCalc(null);
     }
   };
@@ -190,7 +190,7 @@ export function CartSheet({
       return '';
     }
   });
-  const [telefono, setTelefono] = useState(() => {
+  const [phone, setPhone] = useState(() => {
     try {
       return localStorage.getItem('hop_client_telefono') || '';
     } catch {
@@ -204,7 +204,7 @@ export function CartSheet({
       return '';
     }
   });
-  const [direccion, setDireccion] = useState(() => {
+  const [address, setAddress] = useState(() => {
     try {
       return localStorage.getItem('hop_client_direccion') || '';
     } catch {
@@ -216,7 +216,7 @@ export function CartSheet({
   useEffect(() => {
     if (userProfile) {
       if (userProfile.full_name && !nombre) setNombre(userProfile.full_name);
-      if (userProfile.phone && !telefono) setTelefono(userProfile.phone);
+      if (userProfile.phone && !phone) setPhone(userProfile.phone);
       if ((userProfile.email || user?.email) && !email)
         setEmail(userProfile.email || user?.email || '');
     }
@@ -227,7 +227,7 @@ export function CartSheet({
       setDeliveryAddress(prevalidatedAddress);
       setDeliveryCalc(prevalidatedCalc);
       if (prevalidatedAddress.formatted_address) {
-        setDireccion(prevalidatedAddress.formatted_address);
+        setAddress(prevalidatedAddress.formatted_address);
       }
     }
   }, [prevalidatedAddress, prevalidatedCalc]);
@@ -235,7 +235,7 @@ export function CartSheet({
   const [piso, setPiso] = useState('');
   const [referencia, setReferencia] = useState('');
   const [notas, setNotas] = useState('');
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'efectivo');
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>(mpEnabled ? 'mercadopago' : 'cash');
   const [pagaCon, setPagaCon] = useState<string>('');
   const [showMpConfirm, setShowMpConfirm] = useState(false);
   const [promoCode, setPromoCode] = useState<{
@@ -283,7 +283,7 @@ export function CartSheet({
       setMetodoPago(promoPayment.forced);
       return;
     }
-    if (!promoPayment.cashAllowed && metodoPago === 'efectivo') {
+    if (!promoPayment.cashAllowed && metodoPago === 'cash') {
       setMetodoPago('mercadopago');
     }
   }, [promoPayment.conflict, promoPayment.forced, promoPayment.cashAllowed, metodoPago]);
@@ -303,30 +303,30 @@ export function CartSheet({
         : nombre.trim().length < 2
           ? 'Mínimo 2 caracteres'
           : null;
-    e.telefono =
-      telefono.trim().length === 0
+    e.phone =
+      phone.trim().length === 0
         ? 'Ingresá tu teléfono'
-        : telefono.trim().length < 8
+        : phone.trim().length < 8
           ? 'Mínimo 8 dígitos'
           : null;
     e.email =
       email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Email no válido' : null;
     if (isDelivery) {
-      e.direccion =
-        direccion.trim().length === 0
+      e.address =
+        address.trim().length === 0
           ? 'Ingresá tu dirección'
-          : direccion.trim().length < 5
+          : address.trim().length < 5
             ? 'Mínimo 5 caracteres'
             : null;
     }
     return e;
-  }, [nombre, telefono, email, direccion, isDelivery]);
+  }, [nombre, phone, email, address, isDelivery]);
 
   const hasErrors = Object.values(errors).some((e) => e !== null);
   const paymentAllowed = useMemo(() => {
     if (promoPayment.conflict) return false;
-    if (!promoPayment.cashAllowed && metodoPago === 'efectivo') return false;
-    if (promoPayment.hasCashOnly && metodoPago !== 'efectivo') return false;
+    if (!promoPayment.cashAllowed && metodoPago === 'cash') return false;
+    if (promoPayment.hasCashOnly && metodoPago !== 'cash') return false;
     if (promoPayment.hasDigitalOnly && metodoPago !== 'mercadopago') return false;
     if (metodoPago === 'mercadopago' && !promoPayment.mpAllowed) return false;
     return true;
@@ -336,7 +336,7 @@ export function CartSheet({
     !hasErrors &&
     deliveryAvailable &&
     (!isDelivery || !!deliveryAddress) &&
-    (metodoPago === 'efectivo' || mpEnabled);
+    (metodoPago === 'cash' || mpEnabled);
   const canSubmitWithRestrictions = canSubmit && paymentAllowed;
 
   const handleBlur = (field: string) => setTouched((prev) => ({ ...prev, [field]: true }));
@@ -347,7 +347,7 @@ export function CartSheet({
 
   const handleConfirm = async () => {
     // Mark all fields as touched to show errors
-    setTouched({ nombre: true, telefono: true, email: true, direccion: true });
+    setTouched({ nombre: true, phone: true, email: true, address: true });
     if (!branchId || !canSubmitWithRestrictions) return;
 
     // Show MP confirmation dialog before proceeding
@@ -359,9 +359,9 @@ export function CartSheet({
     // Save client data to localStorage for pre-fill
     try {
       localStorage.setItem('hop_client_nombre', nombre.trim());
-      localStorage.setItem('hop_client_telefono', telefono.trim());
+      localStorage.setItem('hop_client_telefono', phone.trim());
       if (email.trim()) localStorage.setItem('hop_client_email', email.trim());
-      if (direccion.trim()) localStorage.setItem('hop_client_direccion', direccion.trim());
+      if (address.trim()) localStorage.setItem('hop_client_direccion', address.trim());
     } catch {
       /* ignore */
     }
@@ -370,34 +370,34 @@ export function CartSheet({
     try {
       const orderItems = cart.items.map((item) => ({
         item_carta_id: item.sourceItemId ?? item.itemId,
-        nombre: item.nombre,
-        cantidad: item.cantidad,
-        precio_unitario: item.precioUnitario,
-        extras: item.extras.map((e) => ({ nombre: e.nombre, precio: e.precio })),
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.precioUnitario,
+        extras: item.extras.map((e) => ({ name: e.name, precio: e.precio })),
         incluidos: (item.includedModifiers || []).map((m) => ({
-          nombre: m.nombre,
-          cantidad: m.cantidad,
+          name: m.name,
+          quantity: m.quantity,
         })),
         removidos: item.removidos,
         promocion_id: item.promocionId ?? null,
         promocion_item_id: item.promocionItemId ?? null,
         articulo_tipo: item.isPromoArticle ? 'promo' : 'base',
         articulo_id: item.itemId,
-        notas: item.notas || null,
+        notes: item.notes || null,
       }));
 
       const { data: orderData, error: orderErr } = await createWebappOrder({
         branch_id: branchId,
-        tipo_servicio: cart.tipoServicio,
-        cliente_nombre: nombre.trim(),
-        cliente_telefono: normalizePhone(telefono) || telefono.trim(),
+        service_type: cart.tipoServicio,
+        customer_name: nombre.trim(),
+        customer_phone: normalizePhone(phone) || phone.trim(),
         cliente_email: email.trim() || null,
-        cliente_direccion: isDelivery ? direccion.trim() : null,
+        customer_address: isDelivery ? address.trim() : null,
         cliente_piso: isDelivery ? piso.trim() || null : null,
         cliente_referencia: isDelivery ? referencia.trim() || null : null,
         cliente_notas: notas.trim() || null,
         metodo_pago: metodoPago,
-        paga_con: metodoPago === 'efectivo' && pagaCon ? parseInt(pagaCon) : null,
+        paga_con: metodoPago === 'cash' && pagaCon ? parseInt(pagaCon) : null,
         delivery_zone_id: null,
         delivery_lat: deliveryAddress?.lat ?? null,
         delivery_lng: deliveryAddress?.lng ?? null,
@@ -431,12 +431,12 @@ export function CartSheet({
       }
       if (!orderData?.pedido_id) throw new Error('No se pudo crear el pedido');
 
-      const { pedido_id, tracking_code, numero_pedido } = orderData;
+      const { pedido_id, tracking_code, order_number } = orderData;
 
       if (metodoPago === 'mercadopago') {
         const checkoutItems = cart.items.map((item) => ({
-          title: item.nombre,
-          quantity: item.cantidad,
+          title: item.name,
+          quantity: item.quantity,
           unit_price: item.precioUnitario + item.extras.reduce((s, e) => s + e.precio, 0),
         }));
 
@@ -453,7 +453,7 @@ export function CartSheet({
           payer: {
             name: nombre.trim(),
             email: email.trim() || undefined,
-            phone: telefono.trim(),
+            phone: phone.trim(),
           },
           back_url: trackingUrl,
           webapp_order: true,
@@ -469,7 +469,7 @@ export function CartSheet({
       }
 
       cart.clearCart();
-      toast.success(`Pedido #${numero_pedido} confirmado`);
+      toast.success(`Pedido #${order_number} confirmado`);
       localStorage.setItem('hoppiness_last_tracking', tracking_code);
       setTrackingCode(tracking_code);
       setStep('tracking');
@@ -603,16 +603,16 @@ export function CartSheet({
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {cart.items.map((item) => {
                 const extrasTotal = item.extras.reduce((s, e) => s + e.precio, 0);
-                const lineTotal = (item.precioUnitario + extrasTotal) * item.cantidad;
+                const lineTotal = (item.precioUnitario + extrasTotal) * item.quantity;
 
                 return (
                   <div
                     key={item.cartId}
                     className="flex items-start gap-3 bg-card rounded-lg p-3 border"
                   >
-                    {item.imagen_url ? (
+                    {item.image_url ? (
                       <img
-                        src={item.imagen_url}
+                        src={item.image_url}
                         alt=""
                         className="w-14 h-14 rounded-lg object-cover shrink-0"
                       />
@@ -622,10 +622,10 @@ export function CartSheet({
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">{item.nombre}</p>
+                      <p className="font-bold text-sm truncate">{item.name}</p>
                       {item.extras.length > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {item.extras.map((e) => `+ ${e.nombre}`).join(', ')}
+                          {item.extras.map((e) => `+ ${e.name}`).join(', ')}
                         </p>
                       )}
                       {item.removidos.length > 0 && (
@@ -633,28 +633,28 @@ export function CartSheet({
                           {item.removidos.map((r) => `Sin ${r}`).join(', ')}
                         </p>
                       )}
-                      {item.notas && (
-                        <p className="text-xs text-muted-foreground italic">"{item.notas}"</p>
+                      {item.notes && (
+                        <p className="text-xs text-muted-foreground italic">"{item.notes}"</p>
                       )}
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => {
-                              if (item.cantidad <= 1) cart.removeItem(item.cartId);
-                              else cart.updateQuantity(item.cartId, item.cantidad - 1);
+                              if (item.quantity <= 1) cart.removeItem(item.cartId);
+                              else cart.updateQuantity(item.cartId, item.quantity - 1);
                             }}
                             className="w-7 h-7 rounded-full bg-muted flex items-center justify-center active:scale-95"
                             aria-label="Quitar uno"
                           >
-                            {item.cantidad === 1 ? (
+                            {item.quantity === 1 ? (
                               <Trash2 className="w-3 h-3 text-destructive" />
                             ) : (
                               <Minus className="w-3 h-3" />
                             )}
                           </button>
-                          <span className="w-5 text-center text-sm font-bold">{item.cantidad}</span>
+                          <span className="w-5 text-center text-sm font-bold">{item.quantity}</span>
                           <button
-                            onClick={() => cart.updateQuantity(item.cartId, item.cantidad + 1)}
+                            onClick={() => cart.updateQuantity(item.cartId, item.quantity + 1)}
                             className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95"
                             aria-label="Agregar uno"
                           >
@@ -718,21 +718,21 @@ export function CartSheet({
                     {touched.nombre && <FieldError error={errors.nombre} />}
                   </div>
                   <div>
-                    <Label htmlFor="checkout-telefono" className="text-xs">
+                    <Label htmlFor="checkout-phone" className="text-xs">
                       Teléfono *
                     </Label>
                     <Input
-                      id="checkout-telefono"
+                      id="checkout-phone"
                       type="tel"
                       inputMode="tel"
-                      value={telefono}
-                      onChange={(e) => setTelefono(e.target.value)}
-                      onBlur={() => handleBlur('telefono')}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      onBlur={() => handleBlur('phone')}
                       placeholder="3511234567"
-                      className={`mt-1 ${touched.telefono && errors.telefono ? 'border-destructive' : ''}`}
+                      className={`mt-1 ${touched.phone && errors.phone ? 'border-destructive' : ''}`}
                     />
-                    {touched.telefono && <FieldError error={errors.telefono} />}
-                    {(!touched.telefono || !errors.telefono) && (
+                    {touched.phone && <FieldError error={errors.phone} />}
+                    {(!touched.phone || !errors.phone) && (
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         Sin 0 ni +54 — ej: 3511234567
                       </p>
@@ -772,10 +772,10 @@ export function CartSheet({
                           </span>
                         </div>
                         <button
-                          onClick={() => {
-                            setDeliveryAddress(null);
-                            setDeliveryCalc(null);
-                            setDireccion('');
+                        onClick={() => {
+                          setDeliveryAddress(null);
+                          setDeliveryCalc(null);
+                          setAddress('');
                           }}
                           className="text-xs text-primary hover:underline shrink-0 ml-2"
                         >
@@ -833,7 +833,7 @@ export function CartSheet({
                             onValueChange={(addrId) => {
                               const addr = savedAddresses.find((a) => a.id === addrId);
                               if (addr) {
-                                setDireccion(addr.direccion);
+                                setAddress(addr.direccion);
                                 setPiso(addr.piso || '');
                                 setReferencia(addr.referencia || '');
                               }
@@ -932,14 +932,14 @@ export function CartSheet({
                     </label>
                   )}
                   <label
-                    htmlFor="pago-efectivo"
+                    htmlFor="pago-cash"
                     className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                      metodoPago === 'efectivo' ? 'border-primary bg-primary/5' : ''
+                      metodoPago === 'cash' ? 'border-primary bg-primary/5' : ''
                     } ${!promoPayment.cashAllowed || promoPayment.hasDigitalOnly ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
                   >
                     <RadioGroupItem
-                      value="efectivo"
-                      id="pago-efectivo"
+                      value="cash"
+                      id="pago-cash"
                       disabled={!promoPayment.cashAllowed || promoPayment.hasDigitalOnly}
                     />
                     <Banknote className="w-5 h-5 text-green-600" />
@@ -953,7 +953,7 @@ export function CartSheet({
                 </RadioGroup>
 
                 {/* "¿Con cuánto pagás?" for cash */}
-                {metodoPago === 'efectivo' && promoPayment.cashAllowed && (
+                {metodoPago === 'cash' && promoPayment.cashAllowed && (
                   <div className="space-y-2 pl-1">
                     <Label className="text-xs">¿Con cuánto pagás?</Label>
                     <div className="flex gap-2 flex-wrap">
@@ -1012,10 +1012,10 @@ export function CartSheet({
                   return (
                     <div key={item.cartId} className="flex justify-between text-xs">
                       <span className="text-muted-foreground">
-                        {item.cantidad}x {item.nombre}
+                        {item.quantity}x {item.name}
                       </span>
                       <span className="font-medium">
-                        {formatPrice((item.precioUnitario + ext) * item.cantidad)}
+                        {formatPrice((item.precioUnitario + ext) * item.quantity)}
                       </span>
                     </div>
                   );

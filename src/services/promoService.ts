@@ -22,7 +22,7 @@ export async function fetchActivePromociones() {
 
 export async function fetchPromocionItemsWithCarta(promoId: string) {
   const { data, error } = await fromUntyped('promotion_items')
-    .select('*, menu_items!inner(name, imagen_url, precio_base)')
+    .select('*, menu_items!inner(name, image_url, base_price)')
     .eq('promocion_id', promoId);
   if (error) throw error;
   return data || [];
@@ -30,7 +30,7 @@ export async function fetchPromocionItemsWithCarta(promoId: string) {
 
 export async function fetchPromoItemsByPromoIds(promoIds: string[]) {
   const { data, error } = await fromUntyped('promotion_items')
-    .select('*, menu_items!inner(name, imagen_url, precio_base)')
+    .select('*, menu_items!inner(name, image_url, base_price)')
     .in('promocion_id', promoIds);
   if (error) throw error;
   return data || [];
@@ -38,7 +38,7 @@ export async function fetchPromoItemsByPromoIds(promoIds: string[]) {
 
 export async function fetchPreconfigExtras(promoItemIds: string[]) {
   const { data, error } = await fromUntyped('promotion_item_extras')
-    .select('promocion_item_id, extra_item_carta_id, cantidad')
+    .select('promocion_item_id, extra_item_carta_id, quantity')
     .in('promocion_item_id', promoItemIds);
   if (error) throw error;
   return (data || []) as Array<Record<string, unknown>>;
@@ -46,7 +46,7 @@ export async function fetchPreconfigExtras(promoItemIds: string[]) {
 
 export async function fetchItemsCartaPriceInfo(ids: string[]) {
   const { data, error } = await fromUntyped('menu_items')
-    .select('id, name, precio_base')
+    .select('id, name, base_price')
     .in('id', ids);
   if (error) throw error;
   return data || [];
@@ -83,7 +83,7 @@ export async function insertPromocionItems(
     .insert(
       items.map((i) => ({
         item_carta_id: i.item_carta_id,
-        precio_promo: i.precio_promo,
+        promo_price: i.precio_promo,
         promocion_id: promoId,
       })),
     )
@@ -93,7 +93,7 @@ export async function insertPromocionItems(
 }
 
 export async function insertPreconfigExtras(
-  rows: { promocion_item_id: string; extra_item_carta_id: string; cantidad: number }[],
+  rows: { promocion_item_id: string; extra_item_carta_id: string; quantity: number }[],
 ) {
   if (rows.length === 0) return;
   const { error } = await fromUntyped('promotion_item_extras').insert(rows);
@@ -128,7 +128,7 @@ export async function fetchCodigosDescuento() {
 export async function findCodigoDescuento(codigo: string) {
   const { data, error } = await fromUntyped('discount_codes')
     .select('*')
-    .ilike('codigo', codigo.trim())
+    .ilike('code', codigo.trim())
     .eq('is_active', true)
     .is('deleted_at', null)
     .maybeSingle();
@@ -139,7 +139,7 @@ export async function findCodigoDescuento(codigo: string) {
 export async function countCodigoUsageByUser(codigoId: string, userId: string) {
   const { count } = await fromUntyped('discount_code_uses')
     .select('id', { count: 'exact', head: true })
-    .eq('codigo_id', codigoId)
+    .eq('code_id', codigoId)
     .eq('user_id', userId);
   return count ?? 0;
 }
@@ -151,20 +151,20 @@ export async function registerCodeUsage(params: {
   montoDescontado: number;
 }) {
   await fromUntyped('discount_code_uses').insert({
-    codigo_id: params.codigoId,
+    code_id: params.codigoId,
     user_id: params.userId || null,
     pedido_id: params.pedidoId || null,
-    monto_descontado: params.montoDescontado,
+    discount_amount: params.montoDescontado,
   } as any);
 
   const { data } = await fromUntyped('discount_codes')
-    .select('usos_actuales')
+    .select('current_uses')
     .eq('id', params.codigoId)
     .single();
   if (data) {
     await fromUntyped('discount_codes')
       .update({
-        usos_actuales: ((data as any).usos_actuales as number) + 1,
+        current_uses: ((data as any).current_uses as number) + 1,
       } as any)
       .eq('id', params.codigoId);
   }
@@ -227,10 +227,10 @@ export async function fetchAllPriceListItems(priceListIds: string[]) {
 export async function fetchItemsCartaForPricing() {
   const { data, error } = await fromUntyped('menu_items')
     .select(
-      'id, name, orden, precio_base, is_active, categoria_carta_id, menu_categories(id, name, orden)',
+      'id, name, sort_order, base_price, is_active, categoria_carta_id, menu_categories(id, name, sort_order)',
     )
     .eq('is_active', true)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data || [];
 }
@@ -278,7 +278,7 @@ export async function deletePriceOverride(price_list_id: string, item_carta_id: 
 
 export async function fetchActiveItemsPrices() {
   const { data, error } = await fromUntyped('menu_items')
-    .select('id, precio_base')
+    .select('id, base_price')
     .eq('is_active', true);
   if (error) throw error;
   return data || [];
@@ -313,7 +313,7 @@ export async function fetchPromoDiscountItems(
 ) {
   const { data, error } = await fromUntyped('order_items')
     .select(
-      'precio_unitario, precio_referencia, cantidad, subtotal, pedido_id, orders!inner(branch_id, created_at)',
+      'unit_price, reference_price, quantity, subtotal, pedido_id, orders!inner(branch_id, created_at)',
     )
     .gte('orders.created_at', startDate)
     .lt('orders.created_at', endDate)

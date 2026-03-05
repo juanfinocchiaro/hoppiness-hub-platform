@@ -6,15 +6,15 @@
 import type { ReglasFacturacion } from '@/types/shiftClosure';
 
 export type PaymentMethod =
-  | 'efectivo'
+  | 'cash'
   | 'debito'
   | 'credito'
   | 'qr'
-  | 'transferencia'
+  | 'transfer'
   | 'mercadopago'
-  | 'vales'
-  | 'tarjeta_debito'
-  | 'tarjeta_credito'
+  | 'vouchers'
+  | 'debit_card'
+  | 'credit_card'
   | 'mercadopago_qr';
 
 export interface OrderPayment {
@@ -38,19 +38,19 @@ function getInternalRuleKey(
   method: PaymentMethod,
 ): keyof ReglasFacturacion['canales_internos'] | null {
   switch (method) {
-    case 'efectivo':
+    case 'cash':
       return 'efectivo';
     case 'debito':
-    case 'tarjeta_debito':
+    case 'debit_card':
       return 'debito';
     case 'credito':
-    case 'tarjeta_credito':
+    case 'credit_card':
       return 'credito';
     case 'qr':
     case 'mercadopago':
     case 'mercadopago_qr':
       return 'qr';
-    case 'transferencia':
+    case 'transfer':
       return 'transferencia';
     default:
       return null;
@@ -100,9 +100,9 @@ export function evaluateInvoicing(
     // MásDelivery has split rules for cash vs digital
     let invoiceable = 0;
     for (const p of payments) {
-      if (p.method === 'efectivo' && reglas.canales_externos.mas_delivery_efectivo) {
+      if (p.method === 'cash' && reglas.canales_externos.mas_delivery_efectivo) {
         invoiceable += p.amount;
-      } else if (p.method !== 'efectivo' && reglas.canales_externos.mas_delivery_digital) {
+      } else if (p.method !== 'cash' && reglas.canales_externos.mas_delivery_digital) {
         invoiceable += p.amount;
       }
     }

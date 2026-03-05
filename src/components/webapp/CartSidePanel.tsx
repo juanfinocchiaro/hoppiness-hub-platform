@@ -81,7 +81,7 @@ export function CartSidePanel({
   useEffect(() => {
     if (!orderStatuses || orderStatuses.length === 0) return;
     const terminalCodes = orderStatuses
-      .filter((o) => TERMINAL_STATES.includes(o.estado as any))
+      .filter((o) => TERMINAL_STATES.includes(o.status as any))
       .map((o) => o.webapp_tracking_code)
       .filter(Boolean) as string[];
 
@@ -153,7 +153,7 @@ export function CartSidePanel({
   const getOrderTabLabel = (code: string) => {
     const status = orderStatuses?.find((o) => o.webapp_tracking_code === code);
     if (!status) return code.slice(0, 6);
-    return `#${status.numero_pedido}`;
+    return `#${status.order_number}`;
   };
 
   const hasTabs = activeOrders.length > 0;
@@ -215,13 +215,13 @@ export function CartSidePanel({
 
               {cart.items.map((item) => {
                 const extrasTotal = item.extras.reduce((s, e) => s + e.precio, 0);
-                const lineTotal = (item.precioUnitario + extrasTotal) * item.cantidad;
+                const lineTotal = (item.precioUnitario + extrasTotal) * item.quantity;
 
                 return (
                   <div key={item.cartId} className="flex items-start gap-3">
-                    {item.imagen_url ? (
+                    {item.image_url ? (
                       <img
-                        src={item.imagen_url}
+                        src={item.image_url}
                         alt=""
                         className="w-12 h-12 rounded-lg object-cover shrink-0"
                       />
@@ -232,11 +232,11 @@ export function CartSidePanel({
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-xs truncate text-foreground">
-                        {item.nombre}
+                        {item.name}
                       </p>
                       {item.extras.length > 0 && (
                         <p className="text-[11px] text-muted-foreground truncate">
-                          {item.extras.map((e) => `+ ${e.nombre}`).join(', ')}
+                          {item.extras.map((e) => `+ ${e.name}`).join(', ')}
                         </p>
                       )}
                       {item.removidos.length > 0 && (
@@ -248,20 +248,20 @@ export function CartSidePanel({
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => {
-                              if (item.cantidad <= 1) cart.removeItem(item.cartId);
-                              else cart.updateQuantity(item.cartId, item.cantidad - 1);
+                              if (item.quantity <= 1) cart.removeItem(item.cartId);
+                              else cart.updateQuantity(item.cartId, item.quantity - 1);
                             }}
                             className="w-6 h-6 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
                           >
-                            {item.cantidad === 1 ? (
+                            {item.quantity === 1 ? (
                               <Trash2 className="w-3 h-3 text-destructive" />
                             ) : (
                               <Minus className="w-3 h-3" />
                             )}
                           </button>
-                          <span className="w-5 text-center text-xs font-bold">{item.cantidad}</span>
+                          <span className="w-5 text-center text-xs font-bold">{item.quantity}</span>
                           <button
-                            onClick={() => cart.updateQuantity(item.cartId, item.cantidad + 1)}
+                            onClick={() => cart.updateQuantity(item.cartId, item.quantity + 1)}
                             className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
                           >
                             <Plus className="w-3 h-3" />
@@ -295,9 +295,9 @@ export function CartSidePanel({
                               onClick={() => onAddSuggested(item)}
                               className="w-full flex items-center gap-2.5 p-2 rounded-lg border hover:border-accent/50 hover:bg-accent/5 transition-colors text-left"
                             >
-                              {item.imagen_url ? (
+                              {item.image_url ? (
                                 <img
-                                  src={item.imagen_url}
+                                  src={item.image_url}
                                   alt=""
                                   className="w-10 h-10 rounded-lg object-cover shrink-0"
                                 />
@@ -307,9 +307,9 @@ export function CartSidePanel({
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold truncate">{item.nombre}</p>
+                                <p className="text-xs font-semibold truncate">{item.name}</p>
                                 <p className="text-xs text-accent font-bold">
-                                  {formatPrice(item.precio_base)}
+                                  {formatPrice(item.base_price)}
                                 </p>
                               </div>
                               <div className="w-6 h-6 rounded-full bg-accent text-accent-foreground flex items-center justify-center shrink-0">

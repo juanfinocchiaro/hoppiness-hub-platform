@@ -32,7 +32,7 @@ interface ExpenseMovement {
   categoria_gasto?: string | null;
   rdo_category_code?: string | null;
   estado_aprobacion?: string | null;
-  observaciones?: string | null;
+  notes?: string | null;
 }
 
 interface CajaExpensesListProps {
@@ -126,7 +126,7 @@ export function CajaExpensesList({
       Monto: e.amount,
       Categoría: e.categoria_gasto ? getCategoriaLabel(e.categoria_gasto) : '',
       Estado: e.estado_aprobacion || 'aprobado',
-      Observaciones: e.observaciones || '',
+      Observaciones: e.notes || '',
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -211,9 +211,9 @@ export function CajaExpensesList({
                         </TableCell>
                         <TableCell className="text-sm">
                           {e.concept}
-                          {e.observaciones && (
+                          {e.notes && (
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {e.observaciones}
+                              {e.notes}
                             </p>
                           )}
                         </TableCell>

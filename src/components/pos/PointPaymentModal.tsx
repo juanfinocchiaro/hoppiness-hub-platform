@@ -14,8 +14,8 @@ import { cn } from '@/lib/utils';
 type PaymentStage = 'sending' | 'waiting' | 'confirmed' | 'rejected' | 'error' | 'cancelled';
 
 interface ConfirmedPayment {
-  metodo: string;
-  monto: number;
+  method: string;
+  amount: number;
   mp_payment_id: string;
 }
 
@@ -33,11 +33,11 @@ interface Props {
 const TIMEOUT_MS = 5 * 60 * 1000;
 
 const METODO_LABELS: Record<string, string> = {
-  tarjeta_debito: 'Tarjeta Débito',
-  tarjeta_credito: 'Tarjeta Crédito',
+  debit_card: 'Tarjeta Débito',
+  credit_card: 'Tarjeta Crédito',
   mercadopago_qr: 'QR MercadoPago',
-  efectivo: 'Efectivo',
-  transferencia: 'Transferencia',
+  cash: 'Efectivo',
+  transfer: 'Transferencia',
 };
 
 export function PointPaymentModal({
@@ -125,8 +125,8 @@ export function PointPaymentModal({
     const channel = subscribeToPedidoPagos(pedidoId, (row) => {
       if (row.conciliado === true && row.mp_payment_id) {
         const payment: ConfirmedPayment = {
-          metodo: row.metodo as string,
-          monto: Number(row.monto),
+          method: row.method as string,
+          amount: Number(row.amount),
           mp_payment_id: String(row.mp_payment_id),
         };
         setConfirmedPayment(payment);
@@ -225,8 +225,8 @@ export function PointPaymentModal({
               <CheckCircle className="h-16 w-16 text-emerald-500" />
               <p className="text-lg font-semibold text-emerald-700">Pago confirmado</p>
               <p className="text-sm text-muted-foreground">
-                {METODO_LABELS[confirmedPayment.metodo] ?? confirmedPayment.metodo}
-                {' · '}$ {confirmedPayment.monto.toLocaleString('es-AR')}
+                {METODO_LABELS[confirmedPayment.method] ?? confirmedPayment.method}
+                {' · '}$ {confirmedPayment.amount.toLocaleString('es-AR')}
               </p>
             </>
           )}

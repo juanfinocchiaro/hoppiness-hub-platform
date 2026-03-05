@@ -44,7 +44,7 @@ export default function PromocionesPage() {
     if (!itemSearch.trim()) return [];
     const q = itemSearch.toLowerCase();
     return menuItems
-      .filter((i) => i.nombre.toLowerCase().includes(q))
+      .filter((i) => i.name.toLowerCase().includes(q))
       .filter((i) => !promoItems.some((pi) => pi.item_carta_id === i.id))
       .slice(0, 8);
   };
@@ -79,14 +79,14 @@ export default function PromocionesPage() {
 
   const openDuplicate = async (promo: Promocion) => {
     const loadedItems = await fetchPromoItems(promo.id);
-    setCreateForm({ ...buildFormFromPromo(promo), nombre: `${promo.nombre} (Copia)` });
+    setCreateForm({ ...buildFormFromPromo(promo), name: `${promo.name} (Copia)` });
     setCreatePromoItems(loadedItems);
     setCreateItemSearch('');
     setCreatingNew(true);
   };
 
-  const addItem = (item: { id: string; nombre: string; precio_base: number; imagen_url?: string | null }, setItems: Dispatch<SetStateAction<PromoItemDraft[]>>, setSearch: Dispatch<SetStateAction<string>>) => {
-    setItems((prev) => [...prev, { item_carta_id: item.id, nombre: item.nombre, imagen_url: item.imagen_url, precio_base: Number(item.precio_base), precio_promo: Number(item.precio_base) }]);
+  const addItem = (item: { id: string; name: string; base_price: number; image_url?: string | null }, setItems: Dispatch<SetStateAction<PromoItemDraft[]>>, setSearch: Dispatch<SetStateAction<string>>) => {
+    setItems((prev) => [...prev, { item_carta_id: item.id, nombre: item.name, imagen_url: item.image_url, precio_base: Number(item.base_price), precio_promo: Number(item.base_price) }]);
     setSearch('');
   };
 
@@ -99,7 +99,7 @@ export default function PromocionesPage() {
   };
 
   const validateForm = (form: PromocionFormData) => {
-    if (!form.nombre.trim()) { toast.error('Ingresá un nombre para la promoción'); return false; }
+    if (!form.name.trim()) { toast.error('Ingresá un nombre para la promoción'); return false; }
     if (form.valor < 0) { toast.error('El valor no puede ser negativo'); return false; }
     if (form.tipo === 'descuento_porcentaje' && form.valor > 100) { toast.error('El porcentaje no puede ser mayor a 100'); return false; }
     if (form.dias_semana.length === 0) { toast.error('Seleccioná al menos un día de la semana'); return false; }
@@ -185,10 +185,10 @@ export default function PromocionesPage() {
       </Dialog>
 
       <ConfirmDialog open={!!deleting} onOpenChange={() => setDeleting(null)} title="Eliminar promoción"
-        description={`¿Eliminar "${deleting?.nombre}"?`} confirmLabel="Eliminar" variant="destructive"
+        description={`¿Eliminar "${deleting?.name}"?`} confirmLabel="Eliminar" variant="destructive"
         onConfirm={async () => { if (deleting) await remove.mutateAsync(deleting.id); setDeleting(null); }} />
       <ConfirmDialog open={!!confirmClosePromo} onOpenChange={() => setConfirmClosePromo(null)} title="Descartar cambios"
-        description={`"${confirmClosePromo?.nombre}" tiene cambios sin guardar. ¿Querés cerrarla igual?`} confirmLabel="Cerrar sin guardar"
+        description={`"${confirmClosePromo?.name}" tiene cambios sin guardar. ¿Querés cerrarla igual?`} confirmLabel="Cerrar sin guardar"
         onConfirm={() => { if (confirmClosePromo) closePromoNow(confirmClosePromo.id); setConfirmClosePromo(null); }} />
     </div>
   );

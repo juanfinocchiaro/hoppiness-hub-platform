@@ -4,9 +4,9 @@ export function emptyItem(): ItemFormState {
   return {
     tipo_item: 'insumo',
     insumo_id: '',
-    cantidad: 0,
+    quantity: 0,
     unidad: 'kg',
-    precio_unitario: 0,
+    unit_price: 0,
     subtotal: 0,
     afecta_costo_base: true,
     alicuota_iva: 21,
@@ -21,11 +21,11 @@ export function emptyItem(): ItemFormState {
 
 /** Recalculate IVA fields based on neto + alicuota */
 export function recalcIva(item: ItemFormState): ItemFormState {
-  const neto = Number(item.precio_unitario) || 0;
+  const neto = Number(item.unit_price) || 0;
   const alicuota = item.alicuota_iva != null ? Number(item.alicuota_iva) : 0;
   const ivaMonto = neto * (alicuota / 100);
   const bruto = neto + ivaMonto;
-  const qty = item.tipo_item === 'servicio' ? 1 : Number(item.cantidad) || 0;
+  const qty = item.tipo_item === 'servicio' ? 1 : Number(item.quantity) || 0;
   return {
     ...item,
     iva_monto: Math.round(ivaMonto * 100) / 100,

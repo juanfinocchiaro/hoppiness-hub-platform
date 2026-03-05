@@ -29,12 +29,12 @@ import { toast } from 'sonner';
 interface DeliveryZone {
   id: string;
   branch_id: string;
-  nombre: string;
+  name: string;
   costo_envio: number;
   pedido_minimo: number;
   tiempo_estimado_min: number;
   barrios: string[];
-  descripcion: string | null;
+  description: string | null;
   orden: number;
   is_active: boolean;
 }
@@ -100,17 +100,17 @@ export function DeliveryZonesManager({ branchId }: Props) {
   const startEdit = (zone: DeliveryZone) => {
     setEditingId(zone.id);
     setDraft({
-      nombre: zone.nombre,
+      name: zone.name,
       costo_envio: zone.costo_envio,
       pedido_minimo: zone.pedido_minimo,
       tiempo_estimado_min: zone.tiempo_estimado_min,
       barrios: zone.barrios,
-      descripcion: zone.descripcion,
+      description: zone.description,
     });
   };
 
   const saveEdit = () => {
-    if (!editingId || !draft.nombre?.trim()) return;
+    if (!editingId || !draft.name?.trim()) return;
     updateZone.mutate({ id: editingId, patch: draft });
   };
 
@@ -150,8 +150,8 @@ export function DeliveryZonesManager({ branchId }: Props) {
                     <div>
                       <Label className="text-xs">Nombre de zona</Label>
                       <Input
-                        value={draft.nombre ?? ''}
-                        onChange={(e) => setDraft((d) => ({ ...d, nombre: e.target.value }))}
+                        value={draft.name ?? ''}
+                        onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
                         placeholder="Ej: Centro, Zona Norte"
                         className="mt-1"
                       />
@@ -226,9 +226,9 @@ export function DeliveryZonesManager({ branchId }: Props) {
                     <div>
                       <Label className="text-xs">Descripción (opcional)</Label>
                       <Input
-                        value={draft.descripcion ?? ''}
+                        value={draft.description ?? ''}
                         onChange={(e) =>
-                          setDraft((d) => ({ ...d, descripcion: e.target.value || null }))
+                          setDraft((d) => ({ ...d, description: e.target.value || null }))
                         }
                         placeholder="Info adicional para el cliente"
                         className="mt-1"
@@ -257,7 +257,7 @@ export function DeliveryZonesManager({ branchId }: Props) {
                     <div className="flex items-start gap-2 flex-1 min-w-0">
                       <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-sm">{zone.nombre}</p>
+                        <p className="font-medium text-sm">{zone.name}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
                           <span>Envío: ${zone.costo_envio}</span>
                           {zone.pedido_minimo > 0 && <span>Mín: ${zone.pedido_minimo}</span>}

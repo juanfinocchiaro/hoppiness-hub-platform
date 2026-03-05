@@ -54,10 +54,10 @@ export default function ComprasPage() {
 
   const filtered = facturas?.filter((f: any) => {
     const matchesSearch =
-      f.proveedores?.razon_social?.toLowerCase().includes(search.toLowerCase()) ||
-      f.factura_numero?.includes(search);
-    const matchesFrom = !dateFrom || (f.fecha_factura && f.fecha_factura >= dateFrom);
-    const matchesTo = !dateTo || (f.fecha_factura && f.fecha_factura <= dateTo);
+      f.suppliers?.business_name?.toLowerCase().includes(search.toLowerCase()) ||
+      f.invoice_number?.includes(search);
+    const matchesFrom = !dateFrom || (f.invoice_date && f.invoice_date >= dateFrom);
+    const matchesTo = !dateTo || (f.invoice_date && f.invoice_date <= dateTo);
     return matchesSearch && matchesFrom && matchesTo;
   });
 
@@ -80,12 +80,12 @@ export default function ComprasPage() {
                 onClick={() =>
                   exportToExcel(
                     filtered.map((f: any) => ({
-                      fecha: f.fecha_factura ? formatLocalDate(f.fecha_factura) : '-',
-                      proveedor: f.proveedores?.razon_social || '-',
-                      numero: f.factura_numero || '-',
+                      fecha: f.invoice_date ? formatLocalDate(f.invoice_date) : '-',
+                      proveedor: f.suppliers?.business_name || '-',
+                      numero: f.invoice_number || '-',
                       total: f.total || 0,
                       estado: f.estado || '-',
-                      vencimiento: f.fecha_vencimiento ? formatLocalDate(f.fecha_vencimiento) : '-',
+                      vencimiento: f.due_date ? formatLocalDate(f.due_date) : '-',
                     })),
                     {
                       fecha: 'Fecha',
@@ -160,7 +160,7 @@ export default function ComprasPage() {
               </TableRow>
             ) : (
               filtered.map((row: any) => {
-                const isCanon = row.factura_numero?.startsWith('CANON-');
+                const isCanon = row.invoice_number?.startsWith('CANON-');
                 return (
                   <>
                     <TableRow
@@ -176,7 +176,7 @@ export default function ComprasPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
-                        {formatLocalDate(row.factura_fecha)}
+                        {formatLocalDate(row.invoice_date)}
                       </TableCell>
                       <TableCell className="font-medium">
                         <Link
@@ -184,7 +184,7 @@ export default function ComprasPage() {
                           className="text-primary hover:underline whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {row.proveedores?.razon_social}
+                          {row.suppliers?.business_name}
                         </Link>
                         {isCanon && (
                           <Badge variant="outline" className="ml-2 text-xs">
@@ -193,15 +193,15 @@ export default function ComprasPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm font-mono whitespace-nowrap">
-                        {row.factura_tipo ? `${row.factura_tipo}-` : ''}
-                        {row.factura_numero}
+                        {row.invoice_type ? `${row.invoice_type}-` : ''}
+                        {row.invoice_number}
                       </TableCell>
                       <TableCell className="text-right font-mono whitespace-nowrap">
                         $ {Number(row.total).toLocaleString('es-AR')}
                       </TableCell>
-                      <TableCell>{estadoBadge(row.estado_pago)}</TableCell>
+                      <TableCell>{estadoBadge(row.payment_status)}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
-                        {row.fecha_vencimiento ? formatLocalDate(row.fecha_vencimiento) : '-'}
+                        {row.due_date ? formatLocalDate(row.due_date) : '-'}
                       </TableCell>
                       <TableCell>
                         <div
@@ -259,7 +259,7 @@ export default function ComprasPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                    {expanded === row.id && row.items_factura?.length > 0 && (
+                    {expanded === row.id && row.invoice_items?.length > 0 && (
                       <TableRow key={`${row.id}-items`}>
                         <TableCell colSpan={8} className="bg-muted/30 p-0">
                           <Table>
@@ -274,13 +274,13 @@ export default function ComprasPage() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {row.items_factura.map((item: any) => (
+                              {row.invoice_items.map((item: any) => (
                                 <TableRow key={item.id}>
                                   <TableCell className="text-sm">
-                                    {item.insumos?.nombre || item.conceptos_servicio?.nombre || '-'}
+                                    {item.supplies?.name || item.service_concepts?.name || '-'}
                                   </TableCell>
                                   <TableCell className="text-right font-mono">
-                                    {Number(item.cantidad)}
+                                    {Number(item.quantity)}
                                   </TableCell>
                                   <TableCell className="text-sm">{item.unidad || '-'}</TableCell>
                                   <TableCell className="text-right font-mono">

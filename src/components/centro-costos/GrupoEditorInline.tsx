@@ -34,24 +34,22 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
 }) {
   const [editItems, setEditItems] = useState<GrupoEditItem[]>([]);
   const [editing, setEditing] = useState(false);
-  const [nombre, setNombre] = useState(grupo.nombre);
+  const [nombre, setNombre] = useState(grupo.name);
 
   useEffect(() => {
     if (grupo.items)
       setEditItems(
-        grupo.items.map((gi: GrupoOpcionalItem) => ({
+        grupo.items.map((gi: any) => ({
           tipo: gi.preparacion_id ? 'preparacion' : 'insumo',
           insumo_id: gi.insumo_id || '',
           preparacion_id: gi.preparacion_id || '',
-          cantidad: gi.cantidad,
+          cantidad: gi.quantity,
           costo_unitario:
-            gi.costo_unitario ||
-            gi.insumos?.costo_por_unidad_base ||
-            gi.preparaciones?.costo_calculado ||
-            (gi as any).supplies?.costo_por_unidad_base ||
-            (gi as any).recipes?.costo_calculado ||
+            gi.unit_cost ||
+            gi.supplies?.base_unit_cost ||
+            gi.recipes?.calculated_cost ||
             0,
-          _nombre: gi.insumos?.nombre || gi.preparaciones?.nombre || (gi as any).supplies?.nombre || (gi as any).recipes?.nombre || '',
+          _nombre: gi.supplies?.name || gi.recipes?.name || '',
         })),
       );
   }, [grupo.items]);
@@ -69,13 +67,13 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
     if (field === 'tipo') { next[i].insumo_id = ''; next[i].preparacion_id = ''; next[i].costo_unitario = 0; next[i]._nombre = ''; }
     if (field === 'insumo_id') {
       const ins = insumos.find((x: any) => x.id === value);
-      next[i].costo_unitario = ins?.costo_por_unidad_base || 0;
-      next[i]._nombre = ins?.nombre || '';
+      next[i].costo_unitario = ins?.base_unit_cost || 0;
+      next[i]._nombre = ins?.name || '';
     }
     if (field === 'preparacion_id') {
       const p = preparaciones.find((x: any) => x.id === value);
-      next[i].costo_unitario = p?.costo_calculado || 0;
-      next[i]._nombre = p?.nombre || '';
+      next[i].costo_unitario = p?.calculated_cost || 0;
+      next[i]._nombre = p?.name || '';
     }
     setEditItems(next);
     setEditing(true);
@@ -86,8 +84,8 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
     : 0;
 
   const handleSave = async () => {
-    if (nombre !== grupo.nombre)
-      await mutations.updateGrupo.mutateAsync({ id: grupo.id, item_carta_id: itemId, data: { nombre } });
+    if (nombre !== grupo.name)
+      await mutations.updateGrupo.mutateAsync({ id: grupo.id, item_carta_id: itemId, data: { name: nombre } });
     await mutations.saveGrupoItems.mutateAsync({
       grupo_id: grupo.id, item_carta_id: itemId,
       items: editItems.filter((i) => i.insumo_id || i.preparacion_id).map((i) => ({
@@ -124,16 +122,16 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
             {ei.tipo === 'insumo'
               ? (() => {
                   const selectedIds = editItems.filter((_, idx) => idx !== i).map((x) => x.insumo_id).filter(Boolean);
-                  const available = insumos.filter((x: any) => (x.tipo_item === 'insumo' || x.tipo_item === 'producto') && !selectedIds.includes(x.id));
-                  const productos = available.filter((x: any) => x.tipo_item === 'producto');
-                  const otros = available.filter((x: any) => x.tipo_item !== 'producto');
+                  const available = insumos.filter((x: any) => (x.item_type === 'insumo' || x.item_type === 'producto') && !selectedIds.includes(x.id));
+                  const productos = available.filter((x: any) => x.item_type === 'producto');
+                  const otros = available.filter((x: any) => x.item_type !== 'producto');
                   return (
                     <Select value={ei.insumo_id || 'none'} onValueChange={(v) => updateItem(i, 'insumo_id', v === 'none' ? '' : v)}>
                       <SelectTrigger className="h-6 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Seleccionar...</SelectItem>
-                        {productos.length > 0 && (<><SelectItem value="__h_prod" disabled className="text-xs font-semibold text-muted-foreground">── Productos ──</SelectItem>{productos.map((ins: any) => (<SelectItem key={ins.id} value={ins.id}>{ins.nombre}</SelectItem>))}</>)}
-                        {otros.length > 0 && (<><SelectItem value="__h_ins" disabled className="text-xs font-semibold text-muted-foreground">── Insumos ──</SelectItem>{otros.map((ins: any) => (<SelectItem key={ins.id} value={ins.id}>{ins.nombre}</SelectItem>))}</>)}
+                        {productos.length > 0 && (<><SelectItem value="__h_prod" disabled className="text-xs font-semibold text-muted-foreground">── Productos ──</SelectItem>{productos.map((ins: any) => (<SelectItem key={ins.id} value={ins.id}>{ins.name}</SelectItem>))}</>)}
+                        {otros.length > 0 && (<><SelectItem value="__h_ins" disabled className="text-xs font-semibold text-muted-foreground">── Insumos ──</SelectItem>{otros.map((ins: any) => (<SelectItem key={ins.id} value={ins.id}>{ins.name}</SelectItem>))}</>)}
                       </SelectContent>
                     </Select>
                   );
@@ -145,7 +143,7 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
                       <SelectTrigger className="h-6 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Seleccionar...</SelectItem>
-                        {preparaciones.filter((p: any) => !selectedIds.includes(p.id)).map((p: any) => (<SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>))}
+                        {preparaciones.filter((p: any) => !selectedIds.includes(p.id)).map((p: any) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
                   );

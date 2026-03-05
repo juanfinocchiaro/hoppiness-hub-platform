@@ -129,20 +129,20 @@ function KdsItemRow({ item, isKds }: { item: KitchenItem; isKds: boolean }) {
     >
       <div className="flex-1 min-w-0">
         <div className={cn('font-bold text-zinc-100', isKds ? 'text-lg' : 'text-base')}>
-          {item.cantidad}× {item.nombre || 'Producto'}
+          {item.quantity}× {item.name || 'Producto'}
         </div>
 
-        {item.pedido_item_modificadores?.length > 0 && (
+        {item.order_item_modifiers?.length > 0 && (
           <div className="mt-1 space-y-0.5">
-            {item.pedido_item_modificadores.map((mod) => (
-              <ModifierLine key={mod.id} tipo={mod.tipo} descripcion={mod.descripcion} />
+            {item.order_item_modifiers.map((mod) => (
+              <ModifierLine key={mod.id} tipo={mod.type} descripcion={mod.description} />
             ))}
           </div>
         )}
 
-        {item.notas && (
+        {item.notes && (
           <div className="mt-1 text-sm bg-amber-900/40 text-amber-200 rounded px-2 py-1 italic">
-            {item.notas}
+            {item.notes}
           </div>
         )}
       </div>
@@ -162,9 +162,9 @@ function KdsOrderCard({
   isKds: boolean;
   fadingOut: boolean;
 }) {
-  const isPendiente = pedido.estado === 'pendiente';
-  const isEnPrep = pedido.estado === 'en_preparacion';
-  const isListo = pedido.estado === 'listo';
+  const isPendiente = pedido.status === 'pendiente';
+  const isEnPrep = pedido.status === 'en_preparacion';
+  const isListo = pedido.status === 'listo';
 
   const elapsed = Math.floor((Date.now() - new Date(pedido.created_at).getTime()) / 1000 / 60);
   const urgencyBorder =
@@ -187,23 +187,23 @@ function KdsOrderCard({
       <div className="px-4 py-3 flex items-center justify-between bg-zinc-800/60">
         <div className="flex items-center gap-3">
           <span className={cn('font-black text-zinc-100', isKds ? 'text-3xl' : 'text-2xl')}>
-            #{pedido.numero_pedido}
+            #{pedido.order_number}
           </span>
           <Badge variant="secondary" className="gap-1 text-xs bg-zinc-700 text-zinc-200 border-0">
-            <ServiceIcon tipo={pedido.tipo_servicio} />
-            {serviceLabel(pedido.tipo_servicio)}
+            <ServiceIcon tipo={pedido.service_type} />
+            {serviceLabel(pedido.service_type)}
           </Badge>
         </div>
         <KdsTimer createdAt={pedido.created_at} isKds={isKds} />
       </div>
 
       {/* Llamador / Cliente */}
-      {(pedido.numero_llamador || pedido.cliente_nombre) && (
+      {(pedido.caller_number || pedido.customer_name) && (
         <div className="px-4 py-2 border-b border-zinc-800 text-sm text-zinc-400 flex gap-3">
-          {pedido.numero_llamador && (
-            <span className="font-semibold text-zinc-200">#{pedido.numero_llamador}</span>
+          {pedido.caller_number && (
+            <span className="font-semibold text-zinc-200">#{pedido.caller_number}</span>
           )}
-          {pedido.cliente_nombre && <span>{pedido.cliente_nombre}</span>}
+          {pedido.customer_name && <span>{pedido.customer_name}</span>}
         </div>
       )}
 
@@ -294,7 +294,7 @@ function KdsColumn({
 
 // ─── Metrics Bar ────────────────────────────────────────────
 function MetricsBar({ pedidos }: { pedidos: KitchenPedido[] }) {
-  const activos = pedidos.filter((p) => p.estado !== 'listo' && p.estado !== 'entregado');
+  const activos = pedidos.filter((p) => p.status !== 'listo' && p.status !== 'entregado');
   const now = Date.now();
 
   const avgMinutes =
@@ -388,7 +388,7 @@ export default function KitchenPage() {
 
       if (estado === 'listo' && branchId) {
         const pedido = pedidos?.find((p) => p.id === pedidoId);
-        const isDelivery = pedido?.tipo_servicio === 'delivery' || pedido?.canal_venta === 'apps';
+        const isDelivery = pedido?.service_type === 'delivery' || pedido?.canal_venta === 'apps';
 
         // Delivery ticket: always print when delivery/apps order is ready
         if (isDelivery) {
@@ -419,12 +419,12 @@ export default function KitchenPage() {
               printConfig,
               printers: allPrinters,
               afipConfig: afipConfig as unknown as {
-                razon_social?: string | null;
+                business_name?: string | null;
                 cuit?: string | null;
                 direccion_fiscal?: string | null;
                 inicio_actividades?: string | null;
                 iibb?: string | null;
-                condicion_iva?: string | null;
+                tax_status?: string | null;
               } | null,
             });
             toast.success('Ticket impreso al marcar listo');
@@ -457,11 +457,11 @@ export default function KitchenPage() {
     if (!pedidos) return [];
     const now = Date.now();
     return pedidos.filter((p) => {
-      if (p.estado === 'listo' && p.tiempo_listo) {
-        const listoTime = new Date(p.tiempo_listo).getTime();
+      if (p.status === 'listo' && p.ready_at_time) {
+        const listoTime = new Date(p.ready_at_time).getTime();
         return now - listoTime < REMOVE_AFTER_MS;
       }
-      if (p.estado === 'entregado') return false;
+      if (p.status === 'entregado') return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -469,9 +469,9 @@ export default function KitchenPage() {
 
   const { pendientes, enPreparacion, listos } = useMemo(
     () => ({
-      pendientes: visiblePedidos.filter((p) => p.estado === 'pendiente'),
-      enPreparacion: visiblePedidos.filter((p) => p.estado === 'en_preparacion'),
-      listos: visiblePedidos.filter((p) => p.estado === 'listo'),
+      pendientes: visiblePedidos.filter((p) => p.status === 'pendiente'),
+      enPreparacion: visiblePedidos.filter((p) => p.status === 'en_preparacion'),
+      listos: visiblePedidos.filter((p) => p.status === 'listo'),
     }),
     [visiblePedidos],
   );

@@ -60,15 +60,15 @@ export function getDraftSignature(form: PromocionFormData, promoItems: PromoItem
 }
 
 export function buildFormFromPromo(promo: {
-  nombre: string; descripcion: string | null; tipo: string; valor: number;
+  name: string; description: string | null; tipo: string; valor: number;
   restriccion_pago: string; dias_semana: number[]; hora_inicio: string; hora_fin: string;
   fecha_inicio: string | null; fecha_fin: string | null; aplica_a: string;
   producto_ids: string[]; categoria_ids: string[]; tipo_usuario: string;
   activa: boolean; branch_ids: string[]; canales: string[] | null;
 }): PromocionFormData {
   return {
-    nombre: promo.nombre,
-    descripcion: promo.descripcion,
+    name: promo.name,
+    description: promo.description,
     tipo: promo.tipo as PromocionFormData['tipo'],
     valor: promo.valor,
     restriccion_pago: promo.restriccion_pago as PromocionFormData['restriccion_pago'],

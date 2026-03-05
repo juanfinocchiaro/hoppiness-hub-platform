@@ -7,12 +7,12 @@ export type Insumo = any;
 
 // Form types for create/edit
 export interface ProveedorFormData {
-  razon_social: string;
+  business_name: string;
   cuit?: string;
   contacto?: string;
-  telefono?: string;
+  phone?: string;
   email?: string;
-  direccion?: string;
+  address?: string;
   ambito: 'marca' | 'local';
   branch_id?: string | null;
   permite_cuenta_corriente?: boolean;
@@ -26,17 +26,17 @@ export interface ProveedorFormData {
   titular_cuenta?: string;
   telefono_secundario?: string;
   contacto_secundario?: string;
-  observaciones?: string;
+  notes?: string;
 }
 
 export interface InsumoFormData {
-  nombre: string;
+  name: string;
   categoria_id?: string;
-  unidad_base: string;
+  base_unit: string;
   categoria_pl?: string;
   precio_referencia?: number;
   proveedor_sugerido_id?: string;
-  descripcion?: string;
+  description?: string;
   tipo_item?: 'ingrediente' | 'insumo' | 'producto';
   rdo_category_code?: string;
   tracks_stock?: boolean;
@@ -68,9 +68,9 @@ export const UNIDAD_BASE_OPTIONS = [
 ] as const;
 
 export interface CategoriaInsumoFormData {
-  nombre: string;
+  name: string;
   tipo: string;
-  descripcion?: string;
+  description?: string;
   orden?: number;
 }
 
@@ -102,8 +102,8 @@ export const TIPO_CATEGORIA_OPTIONS = [
 ] as const;
 
 export const MEDIOS_PAGO_PROVEEDOR = [
-  'efectivo',
-  'transferencia',
+  'cash',
+  'transfer',
   'cheque',
   'cuenta_corriente',
 ] as const;

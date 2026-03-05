@@ -20,9 +20,9 @@ export interface OrderConfig {
   tipoServicio: TipoServicio;
   canalApp: CanalApp;
   numeroLlamador: string;
-  clienteNombre: string;
-  clienteTelefono: string;
-  clienteDireccion: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
   /** Identificador del pedido en la plataforma (Rappi: 6 dígitos, MP: 3 dígitos, PeYa: nombre) */
   referenciaApp: string;
   /** Tipo de comprobante fiscal */
@@ -56,9 +56,9 @@ export const DEFAULT_ORDER_CONFIG: OrderConfig = {
   tipoServicio: 'takeaway',
   canalApp: 'rappi',
   numeroLlamador: '',
-  clienteNombre: '',
-  clienteTelefono: '',
-  clienteDireccion: '',
+  customerName: '',
+  customerPhone: '',
+  customerAddress: '',
   referenciaApp: '',
   tipoFactura: 'B',
   receptorCuit: '',
@@ -87,42 +87,42 @@ export type PedidoItemEstacion = 'parrilla' | 'armado' | 'fritura' | 'entrega' |
 export type ModificadorTipo = 'extra' | 'sin' | 'cambio';
 
 export type MetodoPago =
-  | 'efectivo'
-  | 'tarjeta_debito'
-  | 'tarjeta_credito'
+  | 'cash'
+  | 'debit_card'
+  | 'credit_card'
   | 'mercadopago_qr'
-  | 'transferencia';
+  | 'transfer';
 
 export interface CartItemExtra {
   id: string;
-  nombre: string;
+  name: string;
   precio: number;
-  cantidad: number;
+  quantity: number;
 }
 
 export interface CartItemRemovible {
   id: string;
-  nombre: string;
+  name: string;
 }
 
 export interface CartItemOpcional {
   grupoId: string;
   grupoNombre: string;
   itemId: string;
-  nombre: string;
+  name: string;
 }
 
 export interface CartItem {
   item_carta_id: string;
-  nombre: string;
-  cantidad: number;
-  precio_unitario: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
   subtotal: number;
-  notas?: string;
+  notes?: string;
   extras?: CartItemExtra[];
   removibles?: CartItemRemovible[];
   opcionales?: CartItemOpcional[];
-  precio_referencia?: number;
+  reference_price?: number;
   categoria_carta_id?: string | null;
   createdAt?: number;
   /** Promo aplicada (si corresponde) */

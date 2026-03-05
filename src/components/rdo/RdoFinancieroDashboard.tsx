@@ -25,11 +25,11 @@ import { useRdoFinanciero } from '@/hooks/useRdoFinanciero';
 import { getCurrentPeriodo } from '@/types/compra';
 
 const METODO_LABELS: Record<string, string> = {
-  efectivo: 'Efectivo',
-  tarjeta_debito: 'Tarjeta Débito',
-  tarjeta_credito: 'Tarjeta Crédito',
+  cash: 'Efectivo',
+  debit_card: 'Tarjeta Débito',
+  credit_card: 'Tarjeta Crédito',
   mercadopago_qr: 'MercadoPago QR',
-  transferencia: 'Transferencia',
+  transfer: 'Transferencia',
 };
 
 const GASTO_CAT_LABELS: Record<string, string> = {

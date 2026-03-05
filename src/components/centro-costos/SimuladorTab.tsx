@@ -111,7 +111,7 @@ export function SimuladorTab({ items, gs, sim, setSim, onApply }: SimuladorTabPr
                 const diffAbs = i.np - i.precio;
                 return (
                   <TableRow key={i.id} className={i.changed ? 'bg-primary/5' : ''}>
-                    <TableCell className="font-medium text-sm">{i.nombre}</TableCell>
+                    <TableCell className="font-medium text-sm">{i.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{i.cat}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{fmt(i.costo)}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{fmt(i.precio)}</TableCell>

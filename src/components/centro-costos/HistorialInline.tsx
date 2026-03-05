@@ -18,11 +18,11 @@ export function HistorialInline({ item }: { item: any }) {
               year: 'numeric',
             })}
           </span>
-          <span className="font-mono text-destructive">{formatCurrency(h.precio_anterior)}</span>
+          <span className="font-mono text-destructive">{formatCurrency(h.previous_price)}</span>
           <span className="text-muted-foreground">→</span>
-          <span className="font-mono text-primary font-semibold">{formatCurrency(h.precio_nuevo)}</span>
-          {h.motivo && (
-            <span className="text-xs text-muted-foreground truncate flex-1">({h.motivo})</span>
+          <span className="font-mono text-primary font-semibold">{formatCurrency(h.new_price)}</span>
+          {h.reason && (
+            <span className="text-xs text-muted-foreground truncate flex-1">({h.reason})</span>
           )}
         </div>
       ))}

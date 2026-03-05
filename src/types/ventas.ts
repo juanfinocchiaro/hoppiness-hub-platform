@@ -4,15 +4,15 @@ export type PagoCannon = any;
 
 export interface VentaMensualFormData {
   branch_id: string;
-  periodo: string;
+  period: string;
   fc_total: number;
   ft_total: number;
-  observaciones?: string;
+  notes?: string;
 }
 
 export interface CanonLiquidacionFormData {
   branch_id: string;
-  periodo: string;
+  period: string;
   ventas_id?: string;
   fc_total: number;
   ft_total: number;
@@ -21,16 +21,16 @@ export interface CanonLiquidacionFormData {
   marketing_porcentaje?: number;
   marketing_monto: number;
   total_canon: number;
-  fecha_vencimiento?: string;
-  observaciones?: string;
+  due_date?: string;
+  notes?: string;
 }
 
 export interface PagoCanonFormData {
   canon_liquidacion_id: string;
   branch_id: string;
-  monto: number;
-  fecha_pago: string;
-  medio_pago: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string;
   referencia?: string;
-  observaciones?: string;
+  notes?: string;
 }

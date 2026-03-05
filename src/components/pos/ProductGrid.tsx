@@ -120,7 +120,7 @@ export function ProductGrid({
   const cartQtyMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of cart) {
-      map.set(item.item_carta_id, (map.get(item.item_carta_id) || 0) + item.cantidad);
+      map.set(item.item_carta_id, (map.get(item.item_carta_id) || 0) + item.quantity);
     }
     return map;
   }, [cart]);
@@ -136,10 +136,10 @@ export function ProductGrid({
     return promoItems
       .map((pi) => {
         const base = baseById.get(pi.item_carta_id);
-        if (!base || pi.precio_promo >= Number(base.precio_base ?? 0)) return null;
+        if (!base || pi.precio_promo >= Number(base.base_price ?? 0)) return null;
         const extras = pi.preconfigExtras || [];
         const extrasTotal = extras.reduce((sum, ex) => sum + (ex.precio ?? 0) * ex.cantidad, 0);
-        const precioSinPromo = Number(base.precio_base ?? 0) + extrasTotal;
+        const precioSinPromo = Number(base.base_price ?? 0) + extrasTotal;
         const included = extras
           .filter((ex) => ex.nombre)
           .map((ex) => (ex.cantidad > 1 ? `${ex.cantidad}x ${ex.nombre}` : ex.nombre));
@@ -151,9 +151,9 @@ export function ProductGrid({
           _promoData: pi,
           _precioSinPromo: precioSinPromo,
           _includedLabel: included.length > 0 ? `Incluye: ${included.join(', ')}` : null,
-          nombre: pi.promocion_nombre || `${base.nombre_corto || base.nombre} (PROMO)`,
-          nombre_corto: pi.promocion_nombre || `${base.nombre_corto || base.nombre} (PROMO)`,
-          precio_base: precioSinPromo,
+          name: pi.promocion_nombre || `${base.short_name || base.name} (PROMO)`,
+          short_name: pi.promocion_nombre || `${base.short_name || base.name} (PROMO)`,
+          base_price: precioSinPromo,
         };
       })
       .filter(Boolean) as PromoArticle[];
@@ -163,8 +163,8 @@ export function ProductGrid({
     if (!debouncedSearch.trim()) return [];
     const term = debouncedSearch.toLowerCase();
     const match = (item: GridItem) => {
-      const nombre = (item.nombre ?? '').toLowerCase();
-      const nombreCorto = (item.nombre_corto ?? '').toLowerCase();
+      const nombre = (item.name ?? '').toLowerCase();
+      const nombreCorto = (item.short_name ?? '').toLowerCase();
       return nombre.includes(term) || nombreCorto.includes(term);
     };
     return [...promoArticles.filter(match), ...allItems.filter(match)];
@@ -271,20 +271,20 @@ export function ProductGrid({
   };
 
   const addItemToCart = (item: MenuItemWithCategory) => {
-    const precio = item.precio_base ?? 0;
-    const nombre = item.nombre_corto ?? item.nombre;
-    const precioRef = item.precio_referencia ? Number(item.precio_referencia) : undefined;
+    const precio = item.base_price ?? 0;
+    const nombre = item.short_name ?? item.name;
+    const precioRef = item.reference_price ? Number(item.reference_price) : undefined;
 
     if (onSelectItem) {
       onSelectItem(item);
     } else {
       onAddItem({
         item_carta_id: item.id,
-        nombre,
-        cantidad: 1,
-        precio_unitario: precio,
+        name: nombre,
+        quantity: 1,
+        unit_price: precio,
         subtotal: precio,
-        precio_referencia: precioRef && precioRef > precio ? precioRef : undefined,
+        reference_price: precioRef && precioRef > precio ? precioRef : undefined,
         categoria_carta_id: item.categoria_carta_id ?? null,
       });
     }
@@ -294,12 +294,12 @@ export function ProductGrid({
     const pi = promoArticle._promoData;
     const baseItem = allItems.find((i) => i.id === promoArticle._sourceItemId);
     if (!baseItem) return;
-    const precioSinPromo = promoArticle._precioSinPromo ?? Number(baseItem.precio_base ?? 0);
+    const precioSinPromo = promoArticle._precioSinPromo ?? Number(baseItem.base_price ?? 0);
 
     if (onSelectItem) {
       onSelectItem({
         ...baseItem,
-        precio_base: pi.precio_promo,
+        base_price: pi.precio_promo,
         _promoPrice: pi.precio_promo,
         _originalPrecioBase: precioSinPromo,
         _preconfigExtras: pi.preconfigExtras,
@@ -308,13 +308,13 @@ export function ProductGrid({
         _promoNombre: pi.promocion_nombre,
       });
     } else {
-      const nombre = pi.promocion_nombre || (baseItem.nombre_corto ?? baseItem.nombre);
+      const nombre = pi.promocion_nombre || (baseItem.short_name ?? baseItem.name);
       const discount = precioSinPromo - pi.precio_promo;
       onAddItem({
         item_carta_id: baseItem.id,
-        nombre: `${nombre} (PROMO)`,
-        cantidad: 1,
-        precio_unitario: precioSinPromo,
+        name: `${nombre} (PROMO)`,
+        quantity: 1,
+        unit_price: precioSinPromo,
         subtotal: precioSinPromo,
         categoria_carta_id: baseItem.categoria_carta_id ?? null,
         promo_id: pi.promocion_id,
@@ -512,13 +512,13 @@ function ProductCard({
   promoLabel?: string;
   subtitle?: string | null;
 }) {
-  const precio = item.precio_base ?? 0;
-  const precioRef = item.precio_referencia ? Number(item.precio_referencia) : null;
+  const precio = item.base_price ?? 0;
+  const precioRef = item.reference_price ? Number(item.reference_price) : null;
   const hasDiscount = precioRef != null && precioRef > precio;
   const discountPct = hasDiscount ? Math.round(((precioRef! - precio) / precioRef!) * 100) : 0;
   const hasPromo = promoPrice != null && promoPrice < precio;
-  const nombre = item.nombre_corto ?? item.nombre;
-  const imagenUrl = item.imagen_url;
+  const nombre = item.short_name ?? item.name;
+  const imagenUrl = item.image_url;
   const inCart = qty > 0;
 
   return (

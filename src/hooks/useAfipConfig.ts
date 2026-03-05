@@ -33,7 +33,7 @@ export interface AfipConfig {
   id: string;
   branch_id: string;
   cuit: string | null;
-  razon_social: string | null;
+  business_name: string | null;
   direccion_fiscal: string | null;
   inicio_actividades: string | null;
   punto_venta: number | null;
@@ -68,7 +68,7 @@ export function useAfipConfig(branchId: string | undefined) {
 interface SaveAfipConfigInput {
   branch_id: string;
   cuit?: string;
-  razon_social?: string;
+  business_name?: string;
   direccion_fiscal?: string;
   inicio_actividades?: string;
   punto_venta?: number;

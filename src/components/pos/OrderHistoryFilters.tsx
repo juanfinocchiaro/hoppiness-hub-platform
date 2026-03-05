@@ -99,11 +99,11 @@ export function OrderHistoryFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Pago: Todos</SelectItem>
-          <SelectItem value="efectivo">Efectivo</SelectItem>
-          <SelectItem value="tarjeta_debito">Débito</SelectItem>
-          <SelectItem value="tarjeta_credito">Crédito</SelectItem>
+          <SelectItem value="cash">Efectivo</SelectItem>
+          <SelectItem value="debit_card">Débito</SelectItem>
+          <SelectItem value="credit_card">Crédito</SelectItem>
           <SelectItem value="mercadopago_qr">QR</SelectItem>
-          <SelectItem value="transferencia">Transferencia</SelectItem>
+          <SelectItem value="transfer">Transferencia</SelectItem>
         </SelectContent>
       </Select>
 

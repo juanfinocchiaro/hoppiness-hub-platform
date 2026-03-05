@@ -29,7 +29,7 @@ export function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onT
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           {isEditing ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-          <h3 className="font-semibold text-sm truncate">{promo.nombre}</h3>
+          <h3 className="font-semibold text-sm truncate">{promo.name}</h3>
           {!promo.activa && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Inactiva</Badge>}
           {discountLabel && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{discountLabel}</Badge>}
           {promo.restriccion_pago !== 'cualquiera' && (
@@ -42,7 +42,7 @@ export function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onT
               <div key={item.id} className="flex items-center gap-1 flex-wrap">
                 <span className="font-medium text-foreground/80">{buildItemLabel(item)}</span>
                 <span className="text-muted-foreground/60">→</span>
-                <span className="line-through text-muted-foreground/50">${item.precio_base?.toLocaleString('es-AR')}</span>
+                <span className="line-through text-muted-foreground/50">${item.base_price?.toLocaleString('es-AR')}</span>
                 <span className="font-semibold text-green-600">${item.precio_promo.toLocaleString('es-AR')}</span>
               </div>
             ))}

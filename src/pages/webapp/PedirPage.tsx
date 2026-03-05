@@ -35,16 +35,16 @@ export default function PedirPage() {
     const promoArticles: WebappMenuItem[] = promoItems
       .map((pi) => {
         const base = baseById.get(pi.item_carta_id);
-        if (!base || pi.precio_base == null || pi.precio_promo >= Number(base.precio_base))
+        if (!base || pi.precio_base == null || pi.precio_promo >= Number(base.base_price))
           return null;
         const extras = pi.preconfigExtras || [];
         const extrasTotal = extras.reduce((sum, ex) => sum + (ex.precio ?? 0) * ex.cantidad, 0);
-        const precioSinPromo = Number(base.precio_base) + extrasTotal;
+        const precioSinPromo = Number(base.base_price) + extrasTotal;
         const included = extras
           .filter((ex) => ex.nombre)
-          .map((ex) => ({ nombre: ex.nombre!, cantidad: ex.cantidad }));
+          .map((ex) => ({ name: ex.nombre!, quantity: ex.cantidad }));
         const includedLabel = included.length
-          ? `Incluye: ${included.map((ex) => `${ex.cantidad > 1 ? `${ex.cantidad}x ` : ''}${ex.nombre}`).join(', ')}`
+          ? `Incluye: ${included.map((ex) => `${ex.quantity > 1 ? `${ex.quantity}x ` : ''}${ex.name}`).join(', ')}`
           : null;
 
         return {
@@ -55,10 +55,10 @@ export default function PedirPage() {
           promocion_id: pi.promocion_id,
           promocion_item_id: pi.id,
           promo_included_modifiers: included,
-          nombre: pi.promocion_nombre || `${base.nombre} (PROMO)`,
-          nombre_corto: base.nombre_corto || base.nombre,
-          descripcion: includedLabel || base.descripcion,
-          precio_base: precioSinPromo,
+          name: pi.promocion_nombre || `${base.name} (PROMO)`,
+          short_name: base.short_name || base.name,
+          description: includedLabel || base.description,
+          base_price: precioSinPromo,
           precio_promo: Number(pi.precio_promo),
           promo_etiqueta: 'PROMO',
         } satisfies WebappMenuItem;

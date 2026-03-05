@@ -19,23 +19,23 @@ import { formatPrice, formatTime } from '@/lib/formatters';
 interface TrackingData {
   pedido: {
     id: string;
-    numero_pedido: number;
-    estado: string;
-    tipo_servicio: string | null;
+    order_number: number;
+    status: string;
+    service_type: string | null;
     subtotal: number;
     costo_delivery: number | null;
     total: number;
     created_at: string;
-    cliente_nombre: string | null;
+    customer_name: string | null;
   };
   items: Array<{
-    nombre: string;
-    cantidad: number;
+    name: string;
+    quantity: number;
     subtotal: number;
-    modificadores: Array<{ tipo: string; descripcion: string }>;
+    modificadores: Array<{ type: string; description: string }>;
   }>;
   branch: { name: string } | null;
-  timeline: Array<{ estado: string; timestamp: string | null }>;
+  timeline: Array<{ status: string; timestamp: string | null }>;
 }
 
 function getEstadoOrder(tipoServicio: string | null): string[] {
@@ -135,9 +135,9 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
   }
 
   const { pedido, items, branch, timeline } = data;
-  const isFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado';
-  const estadoOrder = getEstadoOrder(pedido.tipo_servicio);
-  const currentCfg = getEstadoConfig(pedido.estado, pedido.tipo_servicio);
+  const isFinal = pedido.status === 'entregado' || pedido.status === 'cancelado';
+  const estadoOrder = getEstadoOrder(pedido.service_type);
+  const currentCfg = getEstadoConfig(pedido.status, pedido.service_type);
 
   return (
     <>
@@ -145,7 +145,7 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
       <div className="px-4 py-3 border-b">
         <div className="flex items-center gap-2">
           <Package className="w-4 h-4 text-primary" />
-          <h2 className="font-bold text-sm">Pedido #{pedido.numero_pedido}</h2>
+          <h2 className="font-bold text-sm">Pedido #{pedido.order_number}</h2>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
           {branch?.name} · {currentCfg.label}
@@ -157,9 +157,9 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
         {/* Timeline */}
         <div className="space-y-0">
           {estadoOrder.map((estado, i) => {
-            const timelineEntry = timeline.find((t) => t.estado === estado);
-            const isPast = timeline.some((t) => t.estado === estado);
-            const isCurrent = pedido.estado === estado;
+            const timelineEntry = timeline.find((t) => t.status === estado);
+            const isPast = timeline.some((t) => t.status === estado);
+            const isCurrent = pedido.status === estado;
 
             return (
               <div key={estado} className="flex items-start gap-2.5">
@@ -181,7 +181,7 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
                   <p
                     className={`text-xs font-medium ${isPast ? 'text-foreground' : 'text-muted-foreground'}`}
                   >
-                    {getEstadoConfig(estado, pedido.tipo_servicio).label}
+                    {getEstadoConfig(estado, pedido.service_type).label}
                   </p>
                   {timelineEntry?.timestamp && (
                     <p className="text-[10px] text-muted-foreground">
@@ -193,7 +193,7 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
             );
           })}
 
-          {pedido.estado === 'cancelado' && (
+          {pedido.status === 'cancelado' && (
             <div className="flex items-start gap-2.5">
               <div className="w-6 h-6 rounded-full flex items-center justify-center bg-destructive text-destructive-foreground shrink-0">
                 <XCircle className="w-3 h-3" />
@@ -209,8 +209,8 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
           {items.map((item, i) => (
             <div key={i} className="flex justify-between text-xs">
               <div className="min-w-0">
-                <span className="text-muted-foreground">{item.cantidad}x </span>
-                <span>{item.nombre}</span>
+                <span className="text-muted-foreground">{item.quantity}x </span>
+                <span>{item.name}</span>
               </div>
               <span className="font-medium shrink-0 ml-2">{formatPrice(item.subtotal)}</span>
             </div>
@@ -226,7 +226,7 @@ export function TrackingInlineView({ trackingCode, onNewOrder }: Props) {
           trackingCode={trackingCode}
           pedidoId={pedido.id}
           branchName={branch?.name ?? 'Local'}
-          clienteNombre={pedido.cliente_nombre ?? 'Cliente'}
+          clienteNombre={pedido.customer_name ?? 'Cliente'}
           chatActive={!isFinal}
         />
       </div>

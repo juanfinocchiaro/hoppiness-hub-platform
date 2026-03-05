@@ -34,8 +34,8 @@ export function NewRemovibleForm({
       .filter((c) => c.preparacion_id && c.preparaciones)
       .map((c) => ({
         id: c.preparacion_id,
-        nombre: c.preparaciones!.nombre,
-        costo_calculado: c.preparaciones!.costo_calculado || 0,
+        nombre: c.preparaciones!.name,
+        costo_calculado: c.preparaciones!.calculated_cost || 0,
         cantidad: c.cantidad,
       }));
   }, [composicion]);
@@ -59,12 +59,12 @@ export function NewRemovibleForm({
       setSelectedId(recetaId);
       setSelectedType('receta');
       const rec = recetasDelItem.find((r) => r.id === recetaId);
-      setNombre(`Sin ${rec?.nombre || ''}`);
+      setNombre(`Sin ${rec?.nombre || ''}`);  
     } else {
       setSelectedId(v);
       setSelectedType('insumo');
       const ins = allInsumos.find((i) => i.id === v);
-      setNombre(`Sin ${ins?.nombre || ''}`);
+      setNombre(`Sin ${ins?.name || ''}`);
     }
   };
 
@@ -72,14 +72,14 @@ export function NewRemovibleForm({
     selectedType === 'receta' && selectedReceta
       ? selectedReceta.costo_calculado * (selectedReceta.cantidad || 1)
       : selectedInsumo
-        ? (selectedInsumo.costo_por_unidad_base || 0) * (selectedInsumo.cantidad || 1)
+        ? (selectedInsumo.base_unit_cost || 0) * (selectedInsumo.cantidad || 1)
         : 0;
 
   const handleSave = async () => {
     if (!selectedId) return;
     const displayName =
       nombre.trim() ||
-      `Sin ${selectedType === 'receta' ? selectedReceta?.nombre : selectedInsumo?.nombre}`;
+      `Sin ${selectedType === 'receta' ? selectedReceta?.nombre : selectedInsumo?.name}`;
 
     if (selectedType === 'receta') {
       await onCreate.mutateAsync({
@@ -99,7 +99,7 @@ export function NewRemovibleForm({
         nombre: displayName,
         ingrediente_id: selectedId,
         cantidad_ahorro: selectedInsumo?.cantidad || 0,
-        unidad_ahorro: selectedInsumo?.unidad || selectedInsumo?.unidad_base || 'un',
+        unidad_ahorro: selectedInsumo?.unidad || selectedInsumo?.base_unit || 'un',
         costo_ahorro: costoAhorro,
       });
     }
@@ -132,7 +132,7 @@ export function NewRemovibleForm({
               </SelectLabel>
               {recetasDelItem.map((rec) => (
                 <SelectItem key={`receta-${rec.id}`} value={`receta:${rec.id}`}>
-                  {rec.nombre} ({formatCurrency(rec.costo_calculado * (rec.cantidad || 1))})
+                  {rec.nombre} ({formatCurrency(rec.costo_calculado * (rec.cantidad || 1))})  
                 </SelectItem>
               ))}
             </SelectGroup>
@@ -158,7 +158,7 @@ export function NewRemovibleForm({
                   </SelectLabel>
                   {otherInsumos.map((ins) => (
                     <SelectItem key={ins.id} value={ins.id}>
-                      {ins.nombre}
+                      {ins.name}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -167,7 +167,7 @@ export function NewRemovibleForm({
           ) : (
             allInsumos.map((ing) => (
               <SelectItem key={ing.id} value={ing.id}>
-                {ing.nombre} {ing._fromItem ? '(del item)' : ''}
+                {ing.name} {ing._fromItem ? '(del item)' : ''}
               </SelectItem>
             ))
           )}
@@ -181,7 +181,7 @@ export function NewRemovibleForm({
       />
       {(selectedInsumo || selectedReceta) && (
         <div className="p-2 bg-muted/50 rounded text-xs">
-          <strong>{nombre || `Sin ${selectedReceta?.nombre || selectedInsumo?.nombre}`}</strong>
+          <strong>{nombre || `Sin ${selectedReceta?.nombre || selectedInsumo?.name}`}</strong>
           <span className="ml-2 text-muted-foreground">
             Ahorro: {formatCurrency(costoAhorro)}
             {selectedType === 'receta' && (

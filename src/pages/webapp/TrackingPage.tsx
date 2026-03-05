@@ -43,9 +43,9 @@ interface DeliveryTrackingData {
 interface TrackingData {
   pedido: {
     id: string;
-    numero_pedido: number;
-    estado: string;
-    tipo_servicio: string | null;
+    order_number: number;
+    status: string;
+    service_type: string | null;
     subtotal: number;
     costo_delivery: number | null;
     descuento: number | null;
@@ -53,15 +53,15 @@ interface TrackingData {
     pago_estado: string | null;
     tiempo_prometido: string | null;
     created_at: string;
-    cliente_nombre: string | null;
+    customer_name: string | null;
   };
   items: Array<{
-    nombre: string;
-    cantidad: number;
-    precio_unitario: number;
+    name: string;
+    quantity: number;
+    unit_price: number;
     subtotal: number;
-    notas: string | null;
-    modificadores: Array<{ tipo: string; descripcion: string; precio_extra: number | null }>;
+    notes: string | null;
+    modificadores: Array<{ type: string; description: string; extra_price: number | null }>;
   }>;
   branch: {
     name: string;
@@ -69,7 +69,7 @@ interface TrackingData {
     city: string | null;
     phone: string | null;
   } | null;
-  timeline: Array<{ estado: string; timestamp: string | null }>;
+  timeline: Array<{ status: string; timestamp: string | null }>;
   delivery_tracking: DeliveryTrackingData | null;
 }
 
@@ -236,9 +236,9 @@ export default function TrackingPage() {
   }
 
   const { pedido, items, branch, timeline, delivery_tracking: dt } = data;
-  const tipoServicio = pedido.tipo_servicio;
-  const currentCfg = getEstadoConfig(pedido.estado, tipoServicio);
-  const isFinal = pedido.estado === 'entregado' || pedido.estado === 'cancelado';
+  const tipoServicio = pedido.service_type;
+  const currentCfg = getEstadoConfig(pedido.status, tipoServicio);
+  const isFinal = pedido.status === 'entregado' || pedido.status === 'cancelado';
   const estadoOrder = getEstadoOrder(tipoServicio);
 
   const tiempoRestante = pedido.tiempo_prometido
@@ -248,12 +248,12 @@ export default function TrackingPage() {
   return (
     <div className="min-h-screen bg-background">
       <WebappHeader title="Hoppiness" showBack onBack={() => navigate('/pedir')} />
-      <SEO title={`Pedido #${pedido.numero_pedido} | Hoppiness`} path={`/pedido/${trackingCode}`} />
+      <SEO title={`Pedido #${pedido.order_number} | Hoppiness`} path={`/pedido/${trackingCode}`} />
 
       {/* Header */}
       <div className="bg-primary text-primary-foreground px-5 pt-8 pb-6">
         <p className="text-sm opacity-80">{branch?.name ?? 'Hoppiness'}</p>
-        <h1 className="text-2xl font-black mt-1">Pedido #{pedido.numero_pedido}</h1>
+        <h1 className="text-2xl font-black mt-1">Pedido #{pedido.order_number}</h1>
         <div
           className={`mt-3 flex items-center gap-2 ${currentCfg.color} bg-white/90 rounded-xl px-4 py-2.5 w-fit`}
         >
@@ -311,9 +311,9 @@ export default function TrackingPage() {
         {/* Timeline */}
         <div className="space-y-1">
           {estadoOrder.map((estado, i) => {
-            const timelineEntry = timeline.find((t) => t.estado === estado);
-            const isPast = timeline.some((t) => t.estado === estado);
-            const isCurrent = pedido.estado === estado;
+            const timelineEntry = timeline.find((t) => t.status === estado);
+            const isPast = timeline.some((t) => t.status === estado);
+            const isCurrent = pedido.status === estado;
             const cfg = getEstadoConfig(estado, tipoServicio);
 
             return (
@@ -348,7 +348,7 @@ export default function TrackingPage() {
             );
           })}
 
-          {pedido.estado === 'cancelado' && (
+          {pedido.status === 'cancelado' && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-destructive text-destructive-foreground shrink-0">
                 <XCircle className="w-4 h-4" />
@@ -366,13 +366,13 @@ export default function TrackingPage() {
           {items.map((item, i) => (
             <div key={i} className="flex justify-between text-sm py-1">
               <div className="flex-1 min-w-0">
-                <span className="text-muted-foreground">{item.cantidad}x </span>
-                <span>{item.nombre}</span>
+                <span className="text-muted-foreground">{item.quantity}x </span>
+                <span>{item.name}</span>
                 {item.modificadores.length > 0 && (
                   <p className="text-xs text-muted-foreground ml-4">
                     {item.modificadores
                       .map((m) =>
-                        m.tipo === 'extra' ? `+ ${m.descripcion}` : `Sin ${m.descripcion}`,
+                        m.type === 'extra' ? `+ ${m.description}` : `Sin ${m.description}`,
                       )
                       .join(', ')}
                   </p>
@@ -417,7 +417,7 @@ export default function TrackingPage() {
           trackingCode={trackingCode!}
           pedidoId={pedido.id}
           branchName={branch?.name ?? 'Local'}
-          clienteNombre={pedido.cliente_nombre ?? 'Cliente'}
+          clienteNombre={pedido.customer_name ?? 'Cliente'}
           chatActive={!isFinal}
         />
 

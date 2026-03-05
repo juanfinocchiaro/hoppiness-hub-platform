@@ -137,7 +137,7 @@ function SortableCategoryCard({
             <>
               <CollapsibleTrigger asChild>
                 <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                  <span className="font-semibold text-sm">{cat.nombre}</span>
+                  <span className="font-semibold text-sm">{cat.name}</span>
                   <Badge variant="secondary" className="text-xs font-normal">
                     {items.length} {items.length === 1 ? 'item' : 'items'}
                   </Badge>
@@ -166,7 +166,7 @@ function SortableCategoryCard({
                   className="h-7 w-7"
                   onClick={() => {
                     setEditingId(cat.id);
-                    setEditingNombre(cat.nombre);
+                    setEditingNombre(cat.name);
                   }}
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -200,16 +200,16 @@ function SortableCategoryCard({
                       onClick={() => setExpandedItemId(isItemExpanded ? null : item.id)}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm">{item.nombre}</p>
-                        {item.descripcion && (
+                        <p className="font-medium text-sm">{item.name}</p>
+                        {item.description && (
                           <p className="text-xs text-muted-foreground truncate max-w-[350px]">
-                            {item.descripcion}
+                            {item.description}
                           </p>
                         )}
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <span className="font-mono font-medium text-sm">
-                          {formatCurrency(item.precio_base)}
+                          {formatCurrency(item.base_price)}
                         </span>
                         {item.fc_actual != null && (
                           <Badge
@@ -230,7 +230,7 @@ function SortableCategoryCard({
                             Delivery
                           </Badge>
                         )}
-                        {item.imagen_url && <span className="text-xs">📷</span>}
+                        {item.image_url && <span className="text-xs">📷</span>}
                       </div>
                     </div>
                     {isItemExpanded && <ProductPreviewPanel item={item} />}
@@ -281,7 +281,7 @@ export default function MenuCartaPage() {
     const map: Record<string, ItemCarta[]> = {};
     const filtered = (items || []).filter((item) => {
       if (!search) return true;
-      return item.nombre.toLowerCase().includes(search.toLowerCase());
+      return item.name.toLowerCase().includes(search.toLowerCase());
     });
     for (const item of filtered) {
       const catId = item.categoria_carta_id || 'sin-categoria';
@@ -296,14 +296,14 @@ export default function MenuCartaPage() {
 
   const handleCreate = async () => {
     if (!newNombre.trim()) return;
-    await create.mutateAsync({ nombre: newNombre.trim(), orden: (categorias?.length || 0) + 1 });
+    await create.mutateAsync({ name: newNombre.trim(), orden: (categorias?.length || 0) + 1 });
     setNewNombre('');
     setShowNew(false);
   };
 
   const handleUpdate = async () => {
     if (!editingId || !editingNombre.trim()) return;
-    await update.mutateAsync({ id: editingId, data: { nombre: editingNombre.trim() } });
+    await update.mutateAsync({ id: editingId, data: { name: editingNombre.trim() } });
     setEditingId(null);
   };
 
@@ -452,7 +452,7 @@ export default function MenuCartaPage() {
                           key={cat.id}
                           className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-dashed"
                         >
-                          <span className="text-sm text-muted-foreground">{cat.nombre}</span>
+                          <span className="text-sm text-muted-foreground">{cat.name}</span>
                           <Badge variant="secondary" className="text-xs">
                             {(itemsByCategory[cat.id] || []).length} items
                           </Badge>
@@ -483,9 +483,9 @@ export default function MenuCartaPage() {
                   <div className="divide-y">
                     {uncategorized.map((item) => (
                       <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                        <p className="font-medium text-sm">{item.nombre}</p>
+                        <p className="font-medium text-sm">{item.name}</p>
                         <span className="font-mono font-medium text-sm">
-                          {formatCurrency(item.precio_base)}
+                          {formatCurrency(item.base_price)}
                         </span>
                       </div>
                     ))}
@@ -501,7 +501,7 @@ export default function MenuCartaPage() {
         open={!!deleting}
         onOpenChange={() => setDeleting(null)}
         title="Eliminar categoría"
-        description={`¿Eliminar "${deleting?.nombre}"? Los items quedarán sin categoría.`}
+        description={`¿Eliminar "${deleting?.name}"? Los items quedarán sin categoría.`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

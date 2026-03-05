@@ -20,7 +20,7 @@ import {
 
 export interface Promocion {
   id: string;
-  nombre: string;
+  name: string;
   descripcion: string | null;
   tipo: 'descuento_porcentaje' | 'descuento_fijo' | '2x1' | 'combo' | 'precio_especial';
   valor: number;
@@ -34,7 +34,7 @@ export interface Promocion {
   producto_ids: string[];
   categoria_ids: string[];
   tipo_usuario: 'todos' | 'nuevo' | 'recurrente' | 'staff' | 'custom_segment';
-  activa: boolean; // mapped from is_active
+  is_active: boolean;
   branch_ids: string[];
   canales: string[];
   created_at: string;
@@ -70,7 +70,6 @@ export function usePromociones() {
       const data = await fetchPromocionesService();
       return (data as any[]).map((p: any) => ({
         ...p,
-        activa: p.is_active ?? p.activa,
         canales: p.canales ?? ['webapp', 'salon', 'rappi', 'pedidos_ya'],
       })) as Promocion[];
     },
@@ -90,10 +89,10 @@ export function usePromocionItems(promoId: string | undefined) {
         item_carta_id: d.item_carta_id as string,
         precio_promo: Number(d.precio_promo),
         created_at: d.created_at as string,
-        item_nombre: ((d.menu_items as Record<string, unknown>)?.name ?? (d.menu_items as Record<string, unknown>)?.nombre) as string | undefined,
-        item_imagen: (d.menu_items as Record<string, unknown>)?.imagen_url as string | null | undefined,
-        precio_base: (d.menu_items as Record<string, unknown>)?.precio_base
-          ? Number((d.menu_items as Record<string, unknown>).precio_base)
+        item_nombre: (d.menu_items as Record<string, unknown>)?.name as string | undefined,
+        item_imagen: (d.menu_items as Record<string, unknown>)?.image_url as string | null | undefined,
+        precio_base: (d.menu_items as Record<string, unknown>)?.base_price
+          ? Number((d.menu_items as Record<string, unknown>).base_price)
           : undefined,
       })) as PromocionItem[];
 
@@ -105,9 +104,9 @@ export function usePromocionItems(promoId: string | undefined) {
             ...new Set(extrasData.map((e) => e.extra_item_carta_id as string)),
           ];
           const extraInfo = await fetchItemsCartaPriceInfo(extraCartaIds);
-          const nameMap = new Map(extraInfo.map((n: Record<string, unknown>) => [n.id, n.name ?? n.nombre]));
+          const nameMap = new Map(extraInfo.map((n: Record<string, unknown>) => [n.id, n.name]));
           const priceMap = new Map(
-            extraInfo.map((n: Record<string, unknown>) => [n.id, Number(n.precio_base ?? 0)]),
+            extraInfo.map((n: Record<string, unknown>) => [n.id, Number(n.base_price ?? 0)]),
           );
           const byItem = new Map<string, PromocionItemExtra[]>();
           for (const e of extrasData) {
@@ -145,7 +144,6 @@ export function useActivePromos(branchId: string | undefined, canal?: string) {
       const today = now.toISOString().slice(0, 10);
 
       return (data as any[])
-        .map((p: any) => ({ ...p, activa: p.is_active ?? p.activa }))
         .filter((p: any) => {
           const bids = p.branch_ids ?? [];
           if (bids.length > 0 && (!branchId || !bids.includes(branchId))) return false;
@@ -180,7 +178,7 @@ export function useActivePromoItems(branchId: string | undefined, canal?: string
     [promos],
   );
   const promoNameById = useMemo(
-    () => new Map(promos.map((p) => [p.id, p.nombre] as const)),
+    () => new Map(promos.map((p) => [p.id, p.name] as const)),
     [promos],
   );
 
@@ -204,10 +202,10 @@ export function useActivePromoItems(branchId: string | undefined, canal?: string
           ];
           const extraInfo = await fetchItemsCartaPriceInfo(extraItemIds);
           const nameMap = new Map(
-            extraInfo.map((n: Record<string, unknown>) => [n.id, n.name ?? n.nombre]),
+            extraInfo.map((n: Record<string, unknown>) => [n.id, n.name]),
           );
           const priceMap = new Map(
-            extraInfo.map((n: Record<string, unknown>) => [n.id, Number(n.precio_base ?? 0)]),
+            extraInfo.map((n: Record<string, unknown>) => [n.id, Number(n.base_price ?? 0)]),
           );
 
           for (const e of extrasData) {
@@ -229,10 +227,10 @@ export function useActivePromoItems(branchId: string | undefined, canal?: string
         item_carta_id: d.item_carta_id as string,
         precio_promo: Number(d.precio_promo),
         created_at: d.created_at as string,
-        item_nombre: ((d.menu_items as Record<string, unknown>)?.name ?? (d.menu_items as Record<string, unknown>)?.nombre) as string | undefined,
-        item_imagen: (d.menu_items as Record<string, unknown>)?.imagen_url as string | null | undefined,
-        precio_base: (d.menu_items as Record<string, unknown>)?.precio_base
-          ? Number((d.menu_items as Record<string, unknown>).precio_base)
+        item_nombre: (d.menu_items as Record<string, unknown>)?.name as string | undefined,
+        item_imagen: (d.menu_items as Record<string, unknown>)?.image_url as string | null | undefined,
+        precio_base: (d.menu_items as Record<string, unknown>)?.base_price
+          ? Number((d.menu_items as Record<string, unknown>).base_price)
           : undefined,
         preconfigExtras: extrasMap.get(d.id as string) || undefined,
         restriccion_pago:
@@ -292,8 +290,7 @@ export function usePromocionMutations() {
         }>;
       },
     ) => {
-      const { items, activa, ...rest } = data;
-      const promoData = { ...rest, is_active: activa };
+      const { items, ...promoData } = data;
       const result = await createPromocionService(
         promoData as Record<string, unknown>,
         user?.id,
@@ -330,9 +327,7 @@ export function usePromocionMutations() {
         preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }>;
       }>;
     }) => {
-      const { activa, ...rest } = data;
-      const mapped = activa !== undefined ? { ...rest, is_active: activa } : rest;
-      await updatePromocionService(id, mapped as Record<string, unknown>);
+      await updatePromocionService(id, data as Record<string, unknown>);
 
       if (items !== undefined) {
         await deletePromocionItems(id);
@@ -350,8 +345,8 @@ export function usePromocionMutations() {
   });
 
   const toggleActive = useMutation({
-    mutationFn: ({ id, activa }: { id: string; activa: boolean }) =>
-      togglePromocionActive(id, activa), // service maps to is_active
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      togglePromocionActive(id, is_active),
     onSuccess: () => {
       invalidateAll();
     },

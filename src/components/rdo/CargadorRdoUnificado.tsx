@@ -124,7 +124,7 @@ export function CargadorRdoUnificado({ branchId, branchName }: Props) {
     const map = new Map<string, number>();
     for (const m of movimientos) {
       const current = map.get(m.rdo_category_code) || 0;
-      map.set(m.rdo_category_code, current + Number(m.amount ?? (m as any).monto ?? 0));
+      map.set(m.rdo_category_code, current + Number(m.amount ?? 0));
     }
     return map;
   }, [movimientos]);
@@ -289,14 +289,14 @@ function SectionEditModal({
     setSaving(true);
     try {
       for (const cat of categories) {
-        const monto = parseFloat(values[cat.code] || '0') || 0;
+        const amount = parseFloat(values[cat.code] || '0') || 0;
         const payload: RdoMovimientoFormData = {
           branch_id: branchId,
           periodo,
           rdo_category_code: cat.code,
           origen: section.origen,
-          monto,
-          descripcion: notes || undefined,
+          amount,
+          description: notes || undefined,
         };
         await onSave.mutateAsync(payload);
       }

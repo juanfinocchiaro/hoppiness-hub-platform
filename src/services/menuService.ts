@@ -8,7 +8,7 @@ export async function fetchCategoriasInsumo() {
   const { data, error } = await fromUntyped('supply_categories')
     .select('*')
     .is('deleted_at', null)
-    .order('orden', { ascending: true });
+    .order('sort_order', { ascending: true });
   if (error) throw error;
   return data;
 }
@@ -16,6 +16,8 @@ export async function fetchCategoriasInsumo() {
 export async function createCategoriaInsumo(payload: CategoriaInsumoFormData) {
   const dbPayload = { ...payload, name: payload.nombre } as any;
   delete dbPayload.nombre;
+  if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
+  if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
   const { data, error } = await fromUntyped('supply_categories')
     .insert(dbPayload)
     .select()
@@ -30,6 +32,8 @@ export async function updateCategoriaInsumo(
 ) {
   const dbPayload = { ...payload } as any;
   if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
+  if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
   const { error } = await fromUntyped('supply_categories')
     .update(dbPayload)
     .eq('id', id);
@@ -48,7 +52,7 @@ export async function softDeleteCategoriaInsumo(id: string) {
 export async function fetchInsumos() {
   const { data, error } = await fromUntyped('supplies')
     .select(
-      '*, supply_categories(name, tipo), rdo_categories!supplies_rdo_category_code_fkey(code, name), proveedor_obligatorio:suppliers!supplies_proveedor_obligatorio_id_fkey(id, razon_social), proveedor_sugerido:suppliers!supplies_proveedor_sugerido_id_fkey(id, razon_social)',
+      '*, supply_categories(name, type), rdo_categories!supplies_rdo_category_code_fkey(code, name), proveedor_obligatorio:suppliers!supplies_proveedor_obligatorio_id_fkey(id, business_name), proveedor_sugerido:suppliers!supplies_proveedor_sugerido_id_fkey(id, business_name)',
     )
     .is('deleted_at', null)
     .neq('is_active', false)
@@ -60,6 +64,19 @@ export async function fetchInsumos() {
 export async function createInsumo(payload: InsumoFormData) {
   const dbPayload = { ...payload, name: payload.nombre } as any;
   delete dbPayload.nombre;
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
+  if (dbPayload.unidad_base !== undefined) { dbPayload.base_unit = dbPayload.unidad_base; delete dbPayload.unidad_base; }
+  if (dbPayload.costo_por_unidad_base !== undefined) { dbPayload.base_unit_cost = dbPayload.costo_por_unidad_base; delete dbPayload.costo_por_unidad_base; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
+  if (dbPayload.tipo_item !== undefined) { dbPayload.item_type = dbPayload.tipo_item; delete dbPayload.tipo_item; }
+  if (dbPayload.precio_referencia !== undefined) { dbPayload.reference_price = dbPayload.precio_referencia; delete dbPayload.precio_referencia; }
+  if (dbPayload.precio_venta !== undefined) { dbPayload.sale_price = dbPayload.precio_venta; delete dbPayload.precio_venta; }
+  if (dbPayload.unidad_compra !== undefined) { dbPayload.purchase_unit = dbPayload.unidad_compra; delete dbPayload.unidad_compra; }
+  if (dbPayload.unidad_compra_contenido !== undefined) { dbPayload.purchase_unit_content = dbPayload.unidad_compra_contenido; delete dbPayload.unidad_compra_contenido; }
+  if (dbPayload.unidad_compra_precio !== undefined) { dbPayload.purchase_unit_price = dbPayload.unidad_compra_precio; delete dbPayload.unidad_compra_precio; }
+  if (dbPayload.precio_maximo_sugerido !== undefined) { dbPayload.max_suggested_price = dbPayload.precio_maximo_sugerido; delete dbPayload.precio_maximo_sugerido; }
+  if (dbPayload.puede_ser_extra !== undefined) { dbPayload.can_be_extra = dbPayload.puede_ser_extra; delete dbPayload.puede_ser_extra; }
+  if (dbPayload.precio_extra !== undefined) { dbPayload.extra_price = dbPayload.precio_extra; delete dbPayload.precio_extra; }
   const { data, error } = await fromUntyped('supplies')
     .insert(dbPayload)
     .select()
@@ -71,6 +88,19 @@ export async function createInsumo(payload: InsumoFormData) {
 export async function updateInsumo(id: string, payload: Partial<InsumoFormData>) {
   const dbPayload = { ...payload } as any;
   if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
+  if (dbPayload.unidad_base !== undefined) { dbPayload.base_unit = dbPayload.unidad_base; delete dbPayload.unidad_base; }
+  if (dbPayload.costo_por_unidad_base !== undefined) { dbPayload.base_unit_cost = dbPayload.costo_por_unidad_base; delete dbPayload.costo_por_unidad_base; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
+  if (dbPayload.tipo_item !== undefined) { dbPayload.item_type = dbPayload.tipo_item; delete dbPayload.tipo_item; }
+  if (dbPayload.precio_referencia !== undefined) { dbPayload.reference_price = dbPayload.precio_referencia; delete dbPayload.precio_referencia; }
+  if (dbPayload.precio_venta !== undefined) { dbPayload.sale_price = dbPayload.precio_venta; delete dbPayload.precio_venta; }
+  if (dbPayload.unidad_compra !== undefined) { dbPayload.purchase_unit = dbPayload.unidad_compra; delete dbPayload.unidad_compra; }
+  if (dbPayload.unidad_compra_contenido !== undefined) { dbPayload.purchase_unit_content = dbPayload.unidad_compra_contenido; delete dbPayload.unidad_compra_contenido; }
+  if (dbPayload.unidad_compra_precio !== undefined) { dbPayload.purchase_unit_price = dbPayload.unidad_compra_precio; delete dbPayload.unidad_compra_precio; }
+  if (dbPayload.precio_maximo_sugerido !== undefined) { dbPayload.max_suggested_price = dbPayload.precio_maximo_sugerido; delete dbPayload.precio_maximo_sugerido; }
+  if (dbPayload.puede_ser_extra !== undefined) { dbPayload.can_be_extra = dbPayload.puede_ser_extra; delete dbPayload.puede_ser_extra; }
+  if (dbPayload.precio_extra !== undefined) { dbPayload.extra_price = dbPayload.precio_extra; delete dbPayload.precio_extra; }
   const { error } = await fromUntyped('supplies').update(dbPayload).eq('id', id);
   if (error) throw error;
   return payload;
@@ -98,19 +128,19 @@ export async function fetchPreparaciones() {
 export async function fetchPreparacionIngredientes(preparacionId: string) {
   const { data, error } = await fromUntyped('recipe_ingredients')
     .select(
-      `*, supplies(id, name, unidad_base, costo_por_unidad_base), recipes!recipe_ingredients_sub_preparacion_id_fkey(id, name, costo_calculado)`,
+      `*, supplies(id, name, base_unit, base_unit_cost), recipes!recipe_ingredients_sub_preparacion_id_fkey(id, name, calculated_cost)`,
     )
     .eq('preparacion_id', preparacionId)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
 
 export async function fetchPreparacionOpciones(preparacionId: string) {
   const { data, error } = await fromUntyped('recipe_options')
-    .select(`*, supplies(id, name, costo_por_unidad_base)`)
+    .select(`*, supplies(id, name, base_unit_cost)`)
     .eq('preparacion_id', preparacionId)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
@@ -124,6 +154,9 @@ export async function createPreparacion(payload: {
 }) {
   const dbPayload = { ...payload, name: payload.nombre } as any;
   delete dbPayload.nombre;
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
+  if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
+  if (dbPayload.metodo_costeo !== undefined) { dbPayload.costing_method = dbPayload.metodo_costeo; delete dbPayload.metodo_costeo; }
   const { data, error } = await fromUntyped('recipes')
     .insert(dbPayload)
     .select()
@@ -135,6 +168,12 @@ export async function createPreparacion(payload: {
 export async function updatePreparacion(id: string, payload: any) {
   const dbPayload = { ...payload, updated_at: new Date().toISOString() };
   if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
+  if (dbPayload.costo_calculado !== undefined) { dbPayload.calculated_cost = dbPayload.costo_calculado; delete dbPayload.costo_calculado; }
+  if (dbPayload.costo_manual !== undefined) { dbPayload.manual_cost = dbPayload.costo_manual; delete dbPayload.costo_manual; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
+  if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
+  if (dbPayload.metodo_costeo !== undefined) { dbPayload.costing_method = dbPayload.metodo_costeo; delete dbPayload.metodo_costeo; }
   const { error } = await fromUntyped('recipes')
     .update(dbPayload)
     .eq('id', id);
@@ -162,9 +201,9 @@ export async function savePreparacionIngredientes(
         preparacion_id,
         insumo_id: item.insumo_id || null,
         sub_preparacion_id: item.sub_preparacion_id || null,
-        cantidad: item.cantidad,
-        unidad: item.unidad,
-        orden: index,
+        quantity: item.cantidad,
+        unit: item.unidad,
+        sort_order: index,
       })),
     );
     if (error) throw error;
@@ -186,7 +225,7 @@ export async function savePreparacionOpciones(
       insumo_ids.map((insumo_id, index) => ({
         preparacion_id,
         insumo_id,
-        orden: index,
+        sort_order: index,
       })),
     );
     if (error) throw error;
@@ -199,7 +238,7 @@ export async function savePreparacionOpciones(
 
 const ITEMS_CARTA_SELECT = `
   *,
-  menu_categories:categoria_carta_id(id, name, orden),
+  menu_categories:categoria_carta_id(id, name, sort_order),
   rdo_categories:rdo_category_code(code, name)
 `;
 
@@ -216,7 +255,7 @@ export async function fetchItemsCarta() {
     .select(ITEMS_CARTA_SELECT)
     .eq('is_active', true)
     .is('deleted_at', null)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
@@ -226,12 +265,12 @@ export async function fetchItemCartaComposicion(itemId: string) {
     .select(
       `
       *,
-      recipes(id, name, costo_calculado, tipo),
-      supplies(id, name, costo_por_unidad_base, unidad_base)
+      recipes(id, name, calculated_cost, type),
+      supplies(id, name, base_unit_cost, base_unit)
     `,
     )
     .eq('item_carta_id', itemId)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
@@ -258,6 +297,18 @@ export async function createItemCarta(payload: {
 }) {
   const dbPayload = { ...payload, name: payload.nombre } as any;
   delete dbPayload.nombre;
+  if (dbPayload.nombre_corto !== undefined) { dbPayload.short_name = dbPayload.nombre_corto; delete dbPayload.nombre_corto; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
+  if (dbPayload.imagen_url !== undefined) { dbPayload.image_url = dbPayload.imagen_url; delete dbPayload.imagen_url; }
+  if (dbPayload.precio_base !== undefined) { dbPayload.base_price = dbPayload.precio_base; delete dbPayload.precio_base; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
+  if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
+  if (dbPayload.disponible_delivery !== undefined) { dbPayload.available_delivery = dbPayload.disponible_delivery; delete dbPayload.disponible_delivery; }
+  if (dbPayload.disponible_webapp !== undefined) { dbPayload.available_webapp = dbPayload.disponible_webapp; delete dbPayload.disponible_webapp; }
+  if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
+  if (dbPayload.costo_total !== undefined) { dbPayload.total_cost = dbPayload.costo_total; delete dbPayload.costo_total; }
+  if (dbPayload.precio_referencia !== undefined) { dbPayload.reference_price = dbPayload.precio_referencia; delete dbPayload.precio_referencia; }
+  if (dbPayload.precio_promo !== undefined) { dbPayload.promo_price = dbPayload.precio_promo; delete dbPayload.precio_promo; }
   const { data, error } = await fromUntyped('menu_items')
     .insert(dbPayload)
     .select()
@@ -269,6 +320,18 @@ export async function createItemCarta(payload: {
 export async function updateItemCarta(id: string, payload: any) {
   const dbPayload = { ...payload };
   if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.nombre_corto !== undefined) { dbPayload.short_name = dbPayload.nombre_corto; delete dbPayload.nombre_corto; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
+  if (dbPayload.imagen_url !== undefined) { dbPayload.image_url = dbPayload.imagen_url; delete dbPayload.imagen_url; }
+  if (dbPayload.precio_base !== undefined) { dbPayload.base_price = dbPayload.precio_base; delete dbPayload.precio_base; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
+  if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
+  if (dbPayload.disponible_delivery !== undefined) { dbPayload.available_delivery = dbPayload.disponible_delivery; delete dbPayload.disponible_delivery; }
+  if (dbPayload.disponible_webapp !== undefined) { dbPayload.available_webapp = dbPayload.disponible_webapp; delete dbPayload.disponible_webapp; }
+  if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
+  if (dbPayload.costo_total !== undefined) { dbPayload.total_cost = dbPayload.costo_total; delete dbPayload.costo_total; }
+  if (dbPayload.precio_referencia !== undefined) { dbPayload.reference_price = dbPayload.precio_referencia; delete dbPayload.precio_referencia; }
+  if (dbPayload.precio_promo !== undefined) { dbPayload.promo_price = dbPayload.precio_promo; delete dbPayload.precio_promo; }
   const { error } = await fromUntyped('menu_items')
     .update(dbPayload)
     .eq('id', id);
@@ -296,8 +359,8 @@ export async function saveItemCartaComposicion(
         item_carta_id,
         preparacion_id: item.preparacion_id || null,
         insumo_id: item.insumo_id || null,
-        cantidad: item.cantidad,
-        orden: index,
+        quantity: item.cantidad,
+        sort_order: index,
       })),
     );
     if (error) throw error;
@@ -316,17 +379,17 @@ export async function cambiarPrecioItemCarta(params: {
   const { itemId, precioAnterior, precioNuevo, motivo, userId } = params;
 
   const { error: errUpdate } = await fromUntyped('menu_items')
-    .update({ precio_base: precioNuevo })
+    .update({ base_price: precioNuevo })
     .eq('id', itemId);
   if (errUpdate) throw errUpdate;
 
   const { error: errHist } = await fromUntyped('menu_item_price_history')
     .insert({
       item_carta_id: itemId,
-      precio_anterior: precioAnterior,
-      precio_nuevo: precioNuevo,
-      motivo: motivo || null,
-      usuario_id: userId || null,
+      previous_price: precioAnterior,
+      new_price: precioNuevo,
+      reason: motivo || null,
+      user_id: userId || null,
     });
   if (errHist) throw errHist;
 
@@ -346,7 +409,7 @@ export async function fetchMenuCategorias() {
   const { data, error } = await fromUntyped('menu_categories')
     .select('*')
     .eq('is_active', true)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
@@ -359,8 +422,8 @@ export async function createMenuCategoria(payload: {
   const { data, error } = await fromUntyped('menu_categories')
     .insert({
       name: payload.nombre,
-      descripcion: payload.descripcion || null,
-      orden: payload.orden || 99,
+      description: payload.descripcion || null,
+      sort_order: payload.orden || 99,
     })
     .select()
     .single();
@@ -374,6 +437,8 @@ export async function updateMenuCategoria(
 ) {
   const dbPayload: any = { ...payload, updated_at: new Date().toISOString() };
   if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
   const { error } = await fromUntyped('menu_categories')
     .update(dbPayload)
     .eq('id', id);
@@ -383,7 +448,7 @@ export async function updateMenuCategoria(
 export async function reorderMenuCategorias(items: { id: string; orden: number }[]) {
   for (const item of items) {
     const { error } = await fromUntyped('menu_categories')
-      .update({ orden: item.orden, updated_at: new Date().toISOString() })
+      .update({ sort_order: item.orden, updated_at: new Date().toISOString() })
       .eq('id', item.id);
     if (error) throw error;
   }
@@ -398,7 +463,7 @@ export async function softDeleteMenuCategoria(id: string) {
 
 export async function toggleMenuCategoriaVisibility(id: string, visible: boolean) {
   const { error } = await fromUntyped('menu_categories')
-    .update({ visible_en_carta: visible, updated_at: new Date().toISOString() })
+    .update({ is_visible_menu: visible, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -406,7 +471,7 @@ export async function toggleMenuCategoriaVisibility(id: string, visible: boolean
 export async function fetchHiddenMenuCategoriaIds() {
   const { data } = await fromUntyped('menu_categories')
     .select('id')
-    .eq('visible_en_carta', false);
+    .eq('is_visible_menu', false);
   return ((data || []) as Array<Record<string, unknown>>).map((c) => c.id as string);
 }
 
@@ -421,13 +486,13 @@ export async function fetchGruposOpcionales(itemId: string) {
       *,
       items:menu_item_option_group_items(
         *,
-        supplies(id, name, costo_por_unidad_base),
-        recipes(id, name, costo_calculado)
+        supplies(id, name, base_unit_cost),
+        recipes(id, name, calculated_cost)
       )
     `,
     )
     .eq('item_carta_id', itemId)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data || [];
 }
@@ -439,6 +504,7 @@ export async function createGrupoOpcional(params: {
 }) {
   const dbParams = { ...params, name: params.nombre } as any;
   delete dbParams.nombre;
+  if (dbParams.orden !== undefined) { dbParams.sort_order = dbParams.orden; delete dbParams.orden; }
   const { data, error } = await fromUntyped('menu_item_option_groups')
     .insert(dbParams)
     .select()
@@ -478,8 +544,8 @@ export async function saveGrupoOpcionalItems(
         grupo_id,
         insumo_id: item.insumo_id || null,
         preparacion_id: item.preparacion_id || null,
-        cantidad: item.cantidad,
-        costo_unitario: item.costo_unitario,
+        quantity: item.cantidad,
+        unit_cost: item.costo_unitario,
       })),
     );
     if (error) throw error;
@@ -488,7 +554,7 @@ export async function saveGrupoOpcionalItems(
 
 export async function updateGrupoOpcionalCosto(grupo_id: string, costo_promedio: number) {
   const { error } = await fromUntyped('menu_item_option_groups')
-    .update({ costo_promedio: Math.round(costo_promedio * 100) / 100 })
+    .update({ average_cost: Math.round(costo_promedio * 100) / 100 })
     .eq('id', grupo_id);
   if (error) throw error;
 }
@@ -513,7 +579,7 @@ export async function findExistingExtraItem(
     tipo === 'preparacion' ? 'composicion_ref_preparacion_id' : 'composicion_ref_insumo_id';
   const { data, error } = await fromUntyped('menu_items')
     .select('id, is_active, deleted_at')
-    .eq('tipo', 'extra')
+    .eq('type', 'extra')
     .eq(field, refId)
     .maybeSingle();
   if (error) throw error;
@@ -542,10 +608,10 @@ export async function createExtraItemCarta(params: {
   const { data, error } = await fromUntyped('menu_items')
     .insert({
       name: params.nombre,
-      tipo: 'extra',
+      type: 'extra',
       categoria_carta_id: params.catId,
-      precio_base: 0,
-      costo_total: params.costo,
+      base_price: 0,
+      total_cost: params.costo,
       fc_objetivo: 30,
       composicion_ref_preparacion_id: params.composicion_ref_preparacion_id || null,
       composicion_ref_insumo_id: params.composicion_ref_insumo_id || null,
@@ -558,7 +624,7 @@ export async function createExtraItemCarta(params: {
 
 export async function reactivateExtraItemCarta(id: string, costo: number) {
   const { error } = await fromUntyped('menu_items')
-    .update({ is_active: true, deleted_at: null, costo_total: costo })
+    .update({ is_active: true, deleted_at: null, total_cost: costo })
     .eq('id', id);
   if (error) throw error;
 }
@@ -574,7 +640,10 @@ export async function insertComposicionRow(row: {
   cantidad: number;
   orden: number;
 }) {
-  const { error } = await fromUntyped('menu_item_compositions').insert(row);
+  const dbRow = { ...row, quantity: row.cantidad, sort_order: row.orden } as any;
+  delete dbRow.cantidad;
+  delete dbRow.orden;
+  const { error } = await fromUntyped('menu_item_compositions').insert(dbRow);
   if (error) throw error;
 }
 
@@ -610,7 +679,7 @@ export async function fetchExtraAssignmentsByItem(itemId: string) {
 
 export async function fetchExtraAssignmentsWithJoin(itemId: string) {
   const { data, error } = await fromUntyped('extra_assignments')
-    .select('*, extra:extra_id(id, name, precio_base, costo_total, tipo)')
+    .select('*, extra:extra_id(id, name, base_price, total_cost, type)')
     .eq('item_carta_id', itemId);
   if (error) throw error;
   return data || [];
@@ -626,7 +695,7 @@ export async function fetchExtraAssignmentsForExtra(extraId: string) {
 
 export async function fetchActiveExtrasByIds(extraIds: string[]) {
   const { data, error } = await fromUntyped('menu_items')
-    .select('id, name, precio_base, is_active')
+    .select('id, name, base_price, is_active')
     .in('id', extraIds)
     .eq('is_active', true)
     .is('deleted_at', null);
@@ -654,7 +723,7 @@ export async function updatePrecioExtra(
   precio_extra: number | null,
 ) {
   const { error } = await fromUntyped(table)
-    .update({ precio_extra })
+    .update({ extra_price: precio_extra })
     .eq('id', id);
   if (error) throw error;
 }
@@ -687,7 +756,7 @@ export async function upsertRemovible(params: {
 
   if (existing) {
     const { error } = await fromUntyped('removable_items')
-      .update({ is_active: true, nombre_display: params.nombre_display || null })
+      .update({ is_active: true, display_name: params.nombre_display || null })
       .eq('id', (existing as Record<string, unknown>).id as string);
     if (error) throw error;
   } else {
@@ -696,7 +765,7 @@ export async function upsertRemovible(params: {
       insumo_id: params.insumo_id || null,
       preparacion_id: params.preparacion_id || null,
       is_active: true,
-      nombre_display: params.nombre_display || null,
+      display_name: params.nombre_display || null,
     });
     if (error) throw error;
   }
@@ -720,7 +789,7 @@ export async function deleteRemovibleByPreparacion(
 }
 
 export async function updateRemovibleNombreDisplay(id: string, nombre_display: string) {
-  const { error } = await fromUntyped('removable_items').update({ nombre_display }).eq('id', id);
+  const { error } = await fromUntyped('removable_items').update({ display_name: nombre_display }).eq('id', id);
   if (error) throw error;
 }
 
@@ -730,8 +799,8 @@ export async function fetchModificadores(itemId: string) {
   const { data, error } = await fromUntyped('item_modifiers')
     .select('*')
     .eq('item_carta_id', itemId)
-    .order('tipo')
-    .order('orden');
+    .order('type')
+    .order('sort_order');
   if (error) throw error;
   return data as Array<Record<string, unknown>>;
 }
@@ -785,17 +854,17 @@ export async function fetchWebappMenuItems(branchId: string) {
   const query = fromUntyped('menu_items')
     .select(
       `
-      id, name, nombre_corto, descripcion, imagen_url,
-      precio_base, precio_promo, promo_etiqueta,
-      categoria_carta_id, orden, disponible_delivery,
-      disponible_webapp, tipo,
-      menu_categories:categoria_carta_id(id, name, orden)
+      id, name, short_name, description, image_url,
+      base_price, promo_price, promo_etiqueta,
+      categoria_carta_id, sort_order, available_delivery,
+      available_webapp, type,
+      menu_categories:categoria_carta_id(id, name, sort_order)
     `,
     )
     .eq('is_active', true)
     .is('deleted_at', null)
-    .eq('disponible_webapp', true)
-    .order('orden');
+    .eq('available_webapp', true)
+    .order('sort_order');
 
   // Note: fromUntyped doesn't support chaining .not() easily, filter after
   const { data, error } = await query;
@@ -816,9 +885,9 @@ export async function fetchWebappMenuItems(branchId: string) {
 
 export async function fetchWebappItemOptionalGroups(itemId: string) {
   const { data: groups, error: gErr } = await fromUntyped('menu_item_option_groups')
-    .select('id, name, is_required, max_selecciones, orden')
+    .select('id, name, is_required, max_selecciones, sort_order')
     .eq('item_carta_id', itemId)
-    .order('orden');
+    .order('sort_order');
   if (gErr) throw gErr;
   if (!groups || groups.length === 0) return { groups: [], options: [] };
 
@@ -827,7 +896,7 @@ export async function fetchWebappItemOptionalGroups(itemId: string) {
   );
   const { data: options, error: oErr } = await fromUntyped('menu_item_option_group_items')
     .select(
-      'id, grupo_id, insumo_id, preparacion_id, costo_unitario, supplies(id, name), recipes(id, name)',
+      'id, grupo_id, insumo_id, preparacion_id, unit_cost, supplies(id, name), recipes(id, name)',
     )
     .in('grupo_id', groupIds);
   if (oErr) throw oErr;
@@ -844,7 +913,7 @@ export async function fetchWebappItemExtras(itemId: string) {
   if (extraIds.length === 0) return [];
 
   const { data, error } = await fromUntyped('menu_items')
-    .select('id, name, precio_base, imagen_url')
+    .select('id, name, base_price, image_url')
     .in('id', extraIds)
     .eq('is_active', true)
     .is('deleted_at', null);
@@ -855,7 +924,7 @@ export async function fetchWebappItemExtras(itemId: string) {
 export async function fetchWebappItemRemovables(itemId: string) {
   const { data, error } = await fromUntyped('removable_items')
     .select(
-      'id, nombre_display, is_active, insumo_id, preparacion_id, supplies(id, name), recipes(id, name)',
+      'id, display_name, is_active, insumo_id, preparacion_id, supplies(id, name), recipes(id, name)',
     )
     .eq('item_carta_id', itemId)
     .eq('is_active', true);
@@ -870,13 +939,13 @@ export async function fetchCategoriasPreparacion() {
     .select('*')
     .eq('is_active', true)
     .is('deleted_at', null)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data;
 }
 
 export async function createCategoriaPreparacion(payload: { nombre: string; orden: number }) {
-  const dbPayload = { name: payload.nombre, orden: payload.orden };
+  const dbPayload = { name: payload.nombre, sort_order: payload.orden };
   const { data, error } = await fromUntyped('recipe_categories')
     .insert(dbPayload)
     .select()
@@ -891,6 +960,7 @@ export async function updateCategoriaPreparacion(
 ) {
   const dbPayload: any = { ...payload, updated_at: new Date().toISOString() };
   if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
   const { error } = await fromUntyped('recipe_categories')
     .update(dbPayload)
     .eq('id', id);
@@ -900,7 +970,7 @@ export async function updateCategoriaPreparacion(
 export async function reorderCategoriasPreparacion(items: { id: string; orden: number }[]) {
   for (const item of items) {
     const { error } = await fromUntyped('recipe_categories')
-      .update({ orden: item.orden })
+      .update({ sort_order: item.orden })
       .eq('id', item.id);
     if (error) throw error;
   }
@@ -934,7 +1004,7 @@ export async function uploadProductImage(itemId: string, file: File) {
 
 export async function updateItemCartaImageUrl(itemId: string, url: string) {
   const { error } = await fromUntyped('menu_items')
-    .update({ imagen_url: url })
+    .update({ image_url: url })
     .eq('id', itemId);
   if (error) throw error;
 }
@@ -944,12 +1014,12 @@ export async function fetchPrepIngredientesForDeepList(prepId: string) {
     .select(
       `
       *,
-      supplies(id, name, costo_por_unidad_base, unidad_base),
+      supplies(id, name, base_unit_cost, base_unit),
       sub_prep:recipes!recipe_ingredients_sub_preparacion_id_fkey(id, name)
     `,
     )
     .eq('preparacion_id', prepId)
-    .order('orden');
+    .order('sort_order');
   if (error) throw error;
   return data || [];
 }

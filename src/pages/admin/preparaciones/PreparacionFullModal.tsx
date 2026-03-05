@@ -35,11 +35,11 @@ export function PreparacionFullModal({
 }) {
   const isEdit = !!preparacion;
   const [form, setForm] = useState({
-    nombre: '',
-    descripcion: '',
-    tipo: 'elaborado',
+    name: '',
+    description: '',
+    type: 'elaborado',
     is_interchangeable: false,
-    metodo_costeo: 'promedio',
+    costing_method: 'promedio',
     categoria_preparacion_id: '',
   });
   const set = (k: string, v: string | boolean) => setForm((prev) => ({ ...prev, [k]: v }));
@@ -49,21 +49,21 @@ export function PreparacionFullModal({
   useEffect(() => {
     if (preparacion) {
       setForm({
-        nombre: preparacion.nombre,
-        descripcion: preparacion.descripcion || '',
-        tipo: preparacion.tipo,
+        name: preparacion.name,
+        description: preparacion.description || '',
+        type: preparacion.type,
         is_interchangeable: preparacion.is_interchangeable || false,
-        metodo_costeo: preparacion.metodo_costeo || 'promedio',
+        costing_method: preparacion.costing_method || 'promedio',
         categoria_preparacion_id: preparacion.categoria_preparacion_id || '',
       });
       setSavedId(preparacion.id);
     } else {
       setForm({
-        nombre: '',
-        descripcion: '',
-        tipo: 'elaborado',
+        name: '',
+        description: '',
+        type: 'elaborado',
         is_interchangeable: false,
-        metodo_costeo: 'promedio',
+        costing_method: 'promedio',
         categoria_preparacion_id: '',
       });
       setSavedId(null);
@@ -71,7 +71,7 @@ export function PreparacionFullModal({
   }, [preparacion, open]);
 
   const handleSaveGeneral = async () => {
-    if (!form.nombre.trim()) return;
+    if (!form.name.trim()) return;
     if (isEdit || savedId) {
       await mutations.update.mutateAsync({ id: savedId || preparacion.id, data: form });
     } else {
@@ -81,13 +81,13 @@ export function PreparacionFullModal({
     }
   };
 
-  const effectiveTipo = form.tipo;
+  const effectiveTipo = form.type;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? preparacion.nombre : 'Nueva Receta'}</DialogTitle>
+          <DialogTitle>{isEdit ? preparacion.name : 'Nueva Receta'}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -103,15 +103,15 @@ export function PreparacionFullModal({
           <TabsContent value="general" className="space-y-4 mt-4">
             <FormRow label="Nombre" required>
               <Input
-                value={form.nombre}
-                onChange={(e) => set('nombre', e.target.value)}
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
                 placeholder="Ej: Hamburguesa Clásica"
               />
             </FormRow>
             <FormRow label="Descripción">
               <Textarea
-                value={form.descripcion}
-                onChange={(e) => set('descripcion', e.target.value)}
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
                 rows={2}
               />
             </FormRow>
@@ -127,7 +127,7 @@ export function PreparacionFullModal({
                   <SelectItem value="none">Sin categoría</SelectItem>
                   {categorias.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.nombre}
+                      {cat.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -137,8 +137,8 @@ export function PreparacionFullModal({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => set('tipo', 'elaborado')}
-                  className={`p-3 rounded-lg border-2 text-left transition-colors ${form.tipo === 'elaborado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                  onClick={() => set('type', 'elaborado')}
+                  className={`p-3 rounded-lg border-2 text-left transition-colors ${form.type === 'elaborado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                 >
                   <p className="font-medium text-sm">🍳 Elaborado</p>
                   <p className="text-xs text-muted-foreground">
@@ -147,8 +147,8 @@ export function PreparacionFullModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => set('tipo', 'componente_terminado')}
-                  className={`p-3 rounded-lg border-2 text-left transition-colors ${form.tipo === 'componente_terminado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                  onClick={() => set('type', 'componente_terminado')}
+                  className={`p-3 rounded-lg border-2 text-left transition-colors ${form.type === 'componente_terminado' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                 >
                   <p className="font-medium text-sm">📦 Componente</p>
                   <p className="text-xs text-muted-foreground">Porción de insumo terminado</p>
@@ -156,7 +156,7 @@ export function PreparacionFullModal({
               </div>
             </FormSection>
 
-            {form.tipo === 'componente_terminado' && (
+            {form.type === 'componente_terminado' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Intercambiable (múltiples opciones)</span>
@@ -168,8 +168,8 @@ export function PreparacionFullModal({
                 {form.is_interchangeable && (
                   <FormRow label="Método de costeo">
                     <Select
-                      value={form.metodo_costeo}
-                      onValueChange={(v) => set('metodo_costeo', v)}
+                      value={form.costing_method}
+                      onValueChange={(v) => set('costing_method', v)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -191,7 +191,7 @@ export function PreparacionFullModal({
               <LoadingButton
                 loading={mutations.create.isPending || mutations.update.isPending}
                 onClick={handleSaveGeneral}
-                disabled={!form.nombre}
+                disabled={!form.name}
               >
                 {savedId ? 'Guardar Cambios' : 'Crear y Continuar →'}
               </LoadingButton>

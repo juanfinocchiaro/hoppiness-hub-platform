@@ -79,8 +79,8 @@ function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: str
       </p>
     );
 
-  const pendientes = pagos.filter((p: any) => !p.verificado);
-  const verificados = pagos.filter((p: any) => p.verificado);
+  const pendientes = pagos.filter((p: any) => !p.is_verified);
+  const verificados = pagos.filter((p: any) => p.is_verified);
 
   return (
     <div className="space-y-3">
@@ -96,11 +96,11 @@ function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: str
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                 <span className="font-mono font-semibold">
-                  $ {Number(p.monto).toLocaleString('es-AR')}
+                  $ {Number(p.amount).toLocaleString('es-AR')}
                 </span>
-                <span className="text-muted-foreground">{formatLocalDate(p.fecha_pago)}</span>
+                <span className="text-muted-foreground">{formatLocalDate(p.payment_date)}</span>
                 <Badge variant="outline" className="w-fit">
-                  {p.medio_pago}
+                  {p.payment_method}
                 </Badge>
                 {p.referencia && (
                   <span className="text-xs text-muted-foreground">Ref: {p.referencia}</span>
@@ -124,9 +124,9 @@ function PagosDetalleRow({ branchId, periodo }: { branchId: string; periodo: str
               className="flex items-center justify-between text-sm border rounded p-2 opacity-70"
             >
               <div className="flex items-center gap-3">
-                <span className="font-mono">$ {Number(p.monto).toLocaleString('es-AR')}</span>
-                <span className="text-muted-foreground">{formatLocalDate(p.fecha_pago)}</span>
-                <span className="text-muted-foreground">{p.medio_pago}</span>
+                <span className="font-mono">$ {Number(p.amount).toLocaleString('es-AR')}</span>
+                <span className="text-muted-foreground">{formatLocalDate(p.payment_date)}</span>
+                <span className="text-muted-foreground">{p.payment_method}</span>
               </div>
               <Badge variant="default" className="gap-1">
                 <CheckCircle className="w-3 h-3" /> Verificado
@@ -187,7 +187,7 @@ export default function CanonPage() {
       const g = map.get(id)!;
       g.liquidaciones.push(row);
       g.totalCanon += Number(row.total_canon);
-      g.totalSaldo += Number(row.saldo_pendiente ?? 0);
+      g.totalSaldo += Number(row.pending_balance ?? 0);
       if (row.estado !== 'pagado') g.hasPendientes = true;
     }
     return Array.from(map.values()).sort((a, b) => a.branchName.localeCompare(b.branchName));
@@ -352,8 +352,8 @@ export default function CanonPage() {
                               </TableCell>
                               <TableCell>{estadoBadge(row.estado)}</TableCell>
                               <TableCell className="text-right font-mono text-destructive">
-                                {Number(row.saldo_pendiente) > 0
-                                  ? `$ ${Number(row.saldo_pendiente).toLocaleString('es-AR')}`
+                                {Number(row.pending_balance) > 0
+                                  ? `$ ${Number(row.pending_balance).toLocaleString('es-AR')}`
                                   : '-'}
                               </TableCell>
                             </TableRow>

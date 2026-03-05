@@ -8,10 +8,10 @@ export type CreateMutation = ReturnType<typeof useModificadoresMutations>['creat
 
 export interface FlatIngredient {
   id: string;
-  nombre: string;
-  cantidad: number;
+  name: string;
+  quantity: number;
   unidad: string;
-  costo_por_unidad_base: number;
+  base_unit_cost: number;
   _fromItem: boolean;
   _recetaOrigen: string;
 }
@@ -20,19 +20,19 @@ export type ComposicionWithJoins = any;
 
 export interface InsumoLike {
   id: string;
-  nombre: string;
-  costo_por_unidad_base?: number | null;
-  cantidad?: number;
+  name: string;
+  base_unit_cost?: number | null;
+  quantity?: number;
   unidad?: string;
-  unidad_base?: string;
+  base_unit?: string;
   _fromItem?: boolean;
 }
 
 export interface SelectedExtraItem {
   id: string;
-  nombre: string;
-  costo_por_unidad_base?: number | null;
-  costo_calculado?: number | null;
+  name: string;
+  base_unit_cost?: number | null;
+  calculated_cost?: number | null;
 }
 
 export interface NewRemovibleFormProps {

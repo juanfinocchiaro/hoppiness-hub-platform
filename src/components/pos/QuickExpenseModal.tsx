@@ -109,11 +109,11 @@ export function QuickExpenseModal({
           shiftId,
           amount: amountNum,
           concept: concept,
-          paymentMethod: 'efectivo',
+          paymentMethod: 'cash',
           userId: user.id,
           categoriaGasto: categoriaGasto || undefined,
           rdoCategoryCode: rdoCategoryCode || undefined,
-          observaciones: notes || undefined,
+          notes: notes || undefined,
           estadoAprobacion:
             !isSupervisor && amountNum >= pinThreshold ? 'pendiente_aprobacion' : 'aprobado',
         });

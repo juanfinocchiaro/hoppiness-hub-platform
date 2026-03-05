@@ -129,10 +129,10 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
     }));
   }, [gruposOpcionales]);
 
-  const precioBase = item?.precio_base ?? 0;
-  const precioRef = item?.precio_referencia ? Number(item.precio_referencia) : undefined;
+  const precioBase = item?.base_price ?? 0;
+  const precioRef = item?.reference_price ? Number(item.reference_price) : undefined;
   const hasDiscount = precioRef != null && precioRef > precioBase;
-  const nombre = item?.nombre_corto ?? item?.nombre ?? '';
+  const nombre = item?.short_name ?? item?.name ?? '';
 
   const isLoading = loadingExtras || loadingRemovibles || loadingGrupos;
   const hasRegularContent =
@@ -147,11 +147,11 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
         autoAddedRef.current = itemId;
         onConfirm({
           item_carta_id: item.id,
-          nombre,
-          cantidad: 1,
-          precio_unitario: precioBase,
+          name: nombre,
+          quantity: 1,
+          unit_price: precioBase,
           subtotal: precioBase,
-          precio_referencia: hasDiscount ? precioRef : undefined,
+          reference_price: hasDiscount ? precioRef : undefined,
           categoria_carta_id: item.categoria_carta_id ?? null,
           promo_id: undefined,
           promo_restriccion_pago: undefined,
@@ -166,11 +166,11 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
           .join(', ');
         onConfirm({
           item_carta_id: item.id,
-          nombre: `${nombre} (PROMO)`,
-          cantidad: 1,
-          precio_unitario: origPrice,
+          name: `${nombre} (PROMO)`,
+          quantity: 1,
+          unit_price: origPrice,
           subtotal: origPrice,
-          notas: notes || undefined,
+          notes: notes || undefined,
           categoria_carta_id: item.categoria_carta_id ?? null,
           promo_id: promoId,
           promo_restriccion_pago: promoRestriccionPago,
@@ -333,15 +333,15 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
 
     onConfirm({
       item_carta_id: item.id,
-      nombre: displayName,
-      cantidad: 1,
-      precio_unitario: fullPrice,
+      name: displayName,
+      quantity: 1,
+      unit_price: fullPrice,
       subtotal: fullPrice,
-      notas: notasParts.length > 0 ? notasParts.join(' | ') : undefined,
+      notes: notasParts.length > 0 ? notasParts.join(' | ') : undefined,
       extras: cartExtras.length > 0 ? cartExtras : undefined,
       removibles: cartRemovibles.length > 0 ? cartRemovibles : undefined,
       opcionales: cartOpcionales.length > 0 ? cartOpcionales : undefined,
-      precio_referencia: !isPromo && hasDiscount ? precioRef : undefined,
+      reference_price: !isPromo && hasDiscount ? precioRef : undefined,
       categoria_carta_id: item.categoria_carta_id ?? null,
       promo_id: isPromo ? promoId : undefined,
       promo_restriccion_pago: isPromo ? promoRestriccionPago : undefined,

@@ -92,7 +92,7 @@ export function SortableCategoryCard({
             <>
               <CollapsibleTrigger asChild>
                 <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
-                  <span className="font-semibold text-sm">{cat.nombre}</span>
+                  <span className="font-semibold text-sm">{cat.name}</span>
                   <Badge variant="secondary" className="text-xs font-normal">
                     {items.length}
                   </Badge>
@@ -108,7 +108,7 @@ export function SortableCategoryCard({
                   className="h-7 w-7"
                   onClick={() => {
                     setEditingId(cat.id);
-                    setEditingNombre(cat.nombre);
+                    setEditingNombre(cat.name);
                   }}
                 >
                   <Pencil className="w-3.5 h-3.5" />

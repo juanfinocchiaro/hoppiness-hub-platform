@@ -52,7 +52,7 @@ export default function VentasMensualesLocalPage() {
     setModalOpen(true);
   };
 
-  const periodoForNew = editingVenta ? editingVenta.periodo : getCurrentPeriodo();
+  const periodoForNew = editingVenta ? editingVenta.period : getCurrentPeriodo();
   const posEnabled = usePosEnabled(branchId || undefined);
   const currentPeriodo = getCurrentPeriodo();
   const { data: posVentas, isLoading: loadingPos } = usePosVentasAgregadas(
@@ -161,14 +161,14 @@ export default function VentasMensualesLocalPage() {
               </TableRow>
             ) : (
               ventas.map((v: any) => {
-                const ventaTotal = Number(v.venta_total ?? 0);
-                const efectivo = Number(v.efectivo ?? 0);
+                const ventaTotal = Number(v.total_sales ?? 0);
+                const efectivo = Number(v.cash ?? 0);
                 const online = ventaTotal - efectivo;
                 const pctEf = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '-';
                 const canonTotal = ventaTotal * 0.05;
                 return (
                   <TableRow key={v.id}>
-                    <TableCell className="font-medium">{formatPeriodo(v.periodo)}</TableCell>
+                    <TableCell className="font-medium">{formatPeriodo(v.period)}</TableCell>
                     <TableCell className="text-right font-mono font-semibold">
                       $ {ventaTotal.toLocaleString('es-AR')}
                     </TableCell>
@@ -195,7 +195,7 @@ export default function VentasMensualesLocalPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setDeleteTarget({ id: v.id, periodo: v.periodo })}
+                            onClick={() => setDeleteTarget({ id: v.id, periodo: v.period })}
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>

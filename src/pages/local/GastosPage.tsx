@@ -96,15 +96,15 @@ const MEDIOS_PAGO_GASTO = [
 
 interface Gasto {
   id: string;
-  fecha: string;
+  date: string;
   categoria_principal: string;
-  concepto: string;
-  monto: number;
-  medio_pago: string | null;
+  concept: string;
+  amount: number;
+  payment_method: string | null;
   tipo_pago: string | null;
   afecta_caja: boolean;
   costo_transferencia: number;
-  observaciones: string | null;
+  notes: string | null;
   proveedor_id: string | null;
   estado: string | null;
   created_at: string;
@@ -147,7 +147,7 @@ export default function GastosPage() {
       const q = debouncedSearch.toLowerCase();
       filtered = filtered.filter(
         (g) =>
-          g.concepto.toLowerCase().includes(q) || g.categoria_principal.toLowerCase().includes(q),
+          g.concept.toLowerCase().includes(q) || g.categoria_principal.toLowerCase().includes(q),
       );
     }
     return filtered;
@@ -157,9 +157,9 @@ export default function GastosPage() {
     if (!filteredGastos.length) return { total: 0, efectivo: 0, transferencia: 0 };
     return filteredGastos.reduce(
       (acc, g) => ({
-        total: acc.total + Number(g.monto) + Number(g.costo_transferencia || 0),
-        efectivo: acc.efectivo + (g.afecta_caja ? Number(g.monto) : 0),
-        transferencia: acc.transferencia + (!g.afecta_caja ? Number(g.monto) : 0),
+        total: acc.total + Number(g.amount) + Number(g.costo_transferencia || 0),
+        efectivo: acc.efectivo + (g.afecta_caja ? Number(g.amount) : 0),
+        transferencia: acc.transferencia + (!g.afecta_caja ? Number(g.amount) : 0),
       }),
       { total: 0, efectivo: 0, transferencia: 0 },
     );
@@ -177,12 +177,12 @@ export default function GastosPage() {
     if (!filteredGastos.length) return;
     exportToExcel(
       filteredGastos.map((g) => ({
-        fecha: g.fecha,
+        fecha: g.date,
         categoria:
           CATEGORIAS_GASTO.find((c) => c.value === g.categoria_principal)?.label ||
           g.categoria_principal,
-        concepto: g.concepto,
-        monto: g.monto,
+        concepto: g.concept,
+        monto: g.amount,
         costo_transferencia: g.costo_transferencia || 0,
         medio_pago:
           MEDIOS_PAGO_GASTO.find((m) => m.value === g.tipo_pago)?.label || g.tipo_pago || '',
@@ -327,7 +327,7 @@ export default function GastosPage() {
                 {filteredGastos.map((g) => (
                   <TableRow key={g.id}>
                     <TableCell className="text-sm">
-                      {format(new Date(g.fecha + 'T12:00:00'), 'dd/MM', { locale: es })}
+                      {format(new Date(g.date + 'T12:00:00'), 'dd/MM', { locale: es })}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
@@ -335,9 +335,9 @@ export default function GastosPage() {
                           g.categoria_principal}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">{g.concepto}</TableCell>
+                    <TableCell className="text-sm max-w-[200px] truncate">{g.concept}</TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
-                      {fmtCurrency(Number(g.monto))}
+                      {fmtCurrency(Number(g.amount))}
                       {Number(g.costo_transferencia) > 0 && (
                         <span className="text-xs text-muted-foreground block">
                           +{fmtCurrency(Number(g.costo_transferencia))} transf.
@@ -346,7 +346,7 @@ export default function GastosPage() {
                     </TableCell>
                     <TableCell className="text-xs">
                       {MEDIOS_PAGO_GASTO.find((m) => m.value === g.tipo_pago)?.label ||
-                        g.medio_pago ||
+                        g.payment_method ||
                         '-'}
                     </TableCell>
                     <TableCell className="text-center">
@@ -409,38 +409,38 @@ function GastoFormModal({
   const { user } = useAuth();
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    fecha: format(new Date(), 'yyyy-MM-dd'),
+    date: format(new Date(), 'yyyy-MM-dd'),
     categoria_principal: '',
-    concepto: '',
-    monto: '',
+    concept: '',
+    amount: '',
     tipo_pago: 'efectivo_caja',
     afecta_caja: true,
     costo_transferencia: '',
-    observaciones: '',
+    notes: '',
   });
 
   useEffect(() => {
     if (editing) {
       setForm({
-        fecha: editing.fecha,
+        date: editing.date,
         categoria_principal: editing.categoria_principal,
-        concepto: editing.concepto,
-        monto: String(editing.monto),
+        concept: editing.concept,
+        amount: String(editing.amount),
         tipo_pago: editing.tipo_pago || 'efectivo_caja',
         afecta_caja: editing.afecta_caja,
         costo_transferencia: String(editing.costo_transferencia || 0),
-        observaciones: editing.observaciones || '',
+        notes: editing.notes || '',
       });
     } else {
       setForm({
-        fecha: format(new Date(), 'yyyy-MM-dd'),
+        date: format(new Date(), 'yyyy-MM-dd'),
         categoria_principal: '',
-        concepto: '',
-        monto: '',
+        concept: '',
+        amount: '',
         tipo_pago: 'efectivo_caja',
         afecta_caja: true,
         costo_transferencia: '',
-        observaciones: '',
+        notes: '',
       });
     }
   }, [editing]);
@@ -451,16 +451,16 @@ function GastoFormModal({
     mutationFn: async () => {
       const payload = {
         branch_id: branchId,
-        fecha: form.fecha,
-        periodo: form.fecha.substring(0, 7),
+        date: form.date,
+        period: form.date.substring(0, 7),
         categoria_principal: form.categoria_principal,
-        concepto: form.concepto,
-        monto: parseFloat(form.monto),
+        concept: form.concept,
+        amount: parseFloat(form.amount),
         tipo_pago: form.tipo_pago,
-        medio_pago: form.tipo_pago,
+        payment_method: form.tipo_pago,
         afecta_caja: form.afecta_caja,
         costo_transferencia: form.costo_transferencia ? parseFloat(form.costo_transferencia) : 0,
-        observaciones: form.observaciones || null,
+        notes: form.notes || null,
         rdo_section:
           CATEGORIAS_GASTO.find((c) => c.value === form.categoria_principal)?.rdo || 'costos_fijos',
         created_by: user?.id,
@@ -504,8 +504,8 @@ function GastoFormModal({
               <Label>Fecha</Label>
               <Input
                 type="date"
-                value={form.fecha}
-                onChange={(e) => set({ fecha: e.target.value })}
+                value={form.date}
+                onChange={(e) => set({ date: e.target.value })}
               />
             </div>
             <div>
@@ -532,8 +532,8 @@ function GastoFormModal({
             <Label>Concepto</Label>
             <Input
               placeholder="Ej: Pago a cadete, factura de gas..."
-              value={form.concepto}
-              onChange={(e) => set({ concepto: e.target.value })}
+              value={form.concept}
+              onChange={(e) => set({ concept: e.target.value })}
             />
           </div>
 
@@ -547,8 +547,8 @@ function GastoFormModal({
                 <Input
                   type="number"
                   placeholder="0"
-                  value={form.monto}
-                  onChange={(e) => set({ monto: e.target.value })}
+                  value={form.amount}
+                  onChange={(e) => set({ amount: e.target.value })}
                   className="pl-7"
                 />
               </div>
@@ -607,8 +607,8 @@ function GastoFormModal({
             <Label>Observaciones (opcional)</Label>
             <Textarea
               placeholder="Detalles adicionales..."
-              value={form.observaciones}
-              onChange={(e) => set({ observaciones: e.target.value })}
+              value={form.notes}
+              onChange={(e) => set({ notes: e.target.value })}
               rows={2}
             />
           </div>
@@ -620,7 +620,7 @@ function GastoFormModal({
           </Button>
           <Button
             onClick={() => save.mutate()}
-            disabled={save.isPending || !form.categoria_principal || !form.concepto || !form.monto}
+            disabled={save.isPending || !form.categoria_principal || !form.concept || !form.amount}
           >
             {save.isPending ? 'Guardando...' : editing ? 'Actualizar' : 'Registrar'}
           </Button>

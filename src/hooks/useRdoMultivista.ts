@@ -44,7 +44,7 @@ export interface RdoPorCanalRow {
 }
 
 export interface RdoPorMedioRow {
-  medio_pago: string;
+  payment_method: string;
   pedidos: number;
   ventas: number;
   porcentaje: number;

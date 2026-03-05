@@ -52,26 +52,26 @@ export function VerificarPagoModal({ open, onOpenChange, pago }: VerificarPagoMo
           <div className="p-3 rounded-md bg-muted text-sm space-y-1">
             <p>
               Monto:{' '}
-              <strong className="font-mono">$ {Number(pago.monto).toLocaleString('es-AR')}</strong>
+              <strong className="font-mono">$ {Number(pago.amount).toLocaleString('es-AR')}</strong>
             </p>
             <p>
               Fecha:{' '}
               <strong>
                 {(() => {
-                  const [y, m, d] = pago.fecha_pago.split('-').map(Number);
+                  const [y, m, d] = pago.payment_date.split('-').map(Number);
                   return new Date(y, m - 1, d).toLocaleDateString('es-AR');
                 })()}
               </strong>
             </p>
             <p>
-              Medio: <strong>{pago.medio_pago}</strong>
+              Medio: <strong>{pago.payment_method}</strong>
             </p>
             {pago.referencia && (
               <p>
                 Referencia: <strong>{pago.referencia}</strong>
               </p>
             )}
-            {pago.observaciones && <p className="text-muted-foreground">{pago.observaciones}</p>}
+            {pago.notes && <p className="text-muted-foreground">{pago.notes}</p>}
           </div>
 
           <div>

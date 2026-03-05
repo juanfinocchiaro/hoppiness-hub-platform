@@ -42,7 +42,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
 
   // Form state
   const [etiqueta, setEtiqueta] = useState('Casa');
-  const [direccion, setDireccion] = useState('');
+  const [address, setAddress] = useState('');
   const [piso, setPiso] = useState('');
   const [referencia, setReferencia] = useState('');
   const [ciudad, setCiudad] = useState('Córdoba');
@@ -59,7 +59,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
         user!.id,
         {
           label: etiqueta,
-          address: direccion.trim(),
+          address: address.trim(),
           floor: piso.trim() || null,
           reference: referencia.trim() || null,
           city: ciudad.trim() || 'Córdoba',
@@ -88,7 +88,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
   function openNew() {
     setEditId(null);
     setEtiqueta('Casa');
-    setDireccion('');
+    setAddress('');
     setPiso('');
     setReferencia('');
     setCiudad('Córdoba');
@@ -98,7 +98,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
   function openEdit(addr: Direccion) {
     setEditId(addr.id);
     setEtiqueta(addr.label);
-    setDireccion(addr.address);
+    setAddress(addr.address);
     setPiso(addr.floor || '');
     setReferencia(addr.reference || '');
     setCiudad(addr.city || 'Córdoba');
@@ -158,8 +158,8 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
             <div className="space-y-2">
               <Label>Dirección *</Label>
               <Input
-                value={direccion}
-                onChange={(e) => setDireccion(e.target.value)}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
                 placeholder="Av. Colón 1234"
               />
             </div>
@@ -192,7 +192,7 @@ export function DireccionesSheet({ open, onOpenChange }: Props) {
               <Button
                 className="flex-1"
                 onClick={() => saveMutation.mutate()}
-                disabled={!direccion.trim() || saveMutation.isPending}
+                disabled={!address.trim() || saveMutation.isPending}
               >
                 {saveMutation.isPending && (
                   <span className="mr-2 inline-flex">

@@ -22,7 +22,7 @@ export function useToggleExtra() {
       item_carta_id,
       tipo,
       ref_id,
-      nombre,
+      name,
       costo,
       cantidad = 1,
       activo,
@@ -30,7 +30,7 @@ export function useToggleExtra() {
       item_carta_id: string;
       tipo: 'preparacion' | 'insumo';
       ref_id: string;
-      nombre: string;
+      name: string;
       costo: number;
       cantidad?: number;
       activo: boolean;
@@ -42,7 +42,7 @@ export function useToggleExtra() {
         if (!existing) {
           const catId = await fetchExtrasCategoryId();
           const data = await createExtraItemCarta({
-            nombre: `Extra ${nombre}`,
+            nombre: `Extra ${name}`,
             catId,
             costo,
             composicion_ref_preparacion_id: tipo === 'preparacion' ? ref_id : null,

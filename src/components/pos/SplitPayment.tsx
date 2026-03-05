@@ -34,11 +34,11 @@ export interface PaymentLine {
 }
 
 const METODOS: { value: MetodoPago; label: string }[] = [
-  { value: 'efectivo', label: 'Efectivo' },
-  { value: 'tarjeta_debito', label: 'Tarjeta Débito' },
-  { value: 'tarjeta_credito', label: 'Tarjeta Crédito' },
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'debit_card', label: 'Tarjeta Débito' },
+  { value: 'credit_card', label: 'Tarjeta Crédito' },
   { value: 'mercadopago_qr', label: 'Mercado Pago QR' },
-  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'transfer', label: 'Transferencia' },
 ];
 
 interface SplitPaymentProps {
@@ -50,12 +50,12 @@ interface SplitPaymentProps {
 
 export function SplitPayment({ total, open, onOpenChange, onConfirm }: SplitPaymentProps) {
   const [payments, setPayments] = useState<PaymentLine[]>([
-    { id: crypto.randomUUID(), method: 'efectivo', amount: total },
+    { id: crypto.randomUUID(), method: 'cash', amount: total },
   ]);
 
   useEffect(() => {
     if (open) {
-      setPayments([{ id: crypto.randomUUID(), method: 'efectivo', amount: total }]);
+      setPayments([{ id: crypto.randomUUID(), method: 'cash', amount: total }]);
     }
   }, [open, total]);
 
@@ -68,7 +68,7 @@ export function SplitPayment({ total, open, onOpenChange, onConfirm }: SplitPaym
       ...payments,
       {
         id: crypto.randomUUID(),
-        method: 'efectivo',
+        method: 'cash',
         amount: remaining > 0 ? Math.round(remaining * 100) / 100 : 0,
       },
     ]);
@@ -90,7 +90,7 @@ export function SplitPayment({ total, open, onOpenChange, onConfirm }: SplitPaym
     setPayments(
       Array.from({ length: ways }, (_, i) => ({
         id: crypto.randomUUID(),
-        method: 'efectivo' as MetodoPago,
+        method: 'cash' as MetodoPago,
         amount: i === ways - 1 ? lastAmount : amountPerWay,
       })),
     );

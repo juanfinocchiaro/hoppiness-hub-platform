@@ -46,7 +46,7 @@ export function AnalisisTab({ cats, gs, loading, onQueuePrice }: AnalisisTabProp
         .map((g) => ({
           ...g,
           items: g.items.filter((i) => {
-            if (!i.nombre.toLowerCase().includes(search.toLowerCase())) return false;
+            if (!i.name.toLowerCase().includes(search.toLowerCase())) return false;
             if (filter !== 'all' && i.color !== filter) return false;
             return true;
           }),
@@ -147,7 +147,7 @@ export function AnalisisTab({ cats, gs, loading, onQueuePrice }: AnalisisTabProp
               >
                 <div className="flex items-center gap-3">
                   {expanded.has(g.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                  <span className={`font-semibold text-sm ${g.hidden ? 'text-amber-700 dark:text-amber-400' : ''}`}>{g.nombre}</span>
+                  <span className={`font-semibold text-sm ${g.hidden ? 'text-amber-700 dark:text-amber-400' : ''}`}>{g.name}</span>
                   <Badge variant="outline" className="text-xs">{g.items.length}</Badge>
                   {g.hidden && (
                     <Badge className="text-xs font-normal bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400">
@@ -190,7 +190,7 @@ export function AnalisisTab({ cats, gs, loading, onQueuePrice }: AnalisisTabProp
                               <div className="flex items-center gap-2">
                                 {isOpen ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
                                 <div>
-                                  <p className="font-medium text-sm">{i.nombre}</p>
+                                  <p className="font-medium text-sm">{i.name}</p>
                                   {!i.hasComp && <p className="text-xs text-yellow-600">⚠ Sin composición</p>}
                                 </div>
                               </div>

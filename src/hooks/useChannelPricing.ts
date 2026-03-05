@@ -140,13 +140,7 @@ export function useMenuItemsForPricing() {
     queryKey: ['menu-items-all'],
     queryFn: async () => {
       const data = await fetchItemsCartaForPricing();
-      return (data || []).map((it: any) => ({
-        ...it,
-        nombre: it.name ?? it.nombre,
-        menu_categories: it.menu_categories
-          ? { ...it.menu_categories, nombre: it.menu_categories.name ?? it.menu_categories.nombre }
-          : it.menu_categories,
-      }));
+      return data || [];
     },
   });
 }
@@ -207,16 +201,16 @@ export function useUnifyPrices() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: { source: 'default' | string; targetChannels: Channel[] }) => {
-      let sourceItems: Array<{ id: string; precio_base: number }>;
+      let sourceItems: Array<{ id: string; base_price: number }>;
 
       if (params.source === 'default') {
         const data = await fetchActiveItemsPrices();
-        sourceItems = data as Array<{ id: string; precio_base: number }>;
+        sourceItems = data as Array<{ id: string; base_price: number }>;
       } else {
         const data = await fetchPriceListItemsService(params.source);
         sourceItems = (data as Array<Record<string, unknown>>).map((d) => ({
           id: d.item_carta_id as string,
-          precio_base: d.precio as number,
+          base_price: d.precio as number,
         }));
       }
 
@@ -225,7 +219,7 @@ export function useUnifyPrices() {
       for (const list of targetLists as unknown as PriceList[]) {
         const items = sourceItems.map((s) => ({
           item_carta_id: s.id,
-          precio: s.precio_base,
+          precio: s.base_price,
         }));
         if (items.length) {
           await bulkUpsertPriceListItems(list.id, items);

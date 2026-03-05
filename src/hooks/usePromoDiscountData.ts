@@ -36,7 +36,7 @@ export function usePromoDiscountData(branchId: string, periodo: string) {
       for (const item of allItems) {
         const qty = Number((item as Record<string, unknown>).cantidad) || 0;
         const precioUnit = Number((item as Record<string, unknown>).precio_unitario) || 0;
-        const precioRef = Number((item as Record<string, unknown>).precio_referencia) || 0;
+        const precioRef = Number((item as Record<string, unknown>).reference_price) || 0;
         const sub = Number((item as Record<string, unknown>).subtotal) || 0;
         const pedidoId = (item as Record<string, unknown>).pedido_id as string;
 

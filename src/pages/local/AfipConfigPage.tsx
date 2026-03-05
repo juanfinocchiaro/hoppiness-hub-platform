@@ -43,7 +43,7 @@ export default function AfipConfigPage() {
 
   const [form, setForm] = useState({
     cuit: '',
-    razon_social: '',
+    business_name: '',
     direccion_fiscal: '',
     inicio_actividades: '',
     punto_venta: '',
@@ -60,7 +60,7 @@ export default function AfipConfigPage() {
     if (config) {
       setForm({
         cuit: config.cuit || '',
-        razon_social: config.razon_social || '',
+        business_name: config.business_name || '',
         direccion_fiscal: config.direccion_fiscal || '',
         inicio_actividades: config.inicio_actividades || '',
         punto_venta: config.punto_venta?.toString() || '',
@@ -71,7 +71,7 @@ export default function AfipConfigPage() {
   const canAccess = isSuperadmin || localRole === 'franquiciado';
   const hasError = config?.estado_conexion === 'error' || !!config?.ultimo_error;
   const isConnected = config?.estado_conexion === 'conectado' && !hasError;
-  const hasFiscalData = !!(config?.cuit || config?.razon_social);
+  const hasFiscalData = !!(config?.cuit || config?.business_name);
   const fiscalReadOnly = !isEditingFiscal && hasFiscalData;
 
   const handleChange = (field: string, value: string) => {
@@ -83,7 +83,7 @@ export default function AfipConfigPage() {
     const payload: Record<string, unknown> = {
       branch_id: branchId,
       cuit: form.cuit || null,
-      razon_social: form.razon_social || null,
+      business_name: form.business_name || null,
       direccion_fiscal: form.direccion_fiscal || null,
       inicio_actividades: form.inicio_actividades || null,
       punto_venta: form.punto_venta ? parseInt(form.punto_venta) : null,
@@ -294,7 +294,7 @@ export default function AfipConfigPage() {
             </div>
             <div className="space-y-0.5">
               <p className="text-xs text-muted-foreground">Razón Social</p>
-              <p className="text-sm font-semibold">{config?.razon_social ?? '—'}</p>
+              <p className="text-sm font-semibold">{config?.business_name ?? '—'}</p>
             </div>
           </div>
 
@@ -388,7 +388,7 @@ export default function AfipConfigPage() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Razón Social</Label>
-                <p className="text-sm font-medium">{form.razon_social || '—'}</p>
+                <p className="text-sm font-medium">{form.business_name || '—'}</p>
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label className="text-xs text-muted-foreground">Dirección Fiscal</Label>
@@ -416,12 +416,12 @@ export default function AfipConfigPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="razon_social">Razón Social</Label>
+                  <Label htmlFor="business_name">Razón Social</Label>
                   <Input
-                    id="razon_social"
+                    id="business_name"
                     placeholder="Empresa S.R.L."
-                    value={form.razon_social}
-                    onChange={(e) => handleChange('razon_social', e.target.value)}
+                    value={form.business_name}
+                    onChange={(e) => handleChange('business_name', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -468,11 +468,11 @@ export default function AfipConfigPage() {
           config={config ?? null}
           branchId={branchId}
           cuit={form.cuit}
-          razonSocial={form.razon_social}
+          razonSocial={form.business_name}
           onSaveKeyAndCSR={async (data) => {
             if (
               form.cuit ||
-              form.razon_social ||
+              form.business_name ||
               form.direccion_fiscal ||
               form.inicio_actividades ||
               form.punto_venta
@@ -480,7 +480,7 @@ export default function AfipConfigPage() {
               await save.mutateAsync({
                 branch_id: branchId,
                 cuit: form.cuit || null,
-                razon_social: form.razon_social || null,
+                business_name: form.business_name || null,
                 direccion_fiscal: form.direccion_fiscal || null,
                 inicio_actividades: form.inicio_actividades || null,
                 punto_venta: form.punto_venta ? parseInt(form.punto_venta) : null,

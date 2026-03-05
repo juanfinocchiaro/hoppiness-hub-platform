@@ -44,7 +44,7 @@ export function useWebappMenuItems(branchId: string | undefined) {
         categoria_nombre:
           (item.menu_categories as Record<string, unknown> | null)?.name ?? null,
         categoria_orden:
-          (item.menu_categories as Record<string, unknown> | null)?.orden ?? 999,
+          (item.menu_categories as Record<string, unknown> | null)?.sort_order ?? 999,
       })) as WebappMenuItem[];
     },
     enabled: !!branchId,
@@ -54,13 +54,13 @@ export function useWebappMenuItems(branchId: string | undefined) {
 // ── Grupos opcionales (bebidas en combos, etc.) ──────────────────
 export interface OptionalGroupOption {
   id: string;
-  nombre: string;
+  name: string;
   precio_extra: number;
 }
 
 export interface OptionalGroup {
   id: string;
-  nombre: string;
+  name: string;
   is_required: boolean;
   max_selecciones: number | null;
   opciones: OptionalGroupOption[];
@@ -75,14 +75,14 @@ export function useWebappItemOptionalGroups(itemId: string | undefined) {
 
       return groups.map((g: Record<string, unknown>) => ({
         id: g.id,
-        nombre: g.name,
+        name: g.name,
         is_required: g.is_required ?? false,
         max_selecciones: g.max_selecciones,
         opciones: (options as Array<Record<string, unknown>>)
           .filter((o: Record<string, unknown>) => o.grupo_id === g.id)
           .map((o: Record<string, unknown>) => ({
             id: o.id,
-            nombre:
+            name:
               (o.insumos as Record<string, unknown> | null)?.name ||
               (o.preparaciones as Record<string, unknown> | null)?.name ||
               'Opción',
@@ -103,9 +103,9 @@ export function useWebappItemExtras(itemId: string | undefined) {
 
       return extras.map((e: Record<string, unknown>) => ({
         id: e.id,
-        nombre: e.name,
-        precio: e.precio_base,
-        imagen_url: e.imagen_url,
+        name: e.name,
+        precio: e.base_price,
+        image_url: e.image_url,
       }));
     },
     enabled: !!itemId,
@@ -120,8 +120,8 @@ export function useWebappItemRemovables(itemId: string | undefined) {
       const data = await fetchWebappItemRemovables(itemId!);
       return (data as Array<Record<string, unknown>>).map((r: Record<string, unknown>) => ({
         ...r,
-        nombre:
-          (r.nombre_display as string) ||
+        display_name:
+          (r.display_name as string) ||
           (r.insumos as Record<string, unknown> | null)?.name ||
           (r.preparaciones as Record<string, unknown> | null)?.name ||
           'Ingrediente',

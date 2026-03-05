@@ -143,7 +143,7 @@ export default function CentroCostosPage() {
         <HistorialModal open={!!histItem} onOpenChange={() => setHistItem(null)} item={histItem} />
       )}
       <ConfirmDialog open={!!delItem} onOpenChange={() => setDelItem(null)}
-        title="Eliminar item" description={`¿Eliminar "${delItem?.nombre}"?`}
+        title="Eliminar item" description={`¿Eliminar "${delItem?.name}"?`}
         confirmLabel="Eliminar" variant="destructive"
         onConfirm={async () => { await mutations.softDelete.mutateAsync(delItem!.id); setDelItem(null); }} />
     </div>

@@ -31,7 +31,7 @@ interface Props {
 }
 
 const EMPTY: ProveedorFormData = {
-  razon_social: '',
+  business_name: '',
   ambito: 'marca',
   permite_cuenta_corriente: false,
 };
@@ -58,14 +58,14 @@ export function ProveedorFormModal({
   useEffect(() => {
     if (proveedor) {
       setForm({
-        razon_social: proveedor.business_name,
+        business_name: proveedor.business_name,
         cuit: proveedor.cuit || '',
         contacto: proveedor.contact || '',
-        telefono: proveedor.phone || '',
+        phone: proveedor.phone || '',
         contacto_secundario: proveedor.secondary_contact || '',
         telefono_secundario: proveedor.secondary_phone || '',
         email: proveedor.email || '',
-        direccion: proveedor.address || '',
+        address: proveedor.address || '',
         ambito: proveedor.ambito as 'marca' | 'local',
         branch_id: proveedor.branch_id,
         permite_cuenta_corriente: proveedor.permite_cuenta_corriente || false,
@@ -76,7 +76,7 @@ export function ProveedorFormModal({
         cbu: proveedor.cbu || '',
         alias_cbu: proveedor.alias_cbu || '',
         titular_cuenta: proveedor.titular_cuenta || '',
-        observaciones: (proveedor as any).notes || (proveedor as any).observaciones || '',
+        notes: proveedor.notes || '',
       });
     } else if (defaultBranchId) {
       // Creating from local panel: pre-set as local provider
@@ -93,7 +93,7 @@ export function ProveedorFormModal({
   const isLocalContext = !!defaultBranchId && !isEdit;
 
   const handleSubmit = async () => {
-    if (!form.razon_social.trim()) return;
+    if (!form.business_name.trim()) return;
     const payload = {
       ...form,
       branch_id: form.ambito === 'local' ? form.branch_id || defaultBranchId || null : null,
@@ -127,8 +127,8 @@ export function ProveedorFormModal({
             <FormLayout columns={1}>
               <FormRow label="Razón Social" required>
                 <Input
-                  value={form.razon_social}
-                  onChange={(e) => set('razon_social', e.target.value)}
+                  value={form.business_name}
+                  onChange={(e) => set('business_name', e.target.value)}
                   placeholder="Nombre del proveedor"
                 />
               </FormRow>
@@ -189,8 +189,8 @@ export function ProveedorFormModal({
               </FormRow>
               <FormRow label="Teléfono principal">
                 <Input
-                  value={form.telefono || ''}
-                  onChange={(e) => set('telefono', e.target.value)}
+                  value={form.phone || ''}
+                  onChange={(e) => set('phone', e.target.value)}
                 />
               </FormRow>
               <FormRow label="Contacto secundario">
@@ -215,8 +215,8 @@ export function ProveedorFormModal({
               </FormRow>
               <FormRow label="Dirección">
                 <Input
-                  value={form.direccion || ''}
-                  onChange={(e) => set('direccion', e.target.value)}
+                  value={form.address || ''}
+                  onChange={(e) => set('address', e.target.value)}
                 />
               </FormRow>
             </FormLayout>
@@ -306,8 +306,8 @@ export function ProveedorFormModal({
               </FormLayout>
               <FormRow label="Observaciones" className="mt-4">
                 <Textarea
-                  value={form.observaciones || ''}
-                  onChange={(e) => set('observaciones', e.target.value)}
+                  value={form.notes || ''}
+                  onChange={(e) => set('notes', e.target.value)}
                   rows={2}
                 />
               </FormRow>

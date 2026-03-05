@@ -9,17 +9,17 @@ import { useAuth } from './useAuth';
 
 export interface MovimientoCuenta {
   id: string;
-  fecha: string;
+  date: string;
   tipo: 'factura' | 'pago';
-  factura_numero?: string;
-  medio_pago?: string;
+  invoice_number?: string;
+  payment_method?: string;
   referencia?: string;
-  monto: number;
+  amount: number;
   estado?: string;
-  fecha_vencimiento?: string;
+  due_date?: string;
   items_count?: number;
-  saldo_acumulado: number;
-  verificado?: boolean;
+  cumulative_balance: number;
+  is_verified?: boolean;
 }
 
 export interface ResumenCuenta {
@@ -77,21 +77,21 @@ export function useResumenProveedor(branchId?: string, proveedorId?: string) {
 
       for (const f of facturas || []) {
         total_facturado += Number(f.total);
-        const sp = Number(f.saldo_pendiente);
+        const sp = Number(f.pending_balance);
         if (sp < 0) {
           saldo_a_favor_facturas += Math.abs(sp);
         }
-        if (f.estado_pago === 'pendiente') {
+        if (f.payment_status === 'pendiente') {
           facturas_pendientes++;
-          const venc = f.fecha_vencimiento ? parseLocalDate(f.fecha_vencimiento) : null;
+          const venc = f.due_date ? parseLocalDate(f.due_date) : null;
           if (venc && venc < today) {
-            monto_vencido += Number(f.saldo_pendiente);
+            monto_vencido += Number(f.pending_balance);
             facturas_vencidas++;
           } else {
-            monto_por_vencer += Number(f.saldo_pendiente);
-            if (f.fecha_vencimiento) {
-              if (!proximo_vencimiento || f.fecha_vencimiento < proximo_vencimiento) {
-                proximo_vencimiento = f.fecha_vencimiento;
+            monto_por_vencer += Number(f.pending_balance);
+            if (f.due_date) {
+              if (!proximo_vencimiento || f.due_date < proximo_vencimiento) {
+                proximo_vencimiento = f.due_date;
               }
             }
           }
@@ -104,7 +104,7 @@ export function useResumenProveedor(branchId?: string, proveedorId?: string) {
       let pagos_pendientes_verif = 0;
 
       for (const p of pagos || []) {
-        const m = Number(p.monto);
+        const m = Number(p.amount);
         total_pagado += m;
         if (p.is_verified) {
           total_pagado_verificado += m;
@@ -162,33 +162,33 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
       for (const f of facturas || []) {
         movimientos.push({
           id: f.id,
-          fecha: f.factura_fecha,
+          date: f.invoice_date,
           tipo: 'factura',
-          factura_numero: `${f.factura_tipo ? f.factura_tipo + '-' : ''}${f.factura_numero}`,
-          monto: Number(f.total),
-          estado: f.estado_pago ?? undefined,
-          fecha_vencimiento: f.fecha_vencimiento ?? undefined,
-          items_count: f.items_factura?.length || 0,
-          saldo_acumulado: 0,
+          invoice_number: `${f.invoice_type ? f.invoice_type + '-' : ''}${f.invoice_number}`,
+          amount: Number(f.total),
+          estado: f.payment_status ?? undefined,
+          due_date: f.due_date ?? undefined,
+          items_count: f.invoice_items?.length || 0,
+          cumulative_balance: 0,
         });
       }
 
       for (const p of pagos || []) {
         movimientos.push({
           id: p.id,
-          fecha: p.fecha_pago,
+          date: p.payment_date,
           tipo: 'pago',
-          medio_pago: p.medio_pago ?? undefined,
+          payment_method: p.payment_method ?? undefined,
           referencia: !p.factura_id ? 'Pago a cuenta' : (p.referencia ?? undefined),
-          monto: Number(p.monto),
-          saldo_acumulado: 0,
-          verificado: p.is_verified ?? true,
+          amount: Number(p.amount),
+          cumulative_balance: 0,
+          is_verified: p.is_verified ?? true,
         });
       }
 
       // Sort by date asc, facturas first on same date
       movimientos.sort((a, b) => {
-        const d = a.fecha.localeCompare(b.fecha);
+        const d = a.date.localeCompare(b.date);
         if (d !== 0) return d;
         return a.tipo === 'factura' ? -1 : 1;
       });
@@ -196,8 +196,8 @@ export function useMovimientosProveedor(branchId?: string, proveedorId?: string)
       // Compute running balance
       let saldo = 0;
       for (const m of movimientos) {
-        saldo += m.tipo === 'factura' ? m.monto : -m.monto;
-        m.saldo_acumulado = saldo;
+        saldo += m.tipo === 'factura' ? m.amount : -m.amount;
+        m.cumulative_balance = saldo;
       }
 
       // Return in reverse chronological order for display

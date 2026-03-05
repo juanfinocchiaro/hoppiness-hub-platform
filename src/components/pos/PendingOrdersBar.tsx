@@ -107,7 +107,7 @@ function useHamburguesasCount(branchId: string, shiftOpenedAt: string | null) {
       if (pedidoIds.length === 0) return 0;
       const items = await fetchItemQuantitiesByCategories(catIds, pedidoIds);
       if (items.length === 0) return 0;
-      return items.reduce((sum, i) => sum + (i.cantidad ?? 0), 0);
+      return items.reduce((sum, i) => sum + (i.quantity ?? 0), 0);
     },
     enabled: !!branchId && !!shiftOpenedAt,
     refetchInterval: 30000,
@@ -176,14 +176,14 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
         sendOrderPushNotification({
           pedidoId,
           estado,
-          numeroPedido: pedido.numero_pedido,
+          numeroPedido: pedido.order_number,
           clienteUserId: pedido.cliente_user_id,
         });
       }
 
       if (estado === 'listo') {
         const pedido = pedidos.find((p) => p.id === pedidoId);
-        const isDelivery = pedido?.tipo_servicio === 'delivery' || pedido?.canal_venta === 'apps';
+        const isDelivery = pedido?.service_type === 'delivery' || pedido?.canal_venta === 'apps';
         if (isDelivery) {
           try {
             await printDeliveryTicketByPedidoId({
@@ -210,12 +210,12 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
               printConfig,
               printers: allPrinters,
               afipConfig: afipConfig as unknown as {
-                razon_social?: string | null;
+                business_name?: string | null;
                 cuit?: string | null;
                 direccion_fiscal?: string | null;
                 inicio_actividades?: string | null;
                 iibb?: string | null;
-                condicion_iva?: string | null;
+                tax_status?: string | null;
               } | null,
             });
             toast.success('Ticket impreso al marcar listo');
@@ -242,9 +242,9 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
     scrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
   };
 
-  const pendientes = pedidos.filter((p) => p.estado === 'pendiente');
-  const preparando = pedidos.filter((p) => p.estado === 'en_preparacion');
-  const listos = pedidos.filter((p) => p.estado === 'listo');
+  const pendientes = pedidos.filter((p) => p.status === 'pendiente');
+  const preparando = pedidos.filter((p) => p.status === 'en_preparacion');
+  const listos = pedidos.filter((p) => p.status === 'listo');
 
   const groups = [
     { key: 'pendiente', items: pendientes, config: ESTADO_CONFIG.pendiente },
@@ -342,10 +342,10 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
 
                   <div className="flex items-center gap-1.5">
                     {group.items.map((pedido) => {
-                      const config = ESTADO_CONFIG[pedido.estado]!;
+                      const config = ESTADO_CONFIG[pedido.status]!;
                       const mins = getElapsedMin(pedido.created_at);
                       const isSelected = selectedId === pedido.id;
-                      const isUrgent = pedido.estado === 'pendiente' && mins >= 10;
+                      const isUrgent = pedido.status === 'pendiente' && mins >= 10;
 
                       return (
                         <div key={pedido.id} className="flex items-center gap-1 shrink-0">
@@ -361,9 +361,9 @@ export function PendingOrdersBar({ pedidos, branchId, shiftOpenedAt }: Props) {
                               setSelectedId(isSelected ? null : pedido.id);
                             }}
                           >
-                            <span className="text-xs">{serviceIcon(pedido.tipo_servicio)}</span>
+                            <span className="text-xs">{serviceIcon(pedido.service_type)}</span>
                             <span className="font-bold tabular-nums">
-                              #{String(pedido.numero_pedido).slice(-3)}
+                              #{String(pedido.order_number).slice(-3)}
                             </span>
                             <span className="text-xs tabular-nums opacity-70 flex items-center gap-0.5">
                               <Clock className="h-3 w-3" />

@@ -33,11 +33,11 @@ export function useBranchWebappAvailability(branchId: string | undefined) {
     queryFn: async () => {
       const { data: items, error: itemsErr } = await fromUntyped('menu_items')
         .select(
-          'id, nombre, tipo, orden, disponible_webapp, menu_categories:categoria_carta_id(nombre, orden)',
+          'id, name, tipo, sort_order, disponible_webapp, menu_categories:categoria_carta_id(name, sort_order)',
         )
         .eq('is_active', true)
         .is('deleted_at', null)
-        .order('orden');
+        .order('sort_order');
       if (itemsErr) throw itemsErr;
 
       const { data: availability, error: avErr } = await fromUntyped('branch_item_availability')
@@ -55,8 +55,8 @@ export function useBranchWebappAvailability(branchId: string | undefined) {
             itemId: item.id,
             nombre: item.name,
             categoriaNombre: item.menu_categories?.name ?? 'Sin categoría',
-            categoriaOrden: item.menu_categories?.orden ?? 999,
-            productoOrden: item.orden ?? 999,
+            categoriaOrden: item.menu_categories?.sort_order ?? 999,
+            productoOrden: item.sort_order ?? 999,
             marcaDisponibleWebapp: item.disponible_webapp !== false,
             localDisponibleWebapp: (av as any)?.available_webapp ?? true,
             outOfStock: (av as any)?.out_of_stock ?? false,

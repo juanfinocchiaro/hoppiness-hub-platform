@@ -20,7 +20,7 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
   const availableExtras = useMemo(
     () => productExtras.map((e) => ({
       id: e.id,
-      nombre: e.preparaciones?.nombre || e.insumos?.nombre || '',
+      nombre: e.preparaciones?.name || e.insumos?.name || '',
       precio: Number(e.preparaciones?.precio_extra ?? e.insumos?.precio_extra ?? 0),
     })),
     [productExtras],
@@ -39,19 +39,19 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
     } else {
       next = [...existing, { extra_item_carta_id: extraId, nombre, cantidad: 1, precio_extra: precio }];
     }
-    const newPrice = computeAutoPrice(item.precio_base, next, discountPercent);
+    const newPrice = computeAutoPrice(item.base_price, next, discountPercent);
     onUpdate({ ...item, preconfigExtras: next.length > 0 ? next : undefined, precio_promo: newPrice });
   };
 
   const updateQty = (extraId: string, qty: number) => {
     const next = (item.preconfigExtras || []).map((e) => e.extra_item_carta_id === extraId ? { ...e, cantidad: Math.max(1, qty) } : e);
-    const newPrice = computeAutoPrice(item.precio_base, next, discountPercent);
+    const newPrice = computeAutoPrice(item.base_price, next, discountPercent);
     onUpdate({ ...item, preconfigExtras: next, precio_promo: newPrice });
   };
 
   const extrasSubtotal = (item.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.cantidad, 0);
-  const baseWithExtras = item.precio_base + extrasSubtotal;
-  const autoPrice = discountPercent > 0 ? computeAutoPrice(item.precio_base, item.preconfigExtras || [], discountPercent) : null;
+  const baseWithExtras = item.base_price + extrasSubtotal;
+  const autoPrice = discountPercent > 0 ? computeAutoPrice(item.base_price, item.preconfigExtras || [], discountPercent) : null;
   const effectivePercent = baseWithExtras > 0 ? Math.max(0, Math.min(100, Math.round((1 - item.precio_promo / baseWithExtras) * 1000) / 10)) : 0;
   const isOverride = autoPrice != null && item.precio_promo !== autoPrice;
   const isMoreDiscountThanConfigured = autoPrice != null && item.precio_promo < autoPrice;
@@ -59,8 +59,8 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
   return (
     <div className="px-3 py-2 space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-sm truncate flex-1">{item.nombre}</span>
-        <span className="text-xs text-muted-foreground line-through">${item.precio_base.toLocaleString('es-AR')}</span>
+        <span className="text-sm truncate flex-1">{item.name}</span>
+        <span className="text-xs text-muted-foreground line-through">${item.base_price.toLocaleString('es-AR')}</span>
         <span className="text-xs">→</span>
         <Input type="number" value={item.precio_promo} onChange={(e) => onUpdate({ ...item, precio_promo: Math.max(0, Number(e.target.value) || 0) })} className="h-7 w-24 text-xs" />
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove}><X className="w-3.5 h-3.5 text-destructive" /></Button>
@@ -101,11 +101,11 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
                 );
               })}
               <div className="text-[11px] text-muted-foreground space-y-0.5 pt-1 border-t">
-                <div className="flex justify-between"><span>Base</span><span>${item.precio_base.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between"><span>Base</span><span>${item.base_price.toLocaleString('es-AR')}</span></div>
                 {extrasSubtotal > 0 && <div className="flex justify-between"><span>+ Extras</span><span>${extrasSubtotal.toLocaleString('es-AR')}</span></div>}
                 {discountPercent > 0 && (
-                  <><div className="flex justify-between"><span>= Subtotal</span><span>${(item.precio_base + extrasSubtotal).toLocaleString('es-AR')}</span></div>
-                  <div className="flex justify-between text-red-500"><span>- {discountPercent}% desc</span><span>-${Math.round(((item.precio_base + extrasSubtotal) * discountPercent) / 100).toLocaleString('es-AR')}</span></div></>
+                  <><div className="flex justify-between"><span>= Subtotal</span><span>${(item.base_price + extrasSubtotal).toLocaleString('es-AR')}</span></div>
+                  <div className="flex justify-between text-red-500"><span>- {discountPercent}% desc</span><span>-${Math.round(((item.base_price + extrasSubtotal) * discountPercent) / 100).toLocaleString('es-AR')}</span></div></>
                 )}
                 <div className="flex justify-between font-semibold text-green-600"><span>= Promo</span><span>${item.precio_promo.toLocaleString('es-AR')}</span></div>
               </div>

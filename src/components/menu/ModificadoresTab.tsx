@@ -39,10 +39,10 @@ export function ModificadoresTab({ itemId }: Props) {
     return deepGroups.flatMap((g) =>
       g.ingredientes.map((ing) => ({
         id: ing.insumo_id,
-        nombre: ing.nombre,
+        nombre: ing.name,
         cantidad: ing.cantidad,
         unidad: ing.unidad,
-        costo_por_unidad_base: ing.costo_por_unidad_base,
+        costo_por_unidad_base: ing.base_unit_cost,
         _fromItem: true,
         _recetaOrigen: ing.receta_origen,
       })),
@@ -50,11 +50,11 @@ export function ModificadoresTab({ itemId }: Props) {
   }, [deepGroups]);
 
   const removibles =
-    (modificadores as Modificador[] | undefined)?.filter((m) => m.tipo === 'removible') || [];
+    (modificadores as Modificador[] | undefined)?.filter((m) => m.type === 'removible') || [];
   const extras =
-    (modificadores as Modificador[] | undefined)?.filter((m) => m.tipo === 'extra') || [];
+    (modificadores as Modificador[] | undefined)?.filter((m) => m.type === 'extra') || [];
   const sustituciones =
-    (modificadores as Modificador[] | undefined)?.filter((m) => m.tipo === 'sustitucion') || [];
+    (modificadores as Modificador[] | undefined)?.filter((m) => m.type === 'sustitucion') || [];
 
   if (isLoading) {
     return (
@@ -269,7 +269,7 @@ export function ModificadoresTab({ itemId }: Props) {
                         key={gi.id}
                         className="flex items-center justify-between text-xs text-muted-foreground"
                       >
-                        <span>{gi.insumos?.nombre || gi.preparaciones?.nombre || '—'}</span>
+                        <span>{gi.insumos?.name || gi.preparaciones?.name || '—'}</span>
                         <span className="font-mono">
                           {formatCurrency(gi.cantidad * gi.costo_unitario)}
                         </span>

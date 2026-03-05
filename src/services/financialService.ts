@@ -13,7 +13,7 @@ export async function fetchCanonLiquidaciones(branchId?: string) {
   let q = fromUntyped('canon_settlements')
     .select('*, branches!canon_liquidaciones_branch_id_fkey(name)')
     .is('deleted_at', null)
-    .order('periodo', { ascending: false });
+    .order('period', { ascending: false });
 
   if (branchId) q = q.eq('branch_id', branchId);
 
@@ -50,7 +50,7 @@ export async function fetchPagosCanon(canonId: string) {
     .select('*')
     .eq('canon_liquidacion_id', canonId)
     .is('deleted_at', null)
-    .order('fecha_pago', { ascending: false });
+    .order('payment_date', { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -59,7 +59,7 @@ export async function fetchPagosCanonFromProveedores(branchId: string, periodo: 
   const { data: factura } = await fromUntyped('supplier_invoices')
     .select('id')
     .eq('branch_id', branchId)
-    .eq('periodo', periodo)
+    .eq('period', periodo)
     .eq('proveedor_id', '00000000-0000-0000-0000-000000000001')
     .is('deleted_at', null)
     .maybeSingle();
@@ -68,11 +68,11 @@ export async function fetchPagosCanonFromProveedores(branchId: string, periodo: 
 
   const { data: pagos, error } = await fromUntyped('supplier_payments')
     .select(
-      'id, fecha_pago, amount, payment_method, referencia, notes, is_verified, verificado_por, verificado_at, verificado_notas, created_at',
+      'id, payment_date, amount, payment_method, referencia, notes, is_verified, verificado_por, verificado_at, verificado_notas, created_at',
     )
     .eq('factura_id', factura.id)
     .is('deleted_at', null)
-    .order('fecha_pago', { ascending: false });
+    .order('payment_date', { ascending: false });
   if (error) throw error;
   return pagos ?? [];
 }
@@ -83,7 +83,7 @@ export async function createPagoCanon(data: PagoCanonFormData, userId?: string) 
       canon_liquidacion_id: data.canon_liquidacion_id,
       branch_id: data.branch_id,
       amount: data.monto,
-      fecha_pago: data.fecha_pago,
+      payment_date: data.fecha_pago,
       payment_method: data.medio_pago,
       referencia: data.referencia,
       notes: data.observaciones,
@@ -148,13 +148,13 @@ export async function reabrirPeriodo(id: string, userId?: string, motivo?: strin
 export async function fetchFacturas(branchId: string, periodo?: string) {
   let q = fromUntyped('supplier_invoices')
     .select(
-      '*, suppliers(razon_social), invoice_items(*, supplies(nombre), service_concepts(nombre))',
+      '*, suppliers(business_name), invoice_items(*, supplies(name), service_concepts(name))',
     )
     .eq('branch_id', branchId)
     .is('deleted_at', null)
-    .order('factura_fecha', { ascending: false });
+    .order('invoice_date', { ascending: false });
 
-  if (periodo) q = q.eq('periodo', periodo);
+  if (periodo) q = q.eq('period', periodo);
 
   const { data, error } = await q;
   if (error) throw error;
@@ -195,20 +195,20 @@ export async function insertFacturaCompleta(
   const facturaPayload = {
     branch_id: data.branch_id,
     proveedor_id: data.proveedor_id,
-    factura_tipo: data.factura_tipo || null,
-    factura_numero: data.factura_numero,
-    factura_fecha: data.factura_fecha,
+    invoice_type: data.factura_tipo || null,
+    invoice_number: data.factura_numero,
+    invoice_date: data.factura_fecha,
     subtotal: subtotalItems,
     iva: data.iva || 0,
     otros_impuestos: data.otros_impuestos || 0,
     total,
-    condicion_pago: data.condicion_pago,
-    fecha_vencimiento: data.fecha_vencimiento || null,
-    estado_pago: estadoPago,
-    saldo_pendiente: estadoPago === 'pagado' ? 0 : total,
-    tipo: data.tipo || 'normal',
-    motivo_extraordinaria: data.motivo_extraordinaria || null,
-    periodo: data.periodo,
+    payment_terms: data.condicion_pago,
+    due_date: data.fecha_vencimiento || null,
+    payment_status: estadoPago,
+    pending_balance: estadoPago === 'pagado' ? 0 : total,
+    type: data.tipo || 'normal',
+    extraordinary_reason: data.motivo_extraordinaria || null,
+    period: data.periodo,
     notes: data.observaciones || null,
     created_by: userId || null,
     subtotal_bruto: data.subtotal_bruto ?? null,
@@ -257,7 +257,7 @@ export async function softDeleteFactura(id: string) {
 // ── Pagos proveedor ─────────────────────────────────────────────────
 
 export async function fetchPagosProveedor(facturaId: string) {
-  const { data, error } = await fromUntyped('pago_factura')
+  const { data, error } = await fromUntyped('invoice_payment_links')
     .select('monto_aplicado, supplier_payments(*)')
     .eq('factura_id', facturaId);
 
@@ -266,7 +266,7 @@ export async function fetchPagosProveedor(facturaId: string) {
       .select('*')
       .eq('factura_id', facturaId)
       .is('deleted_at', null)
-      .order('fecha_pago', { ascending: false });
+      .order('payment_date', { ascending: false });
     if (legacyErr) throw legacyErr;
     return legacyData;
   }
@@ -283,10 +283,10 @@ export async function createPagoProveedor(data: PagoProveedorFormData, userId?: 
       proveedor_id: data.proveedor_id,
       branch_id: data.branch_id,
       amount: data.monto,
-      fecha_pago: data.fecha_pago,
+      payment_date: data.fecha_pago,
       payment_method: data.medio_pago,
       referencia: data.referencia || null,
-      fecha_vencimiento_pago: data.fecha_vencimiento_pago || null,
+      payment_due_date: data.fecha_vencimiento_pago || null,
       notes: data.observaciones || null,
       created_by: userId,
     } as any)
@@ -301,22 +301,22 @@ export async function createPagoProveedor(data: PagoProveedorFormData, userId?: 
       monto_aplicado: app.monto_aplicado,
     }));
 
-    const { error: junctionErr } = await fromUntyped('pago_factura').insert(junctionRows);
+    const { error: junctionErr } = await fromUntyped('invoice_payment_links').insert(junctionRows);
     if (junctionErr) throw junctionErr;
 
     for (const app of data.aplicaciones) {
       const { data: factura, error: facturaErr } = await fromUntyped('supplier_invoices')
-        .select('saldo_pendiente')
+        .select('pending_balance')
         .eq('id', app.factura_id)
         .single();
 
       if (facturaErr) throw facturaErr;
 
-      const nuevoSaldo = Math.max(0, (factura.saldo_pendiente || 0) - app.monto_aplicado);
+      const nuevoSaldo = Math.max(0, (factura.pending_balance || 0) - app.monto_aplicado);
       const { error: updateErr } = await fromUntyped('supplier_invoices')
         .update({
-          saldo_pendiente: nuevoSaldo,
-          estado_pago: nuevoSaldo === 0 ? 'pagado' : 'parcial',
+          pending_balance: nuevoSaldo,
+          payment_status: nuevoSaldo === 0 ? 'pagado' : 'parcial',
         })
         .eq('id', app.factura_id);
 
@@ -341,9 +341,9 @@ export async function fetchInversiones(branchId: string, periodo?: string) {
     .select('*')
     .eq('branch_id', branchId)
     .is('deleted_at', null)
-    .order('fecha', { ascending: false });
+    .order('date', { ascending: false });
 
-  if (periodo) q = q.eq('periodo', periodo);
+  if (periodo) q = q.eq('period', periodo);
 
   const { data, error } = await q;
   if (error) throw error;
@@ -380,7 +380,7 @@ export async function fetchConsumosManuales(branchId: string, periodo?: string) 
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
-  if (periodo) q = q.eq('periodo', periodo);
+  if (periodo) q = q.eq('period', periodo);
 
   const { data, error } = await q;
   if (error) throw error;
@@ -435,8 +435,12 @@ export async function fetchMovimientosSocio(branchId: string, socioId?: string) 
 }
 
 export async function createSocio(data: SocioFormData, userId?: string) {
+  const dbPayload = { ...data } as any;
+  if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.porcentaje_participacion !== undefined) { dbPayload.ownership_percentage = dbPayload.porcentaje_participacion; delete dbPayload.porcentaje_participacion; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
   const { data: result, error } = await fromUntyped('partners')
-    .insert({ ...data, created_by: userId })
+    .insert({ ...dbPayload, created_by: userId })
     .select()
     .single();
   if (error) throw error;
@@ -444,13 +448,21 @@ export async function createSocio(data: SocioFormData, userId?: string) {
 }
 
 export async function updateSocio(id: string, data: Partial<SocioFormData>) {
-  const { error } = await fromUntyped('partners').update(data).eq('id', id);
+  const dbPayload = { ...data } as any;
+  if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.porcentaje_participacion !== undefined) { dbPayload.ownership_percentage = dbPayload.porcentaje_participacion; delete dbPayload.porcentaje_participacion; }
+  if (dbPayload.activo !== undefined) { dbPayload.is_active = dbPayload.activo; delete dbPayload.activo; }
+  const { error } = await fromUntyped('partners').update(dbPayload).eq('id', id);
   if (error) throw error;
 }
 
 export async function createMovimientoSocio(data: MovimientoSocioFormData, userId?: string) {
+  const dbPayload = { ...data } as any;
+  if (dbPayload.monto !== undefined) { dbPayload.amount = dbPayload.monto; delete dbPayload.monto; }
+  if (dbPayload.detalle !== undefined) { dbPayload.details = dbPayload.detalle; delete dbPayload.detalle; }
+  if (dbPayload.saldo_acumulado !== undefined) { dbPayload.cumulative_balance = dbPayload.saldo_acumulado; delete dbPayload.saldo_acumulado; }
   const { data: result, error } = await fromUntyped('partner_movements')
-    .insert({ ...data, created_by: userId })
+    .insert({ ...dbPayload, created_by: userId })
     .select()
     .single();
   if (error) throw error;
@@ -464,14 +476,17 @@ export async function fetchConceptosServicio() {
     .select('*')
     .is('deleted_at', null)
     .order('tipo')
-    .order('nombre');
+    .order('name');
   if (error) throw error;
   return data;
 }
 
 export async function createConceptoServicio(data: ConceptoServicioFormData) {
+  const dbPayload = { ...data } as any;
+  if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
   const { data: result, error } = await fromUntyped('service_concepts')
-    .insert(data as any)
+    .insert(dbPayload)
     .select()
     .single();
   if (error) throw error;
@@ -482,8 +497,11 @@ export async function updateConceptoServicio(
   id: string,
   data: Partial<ConceptoServicioFormData>,
 ) {
+  const dbPayload = { ...data } as any;
+  if (dbPayload.nombre !== undefined) { dbPayload.name = dbPayload.nombre; delete dbPayload.nombre; }
+  if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
   const { error } = await fromUntyped('service_concepts')
-    .update(data as any)
+    .update(dbPayload)
     .eq('id', id);
   if (error) throw error;
 }

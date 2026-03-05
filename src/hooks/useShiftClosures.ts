@@ -99,14 +99,14 @@ export function useClosuresByDateRange(branchId: string, from: Date, to: Date) {
 /**
  * Get a specific closure
  */
-export function useShiftClosure(branchId: string, fecha: string, turno: ShiftType) {
+export function useShiftClosure(branchId: string, date: string, shift: ShiftType) {
   return useQuery({
-    queryKey: ['shift-closure', branchId, fecha, turno],
+    queryKey: ['shift-closure', branchId, date, shift],
     queryFn: async () => {
-      const data = await fetchShiftClosureSingle(branchId, fecha, turno);
+      const data = await fetchShiftClosureSingle(branchId, date, shift);
       return data ? parseShiftClosure(data) : null;
     },
-    enabled: !!branchId && !!fecha && !!turno,
+    enabled: !!branchId && !!date && !!shift,
   });
 }
 
@@ -182,7 +182,7 @@ export function useBrandClosuresSummary(from: Date, to: Date) {
         // Map closures by shift for status display
         const closuresByShift = new Map<string, ShiftClosure>();
         branchClosures.forEach((c) => {
-          closuresByShift.set(c.turno, c);
+          closuresByShift.set(c.shift, c);
         });
 
         return {
@@ -265,15 +265,15 @@ export function useSaveShiftClosure() {
         has_posnet_alert: posnetDiff.tieneAlerta,
         has_apps_alert: appsDiff.tieneAlerta,
         has_register_alert: tieneAlertaCaja,
-        notes: input.notas || null,
+        notes: input.notes || null,
       };
 
       // Atomic upsert: avoids race condition where two users
       // could create duplicate closures for the same branch+date+shift.
       const data = await upsertShiftClosure({
         branch_id: input.branch_id,
-        date: input.fecha,
-        shift: input.turno,
+        date: input.date,
+        shift: input.shift,
         ...closureData,
         closed_by: user.id,
         updated_by: user.id,
@@ -285,7 +285,7 @@ export function useSaveShiftClosure() {
       queryClient.invalidateQueries({ queryKey: ['shift-closures'] });
       queryClient.invalidateQueries({ queryKey: ['shift-closure'] });
       queryClient.invalidateQueries({ queryKey: ['brand-closures-summary'] });
-      toast.success(`Cierre guardado â€” Turno ${data.turno}`);
+      toast.success(`Cierre guardado â€” Turno ${data.shift}`);
     },
     onError: (error: Error) => {
       toast.error(`Error al guardar: ${error.message}`);

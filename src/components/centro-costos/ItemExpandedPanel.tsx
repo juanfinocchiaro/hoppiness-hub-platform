@@ -28,12 +28,12 @@ interface Props {
 
 export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
   const [activeTab, setActiveTab] = useState<PanelTab>(
-    item.tipo === 'extra' ? 'asignados' : 'composicion',
+    item.type === 'extra' ? 'asignados' : 'composicion',
   );
   const [showDelete, setShowDelete] = useState(false);
   const mutations = useItemCartaMutations();
 
-  const isExtra = item.tipo === 'extra';
+  const isExtra = item.type === 'extra';
   const isAutoExtra =
     isExtra && (item.composicion_ref_preparacion_id || item.composicion_ref_insumo_id);
 
@@ -103,7 +103,7 @@ export function ItemExpandedPanel({ item, onClose, onDeleted }: Props) {
         open={showDelete}
         onOpenChange={setShowDelete}
         title="Eliminar item"
-        description={`¿Eliminar "${item.nombre}"?`}
+        description={`¿Eliminar "${item.name}"?`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

@@ -47,15 +47,15 @@ const METODOS: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { value: 'efectivo', label: 'Efectivo', icon: Banknote },
-  { value: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
-  { value: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
+  { value: 'cash', label: 'Efectivo', icon: Banknote },
+  { value: 'debit_card', label: 'Débito', icon: CreditCard },
+  { value: 'credit_card', label: 'Crédito', icon: CreditCard },
   { value: 'mercadopago_qr', label: 'QR MP', icon: QrCode },
-  { value: 'transferencia', label: 'Transferencia', icon: ArrowRightLeft },
+  { value: 'transfer', label: 'Transferencia', icon: ArrowRightLeft },
 ];
 
 export type PaymentPayload =
-  | { type: 'single'; metodo: MetodoPago; montoRecibido?: number }
+  | { type: 'single'; method: MetodoPago; montoRecibido?: number }
   | { type: 'split'; payments: PaymentLine[] };
 
 interface PaymentModalProps {
@@ -75,21 +75,21 @@ export function PaymentModal({
   loading = false,
   cartItems = [],
 }: PaymentModalProps) {
-  const [metodo, setMetodo] = useState<MetodoPago>('efectivo');
+  const [metodo, setMetodo] = useState<MetodoPago>('cash');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [showSplit, setShowSplit] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   const totalToPay = total;
-  const esEfectivo = metodo === 'efectivo';
+  const esEfectivo = metodo === 'cash';
   const montoNum = parseFloat(montoRecibido) || 0;
   const vuelto = esEfectivo ? Math.max(0, montoNum - totalToPay) : 0;
 
   // Promo discount calculation
   const promoDiscount = useMemo(() => {
     return cartItems.reduce((sum, item) => {
-      if (item.precio_referencia && item.precio_referencia > item.precio_unitario) {
-        return sum + (item.precio_referencia - item.precio_unitario) * item.cantidad;
+      if (item.reference_price && item.reference_price > item.unit_price) {
+        return sum + (item.reference_price - item.unit_price) * item.quantity;
       }
       return sum;
     }, 0);
@@ -100,19 +100,19 @@ export function PaymentModal({
   // Warning: promo items with non-cash payment
   const showPromoWarning = hasPromoItems && !esEfectivo;
 
-  const totalItems = cartItems.reduce((s, i) => s + i.cantidad, 0);
+  const totalItems = cartItems.reduce((s, i) => s + i.quantity, 0);
   const summaryPreview =
     cartItems.length > 0
       ? cartItems
           .slice(0, 3)
-          .map((i) => i.nombre)
+          .map((i) => i.name)
           .join(', ') + (cartItems.length > 3 ? '...' : '')
       : '';
 
   const handleConfirmSingle = () => {
     onConfirm({
       type: 'single',
-      metodo,
+      method: metodo,
       montoRecibido: esEfectivo ? montoNum : undefined,
     });
   };
@@ -150,10 +150,10 @@ export function PaymentModal({
                     {cartItems.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between text-sm">
                         <span className="text-foreground">
-                          {item.cantidad > 1 && (
-                            <span className="text-muted-foreground mr-1">×{item.cantidad}</span>
+                          {item.quantity > 1 && (
+                            <span className="text-muted-foreground mr-1">×{item.quantity}</span>
                           )}
-                          {item.nombre}
+                          {item.name}
                         </span>
                         <span className="text-muted-foreground font-medium">
                           $ {item.subtotal.toLocaleString('es-AR')}

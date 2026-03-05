@@ -60,8 +60,8 @@ export default function WebappConfigPage() {
     if (config) {
       setForm({
         webapp_activa: config.webapp_activa ?? false,
-        estado: config.estado ?? 'cerrado',
-        mensaje_pausa: config.mensaje_pausa ?? '',
+        estado: config.status ?? 'cerrado',
+        mensaje_pausa: config.pause_message ?? '',
         recepcion_modo: config.recepcion_modo ?? 'auto',
         auto_accept_orders: config.auto_accept_orders ?? false,
         auto_print_orders: config.auto_print_orders ?? false,
@@ -85,8 +85,8 @@ export default function WebappConfigPage() {
       const payload = {
         branch_id: branchId!,
         webapp_activa: form.webapp_activa,
-        estado: form.estado,
-        mensaje_pausa: form.mensaje_pausa || null,
+        status: form.estado,
+        pause_message: form.mensaje_pausa || null,
         recepcion_modo: form.recepcion_modo,
         auto_accept_orders: form.auto_accept_orders,
         auto_print_orders: form.auto_print_orders,
@@ -135,7 +135,7 @@ export default function WebappConfigPage() {
     const q = itemSearch.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
-      (r) => r.nombre.toLowerCase().includes(q) || r.categoriaNombre.toLowerCase().includes(q),
+      (r) => r.name.toLowerCase().includes(q) || r.categoriaNombre.toLowerCase().includes(q),
     );
   }, [availabilityRows, itemSearch]);
 
@@ -302,7 +302,7 @@ export default function WebappConfigPage() {
                         className="px-3 py-2.5 flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{row.nombre}</div>
+                          <div className="text-sm font-medium truncate">{row.name}</div>
                           <div className="text-xs text-muted-foreground truncate">
                             {row.categoriaNombre}
                             {!row.marcaDisponibleWebapp && ' · Oculto por marca'}

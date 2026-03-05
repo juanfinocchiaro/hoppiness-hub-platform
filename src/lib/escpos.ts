@@ -255,16 +255,16 @@ function printBrandHeader(b: EscPosBuilder, branchName: string): void {
 function printMods(b: EscPosBuilder, item: PrintableItem): void {
   if (item.modificadores?.length) {
     for (const mod of item.modificadores) {
-      const prefix = modPrefix(mod.tipo);
-      if (mod.tipo === 'sin') {
-        b.boldOn().line(`   ${prefix}${mod.descripcion.toUpperCase()}`).boldOff();
+      const prefix = modPrefix(mod.type);
+      if (mod.type === 'sin') {
+        b.boldOn().line(`   ${prefix}${mod.description.toUpperCase()}`).boldOff();
       } else {
-        b.line(`   ${prefix}${mod.descripcion}`);
+        b.line(`   ${prefix}${mod.description}`);
       }
     }
   }
-  if (item.notas) {
-    b.line(`   * ${item.notas}`);
+  if (item.notes) {
+    b.line(`   * ${item.notes}`);
   }
 }
 
@@ -288,22 +288,21 @@ function printMarketingFooter(b: EscPosBuilder): void {
 
 export interface PrintableItem {
   name?: string | null;
-  nombre?: string | null;
-  cantidad: number;
-  notas: string | null;
+  quantity: number;
+  notes: string | null;
   estacion: string | null;
   modificadores?: Array<{
-    descripcion: string;
-    tipo: string;
+    description: string;
+    type: string;
   }>;
 }
 
 export interface PrintableOrder {
-  numero_pedido: number;
-  tipo_servicio: string | null;
-  numero_llamador: number | null;
+  order_number: number;
+  service_type: string | null;
+  caller_number: number | null;
   canal_venta: string | null;
-  cliente_nombre: string | null;
+  customer_name: string | null;
   referencia_app: string | null;
   created_at: string;
   items: PrintableItem[];
@@ -311,7 +310,7 @@ export interface PrintableOrder {
 
 export interface TicketClienteData {
   order: PrintableOrder & {
-    items: (PrintableItem & { precio_unitario?: number; subtotal?: number })[];
+    items: (PrintableItem & { unit_price?: number; subtotal?: number })[];
     total?: number;
     descuento?: number;
     descuento_porcentaje?: number;
@@ -372,14 +371,14 @@ export function generateComandaCompleta(
   b.alignCenter().boldOn().line('C O M A N D A').boldOff().feed(1);
 
   // Número de pedido — LO MÁS GRANDE
-  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.order_number}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
   // Canal — doble alto para visual rápido
   b.doubleHeight()
     .boldOn()
-    .line(canalLabel(order.canal_venta, order.tipo_servicio))
+    .line(canalLabel(order.canal_venta, order.service_type))
     .normalSize()
     .boldOff();
 
@@ -389,13 +388,13 @@ export function generateComandaCompleta(
   }
 
   // Llamador
-  if (order.numero_llamador) {
-    b.doubleHeight().boldOn().line(`LLAMADOR #${order.numero_llamador}`).normalSize().boldOff();
+  if (order.caller_number) {
+    b.doubleHeight().boldOn().line(`LLAMADOR #${order.caller_number}`).normalSize().boldOff();
   }
 
   // Cliente
-  if (order.cliente_nombre) {
-    b.line(order.cliente_nombre);
+  if (order.customer_name) {
+    b.line(order.customer_name);
   }
 
   // Hora
@@ -407,7 +406,7 @@ export function generateComandaCompleta(
   for (const item of order.items) {
     b.boldOn()
       .doubleHeight()
-      .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
+      .line(`${item.quantity}x ${item.name || 'Producto'}`)
       .normalSize()
       .boldOff();
 
@@ -417,7 +416,7 @@ export function generateComandaCompleta(
 
   // Conteo
   b.alignCenter()
-    .line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`)
+    .line(`Items: ${order.items.reduce((s, i) => s + i.quantity, 0)}`)
     .feed(1)
     .cut();
 
@@ -447,13 +446,13 @@ export function generateComandaEstacion(
     .boldOff()
     .feed(1);
 
-  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.order_number}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
   b.doubleHeight()
     .boldOn()
-    .line(canalLabel(order.canal_venta, order.tipo_servicio))
+    .line(canalLabel(order.canal_venta, order.service_type))
     .normalSize()
     .boldOff();
 
@@ -461,12 +460,12 @@ export function generateComandaEstacion(
     b.doubleHeight().boldOn().line(order.referencia_app).normalSize().boldOff();
   }
 
-  if (order.numero_llamador) {
-    b.doubleHeight().boldOn().line(`LLAMADOR #${order.numero_llamador}`).normalSize().boldOff();
+  if (order.caller_number) {
+    b.doubleHeight().boldOn().line(`LLAMADOR #${order.caller_number}`).normalSize().boldOff();
   }
 
-  if (order.cliente_nombre) {
-    b.line(order.cliente_nombre);
+  if (order.customer_name) {
+    b.line(order.customer_name);
   }
 
   b.line(formatTime(order.created_at));
@@ -476,7 +475,7 @@ export function generateComandaEstacion(
   for (const item of stationItems) {
     b.boldOn()
       .doubleHeight()
-      .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
+      .line(`${item.quantity}x ${item.name || 'Producto'}`)
       .normalSize()
       .boldOff();
 
@@ -485,7 +484,7 @@ export function generateComandaEstacion(
   }
 
   b.alignCenter()
-    .line(`Items estacion: ${stationItems.reduce((s, i) => s + i.cantidad, 0)}`)
+    .line(`Items estacion: ${stationItems.reduce((s, i) => s + i.quantity, 0)}`)
     .feed(1)
     .cut();
 
@@ -496,8 +495,8 @@ export function generateComandaEstacion(
 
 export function generateComandaDelivery(
   order: PrintableOrder & {
-    cliente_telefono?: string | null;
-    cliente_direccion?: string | null;
+    customer_phone?: string | null;
+    customer_address?: string | null;
     hora_entrega?: string | null;
   },
   branchName: string,
@@ -511,13 +510,13 @@ export function generateComandaDelivery(
   printBrandHeader(b, branchName);
   b.alignCenter().boldOn().line('C O M A N D A').boldOff().feed(1);
 
-  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.order_number}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
   b.doubleHeight()
     .boldOn()
-    .line(canalLabel(order.canal_venta, order.tipo_servicio))
+    .line(canalLabel(order.canal_venta, order.service_type))
     .normalSize()
     .boldOff();
 
@@ -527,14 +526,14 @@ export function generateComandaDelivery(
 
   // Bloque datos entrega
   b.alignLeft().separator('=', cols);
-  if (order.cliente_nombre) {
-    b.boldOn().line(order.cliente_nombre).boldOff();
+  if (order.customer_name) {
+    b.boldOn().line(order.customer_name).boldOff();
   }
-  if (order.cliente_direccion) {
-    b.line(order.cliente_direccion);
+  if (order.customer_address) {
+    b.line(order.customer_address);
   }
-  if (order.cliente_telefono) {
-    b.line(`Tel: ${order.cliente_telefono}`);
+  if (order.customer_phone) {
+    b.line(`Tel: ${order.customer_phone}`);
   }
   if (order.hora_entrega) {
     b.boldOn().line(`Entrega: ${order.hora_entrega}`).boldOff();
@@ -548,7 +547,7 @@ export function generateComandaDelivery(
   for (const item of order.items) {
     b.boldOn()
       .doubleHeight()
-      .line(`${item.cantidad}x ${item.nombre || 'Producto'}`)
+      .line(`${item.quantity}x ${item.name || 'Producto'}`)
       .normalSize()
       .boldOff();
 
@@ -556,7 +555,7 @@ export function generateComandaDelivery(
     b.separator('-', cols);
   }
 
-  b.alignCenter().line(`Items: ${order.items.reduce((s, i) => s + i.cantidad, 0)}`);
+  b.alignCenter().line(`Items: ${order.items.reduce((s, i) => s + i.quantity, 0)}`);
 
   // QR de rastreo para cadete (solo canal propio)
   if (trackingQrBitmap) {
@@ -588,17 +587,17 @@ export function generateTicketCliente(data: TicketClienteData, paperWidth: numbe
   printBrandHeader(b, branchName);
 
   b.alignLeft().separator('-', cols);
-  b.columns(`Pedido #${order.numero_pedido}`, formatDate(order.created_at), cols);
+  b.columns(`Pedido #${order.order_number}`, formatDate(order.created_at), cols);
 
-  const canal = canalLabel(order.canal_venta, order.tipo_servicio);
-  if (order.numero_llamador) {
-    b.columns(canal, `Llamador: #${order.numero_llamador}`, cols);
+  const canal = canalLabel(order.canal_venta, order.service_type);
+  if (order.caller_number) {
+    b.columns(canal, `Llamador: #${order.caller_number}`, cols);
   } else {
     b.line(canal);
   }
 
-  if (order.cliente_nombre) {
-    b.line(`Cliente: ${order.cliente_nombre}`);
+  if (order.customer_name) {
+    b.line(`Cliente: ${order.customer_name}`);
   }
   b.separator('-', cols);
   b.feed(1);
@@ -606,15 +605,15 @@ export function generateTicketCliente(data: TicketClienteData, paperWidth: numbe
   // Items con precios
   for (const item of order.items) {
     const price = item.subtotal != null ? `$${formatMoney(item.subtotal)}` : '';
-    b.columns(`${item.cantidad}x ${item.nombre || 'Producto'}`, price, cols);
+    b.columns(`${item.quantity}x ${item.name || 'Producto'}`, price, cols);
 
     if (item.modificadores?.length) {
       for (const mod of item.modificadores) {
-        const prefix = modPrefix(mod.tipo);
-        if (mod.tipo === 'sin') {
-          b.boldOn().line(`   ${prefix}${mod.descripcion.toUpperCase()}`).boldOff();
+        const prefix = modPrefix(mod.type);
+        if (mod.type === 'sin') {
+          b.boldOn().line(`   ${prefix}${mod.description.toUpperCase()}`).boldOff();
         } else {
-          b.line(`   ${prefix}${mod.descripcion}`);
+          b.line(`   ${prefix}${mod.description}`);
         }
       }
     }
@@ -717,10 +716,10 @@ function generateTicketFiscal(b: EscPosBuilder, data: TicketClienteData, cols: n
   b.separator('-', cols);
 
   // 5. Referencia del pedido
-  b.columns(`Pedido #${order.numero_pedido}`, formatDate(order.created_at), cols);
-  const canal = canalLabel(order.canal_venta, order.tipo_servicio);
-  if (order.numero_llamador) {
-    b.columns(canal, `Llamador: #${order.numero_llamador}`, cols);
+  b.columns(`Pedido #${order.order_number}`, formatDate(order.created_at), cols);
+  const canal = canalLabel(order.canal_venta, order.service_type);
+  if (order.caller_number) {
+    b.columns(canal, `Llamador: #${order.caller_number}`, cols);
   } else {
     b.line(canal);
   }
@@ -731,15 +730,15 @@ function generateTicketFiscal(b: EscPosBuilder, data: TicketClienteData, cols: n
   // 6. Items con precios
   for (const item of order.items) {
     const price = item.subtotal != null ? `$${formatMoney(item.subtotal)}` : '';
-    b.columns(`${item.cantidad}x ${item.nombre || 'Producto'}`, price, cols);
+    b.columns(`${item.quantity}x ${item.name || 'Producto'}`, price, cols);
 
     if (item.modificadores?.length) {
       for (const mod of item.modificadores) {
-        const prefix = modPrefix(mod.tipo);
-        if (mod.tipo === 'sin') {
-          b.boldOn().line(`   ${prefix}${mod.descripcion.toUpperCase()}`).boldOff();
+        const prefix = modPrefix(mod.type);
+        if (mod.type === 'sin') {
+          b.boldOn().line(`   ${prefix}${mod.description.toUpperCase()}`).boldOff();
         } else {
-          b.line(`   ${prefix}${mod.descripcion}`);
+          b.line(`   ${prefix}${mod.description}`);
         }
       }
     }
@@ -829,10 +828,10 @@ function generateTicketFiscal(b: EscPosBuilder, data: TicketClienteData, cols: n
 
 export interface DeliveryTicketData {
   order: PrintableOrder & {
-    items: (PrintableItem & { precio_unitario?: number; subtotal?: number })[];
+    items: (PrintableItem & { unit_price?: number; subtotal?: number })[];
     total?: number;
-    cliente_telefono?: string | null;
-    cliente_direccion?: string | null;
+    customer_phone?: string | null;
+    customer_address?: string | null;
   };
   branchName: string;
 }
@@ -847,11 +846,11 @@ export function generateTicketDelivery(data: DeliveryTicketData, paperWidth: num
 
   b.alignCenter().feed(1);
 
-  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.order_number}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
-  const canal = canalLabel(order.canal_venta, order.tipo_servicio);
+  const canal = canalLabel(order.canal_venta, order.service_type);
   b.doubleHeight().boldOn().line(canal).normalSize().boldOff();
 
   if (order.referencia_app) {
@@ -864,14 +863,14 @@ export function generateTicketDelivery(data: DeliveryTicketData, paperWidth: num
 
   // Datos de entrega enmarcados
   b.alignLeft();
-  if (order.cliente_nombre) {
-    b.boldOn().line(order.cliente_nombre).boldOff();
+  if (order.customer_name) {
+    b.boldOn().line(order.customer_name).boldOff();
   }
-  if (order.cliente_direccion) {
-    b.line(order.cliente_direccion);
+  if (order.customer_address) {
+    b.line(order.customer_address);
   }
-  if (order.cliente_telefono) {
-    b.line(`Tel: ${order.cliente_telefono}`);
+  if (order.customer_phone) {
+    b.line(`Tel: ${order.customer_phone}`);
   }
 
   b.separator('=', cols);
@@ -879,7 +878,7 @@ export function generateTicketDelivery(data: DeliveryTicketData, paperWidth: num
   // Items con precios
   for (const item of order.items) {
     const price = item.subtotal != null ? `$${formatMoney(item.subtotal)}` : '';
-    b.columns(`${item.cantidad}x ${item.nombre || 'Producto'}`, price, cols);
+    b.columns(`${item.quantity}x ${item.name || 'Producto'}`, price, cols);
     printMods(b, item);
   }
 
@@ -903,7 +902,7 @@ export function generateTicketDelivery(data: DeliveryTicketData, paperWidth: num
 
 export interface AnulacionTicketData {
   order: PrintableOrder & {
-    items: (PrintableItem & { precio_unitario?: number; subtotal?: number })[];
+    items: (PrintableItem & { unit_price?: number; subtotal?: number })[];
     total?: number;
   };
   branchName: string;
@@ -930,22 +929,22 @@ export function generateTicketAnulacion(
     .boldOff()
     .feed(1);
 
-  b.doubleSize().boldOn().line(`# ${order.numero_pedido}`).normalSize().boldOff();
+  b.doubleSize().boldOn().line(`# ${order.order_number}`).normalSize().boldOff();
 
   b.separator('=', cols);
 
   b.alignLeft();
-  b.columns(`Pedido #${order.numero_pedido}`, formatDate(order.created_at), cols);
+  b.columns(`Pedido #${order.order_number}`, formatDate(order.created_at), cols);
 
-  const canal = canalLabel(order.canal_venta, order.tipo_servicio);
-  if (order.numero_llamador) {
-    b.columns(canal, `Llamador: #${order.numero_llamador}`, cols);
+  const canal = canalLabel(order.canal_venta, order.service_type);
+  if (order.caller_number) {
+    b.columns(canal, `Llamador: #${order.caller_number}`, cols);
   } else {
     b.line(canal);
   }
 
-  if (order.cliente_nombre) {
-    b.line(`Cliente: ${order.cliente_nombre}`);
+  if (order.customer_name) {
+    b.line(`Cliente: ${order.customer_name}`);
   }
 
   b.line(`Anulado: ${formatDate(new Date().toISOString())}`);
@@ -955,7 +954,7 @@ export function generateTicketAnulacion(
 
   for (const item of order.items) {
     const price = item.subtotal != null ? `$${formatMoney(item.subtotal)}` : '';
-    b.columns(`${item.cantidad}x ${item.nombre || 'Producto'}`, price, cols);
+    b.columns(`${item.quantity}x ${item.name || 'Producto'}`, price, cols);
   }
 
   b.separator('=', cols);
@@ -1161,13 +1160,13 @@ export async function generateTrackingQrBitmap(trackingToken: string): Promise<s
 // ─── LEGACY: generateValeBebida ──────────────────────────────
 /** @deprecated Use generateVale instead */
 export function generateValeBebida(
-  order: { numero_pedido: number; created_at: string },
+  order: { order_number: number; created_at: string },
   itemNombre: string,
   paperWidth: number = 80,
 ): string {
   return generateVale(
     itemNombre,
-    order.numero_pedido,
+    order.order_number,
     order.created_at,
     undefined,
     undefined,

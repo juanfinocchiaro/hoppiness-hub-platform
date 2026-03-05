@@ -76,12 +76,12 @@ export function useStockCompleto(branchId: string) {
 
       const items: StockItem[] = insumos.map((ins) => {
         const sa = stockMap.get(ins.id);
-        const cantidad = sa ? Number((sa as any).quantity ?? (sa as any).cantidad ?? 0) : 0;
+        const cantidad = sa ? Number((sa as any).quantity ?? 0) : 0;
         const cat = ins.categorias_insumo as { name?: string } | null;
         return {
           insumo_id: ins.id,
           nombre: ins.name,
-          unidad: ins.unidad_base ?? 'un',
+          unidad: ins.base_unit ?? 'un',
           categoria: cat?.name ?? null,
           cantidad,
           stock_minimo: sa?.stock_minimo != null ? Number(sa.stock_minimo) : null,
@@ -95,7 +95,7 @@ export function useStockCompleto(branchId: string) {
             sa?.stock_minimo_local != null ? Number(sa.stock_minimo_local) : null,
             sa?.stock_critico_local != null ? Number(sa.stock_critico_local) : null,
           ),
-          costo_unitario: Number(ins.costo_por_unidad_base ?? 0),
+          costo_unitario: Number(ins.base_unit_cost ?? 0),
           ultimo_movimiento: lastMovMap.get(ins.id) ?? null,
           tiene_stock_actual: !!sa,
         };
@@ -162,7 +162,7 @@ export function useAjusteInline(branchId: string) {
     mutationFn: async (p: { insumo_id: string; cantidad_nueva: number; motivo: string; nota?: string }) => {
       const unidad = await fetchInsumoUnit(p.insumo_id);
       const row = await fetchStockActualItem(branchId, p.insumo_id);
-      const cantidadAnterior = Number((row as any)?.cantidad ?? (row as any)?.quantity ?? 0);
+      const cantidadAnterior = Number((row as any)?.quantity ?? 0);
 
       await upsertStockActual(branchId, p.insumo_id, p.cantidad_nueva, unidad);
       await insertStockMovimiento({

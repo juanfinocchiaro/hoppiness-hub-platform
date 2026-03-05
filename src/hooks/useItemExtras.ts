@@ -16,15 +16,15 @@ export interface ItemExtra {
   // Joined fields
   preparaciones?: {
     id: string;
-    nombre: string;
-    costo_calculado: number;
+    name: string;
+    calculated_cost: number;
     precio_extra: number | null;
     puede_ser_extra: boolean;
   } | null;
   insumos?: {
     id: string;
-    nombre: string;
-    costo_por_unidad_base: number;
+    name: string;
+    base_unit_cost: number;
     precio_extra: number | null;
     puede_ser_extra: boolean;
   } | null;
@@ -51,9 +51,9 @@ export function useItemExtras(itemId: string | undefined) {
         orden: i,
         preparaciones: {
           id: e.id as string,
-          nombre: e.name as string,
-          costo_calculado: 0,
-          precio_extra: e.precio_base as number,
+          name: e.name as string,
+          calculated_cost: 0,
+          precio_extra: e.base_price as number,
           puede_ser_extra: true,
         },
         insumos: null,

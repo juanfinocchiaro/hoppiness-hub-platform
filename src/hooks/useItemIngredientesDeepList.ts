@@ -6,17 +6,17 @@ import {
 
 export interface DeepIngredient {
   insumo_id: string;
-  nombre: string;
-  cantidad: number;
-  unidad: string;
-  costo_por_unidad_base: number;
+  name: string;
+  quantity: number;
+  unit: string;
+  base_unit_cost: number;
   receta_origen: string;
   receta_origen_id: string;
 }
 
 export interface DeepSubPrep {
   preparacion_id: string;
-  nombre: string;
+  name: string;
   receta_origen: string;
   receta_origen_id: string;
 }
@@ -52,14 +52,14 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
         const subPrepItems: DeepSubPrep[] = [];
 
         for (const ing of ingredientes) {
-          if (ing.insumo_id && (ing as Record<string, unknown>).insumos) {
-            const insumos = (ing as Record<string, unknown>).insumos as Record<string, unknown>;
+          if (ing.insumo_id && (ing as Record<string, unknown>).supplies) {
+            const supplies = (ing as Record<string, unknown>).supplies as Record<string, unknown>;
             insumoItems.push({
-              insumo_id: (insumos.id as string) || ing.insumo_id,
-              nombre: (insumos.name as string) || 'Desconocido',
-              cantidad: ing.cantidad,
-              unidad: ing.unidad || (insumos.unidad_base as string) || 'un',
-              costo_por_unidad_base: (insumos.costo_por_unidad_base as number) || 0,
+              insumo_id: (supplies.id as string) || ing.insumo_id,
+              name: (supplies.name as string) || 'Desconocido',
+              quantity: ing.quantity,
+              unit: ing.unit || (supplies.base_unit as string) || 'un',
+              base_unit_cost: (supplies.base_unit_cost as number) || 0,
               receta_origen: prepNombre,
               receta_origen_id: prepId,
             });
@@ -68,7 +68,7 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
             const subPrep = (ing as Record<string, unknown>).sub_prep as Record<string, unknown>;
             subPrepItems.push({
               preparacion_id: (subPrep.id as string) || ing.sub_preparacion_id,
-              nombre: (subPrep.name as string) || 'Desconocido',
+              name: (subPrep.name as string) || 'Desconocido',
               receta_origen: prepNombre,
               receta_origen_id: prepId,
             });
@@ -91,20 +91,20 @@ export function useItemIngredientesDeepList(itemId: string | undefined) {
       }
 
       for (const comp of composicion || []) {
-        if (comp.preparacion_id && (comp as Record<string, unknown>).preparaciones) {
-          const prep = (comp as Record<string, unknown>).preparaciones as Record<string, unknown>;
+        if (comp.preparacion_id && (comp as Record<string, unknown>).recipes) {
+          const prep = (comp as Record<string, unknown>).recipes as Record<string, unknown>;
           await fetchPrepIngredients(prep.id as string, prep.name as string, 0);
         }
 
-        if (comp.insumo_id && (comp as Record<string, unknown>).insumos) {
-          const ins = (comp as Record<string, unknown>).insumos as Record<string, unknown>;
+        if (comp.insumo_id && (comp as Record<string, unknown>).supplies) {
+          const ins = (comp as Record<string, unknown>).supplies as Record<string, unknown>;
           const directGroup = groups.find((g) => g.receta_id === '__direct__');
           const ingredient: DeepIngredient = {
             insumo_id: ins.id as string,
-            nombre: ins.name as string,
-            cantidad: comp.cantidad,
-            unidad: (ins.unidad_base as string) || 'un',
-            costo_por_unidad_base: (ins.costo_por_unidad_base as number) || 0,
+            name: ins.name as string,
+            quantity: comp.quantity,
+            unit: (ins.base_unit as string) || 'un',
+            base_unit_cost: (ins.base_unit_cost as number) || 0,
             receta_origen: 'Directo',
             receta_origen_id: '__direct__',
           };

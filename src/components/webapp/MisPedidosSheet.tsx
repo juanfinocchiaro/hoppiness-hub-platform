@@ -68,13 +68,13 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
     const reorderItems = items.map((i: any) => ({
       cartId: crypto.randomUUID(),
       itemId: '',
-      nombre: i.nombre,
-      imagen_url: null,
-      precioUnitario: i.precio_unitario ?? 0,
-      cantidad: i.cantidad,
+      name: i.name,
+      image_url: null,
+      precioUnitario: i.unit_price ?? 0,
+      quantity: i.quantity,
       extras: [],
       removidos: [],
-      notas: '',
+      notes: '',
     }));
     localStorage.setItem('hoppiness_reorder', JSON.stringify(reorderItems));
     onOpenChange(false);
@@ -86,8 +86,8 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
     }
   };
 
-  const activeOrders = (orders || []).filter((o) => activeStates.includes(o.estado));
-  const pastOrders = (orders || []).filter((o) => !activeStates.includes(o.estado));
+  const activeOrders = (orders || []).filter((o) => activeStates.includes(o.status));
+  const pastOrders = (orders || []).filter((o) => !activeStates.includes(o.status));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -175,11 +175,11 @@ function InlineOrderCard({
   onTrack: () => void;
   onReorder?: () => void;
 }) {
-  const estado = estadoLabels[order.estado] || { label: order.estado, variant: 'outline' as const };
+  const estado = estadoLabels[order.status] || { label: order.status, variant: 'outline' as const };
   const items = order.order_items || [];
   const itemsSummary = items
     .slice(0, 3)
-    .map((i: any) => `${i.cantidad}x ${i.nombre}`)
+    .map((i: any) => `${i.quantity}x ${i.name}`)
     .join(' · ');
   const moreItems = items.length > 3 ? ` +${items.length - 3} más` : '';
   const canReorder = !isActive && branchSlug && items.length > 0;
@@ -190,7 +190,7 @@ function InlineOrderCard({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-sm">#{order.numero_pedido}</span>
+          <span className="font-bold text-sm">#{order.order_number}</span>
           {branchName && <span className="text-xs text-muted-foreground">· {branchName}</span>}
         </div>
         <Badge variant={estado.variant}>{estado.label}</Badge>

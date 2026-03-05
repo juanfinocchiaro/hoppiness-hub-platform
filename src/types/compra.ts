@@ -7,30 +7,30 @@ export type Gasto = any;
 export interface FacturaFormData {
   branch_id: string;
   proveedor_id: string;
-  factura_tipo?: string;
-  factura_numero: string;
-  factura_fecha: string;
-  condicion_pago: string;
-  fecha_vencimiento?: string;
-  medio_pago?: string;
+  invoice_type?: string;
+  invoice_number: string;
+  invoice_date: string;
+  payment_terms: string;
+  due_date?: string;
+  payment_method?: string;
   iva: number;
   otros_impuestos: number;
   tipo: string;
-  motivo_extraordinaria?: string;
-  periodo: string;
-  observaciones?: string;
+  extraordinary_reason?: string;
+  period: string;
+  notes?: string;
   items: ItemFacturaFormData[];
 }
 
 export interface ItemFacturaFormData {
   insumo_id: string;
-  cantidad: number;
+  quantity: number;
   unidad: string;
-  precio_unitario: number;
+  unit_price: number;
   subtotal: number;
   afecta_costo_base?: boolean;
   categoria_pl?: string;
-  observaciones?: string;
+  notes?: string;
   alicuota_iva?: number | null;
   iva_monto?: number;
   precio_unitario_bruto?: number;
@@ -88,31 +88,31 @@ export const IVA_OPTIONS = [
 export interface PagoProveedorFormData {
   proveedor_id: string;
   branch_id: string;
-  monto: number;
-  fecha_pago: string;
-  medio_pago: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string;
   referencia?: string;
-  fecha_vencimiento_pago?: string;
-  observaciones?: string;
+  payment_due_date?: string;
+  notes?: string;
   /** IDs de facturas a las que se aplica este pago, con montos parciales */
   aplicaciones?: { factura_id: string; monto_aplicado: number }[];
 }
 
 export interface GastoFormData {
   branch_id: string;
-  fecha: string;
-  periodo: string;
+  date: string;
+  period: string;
   categoria_principal: string;
   subcategoria?: string;
-  concepto: string;
-  monto: number;
+  concept: string;
+  amount: number;
   estado?: string;
-  fecha_vencimiento?: string | null;
-  fecha_pago?: string | null;
-  medio_pago?: string;
+  due_date?: string | null;
+  payment_date?: string | null;
+  payment_method?: string;
   referencia_pago?: string;
   gasto_relacionado_id?: string | null;
-  observaciones?: string;
+  notes?: string;
 }
 
 // Constants
@@ -122,8 +122,8 @@ export const CONDICION_PAGO_OPTIONS = [
 ] as const;
 
 export const MEDIO_PAGO_OPTIONS = [
-  { value: 'transferencia', label: 'Transferencia' },
-  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'cash', label: 'Efectivo' },
   { value: 'cheque_plazo', label: 'Cheque con plazo' },
   { value: 'echeq_plazo', label: 'Echeq con plazo' },
 ] as const;

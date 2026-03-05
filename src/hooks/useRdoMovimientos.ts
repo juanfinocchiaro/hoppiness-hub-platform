@@ -9,35 +9,35 @@ import { toast } from 'sonner';
 
 export interface RdoMovimientoFormData {
   branch_id: string;
-  periodo: string;
+  period: string;
   rdo_category_code: string;
   origen: string;
-  monto: number;
+  amount: number;
   descripcion?: string;
   datos_extra?: Record<string, unknown>;
 }
 
-export function useRdoMovimientos(branchId: string, periodo: string) {
+export function useRdoMovimientos(branchId: string, period: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['rdo-movimientos', branchId, periodo],
-    queryFn: () => fetchRdoMovimientos(branchId, periodo),
-    enabled: !!user && !!branchId && !!periodo,
+    queryKey: ['rdo-movimientos', branchId, period],
+    queryFn: () => fetchRdoMovimientos(branchId, period),
+    enabled: !!user && !!branchId && !!period,
   });
 }
 
 export function useRdoMovimientosByCategory(
   branchId: string,
-  periodo: string,
+  period: string,
   categoryCode: string,
 ) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['rdo-movimientos', branchId, periodo, categoryCode],
-    queryFn: () => fetchRdoMovimientosByCategory(branchId, periodo, categoryCode),
-    enabled: !!user && !!branchId && !!periodo && !!categoryCode,
+    queryKey: ['rdo-movimientos', branchId, period, categoryCode],
+    queryFn: () => fetchRdoMovimientosByCategory(branchId, period, categoryCode),
+    enabled: !!user && !!branchId && !!period && !!categoryCode,
   });
 }
 

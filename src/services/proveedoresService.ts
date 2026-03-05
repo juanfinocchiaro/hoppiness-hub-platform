@@ -10,7 +10,7 @@ const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 // ---------------------------------------------------------------------------
 
 export async function fetchProveedores(branchId?: string) {
-  let q = fromUntyped('suppliers').select('*').is('deleted_at', null).order('razon_social');
+  let q = fromUntyped('suppliers').select('*').is('deleted_at', null).order('business_name');
 
   if (branchId === '__marca_only__') {
     q = q.eq('ambito', 'marca');
@@ -65,7 +65,7 @@ export interface UpsertCondicionesPayload {
 }
 
 export async function fetchCondicionesByBranch(branchId: string) {
-  const { data, error } = await fromUntyped('proveedor_condiciones_local')
+  const { data, error } = await fromUntyped('supplier_branch_terms')
     .select('*')
     .eq('branch_id', branchId);
   if (error) throw error;
@@ -73,7 +73,7 @@ export async function fetchCondicionesByBranch(branchId: string) {
 }
 
 export async function fetchCondicionesProveedor(branchId: string, proveedorId: string) {
-  const { data, error } = await fromUntyped('proveedor_condiciones_local')
+  const { data, error } = await fromUntyped('supplier_branch_terms')
     .select('*')
     .eq('branch_id', branchId)
     .eq('proveedor_id', proveedorId)
@@ -87,14 +87,14 @@ export async function upsertCondiciones(
   branchId: string,
   data: UpsertCondicionesPayload,
 ) {
-  const { error } = await fromUntyped('proveedor_condiciones_local').upsert(
+  const { error } = await fromUntyped('supplier_branch_terms').upsert(
     {
       proveedor_id: proveedorId,
       branch_id: branchId,
       permite_cuenta_corriente: data.permite_cuenta_corriente,
       dias_pago_habitual: data.dias_pago_habitual ?? null,
       descuento_pago_contado: data.descuento_pago_contado ?? null,
-      observaciones: data.observaciones ?? null,
+      notes: data.observaciones ?? null,
     } as any,
     { onConflict: 'proveedor_id,branch_id' },
   );
@@ -166,7 +166,7 @@ export async function softDeleteProveedorDoc(docId: string) {
 
 export async function fetchProveedorFacturas(branchId: string, proveedorId: string) {
   const { data, error } = await fromUntyped('supplier_invoices')
-    .select('id, total, saldo_pendiente, estado_pago, fecha_vencimiento')
+    .select('id, total, pending_balance, payment_status, due_date')
     .eq('branch_id', branchId)
     .eq('proveedor_id', proveedorId)
     .is('deleted_at', null);
@@ -176,7 +176,7 @@ export async function fetchProveedorFacturas(branchId: string, proveedorId: stri
 
 export async function fetchProveedorPagos(branchId: string, proveedorId: string) {
   const { data, error } = await fromUntyped('supplier_payments')
-    .select('id, monto, is_verified')
+    .select('id, amount, is_verified')
     .eq('branch_id', branchId)
     .eq('proveedor_id', proveedorId)
     .is('deleted_at', null);
@@ -207,20 +207,20 @@ export async function fetchSaldosProveedores(branchId: string) {
 export async function fetchMovimientosProveedorData(branchId: string, proveedorId: string) {
   const { data: facturas, error: fErr } = await fromUntyped('supplier_invoices')
     .select(
-      'id, factura_fecha, factura_tipo, factura_numero, total, saldo_pendiente, estado_pago, fecha_vencimiento, invoice_items:supplier_invoice_items(id)',
+      'id, invoice_date, invoice_type, invoice_number, total, pending_balance, payment_status, due_date, invoice_items:supplier_invoice_items(id)',
     )
     .eq('branch_id', branchId)
     .eq('proveedor_id', proveedorId)
     .is('deleted_at', null)
-    .order('factura_fecha', { ascending: true });
+    .order('invoice_date', { ascending: true });
   if (fErr) throw fErr;
 
   const { data: pagos, error: pErr } = await fromUntyped('supplier_payments')
-    .select('id, fecha_pago, monto, medio_pago, referencia, factura_id, is_verified')
+    .select('id, payment_date, amount, payment_method, referencia, factura_id, is_verified')
     .eq('branch_id', branchId)
     .eq('proveedor_id', proveedorId)
     .is('deleted_at', null)
-    .order('fecha_pago', { ascending: true });
+    .order('payment_date', { ascending: true });
   if (pErr) throw pErr;
 
   return { facturas: (facturas as any[]) || [], pagos: (pagos as any[]) || [] };

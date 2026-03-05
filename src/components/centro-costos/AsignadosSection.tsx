@@ -12,8 +12,8 @@ import { fromUntyped } from '@/lib/supabase-helpers';
 
 interface ItemCartaWithCategory {
   id: string;
-  nombre: string;
-  menu_categories?: { id: string; nombre: string; orden: number | null } | null;
+  name: string;
+  menu_categories?: { id: string; name: string; sort_order: number | null } | null;
   [key: string]: any;
 }
 
@@ -41,10 +41,10 @@ export function AsignadosInline({ item }: { item: any }) {
                 key={prod.id}
                 className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2"
               >
-                <span className="flex-1">{prod.nombre}</span>
+                <span className="flex-1">{prod.name}</span>
                 {prod.menu_categories && (
                   <Badge variant="outline" className="text-xs">
-                    {prod.menu_categories.nombre}
+                    {prod.menu_categories.name}
                   </Badge>
                 )}
               </div>
@@ -66,7 +66,7 @@ export function ExtraRow({ d, itemId, toggleExtra }: { d: DiscoveredExtra; itemI
   const handleSaveNombre = async () => {
     if (!d.extra_id || localNombre === d.extra_nombre) return;
     await fromUntyped('menu_items')
-      .update({ nombre: localNombre })
+      .update({ name: localNombre })
       .eq('id', d.extra_id!);
   };
 

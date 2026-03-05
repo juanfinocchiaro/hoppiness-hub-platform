@@ -56,7 +56,7 @@ export function useCheckoutPaymentRestrictions({
       if (r === 'solo_digital') hasDigitalOnly = true;
     }
 
-    const cashAllowed = !!servicePayments.efectivo;
+    const cashAllowed = !!servicePayments.cash;
     const mpAllowed = !!servicePayments.mercadopago && mpEnabled;
 
     let allowCash = cashAllowed;
@@ -70,7 +70,7 @@ export function useCheckoutPaymentRestrictions({
       ? null
       : allowCash !== allowMp
         ? allowCash
-          ? 'efectivo'
+          ? 'cash'
           : 'mercadopago'
         : null;
 

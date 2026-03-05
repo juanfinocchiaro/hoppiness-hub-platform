@@ -8,11 +8,11 @@ import { SEO } from '@/components/SEO';
 interface TrackingInfo {
   tracking_token: string;
   pedido: {
-    numero_pedido: number;
-    cliente_nombre: string | null;
-    cliente_direccion: string | null;
-    cliente_telefono: string | null;
-    estado: string;
+    order_number: number;
+    customer_name: string | null;
+    customer_address: string | null;
+    customer_phone: string | null;
+    status: string;
   };
   branch: { name: string; address: string | null };
   tracking_started: boolean;
@@ -211,7 +211,7 @@ export default function CadeteTrackingPage() {
           <Bike className="w-6 h-6" />
           <span className="text-sm opacity-80">{info?.branch.name}</span>
         </div>
-        <h1 className="text-2xl font-black">Pedido #{info?.pedido.numero_pedido}</h1>
+        <h1 className="text-2xl font-black">Pedido #{info?.pedido.order_number}</h1>
         <p className="text-sm opacity-80 mt-1">Rastreo de envío</p>
       </div>
 
@@ -221,16 +221,16 @@ export default function CadeteTrackingPage() {
           <h3 className="text-sm font-bold flex items-center gap-2">
             <MapPin className="w-4 h-4" /> Datos de entrega
           </h3>
-          {info?.pedido.cliente_nombre && <p className="text-sm">{info.pedido.cliente_nombre}</p>}
-          {info?.pedido.cliente_direccion && (
-            <p className="text-sm text-muted-foreground">{info.pedido.cliente_direccion}</p>
+          {info?.pedido.customer_name && <p className="text-sm">{info.pedido.customer_name}</p>}
+          {info?.pedido.customer_address && (
+            <p className="text-sm text-muted-foreground">{info.pedido.customer_address}</p>
           )}
-          {info?.pedido.cliente_telefono && (
+          {info?.pedido.customer_phone && (
             <a
-              href={`tel:${info.pedido.cliente_telefono}`}
+              href={`tel:${info.pedido.customer_phone}`}
               className="text-sm text-primary underline"
             >
-              {info.pedido.cliente_telefono}
+              {info.pedido.customer_phone}
             </a>
           )}
         </div>

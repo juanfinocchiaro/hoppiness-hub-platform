@@ -18,7 +18,7 @@ import {
 interface MenuCategoria {
   id: string;
   name: string;
-  tipo_impresion: 'comanda' | 'vale' | 'no_imprimir';
+  print_type: 'comanda' | 'vale' | 'no_imprimir';
 }
 
 interface OrderItemWithCategoria extends PrintableItem {
@@ -84,8 +84,8 @@ export async function buildPrintJobs(
     items: OrderItemWithCategoria[];
     total?: number;
     descuento?: number;
-    cliente_telefono?: string | null;
-    cliente_direccion?: string | null;
+    customer_phone?: string | null;
+    customer_address?: string | null;
   },
   config: PrintConfig & {
     comanda_printer_id?: string | null;
@@ -108,7 +108,7 @@ export async function buildPrintJobs(
   const getTipoImpresion = (item: OrderItemWithCategoria): 'comanda' | 'vale' | 'no_imprimir' => {
     if (!item.categoria_carta_id) return 'comanda';
     const cat = categorias.find((c) => c.id === item.categoria_carta_id);
-    return cat?.tipo_impresion || 'comanda';
+    return cat?.print_type || 'comanda';
   };
 
   // 1. TICKET CLIENTE
@@ -149,13 +149,13 @@ export async function buildPrintJobs(
     if (printer) {
       for (const item of order.items) {
         if (getTipoImpresion(item) === 'vale') {
-          for (let i = 0; i < item.cantidad; i++) {
+          for (let i = 0; i < item.quantity; i++) {
             const data = generateVale(
               item.name || 'Producto',
-              order.numero_pedido,
+              order.order_number,
               order.created_at,
               order.canal_venta,
-              order.numero_llamador,
+              order.caller_number,
               printer.paper_width,
             );
             jobs.push({
@@ -187,7 +187,7 @@ export async function buildPrintJobs(
       if (comandaItems.length > 0) {
         const comandaOrder = { ...order, items: comandaItems };
         const isDelivery =
-          order.tipo_servicio === 'delivery' ||
+          order.service_type === 'delivery' ||
           order.canal_venta === 'rappi' ||
           order.canal_venta === 'pedidos_ya' ||
           order.canal_venta === 'mp_delivery' ||

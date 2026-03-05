@@ -223,7 +223,7 @@ export function usePrinting(branchId: string) {
     categorias: {
       id: string;
       name: string;
-      tipo_impresion: 'comanda' | 'vale' | 'no_imprimir';
+      print_type: 'comanda' | 'vale' | 'no_imprimir';
     }[],
     branchName: string,
     esSalon: boolean,
@@ -235,7 +235,7 @@ export function usePrinting(branchId: string) {
     let trackingToken: string | undefined;
     const isCanalPropio =
       !order.canal_venta || order.canal_venta === 'mostrador' || order.canal_venta === 'webapp';
-    if (pedidoId && order.tipo_servicio === 'delivery' && isCanalPropio) {
+    if (pedidoId && order.service_type === 'delivery' && isCanalPropio) {
       try {
         const pedido = await fetchPedidoForTracking(pedidoId);
         if (!pedido?.branch_id) throw new Error('Pedido not found for tracking');

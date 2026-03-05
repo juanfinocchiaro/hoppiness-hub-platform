@@ -19,8 +19,8 @@ import {
 
 interface ActiveOrder {
   id: string;
-  numero_pedido: number;
-  estado: string;
+  order_number: number;
+  status: string;
   webapp_tracking_code: string;
   branch_name: string;
 }
@@ -28,8 +28,8 @@ interface ActiveOrder {
 interface ChatMessage {
   id: string;
   sender_type: 'cliente' | 'local';
-  sender_nombre: string;
-  mensaje: string;
+  sender_name: string;
+  message: string;
   leido: boolean;
   created_at: string;
 }
@@ -57,8 +57,8 @@ export function FloatingOrderChat() {
         const branch = data.branch as { name?: string } | null;
         return {
           id: data.id,
-          numero_pedido: data.numero_pedido,
-          estado: data.estado,
+          order_number: data.order_number,
+          status: data.status,
           webapp_tracking_code: data.webapp_tracking_code,
           branch_name: branch?.name || '',
         };
@@ -77,8 +77,8 @@ export function FloatingOrderChat() {
         const branch = order.branch as { name?: string } | null;
         return {
           id: order.id,
-          numero_pedido: order.numero_pedido,
-          estado: order.estado,
+          order_number: order.order_number,
+          status: order.status,
           webapp_tracking_code: order.webapp_tracking_code,
           branch_name: branch?.name || '',
         };
@@ -149,7 +149,7 @@ export function FloatingOrderChat() {
           code: trackingCode,
           mensaje: input.trim(),
           sender_type: 'cliente',
-          sender_nombre: user?.user_metadata?.full_name || 'Cliente',
+          sender_name: user?.user_metadata?.full_name || 'Cliente',
         }),
       });
       setInput('');
@@ -173,7 +173,7 @@ export function FloatingOrderChat() {
           {/* Header */}
           <div className="px-3 py-2 border-b bg-primary text-primary-foreground flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-xs font-bold">Pedido #{activeOrder.numero_pedido}</p>
+              <p className="text-xs font-bold">Pedido #{activeOrder.order_number}</p>
               <p className="text-[10px] opacity-80">{activeOrder.branch_name}</p>
             </div>
             <button
@@ -203,7 +203,7 @@ export function FloatingOrderChat() {
                       : 'bg-muted text-foreground'
                   }`}
                 >
-                  <p className="text-xs">{msg.mensaje}</p>
+                  <p className="text-xs">{msg.message}</p>
                   <p
                     className={`text-[9px] mt-0.5 ${
                       msg.sender_type === 'cliente'

@@ -42,8 +42,8 @@ export function NewExtraForm({
 
   const costoCalculado = selectedItem
     ? tipo === 'ingrediente'
-      ? (selectedItem.costo_por_unidad_base || 0) * cantidad
-      : (selectedItem.costo_calculado || 0) * cantidad
+      ? (selectedItem.base_unit_cost || 0) * cantidad
+      : (selectedItem.calculated_cost || 0) * cantidad
     : 0;
 
   const handleSelect = (v: string) => {
@@ -52,12 +52,12 @@ export function NewExtraForm({
       tipo === 'ingrediente'
         ? ingredientes?.find((i) => i.id === v) || insumos?.find((i) => i.id === v)
         : recetas?.find((r) => r.id === v);
-    setNombre(`Extra ${item?.nombre || ''}`);
+    setNombre(`Extra ${item?.name || ''}`);
   };
 
   const handleSave = async () => {
     if (!selectedId || !precio) return;
-    const displayName = nombre.trim() || `Extra ${selectedItem?.nombre}`;
+    const displayName = nombre.trim() || `Extra ${selectedItem?.name}`;
     await onCreate.mutateAsync({
       item_carta_id: itemId,
       tipo: 'extra',
@@ -123,14 +123,14 @@ export function NewExtraForm({
               ) : (
                 insumos?.map((i) => (
                   <SelectItem key={i.id} value={i.id}>
-                    {i.nombre}
+                    {i.name}
                   </SelectItem>
                 ))
               )
             ) : (
               recetas?.map((r) => (
                 <SelectItem key={r.id} value={r.id}>
-                  {r.nombre}
+                  {r.name}
                 </SelectItem>
               ))
             )}

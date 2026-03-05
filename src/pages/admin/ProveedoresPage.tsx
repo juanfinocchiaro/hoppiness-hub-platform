@@ -28,7 +28,7 @@ export default function ProveedoresPage() {
 
   const filtered = proveedores?.filter(
     (p) =>
-      p.razon_social.toLowerCase().includes(search.toLowerCase()) ||
+      p.business_name.toLowerCase().includes(search.toLowerCase()) ||
       p.cuit?.includes(search) ||
       p.contacto?.toLowerCase().includes(search.toLowerCase()),
   );
@@ -90,13 +90,13 @@ export default function ProveedoresPage() {
               filtered.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
-                    <p className="font-medium">{row.razon_social}</p>
+                    <p className="font-medium">{row.business_name}</p>
                     {row.cuit && <p className="text-xs text-muted-foreground">{row.cuit}</p>}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
                       {row.contacto && <p>{row.contacto}</p>}
-                      {row.telefono && <p className="text-muted-foreground">{row.telefono}</p>}
+                      {row.phone && <p className="text-muted-foreground">{row.phone}</p>}
                     </div>
                   </TableCell>
                   <TableCell>

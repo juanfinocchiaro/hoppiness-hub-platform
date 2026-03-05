@@ -39,12 +39,12 @@ export interface WebappMenuItem {
   is_promo_article?: boolean;
   promocion_id?: string | null;
   promocion_item_id?: string | null;
-  promo_included_modifiers?: Array<{ nombre: string; cantidad: number }>;
-  nombre: string;
-  nombre_corto: string | null;
-  descripcion: string | null;
-  imagen_url: string | null;
-  precio_base: number;
+  promo_included_modifiers?: Array<{ name: string; quantity: number }>;
+  name: string;
+  short_name: string | null;
+  description: string | null;
+  image_url: string | null;
+  base_price: number;
   precio_promo: number | null;
   promo_etiqueta: string | null;
   categoria_carta_id: string | null;
@@ -58,10 +58,10 @@ export interface WebappMenuItem {
 
 export interface CartItemModifier {
   id: string;
-  nombre: string;
+  name: string;
   precio: number;
   tipo: 'extra' | 'sin';
-  cantidad?: number;
+  quantity?: number;
 }
 
 export interface CartItem {
@@ -71,14 +71,14 @@ export interface CartItem {
   isPromoArticle?: boolean;
   promocionId?: string | null;
   promocionItemId?: string | null;
-  includedModifiers?: Array<{ nombre: string; cantidad: number }>;
-  nombre: string;
-  imagen_url: string | null;
+  includedModifiers?: Array<{ name: string; quantity: number }>;
+  name: string;
+  image_url: string | null;
   precioUnitario: number;
-  cantidad: number;
+  quantity: number;
   extras: CartItemModifier[];
   removidos: string[];
-  notas: string;
+  notes: string;
 }
 
 export interface CartItemGroupSelection {
@@ -92,10 +92,10 @@ export interface CartItemGroupSelection {
 export interface WebappCart {
   tipoServicio: TipoServicioWebapp;
   items: CartItem[];
-  clienteNombre: string;
-  clienteTelefono: string;
+  customerName: string;
+  customerPhone: string;
   clienteEmail: string;
-  clienteDireccion: string;
+  customerAddress: string;
   clientePiso: string;
   clienteReferencia: string;
 }

@@ -47,7 +47,7 @@ export function ClosureHistoryView({ branchId, branchName, daysBack, setDaysBack
   const closuresByDate = useMemo(() => {
     if (!closures) return [];
     const grouped = new Map<string, typeof closures>();
-    closures.forEach((c) => { const existing = grouped.get(c.fecha) || []; existing.push(c); grouped.set(c.fecha, existing); });
+    closures.forEach((c) => { const existing = grouped.get(c.date) || []; existing.push(c); grouped.set(c.date, existing); });
     return Array.from(grouped.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [closures]);
 
@@ -60,7 +60,7 @@ export function ClosureHistoryView({ branchId, branchName, daysBack, setDaysBack
     }), { vendido: 0, hamburguesas: 0, alertas: 0 });
   }, [closures]);
 
-  const handleEdit = (fecha: string, turno: string) => { setEditDate(new Date(fecha + 'T12:00:00')); setEditShift(turno as ShiftType); };
+  const handleEdit = (date: string, shift: string) => { setEditDate(new Date(date + 'T12:00:00')); setEditShift(shift as ShiftType); };
 
   return (
     <>
@@ -73,7 +73,7 @@ export function ClosureHistoryView({ branchId, branchName, daysBack, setDaysBack
           {closures && closures.length > 0 && (
             <Button variant="outline" size="sm" onClick={() =>
               exportToExcel(
-                closures.map((c) => ({ fecha: c.fecha || '-', turno: getShiftLabel(c.turno), hamburguesas: c.total_hamburguesas || 0, vendido: c.total_vendido || 0, estado: c.tiene_alerta_facturacion ? 'Con alertas' : 'OK' })),
+                closures.map((c) => ({ fecha: c.date || '-', turno: getShiftLabel(c.shift), hamburguesas: c.total_hamburguesas || 0, vendido: c.total_vendido || 0, estado: c.tiene_alerta_facturacion ? 'Con alertas' : 'OK' })),
                 { fecha: 'Fecha', turno: 'Turno', hamburguesas: 'Hamburguesas', vendido: 'Vendido', estado: 'Estado' },
                 { filename: 'ventas-historial' },
               )
@@ -105,18 +105,18 @@ export function ClosureHistoryView({ branchId, branchName, daysBack, setDaysBack
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {closuresByDate.map(([fecha, dayClosures]) => (
-                  <Fragment key={fecha}>
+                {closuresByDate.map(([dateStr, dayClosures]) => (
+                  <Fragment key={dateStr}>
                     {dayClosures.map((closure, idx) => {
                       const hasAlerts = closure.tiene_alerta_facturacion || closure.tiene_alerta_posnet || closure.tiene_alerta_apps || closure.tiene_alerta_caja;
                       return (
                         <TableRow key={closure.id}>
-                          <TableCell className="font-medium">{idx === 0 ? format(new Date(fecha + 'T12:00:00'), 'EEE d MMM', { locale: es }) : <span className="text-transparent">-</span>}</TableCell>
-                          <TableCell><div className="flex items-center gap-1"><Badge variant="outline">{getShiftLabel(closure.turno)}</Badge>{closure.fuente === 'pos' && <Badge variant="secondary" className="text-xs">POS</Badge>}</div></TableCell>
+                          <TableCell className="font-medium">{idx === 0 ? format(new Date(dateStr + 'T12:00:00'), 'EEE d MMM', { locale: es }) : <span className="text-transparent">-</span>}</TableCell>
+                          <TableCell><div className="flex items-center gap-1"><Badge variant="outline">{getShiftLabel(closure.shift)}</Badge>{closure.source === 'pos' && <Badge variant="secondary" className="text-xs">POS</Badge>}</div></TableCell>
                           <TableCell className="text-right tabular-nums">{closure.total_hamburguesas}</TableCell>
                           <TableCell className="text-right tabular-nums font-medium">{fmtCurrency(Number(closure.total_vendido || 0))}</TableCell>
                           <TableCell className="text-center">{hasAlerts ? <AlertCircle className="w-4 h-4 text-warning mx-auto" /> : <CheckCircle className="w-4 h-4 text-success mx-auto" />}</TableCell>
-                          {canEdit && (<TableCell><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(closure.fecha, closure.turno)}><Pencil className="w-4 h-4" /></Button></TableCell>)}
+                          {canEdit && (<TableCell><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(closure.date, closure.shift)}><Pencil className="w-4 h-4" /></Button></TableCell>)}
                         </TableRow>
                       );
                     })}

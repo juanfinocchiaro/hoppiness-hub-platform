@@ -48,7 +48,7 @@ export function ReimprimirCard({
 
       const { generateTicketCliente, generateArcaQrBitmap } = await import('@/lib/escpos');
 
-      const tipoComprobante = factura.tipo_comprobante || '';
+      const tipoComprobante = factura.receipt_type || '';
       const isNC = tipoComprobante.includes('NC') || tipoComprobante.includes('Nota de Crédito');
       const tipoLetra = tipoComprobante.includes('B')
         ? 'B'
@@ -70,16 +70,16 @@ export function ReimprimirCard({
               : isNC
                 ? '003'
                 : '001',
-        numero: `${String(factura.punto_venta).padStart(5, '0')}-${String(factura.numero_comprobante).padStart(8, '0')}`,
+        numero: `${String(factura.point_of_sale).padStart(5, '0')}-${String(factura.receipt_number).padStart(8, '0')}`,
         fecha: format(new Date(factura.created_at), 'dd/MM/yyyy'),
         emisor: {
-          razon_social: branchData?.razon_social || '',
+          business_name: branchData?.business_name || '',
           cuit: branchData?.cuit || '',
           iibb: branchData?.iibb || '',
-          condicion_iva: branchData?.condicion_iva || 'Responsable Inscripto',
+          tax_status: branchData?.tax_status || 'Responsable Inscripto',
           inicio_actividades: branchData?.inicio_actividades || '',
           direccion_fiscal: branchData?.direccion_fiscal || '',
-          punto_venta: factura.punto_venta,
+          punto_venta: factura.point_of_sale,
         },
         cae: factura.cae || '',
         cae_vto: factura.cae_vencimiento || '',
@@ -100,21 +100,21 @@ export function ReimprimirCard({
 
       const ticketData = {
         order: {
-          numero_pedido: pedido.numero_pedido,
-          tipo_servicio: pedido.tipo_servicio,
-          numero_llamador: pedido.numero_llamador,
+          order_number: pedido.order_number,
+          service_type: pedido.service_type,
+          caller_number: pedido.caller_number,
           canal_venta: pedido.canal_venta,
-          cliente_nombre: pedido.cliente_nombre,
+          customer_name: pedido.customer_name,
           referencia_app: (pedido as unknown as Record<string, unknown>).referencia_app as
             | string
             | null,
           created_at: pedido.created_at!,
           items: (items || []).map((it: any) => ({
-            nombre: it.nombre,
-            cantidad: it.cantidad,
+            name: it.name,
+            quantity: it.quantity,
             notas: it.notas,
             estacion: it.estacion,
-            precio_unitario: it.precio_unitario,
+            unit_price: it.unit_price,
             subtotal: it.subtotal,
           })),
           total: pedido.total,
@@ -122,8 +122,8 @@ export function ReimprimirCard({
           descuento_porcentaje: (pedido as unknown as Record<string, unknown>)
             .descuento_porcentaje as number | undefined,
         },
-        branchName: branchData?.name || branchData?.razon_social || '',
-        metodo_pago: pago?.metodo || undefined,
+        branchName: branchData?.name || branchData?.business_name || '',
+        metodo_pago: pago?.method || undefined,
         factura: facturaData as unknown as TicketClienteData['factura'],
       };
 
@@ -261,12 +261,12 @@ export function ReimprimirCard({
               >
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">
-                    {r.tipo_comprobante} {String(r.punto_venta).padStart(5, '0')}-
-                    {String(r.numero_comprobante).padStart(8, '0')}
+                    {r.receipt_type} {String(r.point_of_sale).padStart(5, '0')}-
+                    {String(r.receipt_number).padStart(8, '0')}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {format(new Date(r.created_at), 'dd/MM/yyyy HH:mm')} â€” Pedido #
-                    {r.pedidos?.numero_pedido}
+                    {r.pedidos?.order_number}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

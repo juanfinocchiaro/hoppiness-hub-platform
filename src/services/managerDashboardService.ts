@@ -154,10 +154,10 @@ export async function fetchPendingItems(branchId: string) {
 export async function fetchPosSalesToday(branchId: string) {
   const today = getOperationalDateString();
   const { data, error } = await fromUntyped('orders')
-    .select('id, total, estado, created_at')
+    .select('id, total, status, created_at')
     .eq('branch_id', branchId)
     .gte('created_at', today)
-    .not('estado', 'eq', 'cancelado');
+    .not('status', 'eq', 'cancelado');
 
   if (error) throw error;
   const pedidos = (data as any[]) || [];

@@ -138,16 +138,16 @@ export default function CuentaHome() {
                 <span className="text-sm font-semibold">Tu último pedido</span>
               </div>
               <Badge variant="secondary" className="text-xs">
-                #{lastOrder.numero_pedido}
+                #{lastOrder.order_number}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              {lastOrderBranch} · {estadoLabels[lastOrder.estado] || lastOrder.estado}
+              {lastOrderBranch} · {estadoLabels[lastOrder.status] || lastOrder.status}
             </p>
             <p className="text-sm text-muted-foreground truncate">
               {(lastOrder.order_items || [])
                 .slice(0, 2)
-                .map((i: any) => `${i.cantidad}x ${i.nombre}`)
+                .map((i: any) => `${i.quantity}x ${i.name}`)
                 .join(' · ')}
             </p>
             <div className="flex items-center justify-between pt-1">

@@ -43,12 +43,12 @@ export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Prop
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
-            Anular pedido #{order.numero_pedido}
+            Anular pedido #{order.order_number}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3">
               <p>
-                Estás por anular el pedido <strong>#{order.numero_pedido}</strong> por un total de{' '}
+                Estás por anular el pedido <strong>#{order.order_number}</strong> por un total de{' '}
                 <strong>{formatCurrency(order.total)}</strong>.
               </p>
 
@@ -64,8 +64,8 @@ export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Prop
                     </Badge>{' '}
                     para anular la factura{' '}
                     <strong>
-                      {factura.tipo_comprobante} {String(factura.punto_venta).padStart(5, '0')}-
-                      {String(factura.numero_comprobante).padStart(8, '0')}
+                      {factura.receipt_type} {String(factura.point_of_sale).padStart(5, '0')}-
+                      {String(factura.receipt_number).padStart(8, '0')}
                     </strong>
                     .
                   </p>

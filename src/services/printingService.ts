@@ -67,10 +67,10 @@ export async function fetchBranchCoords(branchId: string) {
 export async function fetchPedidoForTicket(pedidoId: string) {
   const { data, error } = await fromUntyped('orders')
     .select(
-      `id, numero_pedido, tipo_servicio, canal_venta, canal_app, numero_llamador, cliente_nombre, cliente_telefono, cliente_direccion, created_at, total, descuento,
-       order_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id),
-       order_payments(metodo, monto, monto_recibido, vuelto, tarjeta_marca),
-       issued_invoices(anulada, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, fecha_emision, neto, iva, total, receptor_cuit, receptor_razon_social, receptor_condicion_iva)`,
+      `id, order_number, service_type, canal_venta, canal_app, caller_number, customer_name, customer_phone, customer_address, created_at, total, descuento,
+       order_items(name, quantity, notes, unit_price, subtotal, categoria_carta_id),
+       order_payments(method, amount, received_amount, vuelto, tarjeta_marca),
+       issued_invoices(anulada, receipt_type, point_of_sale, receipt_number, cae, cae_vencimiento, issue_date, neto, iva, total, receptor_cuit, receptor_razon_social, receptor_condicion_iva)`,
     )
     .eq('id', pedidoId)
     .single();
@@ -81,10 +81,10 @@ export async function fetchPedidoForTicket(pedidoId: string) {
 export async function fetchPedidoForDeliveryTicket(pedidoId: string) {
   const { data, error } = await fromUntyped('orders')
     .select(
-      `id, numero_pedido, tipo_servicio, canal_venta, canal_app, numero_llamador,
-       cliente_nombre, cliente_telefono, cliente_direccion,
+      `id, order_number, service_type, canal_venta, canal_app, caller_number,
+       customer_name, customer_phone, customer_address,
        created_at, total, descuento,
-       order_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id)`,
+       order_items(name, quantity, notes, unit_price, subtotal, categoria_carta_id)`,
     )
     .eq('id', pedidoId)
     .single();

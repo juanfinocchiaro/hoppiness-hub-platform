@@ -82,7 +82,7 @@ export function ManualIncomeModal({
         type: 'income',
         amount: amountNum,
         concept: fullConcept + (notes ? ` - ${notes}` : ''),
-        paymentMethod: 'efectivo',
+        paymentMethod: 'cash',
         userId: user.id,
       });
       toast.success('Ingreso registrado correctamente');

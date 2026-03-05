@@ -14,14 +14,14 @@ export interface CondicionesLocal {
   permite_cuenta_corriente: boolean;
   dias_pago_habitual: number | null;
   descuento_pago_contado: number | null;
-  observaciones: string | null;
+  notes: string | null;
 }
 
 export interface CondicionesFormData {
   permite_cuenta_corriente: boolean;
   dias_pago_habitual?: number | null;
   descuento_pago_contado?: number | null;
-  observaciones?: string | null;
+  notes?: string | null;
 }
 
 /** Fetch all condiciones for a branch (keyed by proveedor_id) */

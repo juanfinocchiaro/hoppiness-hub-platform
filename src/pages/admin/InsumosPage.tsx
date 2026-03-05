@@ -78,21 +78,21 @@ function SortableHead({
 function getSortValue(row: any, key: SortKey): string | number {
   switch (key) {
     case 'nombre':
-      return row.nombre?.toLowerCase() || '';
+      return row.name?.toLowerCase() || '';
     case 'proveedor':
       return (
-        row.proveedor_obligatorio?.razon_social ||
-        row.proveedor_sugerido?.razon_social ||
+        row.proveedor_obligatorio?.business_name ||
+        row.proveedor_sugerido?.business_name ||
         ''
       ).toLowerCase();
     case 'categoria':
-      return (row.rdo_categories?.name || row.categorias_insumo?.nombre || '').toLowerCase();
+      return (row.rdo_categories?.name || row.supply_categories?.name || '').toLowerCase();
     case 'presentacion':
-      return row.unidad_compra || row.unidad_base || '';
+      return row.purchase_unit || row.base_unit || '';
     case 'costo':
-      return Number(row.costo_por_unidad_base || row.precio_referencia || 0);
+      return Number(row.base_unit_cost || row.reference_price || 0);
     case 'precio_venta':
-      return Number(row.precio_venta || 0);
+      return Number(row.sale_price || 0);
     case 'margen':
       return Number(row.margen_porcentaje || 0);
     default:
@@ -141,9 +141,9 @@ export default function InsumosPage() {
   const filteredObligatorios = useMemo(() => {
     const filtered = insumos?.filter(
       (i: any) =>
-        i.tipo_item === 'ingrediente' &&
+        i.item_type === 'ingrediente' &&
         i.nivel_control !== 'semi_libre' &&
-        i.nombre.toLowerCase().includes(search.toLowerCase()),
+        i.name.toLowerCase().includes(search.toLowerCase()),
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -151,9 +151,9 @@ export default function InsumosPage() {
   const filteredSugeridos = useMemo(() => {
     const filtered = insumos?.filter(
       (i: any) =>
-        i.tipo_item === 'ingrediente' &&
+        i.item_type === 'ingrediente' &&
         i.nivel_control === 'semi_libre' &&
-        i.nombre.toLowerCase().includes(search.toLowerCase()),
+        i.name.toLowerCase().includes(search.toLowerCase()),
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -161,9 +161,9 @@ export default function InsumosPage() {
   const filteredInsumosOblig = useMemo(() => {
     const filtered = insumos?.filter(
       (i: any) =>
-        (i.tipo_item === 'insumo' || !i.tipo_item) &&
+        (i.item_type === 'insumo' || !i.item_type) &&
         i.nivel_control !== 'semi_libre' &&
-        i.nombre.toLowerCase().includes(search.toLowerCase()),
+        i.name.toLowerCase().includes(search.toLowerCase()),
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -171,9 +171,9 @@ export default function InsumosPage() {
   const filteredInsumosSugeridos = useMemo(() => {
     const filtered = insumos?.filter(
       (i: any) =>
-        (i.tipo_item === 'insumo' || !i.tipo_item) &&
+        (i.item_type === 'insumo' || !i.item_type) &&
         i.nivel_control === 'semi_libre' &&
-        i.nombre.toLowerCase().includes(search.toLowerCase()),
+        i.name.toLowerCase().includes(search.toLowerCase()),
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -181,9 +181,9 @@ export default function InsumosPage() {
   const filteredProductosOblig = useMemo(() => {
     const filtered = insumos?.filter(
       (i: any) =>
-        i.tipo_item === 'producto' &&
+        i.item_type === 'producto' &&
         i.nivel_control !== 'semi_libre' &&
-        i.nombre.toLowerCase().includes(search.toLowerCase()),
+        i.name.toLowerCase().includes(search.toLowerCase()),
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -191,9 +191,9 @@ export default function InsumosPage() {
   const filteredProductosSugeridos = useMemo(() => {
     const filtered = insumos?.filter(
       (i: any) =>
-        i.tipo_item === 'producto' &&
+        i.item_type === 'producto' &&
         i.nivel_control === 'semi_libre' &&
-        i.nombre.toLowerCase().includes(search.toLowerCase()),
+        i.name.toLowerCase().includes(search.toLowerCase()),
     );
     return sortRows(filtered || [], sortKey, sortDir);
   }, [insumos, search, sortKey, sortDir]);
@@ -216,19 +216,19 @@ export default function InsumosPage() {
 
   const renderRow = (row: any, type: 'ingrediente' | 'insumo') => {
     const provName =
-      row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
-    const costoCompra = Number(row.unidad_compra_precio || 0);
-    const costoUnitario = Number(row.costo_por_unidad_base || row.precio_referencia || 0);
-    const unit = row.unidad_base || 'un';
+      row.proveedor_obligatorio?.business_name || row.proveedor_sugerido?.business_name;
+    const costoCompra = Number(row.purchase_unit_price || 0);
+    const costoUnitario = Number(row.base_unit_cost || row.reference_price || 0);
+    const unit = row.base_unit || 'un';
     const iva = row.default_alicuota_iva;
     const costoConIva = iva && costoCompra ? costoCompra * (1 + iva / 100) : null;
     return (
       <TableRow key={row.id}>
         <TableCell>
-          <p className="font-medium">{row.nombre}</p>
-          {row.descripcion && (
+          <p className="font-medium">{row.name}</p>
+          {row.description && (
             <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-              {row.descripcion}
+              {row.description}
             </p>
           )}
         </TableCell>
@@ -236,20 +236,20 @@ export default function InsumosPage() {
           {provName || <span className="text-muted-foreground italic">—</span>}
         </TableCell>
         <TableCell className="text-sm">
-          {row.rdo_categories?.name || row.categorias_insumo?.nombre || '—'}
+          {row.rdo_categories?.name || row.supply_categories?.name || '—'}
         </TableCell>
         <TableCell>
-          {row.unidad_compra ? (
+          {row.purchase_unit ? (
             <span className="text-sm">
-              <Badge variant="outline">{row.unidad_compra}</Badge>
-              {row.unidad_compra_contenido && (
+              <Badge variant="outline">{row.purchase_unit}</Badge>
+              {row.purchase_unit_content && (
                 <span className="text-muted-foreground ml-1 text-xs">
-                  ({row.unidad_compra_contenido} {row.unidad_base})
+                  ({row.purchase_unit_content} {row.base_unit})
                 </span>
               )}
             </span>
           ) : (
-            <Badge variant="outline">{row.unidad_base}</Badge>
+            <Badge variant="outline">{row.base_unit}</Badge>
           )}
         </TableCell>
         <TableCell>
@@ -258,7 +258,7 @@ export default function InsumosPage() {
               <span className="font-mono text-sm">
                 ${costoCompra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 <span className="text-muted-foreground text-xs font-normal">
-                  /{row.unidad_compra || unit}
+                  /{row.purchase_unit || unit}
                 </span>
               </span>
               {iva != null && <span className="text-muted-foreground text-xs ml-1">+{iva}%</span>}
@@ -306,19 +306,19 @@ export default function InsumosPage() {
 
   const renderProductoRow = (row: any) => {
     const provName =
-      row.proveedor_obligatorio?.razon_social || row.proveedor_sugerido?.razon_social;
-    const costoCompra = Number(row.unidad_compra_precio || 0);
-    const costoUnitario = Number(row.costo_por_unidad_base || 0);
+      row.proveedor_obligatorio?.business_name || row.proveedor_sugerido?.business_name;
+    const costoCompra = Number(row.purchase_unit_price || 0);
+    const costoUnitario = Number(row.base_unit_cost || 0);
     const iva = row.default_alicuota_iva;
     const costoConIva = iva && costoCompra ? costoCompra * (1 + iva / 100) : null;
 
     return (
       <TableRow key={row.id}>
         <TableCell>
-          <p className="font-medium">{row.nombre}</p>
-          {row.descripcion && (
+          <p className="font-medium">{row.name}</p>
+          {row.description && (
             <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-              {row.descripcion}
+              {row.description}
             </p>
           )}
         </TableCell>
@@ -327,12 +327,12 @@ export default function InsumosPage() {
         </TableCell>
         <TableCell className="text-sm">{row.rdo_categories?.name || '—'}</TableCell>
         <TableCell>
-          {row.unidad_compra && (
+          {row.purchase_unit && (
             <span className="text-sm">
-              <Badge variant="outline">{row.unidad_compra}</Badge>
-              {row.unidad_compra_contenido && (
+              <Badge variant="outline">{row.purchase_unit}</Badge>
+              {row.purchase_unit_content && (
                 <span className="text-muted-foreground ml-1 text-xs">
-                  ({row.unidad_compra_contenido} un)
+                  ({row.purchase_unit_content} un)
                 </span>
               )}
             </span>
@@ -344,7 +344,7 @@ export default function InsumosPage() {
               <span className="font-mono text-sm">
                 ${costoCompra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 <span className="text-muted-foreground text-xs font-normal">
-                  /{row.unidad_compra || 'un'}
+                  /{row.purchase_unit || 'un'}
                 </span>
               </span>
               {iva != null && <span className="text-muted-foreground text-xs ml-1">+{iva}%</span>}
@@ -673,7 +673,7 @@ export default function InsumosPage() {
         open={!!deletingInsumo}
         onOpenChange={() => setDeletingInsumo(null)}
         title="Eliminar item"
-        description={`¿Eliminar "${deletingInsumo?.nombre}"?`}
+        description={`¿Eliminar "${deletingInsumo?.name}"?`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

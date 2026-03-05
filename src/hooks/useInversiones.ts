@@ -13,13 +13,13 @@ export interface InversionFormData {
   descripcion: string;
   tipo_inversion: string;
   monto_total: number;
-  fecha: string;
-  periodo: string;
+  date: string;
+  period: string;
   vida_util_meses?: number | null;
   estado: string;
   cuotas_total?: number | null;
   cuotas_pagadas?: number;
-  observaciones?: string;
+  notes?: string;
 }
 
 export const TIPO_INVERSION_OPTIONS = [
@@ -39,12 +39,12 @@ export const ESTADO_INVERSION_OPTIONS = [
   { value: 'financiado', label: 'Financiado' },
 ] as const;
 
-export function useInversiones(branchId: string, periodo?: string) {
+export function useInversiones(branchId: string, period?: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['inversiones', branchId, periodo],
-    queryFn: () => fetchInversiones(branchId, periodo),
+    queryKey: ['inversiones', branchId, period],
+    queryFn: () => fetchInversiones(branchId, period),
     enabled: !!user && !!branchId,
   });
 }

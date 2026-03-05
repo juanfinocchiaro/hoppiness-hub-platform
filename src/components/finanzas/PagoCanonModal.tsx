@@ -24,25 +24,25 @@ interface PagoCanonModalProps {
 export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProps) {
   const { create } = usePagoCanonMutations();
   const [form, setForm] = useState({
-    monto: '',
-    fecha_pago: new Date().toISOString().slice(0, 10),
-    medio_pago: 'transferencia',
+    amount: '',
+    payment_date: new Date().toISOString().slice(0, 10),
+    payment_method: 'transfer',
     referencia: '',
-    observaciones: '',
+    notes: '',
   });
 
-  const saldo = canon?.saldo_pendiente ?? 0;
+  const saldo = canon?.pending_balance ?? 0;
 
   const handleSubmit = async () => {
-    if (!canon || !form.monto) return;
+    if (!canon || !form.amount) return;
     await create.mutateAsync({
       canon_liquidacion_id: canon.id,
       branch_id: canon.branch_id,
-      monto: parseFloat(form.monto),
-      fecha_pago: form.fecha_pago,
-      medio_pago: form.medio_pago,
+      amount: parseFloat(form.amount),
+      payment_date: form.payment_date,
+      payment_method: form.payment_method,
       referencia: form.referencia || undefined,
-      observaciones: form.observaciones || undefined,
+      notes: form.notes || undefined,
     });
     onOpenChange(false);
   };
@@ -74,8 +74,8 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
             <Input
               type="number"
               step="0.01"
-              value={form.monto}
-              onChange={(e) => set('monto', e.target.value)}
+              value={form.amount}
+              onChange={(e) => set('amount', e.target.value)}
               placeholder={`Máx $ ${Number(saldo).toLocaleString('es-AR')}`}
             />
           </div>
@@ -84,14 +84,14 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
             <Label>Fecha de pago</Label>
             <Input
               type="date"
-              value={form.fecha_pago}
-              onChange={(e) => set('fecha_pago', e.target.value)}
+              value={form.payment_date}
+              onChange={(e) => set('payment_date', e.target.value)}
             />
           </div>
 
           <div>
             <Label>Medio de pago</Label>
-            <Select value={form.medio_pago} onValueChange={(v) => set('medio_pago', v)}>
+            <Select value={form.payment_method} onValueChange={(v) => set('payment_method', v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -113,8 +113,8 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
           <div>
             <Label>Observaciones</Label>
             <Textarea
-              value={form.observaciones}
-              onChange={(e) => set('observaciones', e.target.value)}
+              value={form.notes}
+              onChange={(e) => set('notes', e.target.value)}
               rows={2}
             />
           </div>
@@ -123,7 +123,7 @@ export function PagoCanonModal({ open, onOpenChange, canon }: PagoCanonModalProp
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={create.isPending || !form.monto}>
+            <Button onClick={handleSubmit} disabled={create.isPending || !form.amount}>
               {create.isPending ? 'Guardando...' : 'Registrar Pago'}
             </Button>
           </div>

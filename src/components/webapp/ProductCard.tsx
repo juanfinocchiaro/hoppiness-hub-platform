@@ -20,7 +20,7 @@ function PromoBadge({ label }: { label: string }) {
   );
 }
 
-function PriceDisplay({ base, promo }: { base: number; promo: number | null }) {
+function PriceDisplay({ base, promo }: { base: number; promo: number | null | undefined }) {
   if (promo != null && promo < base) {
     return (
       <div className="flex items-center gap-1.5">
@@ -106,14 +106,14 @@ export function ProductCard({
               </span>
             )}
             <h3 className="font-brand font-bold text-sm text-foreground leading-tight line-clamp-2">
-              {item.nombre_corto || item.nombre}
+              {item.short_name || item.name}
             </h3>
-            {item.descripcion && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.descripcion}</p>
+            {item.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
             )}
           </div>
           <div className="flex items-center justify-between mt-2">
-            <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
+            <PriceDisplay base={item.base_price} promo={item.precio_promo} />
             <div onClick={(e) => e.stopPropagation()}>
               <QtyControls
                 qty={qty}
@@ -126,11 +126,11 @@ export function ProductCard({
           </div>
         </div>
 
-        {item.imagen_url ? (
+        {item.image_url ? (
           <div className="w-[100px] h-[100px] rounded-lg overflow-hidden shrink-0 bg-muted relative">
             <img
-              src={item.imagen_url}
-              alt={item.nombre}
+              src={item.image_url}
+              alt={item.name}
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -152,11 +152,11 @@ export function ProductCard({
         onClick={onTap}
       >
         {item.promo_etiqueta && <PromoBadge label={item.promo_etiqueta} />}
-        {item.imagen_url ? (
+        {item.image_url ? (
           <div className="aspect-[3/2] w-full overflow-hidden bg-muted">
             <img
-              src={item.imagen_url}
-              alt={item.nombre}
+              src={item.image_url}
+              alt={item.name}
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -169,15 +169,15 @@ export function ProductCard({
 
         <div className="p-3 flex-1 flex flex-col">
           <h3 className="font-brand font-bold text-sm text-foreground leading-tight line-clamp-2">
-            {item.nombre_corto || item.nombre}
+            {item.short_name || item.name}
           </h3>
-          {item.descripcion && (
+          {item.description && (
             <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
-              {item.descripcion}
+              {item.description}
             </p>
           )}
           <div className="flex items-center justify-between mt-auto pt-2">
-            <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
+            <PriceDisplay base={item.base_price} promo={item.precio_promo} />
             <div onClick={(e) => e.stopPropagation()}>
               <QtyControls
                 qty={qty}
@@ -204,11 +204,11 @@ export function ProductCard({
             {item.promo_etiqueta}
           </span>
         )}
-        {item.imagen_url ? (
+        {item.image_url ? (
           <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted">
             <img
-              src={item.imagen_url}
-              alt={item.nombre}
+              src={item.image_url}
+              alt={item.name}
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -222,13 +222,13 @@ export function ProductCard({
 
       <div className="flex-1 min-w-0">
         <h3 className="font-brand font-bold text-sm text-foreground leading-tight line-clamp-2">
-          {item.nombre_corto || item.nombre}
+          {item.short_name || item.name}
         </h3>
-        {item.descripcion && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.descripcion}</p>
+        {item.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</p>
         )}
         <div className="mt-1">
-          <PriceDisplay base={item.precio_base} promo={item.precio_promo} />
+          <PriceDisplay base={item.base_price} promo={item.precio_promo} />
         </div>
       </div>
 

@@ -97,8 +97,8 @@ export default function ChannelPricingPage() {
       ? menuItems
       : menuItems.filter(
           (i) =>
-            i.nombre.toLowerCase().includes(q) ||
-            (i as any).menu_categories?.nombre?.toLowerCase().includes(q),
+            i.name.toLowerCase().includes(q) ||
+            (i as any).menu_categories?.name?.toLowerCase().includes(q),
         );
     return [...items].sort((a, b) => {
       const catA = (a as any).menu_categories?.orden ?? 999;
@@ -111,7 +111,7 @@ export default function ChannelPricingPage() {
   const byCategory = useMemo(() => {
     const acc: Record<string, { items: typeof sortedItems; orden: number }> = {};
     for (const item of sortedItems) {
-      const cat = (item as any).menu_categories?.nombre ?? 'Sin categoría';
+      const cat = (item as any).menu_categories?.name ?? 'Sin categoría';
       const orden = (item as any).menu_categories?.orden ?? 999;
       if (!acc[cat]) acc[cat] = { items: [], orden };
       acc[cat].items.push(item);
@@ -186,9 +186,9 @@ export default function ChannelPricingPage() {
         } as any,
       ]);
       for (const item of byCategory[cat].items) {
-        const row: (string | number)[] = [item.nombre, fmtCurrency(item.precio_base)];
+        const row: (string | number)[] = [item.name, fmtCurrency(item.base_price)];
         for (const ch of TABLE_CHANNELS) {
-          const { price } = getChannelPrice(item.id, item.precio_base, ch.value);
+          const { price } = getChannelPrice(item.id, item.base_price, ch.value);
           row.push(fmtCurrency(price));
         }
         body.push(row);
@@ -313,18 +313,18 @@ export default function ChannelPricingPage() {
                           {catItems.map((item) => (
                             <TableRow key={item.id}>
                               <TableCell className="font-medium pl-5 text-sm py-1.5">
-                                {item.nombre}
+                                {item.name}
                               </TableCell>
                               <TableCell className="text-right tabular-nums text-sm py-1.5 text-muted-foreground">
-                                {fmtCurrency(item.precio_base)}
+                                {fmtCurrency(item.base_price)}
                               </TableCell>
                               {TABLE_CHANNELS.map((ch) => {
                                 const { price, isOverride } = getChannelPrice(
                                   item.id,
-                                  item.precio_base,
+                                  item.base_price,
                                   ch.value,
                                 );
-                                const diffLabel = fmtPct(item.precio_base, price);
+                                const diffLabel = fmtPct(item.base_price, price);
                                 const isEditing =
                                   editCell?.itemId === item.id && editCell?.channel === ch.value;
 
@@ -501,7 +501,7 @@ function ChannelRulesPanel({
                 {CHANNELS.map((ch) => {
                   const list = priceLists.find((l) => l.channel === ch.value);
                   if (!list) return null;
-                  const isBase = ch.value === 'mostrador' || ch.value === 'webapp';
+                  const isBase = ch.value === 'counter' || ch.value === 'webapp';
 
                   return (
                     <TableRow key={ch.value}>
@@ -574,7 +574,7 @@ function ChannelRulesPanel({
                               {CHANNELS.filter(
                                 (c) =>
                                   c.value !== ch.value &&
-                                  c.value !== 'mostrador' &&
+                                  c.value !== 'counter' &&
                                   c.value !== 'webapp',
                               ).map((c) => (
                                 <SelectItem key={c.value} value={c.value}>

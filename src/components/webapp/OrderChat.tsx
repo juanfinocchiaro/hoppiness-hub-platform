@@ -12,8 +12,8 @@ import { formatTime } from '@/lib/formatters';
 interface ChatMessage {
   id: string;
   sender_type: 'cliente' | 'local';
-  sender_nombre: string;
-  mensaje: string;
+  sender_name: string;
+  message: string;
   leido: boolean;
   created_at: string;
 }
@@ -107,8 +107,8 @@ export function OrderChat({
         },
         body: JSON.stringify({
           code: trackingCode,
-          mensaje: text,
-          sender_nombre: clienteNombre || 'Cliente',
+          message: text,
+          sender_name: clienteNombre || 'Cliente',
         }),
       });
 
@@ -185,7 +185,7 @@ export function OrderChat({
                       : 'bg-card border rounded-bl-sm'
                   }`}
                 >
-                  <p className="text-sm break-words">{msg.mensaje}</p>
+                  <p className="text-sm break-words">{msg.message}</p>
                   <p
                     className={`text-[10px] mt-0.5 ${
                       msg.sender_type === 'cliente' ? 'opacity-70' : 'text-muted-foreground'

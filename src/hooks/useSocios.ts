@@ -11,12 +11,12 @@ import {
 
 export interface SocioFormData {
   branch_id: string;
-  nombre: string;
+  name: string;
   cuit?: string;
   email?: string;
-  telefono?: string;
+  phone?: string;
   user_id?: string | null;
-  porcentaje_participacion: number;
+  ownership_percentage: number;
   fecha_ingreso: string;
   limite_retiro_mensual?: number | null;
 }
@@ -25,10 +25,10 @@ export interface MovimientoSocioFormData {
   branch_id: string;
   socio_id: string;
   tipo: string;
-  monto: number;
-  fecha: string;
-  periodo?: string;
-  observaciones?: string;
+  amount: number;
+  date: string;
+  period?: string;
+  notes?: string;
 }
 
 export const TIPO_MOVIMIENTO_OPTIONS = [

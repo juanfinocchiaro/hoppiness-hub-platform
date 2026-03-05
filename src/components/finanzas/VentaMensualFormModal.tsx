@@ -56,34 +56,34 @@ export function VentaMensualFormModal({
   const isEditing = !!venta;
 
   const [form, setForm] = useState({
-    periodo: periodo || getCurrentPeriodo(),
-    venta_total: '',
-    efectivo: '',
-    observaciones: '',
+    period: periodo || getCurrentPeriodo(),
+    total_sales: '',
+    cash: '',
+    notes: '',
   });
 
   useEffect(() => {
     if (open) {
       if (venta) {
         setForm({
-          periodo: venta.periodo,
-          venta_total: String(venta.venta_total ?? 0),
-          efectivo: String(venta.efectivo ?? 0),
-          observaciones: venta.observaciones || '',
+          period: venta.period,
+          total_sales: String(venta.total_sales ?? 0),
+          cash: String(venta.cash ?? 0),
+          notes: venta.notes || '',
         });
       } else {
         setForm({
-          periodo: periodo,
-          venta_total: '',
-          efectivo: '',
-          observaciones: '',
+          period: periodo,
+          total_sales: '',
+          cash: '',
+          notes: '',
         });
       }
     }
   }, [open, venta, periodo]);
 
-  const ventaTotal = parseFloat(form.venta_total) || 0;
-  const efectivo = parseFloat(form.efectivo) || 0;
+  const ventaTotal = parseFloat(form.total_sales) || 0;
+  const efectivo = parseFloat(form.cash) || 0;
   const online = ventaTotal - efectivo;
   const marcaEfectivo = efectivo * 0.045;
   const mktEfectivo = efectivo * 0.005;
@@ -95,12 +95,12 @@ export function VentaMensualFormModal({
   const pctEfectivo = ventaTotal > 0 ? ((efectivo / ventaTotal) * 100).toFixed(1) : '0.0';
 
   const handleSubmit = async () => {
-    if (!form.venta_total) return;
+    if (!form.total_sales) return;
 
     const payload = {
-      venta_total: ventaTotal,
-      efectivo: efectivo,
-      observaciones: form.observaciones || undefined,
+      total_sales: ventaTotal,
+      cash: efectivo,
+      notes: form.notes || undefined,
     };
 
     if (isEditing) {
@@ -108,7 +108,7 @@ export function VentaMensualFormModal({
     } else {
       await create.mutateAsync({
         branch_id: branchId,
-        periodo: form.periodo,
+        period: form.period,
         ...payload,
       });
     }
@@ -127,7 +127,7 @@ export function VentaMensualFormModal({
           </DialogTitle>
           <DialogDescription>
             {branchName && <>{branchName} — </>}
-            {formatPeriodoLargo(form.periodo)}
+            {formatPeriodoLargo(form.period)}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,8 +141,8 @@ export function VentaMensualFormModal({
               <Input
                 type="number"
                 step="0.01"
-                value={form.venta_total}
-                onChange={(e) => set('venta_total', e.target.value)}
+                value={form.total_sales}
+                onChange={(e) => set('total_sales', e.target.value)}
                 placeholder="0.00"
                 className="pl-7"
               />
@@ -158,8 +158,8 @@ export function VentaMensualFormModal({
               <Input
                 type="number"
                 step="0.01"
-                value={form.efectivo}
-                onChange={(e) => set('efectivo', e.target.value)}
+                value={form.cash}
+                onChange={(e) => set('cash', e.target.value)}
                 placeholder="0.00"
                 className="pl-7"
               />
@@ -242,8 +242,8 @@ export function VentaMensualFormModal({
           <div>
             <Label>Observaciones</Label>
             <Textarea
-              value={form.observaciones}
-              onChange={(e) => set('observaciones', e.target.value)}
+              value={form.notes}
+              onChange={(e) => set('notes', e.target.value)}
               rows={2}
               placeholder="Notas adicionales sobre el período..."
             />
@@ -253,7 +253,7 @@ export function VentaMensualFormModal({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={isPending || !form.venta_total}>
+            <Button onClick={handleSubmit} disabled={isPending || !form.total_sales}>
               {isPending ? 'Guardando...' : isEditing ? 'Guardar Cambios' : 'Registrar'}
             </Button>
           </div>

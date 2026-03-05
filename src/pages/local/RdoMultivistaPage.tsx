@@ -82,7 +82,7 @@ export default function RdoMultivistaPage() {
     const base = data?.opciones_filtros.categorias || [];
     const query = categoriaSearch.trim().toLowerCase();
     if (!query) return base;
-    return base.filter((c) => c.nombre.toLowerCase().includes(query));
+    return base.filter((c) => c.name.toLowerCase().includes(query));
   }, [data?.opciones_filtros.categorias, categoriaSearch]);
 
   const productosDisponibles = useMemo(() => {
@@ -91,7 +91,7 @@ export default function RdoMultivistaPage() {
     if (!query) return base;
     return base.filter(
       (p) =>
-        p.nombre.toLowerCase().includes(query) ||
+        p.name.toLowerCase().includes(query) ||
         (p.categoria_nombre || '').toLowerCase().includes(query),
     );
   }, [data?.opciones_filtros.productos, productoSearch]);
@@ -339,7 +339,7 @@ export default function RdoMultivistaPage() {
                           }))
                         }
                       />
-                      <span>{cat.nombre}</span>
+                      <span>{cat.name}</span>
                     </label>
                   );
                 })}
@@ -370,7 +370,7 @@ export default function RdoMultivistaPage() {
                           }))
                         }
                       />
-                      <span>{prod.nombre}</span>
+                      <span>{prod.name}</span>
                       {prod.categoria_nombre && (
                         <Badge variant="outline">{prod.categoria_nombre}</Badge>
                       )}

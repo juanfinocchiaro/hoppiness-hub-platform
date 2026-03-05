@@ -24,19 +24,19 @@ export function useItemRemoviblesMutations() {
       item_carta_id,
       insumo_id,
       activo,
-      nombre_display,
+      display_name,
     }: {
       item_carta_id: string;
       insumo_id: string;
       activo: boolean;
-      nombre_display?: string;
+      display_name?: string;
     }) => {
       if (activo) {
         await upsertRemovible({
           item_carta_id,
           insumo_id,
           preparacion_id: null,
-          nombre_display: nombre_display || null,
+          display_name: display_name || null,
         });
       } else {
         await deleteRemovibleByInsumo(item_carta_id, insumo_id);
@@ -53,19 +53,19 @@ export function useItemRemoviblesMutations() {
       item_carta_id,
       preparacion_id,
       activo,
-      nombre_display,
+      display_name,
     }: {
       item_carta_id: string;
       preparacion_id: string;
       activo: boolean;
-      nombre_display?: string;
+      display_name?: string;
     }) => {
       if (activo) {
         await upsertRemovible({
           item_carta_id,
           insumo_id: null,
           preparacion_id,
-          nombre_display: nombre_display || null,
+          display_name: display_name || null,
         });
       } else {
         await deleteRemovibleByPreparacion(item_carta_id, preparacion_id);
@@ -77,17 +77,16 @@ export function useItemRemoviblesMutations() {
     onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
-  const updateNombreDisplayMut = useMutation({
-    mutationFn: ({ id, nombre_display }: { id: string; nombre_display: string }) =>
-      updateRemovibleNombreDisplay(id, nombre_display),
+  const updateDisplayNameMut = useMutation({
+    mutationFn: ({ id, display_name }: { id: string; display_name: string }) =>
+      updateRemovibleNombreDisplay(id, display_name),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['item-removibles'] });
     },
     onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });
 
-  // Keep backward compat
   const toggle = toggleInsumo;
 
-  return { toggle, toggleInsumo, togglePreparacion, updateNombreDisplay: updateNombreDisplayMut };
+  return { toggle, toggleInsumo, togglePreparacion, updateDisplayName: updateDisplayNameMut };
 }

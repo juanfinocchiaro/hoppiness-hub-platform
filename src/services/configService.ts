@@ -85,11 +85,11 @@ export async function updateBranchShiftConfig(
 function toClosureConfigItem(row: any): ClosureConfigItem {
   return {
     id: row.id,
-    type: (row.type ?? row.tipo) as ConfigTipo,
-    key: row.key ?? row.clave,
-    label: row.label ?? row.etiqueta,
+    type: row.type as ConfigTipo,
+    key: row.key,
+    label: row.label,
     categoria_padre: row.categoria_padre,
-    sort_order: row.sort_order ?? row.orden,
+    sort_order: row.sort_order,
     is_active: row.is_active,
   };
 }

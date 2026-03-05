@@ -3,7 +3,7 @@ import type { useItemCartaMutations } from '@/hooks/useItemsCarta';
 import type { useGruposOpcionalesMutations } from '@/hooks/useGruposOpcionales';
 
 export type ItemCartaRow = any & {
-  menu_categories: { id: string; nombre: string; orden: number | null } | null;
+  menu_categories: { id: string; name: string; orden: number | null } | null;
   rdo_categories: { code: string; name: string } | null;
 };
 
@@ -25,7 +25,7 @@ export interface GlobalStats {
 
 export interface EI {
   id: string;
-  nombre: string;
+  name: string;
   cat: string;
   catId: string;
   costo: number;
@@ -42,7 +42,7 @@ export interface EI {
 }
 
 export interface CG {
-  nombre: string;
+  name: string;
   id: string;
   items: EI[];
   cmv: number;
@@ -57,7 +57,7 @@ export interface ComposicionRow {
   tipo: 'preparacion' | 'insumo';
   preparacion_id: string;
   insumo_id: string;
-  cantidad: number;
+  quantity: number;
   _label: string;
   _costo: number;
 }
@@ -66,7 +66,7 @@ export interface GrupoEditItem {
   tipo: 'insumo' | 'preparacion';
   insumo_id: string;
   preparacion_id: string;
-  cantidad: number;
+  quantity: number;
   costo_unitario: number;
   _nombre: string;
 }

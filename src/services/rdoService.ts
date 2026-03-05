@@ -361,7 +361,7 @@ export async function fetchVentasMensuales(branchId: string) {
     .select('*')
     .eq('branch_id', branchId)
     .is('deleted_at', null)
-    .order('periodo', { ascending: false });
+    .order('period', { ascending: false });
   if (error) throw error;
   return (data as any[]) ?? [];
 }
@@ -374,19 +374,19 @@ export async function createVentaMensual(payload: VentaMensualPayload, userId?: 
   const { data: existing } = await fromUntyped('branch_monthly_sales')
     .select('id')
     .eq('branch_id', payload.branch_id!)
-    .eq('periodo', payload.periodo!)
+    .eq('period', payload.periodo!)
     .not('deleted_at', 'is', null)
     .maybeSingle();
 
   if (existing) {
     const { data: result, error } = await fromUntyped('branch_monthly_sales')
       .update({
-        venta_total: vt,
+        total_sales: vt,
         efectivo: ef,
         fc_total: fc,
         ft_total: ef,
-        observaciones: payload.observaciones,
-        cargado_por: userId,
+        notes: payload.observaciones,
+        loaded_by: userId,
         deleted_at: null,
       } as any)
       .eq('id', (existing as any).id)
@@ -399,13 +399,13 @@ export async function createVentaMensual(payload: VentaMensualPayload, userId?: 
   const { data: result, error } = await fromUntyped('branch_monthly_sales')
     .insert({
       branch_id: payload.branch_id!,
-      periodo: payload.periodo!,
-      venta_total: vt,
+      period: payload.periodo!,
+      total_sales: vt,
       efectivo: ef,
       fc_total: fc,
       ft_total: ef,
-      observaciones: payload.observaciones,
-      cargado_por: userId,
+      notes: payload.observaciones,
+      loaded_by: userId,
     } as any)
     .select()
     .single();
@@ -419,11 +419,11 @@ export async function updateVentaMensual(id: string, payload: VentaMensualPayloa
   const fc = vt - ef;
   const { error } = await fromUntyped('branch_monthly_sales')
     .update({
-      venta_total: vt,
+      total_sales: vt,
       efectivo: ef,
       fc_total: fc,
       ft_total: ef,
-      observaciones: payload.observaciones,
+      notes: payload.observaciones,
     } as any)
     .eq('id', id);
   if (error) throw error;
@@ -734,7 +734,7 @@ export async function fetchPosVentasAgregadas(branchId: string, periodo: string)
   const { data: pedidos, error: pedidosError } = await fromUntyped('orders')
     .select('id, total')
     .eq('branch_id', branchId)
-    .in('estado', ['entregado', 'listo'])
+    .in('status', ['entregado', 'listo'])
     .gte('created_at', startDate)
     .lt('created_at', endDate);
 
@@ -750,12 +750,12 @@ export async function fetchPosVentasAgregadas(branchId: string, periodo: string)
   for (let i = 0; i < pedidoIds.length; i += 100) {
     const batch = pedidoIds.slice(i, i + 100);
     const { data: pagos, error: pagosError } = await fromUntyped('order_payments')
-      .select('monto, metodo')
+      .select('amount, method')
       .in('pedido_id', batch)
-      .eq('metodo', 'efectivo');
+      .eq('method', 'cash');
 
     if (pagosError) throw pagosError;
-    totalEfectivo += (pagos || []).reduce((sum, p) => sum + Number(p.monto || 0), 0);
+    totalEfectivo += (pagos || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
   }
 
   return {
@@ -852,10 +852,10 @@ export async function fetchGastos(branchId: string, startDate: string, endDate: 
   const { data, error } = await fromUntyped('expenses')
     .select('*')
     .eq('branch_id', branchId)
-    .gte('fecha', startDate)
-    .lte('fecha', endDate)
+    .gte('date', startDate)
+    .lte('date', endDate)
     .is('deleted_at', null)
-    .order('fecha', { ascending: false });
+    .order('date', { ascending: false });
   if (error) throw error;
   return data || [];
 }
@@ -887,18 +887,18 @@ export async function fetchShiftClosureReport(
   const [ordersRes, cancelledRes, cashShiftsRes] = await Promise.all([
     fromUntyped('orders')
       .select(
-        `id, created_at, total, estado, canal_venta, tipo_servicio, canal_app,
-        order_payments (metodo, monto),
-        order_items (nombre, cantidad, precio_unitario, subtotal)`,
+        `id, created_at, total, status, canal_venta, service_type, canal_app,
+        order_payments (method, amount),
+        order_items (name, quantity, unit_price, subtotal)`,
       )
       .eq('branch_id', branchId)
       .gte('created_at', startIso)
       .lt('created_at', endIso)
-      .neq('estado', 'cancelado'),
+      .neq('status', 'cancelado'),
     fromUntyped('orders')
-      .select('id, numero_llamador, total, cliente_notas, created_at')
+      .select('id, caller_number, total, cliente_notas, created_at')
       .eq('branch_id', branchId)
-      .eq('estado', 'cancelado')
+      .eq('status', 'cancelado')
       .gte('created_at', startIso)
       .lt('created_at', endIso),
     supabase

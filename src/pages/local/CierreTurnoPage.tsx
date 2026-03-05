@@ -95,8 +95,8 @@ export default function CierreTurnoPage() {
       .flatMap((o) => o.order_payments || [])
       .reduce(
         (acc, pago) => {
-          const method = pago.metodo || 'otro';
-          acc[method] = (acc[method] || 0) + Number(pago.monto || 0);
+          const method = pago.method || 'otro';
+          acc[method] = (acc[method] || 0) + Number(pago.amount || 0);
           return acc;
         },
         {} as Record<string, number>,
@@ -120,11 +120,11 @@ export default function CierreTurnoPage() {
       .flatMap((o) => o.order_items || [])
       .reduce(
         (acc, item) => {
-          const name = item.nombre || 'Producto';
+          const name = item.name || 'Producto';
           if (!acc[name]) {
             acc[name] = { quantity: 0, total: 0 };
           }
-          acc[name].quantity += item.cantidad || 0;
+          acc[name].quantity += item.quantity || 0;
           acc[name].total += Number(item.subtotal || 0);
           return acc;
         },
@@ -299,7 +299,7 @@ export default function CierreTurnoPage() {
                   <div key={method} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        {method === 'efectivo' ? (
+                        {method === 'cash' ? (
                           <Banknote className="w-4 h-4" />
                         ) : (
                           <CreditCard className="w-4 h-4" />
@@ -455,7 +455,7 @@ export default function CierreTurnoPage() {
                 <TableBody>
                   {shiftData.cancelledOrders.map((order: any) => (
                     <TableRow key={order.id}>
-                      <TableCell>#{order.numero_llamador || '-'}</TableCell>
+                      <TableCell>#{order.caller_number || '-'}</TableCell>
                       <TableCell>{format(new Date(order.created_at), 'HH:mm')}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(order.total || 0)}

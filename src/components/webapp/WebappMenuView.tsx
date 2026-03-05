@@ -64,7 +64,7 @@ export function WebappMenuView({
 
   const promoItems = useMemo(() => {
     return items.filter(
-      (i) => i.promo_etiqueta || (i.precio_promo != null && i.precio_promo < i.precio_base),
+      (i) => i.promo_etiqueta || (i.precio_promo != null && i.precio_promo < i.base_price),
     );
   }, [items]);
 
@@ -73,16 +73,16 @@ export function WebappMenuView({
     const filtered = debouncedSearch.trim()
       ? items.filter(
           (i) =>
-            i.nombre.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-            i.descripcion?.toLowerCase().includes(debouncedSearch.toLowerCase()),
+            i.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            i.description?.toLowerCase().includes(debouncedSearch.toLowerCase()),
         )
       : nonPromoItems;
 
-    const grouped: Record<string, { nombre: string; orden: number; items: WebappMenuItem[] }> = {};
+    const grouped: Record<string, { name: string; orden: number; items: WebappMenuItem[] }> = {};
     filtered.forEach((item) => {
-      const cat = item.categoria_nombre || 'Otros';
+      const cat = item.categoria_name || 'Otros';
       const orden = item.categoria_orden ?? 999;
-      if (!grouped[cat]) grouped[cat] = { nombre: cat, orden, items: [] };
+      if (!grouped[cat]) grouped[cat] = { name: cat, orden, items: [] };
       grouped[cat].items.push(item);
     });
 
@@ -91,7 +91,7 @@ export function WebappMenuView({
 
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0].nombre);
+      setActiveCategory(categories[0].name);
     }
   }, [categories, activeCategory]);
 
@@ -164,9 +164,9 @@ export function WebappMenuView({
 
   const renderProductCard = (item: WebappMenuItem, layout: 'grid' | 'list' | 'desktop') => {
     const price =
-      item.precio_promo != null && item.precio_promo < item.precio_base
+      item.precio_promo != null && item.precio_promo < item.base_price
         ? item.precio_promo
-        : item.precio_base;
+        : item.base_price;
     return (
       <ProductCard
         key={item.id}
@@ -175,7 +175,7 @@ export function WebappMenuView({
         layout={layout}
         onTap={() => onProductClick(item)}
         onQuickAdd={() =>
-          cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
+          cart.quickAdd(item.id, item.name, price, item.image_url, {
             sourceItemId: item.source_item_id ?? item.id,
             isPromoArticle: item.is_promo_article,
             promocionId: item.promocion_id,
@@ -184,7 +184,7 @@ export function WebappMenuView({
           })
         }
         onIncrement={() =>
-          cart.quickAdd(item.id, item.nombre, price, item.imagen_url, {
+          cart.quickAdd(item.id, item.name, price, item.image_url, {
             sourceItemId: item.source_item_id ?? item.id,
             isPromoArticle: item.is_promo_article,
             promocionId: item.promocion_id,
@@ -194,7 +194,7 @@ export function WebappMenuView({
         }
         onDecrement={() => {
           const entry = cart.items.find((i) => i.itemId === item.id);
-          if (entry) cart.updateQuantity(entry.cartId, entry.cantidad - 1);
+          if (entry) cart.updateQuantity(entry.cartId, entry.quantity - 1);
         }}
       />
     );
@@ -287,18 +287,18 @@ export function WebappMenuView({
             >
               {categories.map((cat) => (
                 <button
-                  key={cat.nombre}
-                  onClick={() => scrollToCategory(cat.nombre)}
+                  key={cat.name}
+                  onClick={() => scrollToCategory(cat.name)}
                   className={`
                     whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0
                     ${
-                      activeCategory === cat.nombre
+                      activeCategory === cat.name
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     }
                   `}
                 >
-                  {cat.nombre}
+                  {cat.name}
                 </button>
               ))}
             </div>
@@ -334,18 +334,18 @@ export function WebappMenuView({
                 )}
                 {categories.map((cat) => (
                   <button
-                    key={cat.nombre}
-                    onClick={() => scrollToCategory(cat.nombre)}
+                    key={cat.name}
+                    onClick={() => scrollToCategory(cat.name)}
                     className={`
                       w-full text-left px-4 py-2.5 text-sm rounded-lg transition-colors mb-0.5
                       ${
-                        activeCategory === cat.nombre
+                        activeCategory === cat.name
                           ? 'bg-primary/10 text-primary font-bold'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }
                     `}
                   >
-                    {cat.nombre}
+                    {cat.name}
                   </button>
                 ))}
               </nav>
@@ -364,22 +364,22 @@ export function WebappMenuView({
                       onClick={() => onProductClick(item)}
                       className="shrink-0 flex items-center gap-2 bg-card rounded-full border border-accent/30 px-3 py-1.5 hover:border-accent transition-colors"
                     >
-                      {item.imagen_url && (
+                      {item.image_url && (
                         <img
-                          src={item.imagen_url}
+                          src={item.image_url}
                           alt=""
                           className="w-7 h-7 rounded-full object-cover"
                         />
                       )}
                       <span className="text-xs font-bold text-foreground whitespace-nowrap">
-                        {item.nombre_corto || item.nombre}
+                        {item.short_name || item.name}
                       </span>
                       {item.promo_etiqueta && (
                         <span className="bg-accent text-accent-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">
                           {item.promo_etiqueta}
                         </span>
                       )}
-                      {item.precio_promo != null && item.precio_promo < item.precio_base && (
+                      {item.precio_promo != null && item.precio_promo < item.base_price && (
                         <span className="text-xs font-bold text-accent">
                           ${item.precio_promo.toLocaleString('es-AR')}
                         </span>
@@ -396,7 +396,7 @@ export function WebappMenuView({
             ) : categories.length === 0 && !promoItems.length ? (
               <div className="text-center py-20 text-muted-foreground">
                 {debouncedSearch
-                  ? 'No encontramos productos con ese nombre. Probá con otra búsqueda.'
+                  ? 'No encontramos productos con ese name. Probá con otra búsqueda.'
                   : 'El menú se está preparando. Volvé en un ratito.'}
               </div>
             ) : (
@@ -440,11 +440,11 @@ export function WebappMenuView({
                 {/* Regular categories */}
                 {categories.map((cat) => (
                   <div
-                    key={cat.nombre}
+                    key={cat.name}
                     ref={(el) => {
-                      categoryRefs.current[cat.nombre] = el;
+                      categoryRefs.current[cat.name] = el;
                     }}
-                    data-category={cat.nombre}
+                    data-category={cat.name}
                     style={{ scrollMarginTop: headerH }}
                   >
                     <div
@@ -452,7 +452,7 @@ export function WebappMenuView({
                       style={{ top: headerH }}
                     >
                       <h2 className="font-brand text-sm font-black text-primary uppercase tracking-wide">
-                        {cat.nombre}
+                        {cat.name}
                         <span className="text-xs font-normal text-muted-foreground ml-2 lowercase tracking-normal">
                           {cat.items.length} {cat.items.length === 1 ? 'producto' : 'productos'}
                         </span>

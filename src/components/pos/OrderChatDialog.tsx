@@ -28,8 +28,8 @@ import { formatTime } from '@/lib/formatters';
 interface ChatMessage {
   id: string;
   sender_type: string;
-  sender_nombre: string;
-  mensaje: string;
+  sender_name: string;
+  message: string;
   leido: boolean;
   created_at: string;
 }
@@ -76,7 +76,7 @@ export function OrderChatDialog({
         branch_id: branchId,
         sender_type: 'local',
         sender_id: user?.id,
-        sender_nombre: branchName,
+        sender_name: branchName,
         mensaje: text.trim(),
       });
     },
@@ -149,9 +149,9 @@ export function OrderChatDialog({
                 }`}
               >
                 {msg.sender_type === 'cliente' && (
-                  <p className="text-[10px] font-semibold mb-0.5">{msg.sender_nombre}</p>
+                  <p className="text-[10px] font-semibold mb-0.5">{msg.sender_name}</p>
                 )}
-                <p className="text-sm break-words">{msg.mensaje}</p>
+                <p className="text-sm break-words">{msg.message}</p>
                 <p
                   className={`text-[10px] mt-0.5 ${
                     msg.sender_type === 'local' ? 'opacity-70' : 'text-muted-foreground'

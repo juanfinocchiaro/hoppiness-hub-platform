@@ -37,15 +37,15 @@ export const txtColor = {
 
 export function enrich(items: ItemCartaRow[]): EI[] {
   return items.map((it) => {
-    const c = Number(it.costo_total) || 0,
-      p = Number(it.precio_base) || 0;
+    const c = Number(it.total_cost) || 0,
+      p = Number(it.base_price) || 0;
     const obj = Number(it.fc_objetivo) || 32;
     const n = neto(p),
       fc = p > 0 ? calcFC(c, p) : 0;
     return {
       id: it.id,
-      nombre: it.nombre,
-      cat: it.menu_categories?.nombre || 'Sin categoría',
+      name: it.name,
+      cat: it.menu_categories?.name || 'Sin categoría',
       catId: it.categoria_carta_id || '_none',
       costo: c,
       precio: p,
@@ -79,15 +79,15 @@ export function groupByCat(items: EI[], categorias?: any[]): CG[] {
       const mg = w.reduce((s, i) => s + i.margen, 0) / n;
       const cat = catMap.get(id);
       return {
-        nombre: ci[0]?.cat,
+        name: ci[0]?.cat,
         id,
         items: ci,
         cmv,
         obj,
         margen: mg,
         color: fcColor(cmv, obj),
-        hidden: cat?.visible_en_carta === false,
-        orden: cat?.orden ?? 999,
+        hidden: cat?.is_visible_menu === false,
+        orden: cat?.sort_order ?? 999,
       };
     })
     .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));

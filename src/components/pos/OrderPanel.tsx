@@ -94,28 +94,28 @@ export function OrderPanel({
               <div key={`${it.item_carta_id}-${idx}`} className="p-2 rounded-lg bg-muted/50">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{it.nombre}</p>
+                    <p className="text-sm font-medium truncate">{it.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {it.precio_referencia && it.precio_referencia > it.precio_unitario ? (
+                      {it.reference_price && it.reference_price > it.unit_price ? (
                         <>
                           <span className="line-through mr-1">
-                            $ {it.precio_referencia.toLocaleString('es-AR')}
+                            $ {it.reference_price.toLocaleString('es-AR')}
                           </span>
                           <span className="text-destructive font-semibold">
-                            $ {it.precio_unitario.toLocaleString('es-AR')}
+                            $ {it.unit_price.toLocaleString('es-AR')}
                           </span>
-                          <span className="ml-1"> × {it.cantidad}</span>
+                          <span className="ml-1"> × {it.quantity}</span>
                         </>
                       ) : (
                         <>
-                          $ {it.precio_unitario.toLocaleString('es-AR')} × {it.cantidad}
+                          $ {it.unit_price.toLocaleString('es-AR')} × {it.quantity}
                         </>
                       )}
                     </p>
                     {/* Show existing notes (from modifiers or manual) */}
-                    {it.notas && editingNoteIdx !== idx && (
+                    {it.notes && editingNoteIdx !== idx && (
                       <div className="mt-0.5 space-y-0">
-                        {it.notas.split(/[,|]/).map((note, ni) => {
+                        {it.notes.split(/[,|]/).map((note, ni) => {
                           const trimmed = note.trim();
                           return trimmed ? (
                             <p key={ni} className="text-xs text-primary truncate">
@@ -132,11 +132,11 @@ export function OrderPanel({
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => onUpdateQty(idx, -1)}
-                      disabled={it.cantidad <= 1}
+                      disabled={it.quantity <= 1}
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </Button>
-                    <span className="text-sm font-medium w-6 text-center">{it.cantidad}</span>
+                    <span className="text-sm font-medium w-6 text-center">{it.quantity}</span>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -170,7 +170,7 @@ export function OrderPanel({
                   <div className="flex items-center gap-1.5 mt-1.5">
                     <Input
                       placeholder="Ej: sin lechuga, bien cocida..."
-                      value={it.notas || ''}
+                      value={it.notes || ''}
                       onChange={(e) => onUpdateNotes(idx, e.target.value)}
                       className="h-8 text-xs flex-1"
                       autoFocus

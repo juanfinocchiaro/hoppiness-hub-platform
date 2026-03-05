@@ -37,11 +37,11 @@ const CANALES_DEFAULT = [
 ];
 
 const MEDIOS_DEFAULT = [
-  { id: 'efectivo', label: 'Efectivo' },
-  { id: 'debito', label: 'Débito' },
-  { id: 'credito', label: 'Crédito' },
+  { id: 'cash', label: 'Efectivo' },
+  { id: 'debit_card', label: 'Débito' },
+  { id: 'credit_card', label: 'Crédito' },
   { id: 'qr', label: 'QR' },
-  { id: 'transferencia', label: 'Transferencia' },
+  { id: 'transfer', label: 'Transferencia' },
 ];
 
 const RANGE_OPTIONS = [

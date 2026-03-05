@@ -33,7 +33,7 @@ import {
 } from '@/hooks/useCodigosDescuento';
 
 const EMPTY_FORM: CodigoDescuentoFormData = {
-  codigo: '',
+  code: '',
   tipo: 'descuento_porcentaje',
   valor: 0,
   usos_maximos: null,
@@ -62,7 +62,7 @@ export default function CodigosDescuentoPage() {
   const openEdit = (code: CodigoDescuento) => {
     setEditing(code);
     setForm({
-      codigo: code.codigo,
+      code: code.code,
       tipo: code.tipo,
       valor: code.valor,
       usos_maximos: code.usos_maximos,
@@ -77,7 +77,7 @@ export default function CodigosDescuentoPage() {
   };
 
   const handleSubmit = async () => {
-    if (!form.codigo.trim()) {
+    if (!form.code.trim()) {
       toast.error('Ingresá un código');
       return;
     }
@@ -156,14 +156,14 @@ export default function CodigosDescuentoPage() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <code className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
-                        {code.codigo}
+                        {code.code}
                       </code>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
                         onClick={() => {
-                          navigator.clipboard.writeText(code.codigo);
+                          navigator.clipboard.writeText(code.code);
                           toast.success('Código copiado');
                         }}
                       >
@@ -213,8 +213,8 @@ export default function CodigosDescuentoPage() {
             <div className="space-y-1.5">
               <Label>Código *</Label>
               <Input
-                value={form.codigo}
-                onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value.toUpperCase() }))}
+                value={form.code}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
                 placeholder="BIENVENIDO20"
                 className="font-mono"
               />
@@ -319,7 +319,7 @@ export default function CodigosDescuentoPage() {
         open={!!deleting}
         onOpenChange={() => setDeleting(null)}
         title="Eliminar código"
-        description={`¿Eliminar el código "${deleting?.codigo}"?`}
+        description={`¿Eliminar el código "${deleting?.code}"?`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

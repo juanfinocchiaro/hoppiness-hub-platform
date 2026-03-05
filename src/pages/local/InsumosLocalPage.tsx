@@ -29,7 +29,7 @@ export default function InsumosLocalPage() {
   const [deletingInsumo, setDeletingInsumo] = useState<Insumo | null>(null);
 
   const filtered = insumos?.filter((i: any) =>
-    i.nombre.toLowerCase().includes(search.toLowerCase()),
+    i.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -91,10 +91,10 @@ export default function InsumosLocalPage() {
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <p className="font-medium">{row.nombre}</p>
-                      {row.descripcion && (
+                      <p className="font-medium">{row.name}</p>
+                      {row.description && (
                         <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {row.descripcion}
+                          {row.description}
                         </p>
                       )}
                     </TableCell>
@@ -108,14 +108,14 @@ export default function InsumosLocalPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {row.categorias_insumo?.nombre || '—'}
+                      {row.supply_categories?.name || '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{row.unidad_base}</Badge>
+                      <Badge variant="outline">{row.base_unit}</Badge>
                     </TableCell>
                     <TableCell>
-                      {row.precio_referencia
-                        ? `$${Number(row.precio_referencia).toLocaleString('es-AR')}`
+                      {row.reference_price
+                        ? `$${Number(row.reference_price).toLocaleString('es-AR')}`
                         : '—'}
                     </TableCell>
                     <TableCell>
@@ -163,7 +163,7 @@ export default function InsumosLocalPage() {
         open={!!deletingInsumo}
         onOpenChange={() => setDeletingInsumo(null)}
         title="Eliminar insumo"
-        description={`¿Eliminar "${deletingInsumo?.nombre}"?`}
+        description={`¿Eliminar "${deletingInsumo?.name}"?`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

@@ -19,13 +19,13 @@ import { normalizePhone } from "@/lib/normalizePhone";
 
 export interface PedidoItemInput {
   item_carta_id: string;
-  nombre: string;
-  cantidad: number;
-  precio_unitario: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
   subtotal: number;
-  notas?: string;
+  notes?: string;
   estacion?: string;
-  precio_referencia?: number;
+  reference_price?: number;
   categoria_carta_id?: string | null;
   promo_descuento?: number;
 }
@@ -38,7 +38,7 @@ export interface PaymentLineInput {
 
 export interface CreatePedidoParams {
   items: PedidoItemInput[];
-  tipo?: "mostrador" | "delivery" | "webapp";
+  tipo?: "counter" | "delivery" | "webapp";
   descuento?: number;
   metodoPago?: string;
   montoRecibido?: number;
@@ -56,11 +56,11 @@ export function useOrders(branchId: string) {
   });
 }
 
-function resolveTipo(orderConfig?: OrderConfig): "mostrador" | "delivery" | "webapp" {
-  if (!orderConfig) return "mostrador";
+function resolveTipo(orderConfig?: OrderConfig): "counter" | "delivery" | "webapp" {
+  if (!orderConfig) return "counter";
   if (orderConfig.canalVenta === "apps") return "webapp";
   if (orderConfig.tipoServicio === "delivery") return "delivery";
-  return "mostrador";
+  return "counter";
 }
 
 export function useCreatePedido(branchId: string) {
@@ -74,7 +74,7 @@ export function useCreatePedido(branchId: string) {
       const numeroPedido = await generateOrderNumber(branchId);
 
       const subtotal = params.items.reduce((s, i) => s + i.subtotal, 0);
-      const promoDesc = params.items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
+      const promoDesc = params.items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.quantity, 0);
       const descuentoPlat = params.orderConfig?.descuentoPlataforma ?? 0;
       const descuentoRestRaw = params.orderConfig?.descuentoRestaurante ?? 0;
       const descuentoRest =
@@ -92,9 +92,9 @@ export function useCreatePedido(branchId: string) {
 
       const insertPayload: Record<string, unknown> = {
         branch_id: branchId,
-        numero_pedido: numeroPedido,
-        tipo,
-        estado: params.estadoInicial ?? "pendiente",
+        order_number: numeroPedido,
+        type: tipo,
+        status: params.estadoInicial ?? "pendiente",
         subtotal,
         descuento,
         total: totalOrder,
@@ -113,16 +113,16 @@ export function useCreatePedido(branchId: string) {
       if (descuentoRestaurante > 0) insertPayload.descuento_restaurante = descuentoRestaurante;
 
       if (cfg) {
-        if (cfg.numeroLlamador) insertPayload.numero_llamador = parseInt(cfg.numeroLlamador, 10);
-        if (cfg.clienteNombre) insertPayload.cliente_nombre = cfg.clienteNombre;
+        if (cfg.numeroLlamador) insertPayload.caller_number = parseInt(cfg.numeroLlamador, 10);
+        if (cfg.clienteNombre) insertPayload.customer_name = cfg.clienteNombre;
         if (cfg.clienteTelefono) {
           const normalized = normalizePhone(cfg.clienteTelefono);
-          insertPayload.cliente_telefono = normalized || cfg.clienteTelefono;
+          insertPayload.customer_phone = normalized || cfg.clienteTelefono;
         }
-        if (cfg.clienteDireccion) insertPayload.cliente_direccion = cfg.clienteDireccion;
+        if (cfg.clienteDireccion) insertPayload.customer_address = cfg.clienteDireccion;
         if (cfg.clienteUserId) insertPayload.cliente_user_id = cfg.clienteUserId;
         insertPayload.canal_venta = cfg.canalVenta;
-        insertPayload.tipo_servicio = cfg.tipoServicio;
+        insertPayload.service_type = cfg.tipoServicio;
         if (cfg.canalVenta === "apps") {
           insertPayload.canal_app = cfg.canalApp;
           //if (cfg.referenciaApp) insertPayload.referencia_app = cfg.referenciaApp;
@@ -138,13 +138,13 @@ export function useCreatePedido(branchId: string) {
       const itemRows = params.items.map((it) => ({
         pedido_id: pedido.id,
         item_carta_id: it.item_carta_id,
-        nombre: it.nombre,
-        cantidad: it.cantidad,
-        precio_unitario: it.precio_unitario,
+        name: it.name,
+        quantity: it.quantity,
+        unit_price: it.unit_price,
         subtotal: it.subtotal,
-        notas: it.notas ?? null,
+        notes: it.notes ?? null,
         estacion: it.estacion ?? "armado",
-        precio_referencia: it.precio_referencia ?? null,
+        reference_price: it.reference_price ?? null,
         categoria_carta_id: it.categoria_carta_id ?? null,
       }));
       await insertPedidoItems(itemRows);
@@ -167,9 +167,9 @@ export function useCreatePedido(branchId: string) {
           const montoRecibido = row.montoRecibido ?? row.amount;
           return {
             pedido_id: pedido.id,
-            metodo: row.method,
-            monto: row.amount,
-            monto_recibido: montoRecibido,
+            method: row.method,
+            amount: row.amount,
+            received_amount: montoRecibido,
             vuelto: montoRecibido - row.amount,
             created_by: user.id,
           };
@@ -179,7 +179,7 @@ export function useCreatePedido(branchId: string) {
 
       const openShift = await findOpenCashShift(branchId);
       for (const row of paymentRows) {
-        const isCash = String(row.method).toLowerCase() === "efectivo";
+        const isCash = String(row.method).toLowerCase() === "cash";
         if (isCash && row.amount > 0 && openShift) {
           const { error: errMov } = await insertCashMovement({
             shift_id: openShift.id,

@@ -11,34 +11,34 @@ import {
 
 export interface KitchenModificador {
   id: string;
-  descripcion: string;
-  tipo: string;
-  precio_extra: number | null;
+  description: string;
+  type: string;
+  extra_price: number | null;
 }
 
 export interface KitchenItem {
   id: string;
-  nombre: string | null;
-  cantidad: number;
-  notas: string | null;
+  name: string | null;
+  quantity: number;
+  notes: string | null;
   estacion: string | null;
-  estado: string;
-  pedido_item_modificadores: KitchenModificador[];
+  status: string;
+  order_item_modifiers: KitchenModificador[];
 }
 
 export interface KitchenPedido {
   id: string;
-  numero_pedido: number;
-  tipo_servicio: string | null;
-  numero_llamador: number | null;
+  order_number: number;
+  service_type: string | null;
+  caller_number: number | null;
   canal_venta: string | null;
-  cliente_nombre: string | null;
+  customer_name: string | null;
   cliente_user_id: string | null;
   created_at: string;
-  estado: string;
-  tiempo_listo: string | null;
-  tiempo_inicio_prep: string | null;
-  origen: string | null;
+  status: string;
+  ready_at_time: string | null;
+  prep_started_at_time: string | null;
+  source: string | null;
   order_items: KitchenItem[];
 }
 

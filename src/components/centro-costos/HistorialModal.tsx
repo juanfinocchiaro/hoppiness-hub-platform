@@ -15,15 +15,15 @@ export function HistorialModal({ open, onOpenChange, item }: HistorialModalProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Historial: {item.nombre}</DialogTitle>
+          <DialogTitle>Historial: {item.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
           {historial?.length ? (
             historial.map((h) => (
               <div key={h.id} className="flex justify-between items-center p-2 border rounded text-sm">
                 <div>
-                  <span className="font-mono">{fmt(h.precio_anterior || 0)} → {fmt(h.precio_nuevo)}</span>
-                  {h.motivo && <p className="text-xs text-muted-foreground">{h.motivo}</p>}
+                  <span className="font-mono">{fmt(h.previous_price || 0)} → {fmt(h.new_price)}</span>
+                  {h.reason && <p className="text-xs text-muted-foreground">{h.reason}</p>}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {new Date(h.created_at).toLocaleDateString('es-AR')}

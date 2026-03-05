@@ -10,18 +10,18 @@ export interface IngredienteLine {
   tipo_linea: string;
   insumo_id: string;
   sub_preparacion_id: string;
-  cantidad: number;
+  quantity: number;
   unidad: string;
   insumo: {
     id: string;
-    nombre: string;
-    unidad_base: string;
-    costo_por_unidad_base: number | null;
+    name: string;
+    base_unit: string;
+    base_unit_cost: number | null;
   } | null;
   sub_preparacion: {
     id: string;
-    nombre: string;
-    costo_calculado: number | null;
+    name: string;
+    calculated_cost: number | null;
   } | null;
 }
 
@@ -35,8 +35,8 @@ export const UNIDADES = [
   { value: 'un', label: 'Unidades' },
 ];
 
-export function calcSubtotal(cantidad: number, costoUnit: number, unidad: string) {
-  if (!cantidad || !costoUnit) return 0;
+export function calcSubtotal(quantity: number, costoUnit: number, unidad: string) {
+  if (!quantity || !costoUnit) return 0;
   const mult = unidad === 'kg' || unidad === 'l' ? 1000 : 1;
-  return cantidad * costoUnit * mult;
+  return quantity * costoUnit * mult;
 }

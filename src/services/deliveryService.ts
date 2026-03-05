@@ -286,21 +286,21 @@ export async function fetchNeighborhoodAssignments(neighborhoodIds: string[]) {
 
 export async function fetchActiveDeliveryStats(branchId: string) {
   const { data, error } = await fromUntyped('orders')
-    .select('id, created_at, tiempo_en_camino')
+    .select('id, created_at, on_route_at_time')
     .eq('branch_id', branchId)
-    .eq('tipo_servicio', 'delivery')
-    .in('estado', ['confirmado', 'en_preparacion', 'listo', 'en_camino'])
+    .eq('service_type', 'delivery')
+    .in('status', ['confirmado', 'en_preparacion', 'listo', 'en_camino'])
     .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
   if (error) return { activeCount: 0, avgMinutes: null };
 
   const activeCount = data?.length ?? 0;
-  const deliveredWithTime = (data ?? []).filter((p) => p.tiempo_en_camino);
+  const deliveredWithTime = (data ?? []).filter((p) => p.on_route_at_time);
   let avgMinutes: number | null = null;
   if (deliveredWithTime.length > 0) {
     const totalMin = deliveredWithTime.reduce((sum, p) => {
       const created = new Date(p.created_at!).getTime();
-      const delivered = new Date(p.tiempo_en_camino!).getTime();
+      const delivered = new Date(p.on_route_at_time!).getTime();
       return sum + (delivered - created) / 60000;
     }, 0);
     avgMinutes = Math.round(totalMin / deliveredWithTime.length);
@@ -312,7 +312,7 @@ export async function fetchDeliveryZones(branchId: string) {
   const { data, error } = await fromUntyped('delivery_zones')
     .select('*')
     .eq('branch_id', branchId)
-    .order('orden', { ascending: true });
+    .order('sort_order', { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
@@ -320,12 +320,12 @@ export async function fetchDeliveryZones(branchId: string) {
 export async function createDeliveryZone(branchId: string, orden: number) {
   const { error } = await fromUntyped('delivery_zones').insert({
     branch_id: branchId,
-    nombre: 'Nueva zona',
+    name: 'Nueva zona',
     costo_envio: 0,
     pedido_minimo: 0,
     tiempo_estimado_min: 40,
     barrios: [],
-    orden,
+    sort_order: orden,
     is_active: true,
   });
   if (error) throw error;

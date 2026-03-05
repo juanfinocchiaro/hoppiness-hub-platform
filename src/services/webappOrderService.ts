@@ -7,10 +7,10 @@ const ACTIVE_STATES = ORDER_ACTIVE_STATES as unknown as string[];
 export async function fetchUserOrders(userId: string, limit = 30) {
   const { data, error } = await fromUntyped('orders')
     .select(
-      `id, numero_pedido, estado, tipo_servicio,
+      `id, order_number, status, service_type,
        total, created_at, webapp_tracking_code,
        branch_id,
-       order_items(nombre, cantidad, precio_unitario, subtotal)`,
+       order_items(name, quantity, unit_price, subtotal)`,
     )
     .eq('cliente_user_id', userId)
     .order('created_at', { ascending: false })
@@ -34,30 +34,30 @@ export async function fetchBranchNamesAndSlugs(branchIds: string[]) {
 
 export async function fetchActiveOrdersForUser(userId: string) {
   const { data } = await fromUntyped('orders')
-    .select('numero_pedido, estado, webapp_tracking_code')
+    .select('order_number, status, webapp_tracking_code')
     .eq('cliente_user_id', userId)
-    .eq('origen', 'webapp')
-    .in('estado', ACTIVE_STATES)
+    .eq('source', 'webapp')
+    .in('status', ACTIVE_STATES)
     .order('created_at', { ascending: false });
   return (data as any[]) || [];
 }
 
 export async function fetchActiveOrdersByTrackingCode(code: string) {
   const { data } = await fromUntyped('orders')
-    .select('numero_pedido, estado, webapp_tracking_code')
+    .select('order_number, status, webapp_tracking_code')
     .eq('webapp_tracking_code', code)
-    .in('estado', ACTIVE_STATES);
+    .in('status', ACTIVE_STATES);
   return (data as any[]) || [];
 }
 
 export async function fetchActiveOrderWithBranch(userId: string) {
   const { data } = await fromUntyped('orders')
     .select(
-      'id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
+      'id, order_number, status, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
     )
     .eq('cliente_user_id', userId)
-    .eq('origen', 'webapp')
-    .in('estado', ACTIVE_STATES)
+    .eq('source', 'webapp')
+    .in('status', ACTIVE_STATES)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -67,10 +67,10 @@ export async function fetchActiveOrderWithBranch(userId: string) {
 export async function fetchOrderByTrackingWithBranch(code: string) {
   const { data } = await fromUntyped('orders')
     .select(
-      'id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
+      'id, order_number, status, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
     )
     .eq('webapp_tracking_code', code)
-    .in('estado', ACTIVE_STATES)
+    .in('status', ACTIVE_STATES)
     .maybeSingle();
   return data as any;
 }
@@ -79,8 +79,8 @@ export async function fetchPendingWebappCount(branchId: string): Promise<number>
   const { count, error } = await fromUntyped('orders')
     .select('*', { count: 'exact', head: true })
     .eq('branch_id', branchId)
-    .eq('origen', 'webapp')
-    .eq('estado', 'pendiente');
+    .eq('source', 'webapp')
+    .eq('status', 'pendiente');
   if (error) throw error;
   return count ?? 0;
 }
@@ -114,7 +114,7 @@ export function unsubscribeChannel(channel: ReturnType<typeof supabase.channel>)
 export async function fetchOrderStatuses(trackingCodes: string[]) {
   if (trackingCodes.length === 0) return [];
   const { data } = await fromUntyped('orders')
-    .select('webapp_tracking_code, estado, numero_pedido')
+    .select('webapp_tracking_code, status, order_number')
     .in('webapp_tracking_code', trackingCodes);
   return (data as any[]) || [];
 }
@@ -122,8 +122,8 @@ export async function fetchOrderStatuses(trackingCodes: string[]) {
 export async function fetchLastUserOrder(userId: string) {
   const { data, error } = await fromUntyped('orders')
     .select(
-      `id, numero_pedido, estado, total, created_at, webapp_tracking_code, branch_id,
-       order_items(nombre, cantidad)`,
+      `id, order_number, status, total, created_at, webapp_tracking_code, branch_id,
+       order_items(name, quantity)`,
     )
     .eq('cliente_user_id', userId)
     .order('created_at', { ascending: false })

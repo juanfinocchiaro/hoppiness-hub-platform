@@ -102,12 +102,12 @@ export async function searchFacturasEmitidas(
   params: { mode: 'number' | 'recent' | 'date'; searchNumber?: string; searchDate?: string },
 ) {
   let query = fromUntyped('issued_invoices')
-    .select('*, orders!inner(numero_pedido, total, cliente_nombre)')
+    .select('*, orders!inner(order_number, total, customer_name)')
     .eq('branch_id', branchId)
     .order('created_at', { ascending: false });
 
   if (params.mode === 'number' && params.searchNumber) {
-    query = query.eq('numero_comprobante', parseInt(params.searchNumber));
+    query = query.eq('receipt_number', parseInt(params.searchNumber));
   } else if (params.mode === 'date' && params.searchDate) {
     query = query
       .gte('created_at', params.searchDate + 'T00:00:00')

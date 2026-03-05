@@ -20,11 +20,11 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
   const isEdit = !!socio;
 
   const [form, setForm] = useState({
-    nombre: '',
+    name: '',
     cuit: '',
     email: '',
-    telefono: '',
-    porcentaje_participacion: '',
+    phone: '',
+    ownership_percentage: '',
     fecha_ingreso: new Date().toISOString().split('T')[0],
     limite_retiro_mensual: '',
   });
@@ -32,11 +32,11 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
   useEffect(() => {
     if (socio) {
       setForm({
-        nombre: socio.name || '',
+        name: socio.name || '',
         cuit: socio.cuit || '',
         email: socio.email || '',
-        telefono: socio.phone || '',
-        porcentaje_participacion: String(socio.ownership_percentage),
+        phone: socio.phone || '',
+        ownership_percentage: String(socio.ownership_percentage),
         fecha_ingreso: socio.start_date,
         limite_retiro_mensual: socio.limite_retiro_mensual
           ? String(socio.limite_retiro_mensual)
@@ -44,11 +44,11 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
       });
     } else {
       setForm({
-        nombre: '',
+        name: '',
         cuit: '',
         email: '',
-        telefono: '',
-        porcentaje_participacion: '',
+        phone: '',
+        ownership_percentage: '',
         fecha_ingreso: new Date().toISOString().split('T')[0],
         limite_retiro_mensual: '',
       });
@@ -56,15 +56,15 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
   }, [socio, open]);
 
   const handleSubmit = async () => {
-    if (!form.nombre || !form.porcentaje_participacion) return;
+    if (!form.name || !form.ownership_percentage) return;
 
     const payload: SocioFormData = {
       branch_id: branchId,
-      nombre: form.nombre,
+      name: form.name,
       cuit: form.cuit || undefined,
       email: form.email || undefined,
-      telefono: form.telefono || undefined,
-      porcentaje_participacion: parseFloat(form.porcentaje_participacion),
+      phone: form.phone || undefined,
+      ownership_percentage: parseFloat(form.ownership_percentage),
       fecha_ingreso: form.fecha_ingreso,
       limite_retiro_mensual: form.limite_retiro_mensual
         ? parseFloat(form.limite_retiro_mensual)
@@ -90,8 +90,8 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
           <div className="grid gap-2">
             <Label>Nombre *</Label>
             <Input
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -115,8 +115,8 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
             <div className="grid gap-2">
               <Label>Teléfono</Label>
               <Input
-                value={form.telefono}
-                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </div>
             <div className="grid gap-2">
@@ -126,8 +126,8 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
                 min="0"
                 max="100"
                 step="0.01"
-                value={form.porcentaje_participacion}
-                onChange={(e) => setForm({ ...form, porcentaje_participacion: e.target.value })}
+                value={form.ownership_percentage}
+                onChange={(e) => setForm({ ...form, ownership_percentage: e.target.value })}
               />
             </div>
           </div>
@@ -159,8 +159,8 @@ export function SocioFormModal({ open, onOpenChange, branchId, socio }: Props) {
           <Button
             onClick={handleSubmit}
             disabled={
-              !form.nombre ||
-              !form.porcentaje_participacion ||
+              !form.name ||
+              !form.ownership_percentage ||
               createSocio.isPending ||
               updateSocio.isPending
             }

@@ -80,9 +80,9 @@ export interface ArqueoCaja {
 export interface ShiftClosure {
   id: string;
   branch_id: string;
-  fecha: string; // DATE as string 'YYYY-MM-DD'
-  turno: ShiftType;
-  fuente?: 'pos' | 'manual'; // pos = generado desde POS, manual = carga manual
+  date: string; // DATE as string 'YYYY-MM-DD'
+  shift: ShiftType;
+  source?: 'pos' | 'manual'; // pos = generado desde POS, manual = carga manual
 
   hamburguesas: HamburguesasData;
   ventas_local: VentasLocalData;
@@ -105,9 +105,9 @@ export interface ShiftClosure {
   tiene_alerta_apps: boolean;
   tiene_alerta_caja: boolean;
 
-  notas: string | null;
+  notes: string | null;
 
-  cerrado_por: string;
+  closed_by: string;
   cerrado_at: string;
   updated_at: string | null;
   updated_by: string | null;
@@ -116,14 +116,14 @@ export interface ShiftClosure {
 // For creating/updating closures
 export interface ShiftClosureInput {
   branch_id: string;
-  fecha: string;
-  turno: ShiftType;
+  date: string;
+  shift: ShiftType;
   hamburguesas: HamburguesasData;
   ventas_local: VentasLocalData;
   ventas_apps: VentasAppsData;
   arqueo_caja: ArqueoCaja;
   total_facturado: number;
-  notas?: string;
+  notes?: string;
   reglas_facturacion?: ReglasFacturacion | null;
 }
 

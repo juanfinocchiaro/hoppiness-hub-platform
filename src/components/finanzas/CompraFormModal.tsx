@@ -84,13 +84,13 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
 
   const [form, setForm] = useState({
     proveedor_id: '',
-    factura_tipo: '',
-    factura_numero: '',
-    factura_fecha: new Date().toISOString().slice(0, 10),
-    condicion_pago: 'contado',
+    invoice_type: '',
+    invoice_number: '',
+    invoice_date: new Date().toISOString().slice(0, 10),
+    payment_terms: 'contado',
     tipo: 'normal',
-    motivo_extraordinaria: '',
-    observaciones: '',
+    extraordinary_reason: '',
+    notes: '',
   });
 
   // --- Simple mode: user enters total factura directly ---
@@ -114,9 +114,9 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
 
   const selectedProveedor = proveedores?.find((p) => p.id === form.proveedor_id);
   const computedVencimiento = (() => {
-    if (form.condicion_pago !== 'cuenta_corriente' || !selectedProveedor?.dias_pago_habitual)
+    if (form.payment_terms !== 'cuenta_corriente' || !selectedProveedor?.dias_pago_habitual)
       return undefined;
-    const base = new Date(form.factura_fecha);
+    const base = new Date(form.invoice_date);
     base.setDate(base.getDate() + selectedProveedor.dias_pago_habitual);
     return base.toISOString().slice(0, 10);
   })();
@@ -129,10 +129,10 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
       setForm((f) => ({
         ...f,
         proveedor_id: '',
-        factura_tipo: '',
-        factura_numero: '',
-        observaciones: '',
-        condicion_pago: 'contado',
+        invoice_type: '',
+        invoice_number: '',
+        notes: '',
+        payment_terms: 'contado',
       }));
       setItems([emptyItem()]);
       setImpuestos({
@@ -150,9 +150,9 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
 
   useEffect(() => {
     if (selectedProveedor?.permite_cuenta_corriente) {
-      setForm((f) => ({ ...f, condicion_pago: 'cuenta_corriente' }));
+      setForm((f) => ({ ...f, payment_terms: 'cuenta_corriente' }));
     } else {
-      setForm((f) => ({ ...f, condicion_pago: 'contado' }));
+      setForm((f) => ({ ...f, payment_terms: 'contado' }));
     }
   }, [form.proveedor_id, selectedProveedor]);
 
@@ -175,10 +175,10 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
         item.alicuota_iva = 21;
       }
 
-      if (field === 'insumo_id' && insumos) {
+        if (field === 'insumo_id' && insumos) {
         const ins = insumos.find((i: any) => i.id === value) as any;
         if (ins) {
-          item.unidad = ins.unidad_base;
+          item.unidad = ins.base_unit;
         }
       }
 
@@ -276,18 +276,18 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
   const canSubmit = (() => {
     if (!form.proveedor_id || validItems.length === 0) return false;
     if (modalidad === 'sin_comprobante') return totalPagado > 0;
-    if (modalidad === 'factura_simple') return !!form.factura_numero;
-    return !!form.factura_numero; // detallada
+    if (modalidad === 'factura_simple') return !!form.invoice_number;
+    return !!form.invoice_number; // detallada
   })();
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
     const facturaNumero =
-      modalidad === 'sin_comprobante' ? `SC-${Date.now()}` : form.factura_numero;
+      modalidad === 'sin_comprobante' ? `SC-${Date.now()}` : form.invoice_number;
 
     const facturaTipo =
-      modalidad === 'sin_comprobante' ? undefined : form.factura_tipo || undefined;
+      modalidad === 'sin_comprobante' ? undefined : form.invoice_type || undefined;
 
     // Build fiscal fields based on mode
     let fiscalFields: any = {};
@@ -336,11 +336,11 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
     await create.mutateAsync({
       branch_id: branchId,
       proveedor_id: form.proveedor_id,
-      factura_tipo: facturaTipo,
-      factura_numero: facturaNumero,
-      factura_fecha: form.factura_fecha,
-      condicion_pago: modalidad === 'sin_comprobante' ? 'contado' : form.condicion_pago,
-      fecha_vencimiento: modalidad === 'sin_comprobante' ? undefined : computedVencimiento,
+      invoice_type: facturaTipo,
+      invoice_number: facturaNumero,
+      invoice_date: form.invoice_date,
+      payment_terms: modalidad === 'sin_comprobante' ? 'contado' : form.payment_terms,
+      due_date: modalidad === 'sin_comprobante' ? undefined : computedVencimiento,
       iva: fiscalFields.iva_21 + fiscalFields.iva_105,
       otros_impuestos:
         fiscalFields.imp_internos +
@@ -348,10 +348,10 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
         fiscalFields.perc_provincial +
         fiscalFields.perc_municipal,
       tipo: form.tipo,
-      motivo_extraordinaria:
-        form.tipo === 'extraordinaria' ? form.motivo_extraordinaria : undefined,
+      extraordinary_reason:
+        form.tipo === 'extraordinaria' ? form.extraordinary_reason : undefined,
       periodo: getCurrentPeriodo(),
-      observaciones: form.observaciones || undefined,
+      notes: form.notes || undefined,
       items: validItems.map((item) => ({ ...item })),
       ...fiscalFields,
     });
@@ -407,8 +407,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
           (() => {
             const selectedInsumo = insumos?.find((i: any) => i.id === item.insumo_id) as any;
             const nivel = selectedInsumo?.nivel_control;
-            const precioRef = selectedInsumo?.precio_referencia
-              ? Number(selectedInsumo.precio_referencia)
+            const precioRef = selectedInsumo?.reference_price
+              ? Number(selectedInsumo.reference_price)
               : null;
             const precioMax = selectedInsumo?.precio_maximo_sugerido
               ? Number(selectedInsumo.precio_maximo_sugerido)
@@ -443,7 +443,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                                 : i.nivel_control === 'semi_libre'
                                   ? '🟡 '
                                   : '🟢 '}
-                              {i.nombre}
+                              {i.name}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -503,7 +503,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                         </Badge>
                         {provObligatorio && (
                           <span className="text-muted-foreground">
-                            Proveedor fijo: {provObligatorio.razon_social}
+                            Proveedor fijo: {provObligatorio.business_name}
                           </span>
                         )}
                       </div>
@@ -516,14 +516,14 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                         </Badge>
                         {selectedInsumo.proveedor_sugerido && (
                           <span className="text-muted-foreground">
-                            Sugerido: {selectedInsumo.proveedor_sugerido.razon_social}
+                            Sugerido: {selectedInsumo.proveedor_sugerido.business_name}
                           </span>
                         )}
                       </div>
                     )}
                     {wrongProvider && (
                       <p className="text-xs text-destructive font-medium">
-                        ⚠️ Este insumo solo puede comprarse a {provObligatorio.razon_social}
+                        ⚠️ Este insumo solo puede comprarse a {provObligatorio.business_name}
                       </p>
                     )}
                     {precioRef && item.precio_unitario > 0 && (
@@ -639,7 +639,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                     <SelectContent>
                       {proveedores?.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.razon_social}
+                          {p.business_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -650,8 +650,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                     <Label>Fecha *</Label>
                     <Input
                       type="date"
-                      value={form.factura_fecha}
-                      onChange={(e) => set('factura_fecha', e.target.value)}
+                      value={form.invoice_date}
+                      onChange={(e) => set('invoice_date', e.target.value)}
                     />
                   </div>
                 )}
@@ -663,8 +663,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                     <Label>Fecha</Label>
                     <Input
                       type="date"
-                      value={form.factura_fecha}
-                      onChange={(e) => set('factura_fecha', e.target.value)}
+                      value={form.invoice_date}
+                      onChange={(e) => set('invoice_date', e.target.value)}
                     />
                   </div>
                   <div>
@@ -685,7 +685,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label>Tipo</Label>
-                    <Select value={form.factura_tipo} onValueChange={(v) => set('factura_tipo', v)}>
+                    <Select value={form.invoice_type} onValueChange={(v) => set('invoice_type', v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Tipo" />
                       </SelectTrigger>
@@ -701,8 +701,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                   <div>
                     <Label>Número *</Label>
                     <Input
-                      value={form.factura_numero}
-                      onChange={(e) => set('factura_numero', e.target.value)}
+                      value={form.invoice_number}
+                      onChange={(e) => set('invoice_number', e.target.value)}
                       placeholder="0003-00012345"
                     />
                   </div>
@@ -916,8 +916,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                 <div>
                   <Label>Condición</Label>
                   <Select
-                    value={form.condicion_pago}
-                    onValueChange={(v) => set('condicion_pago', v)}
+                    value={form.payment_terms}
+                    onValueChange={(v) => set('payment_terms', v)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -931,7 +931,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-                {form.condicion_pago === 'cuenta_corriente' && (
+                {form.payment_terms === 'cuenta_corriente' && (
                   <div>
                     <Label>Vencimiento (automático)</Label>
                     {computedVencimiento ? (
@@ -952,7 +952,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                   </div>
                 )}
               </div>
-              {form.condicion_pago === 'cuenta_corriente' &&
+              {form.payment_terms === 'cuenta_corriente' &&
                 selectedProveedor?.dias_pago_habitual && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Regla: {selectedProveedor.dias_pago_habitual} días desde fecha de factura
@@ -964,8 +964,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
           <div>
             <Label>Observaciones</Label>
             <Textarea
-              value={form.observaciones}
-              onChange={(e) => set('observaciones', e.target.value)}
+              value={form.notes}
+              onChange={(e) => set('notes', e.target.value)}
               rows={2}
             />
           </div>

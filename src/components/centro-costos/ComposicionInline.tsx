@@ -45,7 +45,7 @@ interface RemovibleRecord {
   id: string;
   insumo_id: string | null;
   preparacion_id: string | null;
-  nombre_display: string | null;
+  display_name: string | null;
 }
 
 export function ComposicionInline({ item, mutations }: { item: any; mutations: ItemCartaMutations }) {
@@ -74,9 +74,9 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
           tipo: c.preparacion_id ? 'preparacion' : 'insumo',
           preparacion_id: c.preparacion_id || '',
           insumo_id: c.insumo_id || '',
-          cantidad: c.cantidad,
-          _label: c.recipes?.nombre || c.preparaciones?.nombre || c.supplies?.nombre || c.insumos?.nombre || '',
-          _costo: c.recipes?.costo_calculado || c.preparaciones?.costo_calculado || c.supplies?.costo_por_unidad_base || c.insumos?.costo_por_unidad_base || 0,
+          cantidad: c.quantity,
+          _label: c.recipes?.name || c.supplies?.name || '',
+          _costo: c.recipes?.calculated_cost || c.supplies?.base_unit_cost || 0,
         })),
       );
       setHasChanges(false);
@@ -112,13 +112,13 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
     }
     if (field === 'preparacion_id') {
       const p = ((preparaciones || []) as any[]).find((x: any) => x.id === value);
-      nr[i]._label = p?.nombre || '';
-      nr[i]._costo = p?.costo_calculado || 0;
+      nr[i]._label = p?.name || '';
+      nr[i]._costo = p?.calculated_cost || 0;
     }
     if (field === 'insumo_id') {
       const ins = ((insumos || []) as any[]).find((x: any) => x.id === value);
-      nr[i]._label = ins?.nombre || '';
-      nr[i]._costo = ins?.costo_por_unidad_base || 0;
+      nr[i]._label = ins?.name || '';
+      nr[i]._costo = ins?.base_unit_cost || 0;
     }
     setRows(nr);
     setHasChanges(true);
@@ -127,7 +127,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
   const baseRows = rows.filter((r) => r.cantidad > 0);
 
   const costoFijo = baseRows.reduce((t, r) => t + r.cantidad * r._costo, 0);
-  const costoGrupos = (grupos || []).reduce((t: number, g: GrupoOpcional) => t + (g.costo_promedio || 0), 0);
+  const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.average_cost || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
 
   const removibleInsumoSet = useMemo(
@@ -181,7 +181,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
       item_carta_id: item.id,
       insumo_id: insumoId,
       activo,
-      nombre_display: activo ? `Sin ${nombre}` : undefined,
+      display_name: activo ? `Sin ${nombre}` : undefined,
     });
   };
   const handleToggleRemoviblePrep = async (prepId: string, nombre: string, activo: boolean) => {
@@ -189,7 +189,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
       item_carta_id: item.id,
       preparacion_id: prepId,
       activo,
-      nombre_display: activo ? `Sin ${nombre}` : undefined,
+      display_name: activo ? `Sin ${nombre}` : undefined,
     });
   };
 
@@ -211,7 +211,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
     if (!grupoNuevoNombre.trim()) return;
     await gruposMutations.createGrupo.mutateAsync({
       item_carta_id: item.id,
-      nombre: grupoNuevoNombre.trim(),
+      name: grupoNuevoNombre.trim(),
       orden: grupos?.length || 0,
     });
     setGrupoNuevoNombre('');
@@ -232,7 +232,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
             <SelectItem value="none">Seleccionar...</SelectItem>
             {((preparaciones || []) as any[]).map((p: any) => (
               <SelectItem key={p.id} value={p.id}>
-                {p.nombre} ({formatCurrency(p.costo_calculado || 0)})
+                {p.name} ({formatCurrency(p.calculated_cost || 0)})
               </SelectItem>
             ))}
           </SelectContent>
@@ -240,9 +240,9 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
       );
     }
     const allInsumos = ((insumos || []) as any[]);
-    const productos = allInsumos.filter((x: any) => x.tipo_item === 'producto');
-    const ingredientes = allInsumos.filter((x: any) => x.tipo_item === 'ingrediente');
-    const insumosItems = allInsumos.filter((x: any) => x.tipo_item === 'insumo' || !x.tipo_item);
+    const productos = allInsumos.filter((x: any) => x.item_type === 'producto');
+    const ingredientes = allInsumos.filter((x: any) => x.item_type === 'ingrediente');
+    const insumosItems = allInsumos.filter((x: any) => x.item_type === 'insumo' || !x.item_type);
     return (
       <Select
         value={row.insumo_id || 'none'}
@@ -264,7 +264,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
               </SelectItem>
               {productos.map((ins: any) => (
                 <SelectItem key={ins.id} value={ins.id}>
-                  {ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})
+                  {ins.name} ({formatCurrency(ins.base_unit_cost || 0)})
                 </SelectItem>
               ))}
             </>
@@ -280,7 +280,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
               </SelectItem>
               {ingredientes.map((ins: any) => (
                 <SelectItem key={ins.id} value={ins.id}>
-                  {ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})
+                  {ins.name} ({formatCurrency(ins.base_unit_cost || 0)})
                 </SelectItem>
               ))}
             </>
@@ -296,7 +296,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
               </SelectItem>
               {insumosItems.map((ins: any) => (
                 <SelectItem key={ins.id} value={ins.id}>
-                  {ins.nombre} ({formatCurrency(ins.costo_por_unidad_base || 0)})
+                  {ins.name} ({formatCurrency(ins.base_unit_cost || 0)})
                 </SelectItem>
               ))}
             </>
@@ -425,12 +425,12 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
                   nombre={sp.nombre}
                   origen={sp.receta_nombre}
                   isActive={isActive}
-                  nombreDisplay={existing?.nombre_display || ''}
-                  onToggle={(v) => handleToggleRemoviblePrep(sp.preparacion_id, sp.nombre, v)}
+                  nombreDisplay={existing?.display_name || ''}
+                  onToggle={(v) => handleToggleRemoviblePrep(sp.preparacion_id, sp.name, v)}
                   onUpdateNombre={(nombre) =>
                     removiblesMutations.updateNombreDisplay.mutate({
                       id: existing?.id,
-                      nombre_display: nombre,
+                      display_name: nombre,
                     })
                   }
                   isPending={removiblesMutations.togglePreparacion.isPending}
@@ -447,12 +447,12 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
                   nombre={ing.nombre}
                   origen={ing.receta_nombre}
                   isActive={isActive}
-                  nombreDisplay={existing?.nombre_display || ''}
-                  onToggle={(v) => handleToggleRemovibleInsumo(ing.insumo_id, ing.nombre, v)}
+                  nombreDisplay={existing?.display_name || ''}
+                  onToggle={(v) => handleToggleRemovibleInsumo(ing.insumo_id, ing.name, v)}
                   onUpdateNombre={(nombre) =>
                     removiblesMutations.updateNombreDisplay.mutate({
                       id: existing?.id,
-                      nombre_display: nombre,
+                      display_name: nombre,
                     })
                   }
                   isPending={removiblesMutations.toggleInsumo.isPending}
@@ -533,16 +533,16 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
               <p className="text-sm text-muted-foreground">Costo Total</p>
               <p className="text-2xl font-bold font-mono text-primary">{formatCurrency(costoTotal)}</p>
             </div>
-            {item.precio_base > 0 && (
+            {item.base_price > 0 && (
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">FC% (s/neto)</p>
                 <Badge
                   variant={
-                    badgeVar[fcColor(calcFC(costoTotal, item.precio_base), item.fc_objetivo || 32)]
+                    badgeVar[fcColor(calcFC(costoTotal, item.base_price), item.fc_objetivo || 32)]
                   }
                   className="text-lg px-3 py-1"
                 >
-                  {fmtPct(calcFC(costoTotal, item.precio_base))}
+                  {fmtPct(calcFC(costoTotal, item.base_price))}
                 </Badge>
               </div>
             )}

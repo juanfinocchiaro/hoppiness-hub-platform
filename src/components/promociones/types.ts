@@ -2,16 +2,16 @@ import type { PromocionFormData } from '@/hooks/usePromociones';
 
 export interface PromoItemExtraDraft {
   extra_item_carta_id: string;
-  nombre: string;
-  cantidad: number;
+  name: string;
+  quantity: number;
   precio_extra: number;
 }
 
 export interface PromoItemDraft {
   item_carta_id: string;
-  nombre: string;
-  imagen_url?: string | null;
-  precio_base: number;
+  name: string;
+  image_url?: string | null;
+  base_price: number;
   precio_promo: number;
   preconfigExtras?: PromoItemExtraDraft[];
 }

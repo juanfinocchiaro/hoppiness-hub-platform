@@ -13,7 +13,7 @@ import {
 
 export interface CodigoDescuento {
   id: string;
-  codigo: string;
+  code: string;
   tipo: 'descuento_porcentaje' | 'descuento_fijo';
   valor: number;
   usos_maximos: number | null;

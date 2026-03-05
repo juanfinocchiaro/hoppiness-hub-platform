@@ -78,7 +78,7 @@ export function AccountPanel({
   branchId,
 }: AccountPanelProps) {
   const subtotalItems = items.reduce((s, i) => s + i.subtotal, 0);
-  const promoDescTotal = items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
+  const promoDescTotal = items.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.quantity, 0);
   const isApps = orderConfig?.canalVenta === 'apps';
   const isDelivery = orderConfig?.tipoServicio === 'delivery';
   const costoEnvio = isApps || isDelivery ? (orderConfig?.costoDelivery ?? 0) : 0;
@@ -145,7 +145,7 @@ export function AccountPanel({
   }, [items, payments]);
 
   // Determine send button state
-  const totalQty = items.reduce((s, i) => s + i.cantidad, 0);
+  const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   let sendLabel = 'Agrega productos';
   let sendDisabled = true;
   if (isApps && items.length > 0) {

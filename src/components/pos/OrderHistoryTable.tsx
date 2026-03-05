@@ -42,16 +42,16 @@ interface Props {
   onReprint?: (order: PosOrder, type: ReprintType) => void;
   onCancelOrder?: (order: PosOrder) => void;
   onChangeInvoice?: (order: PosOrder) => void;
-  /** Set of category IDs that are tipo_impresion='vale' */
+  /** Set of category IDs that are print_type='vale' */
   valeCategoryIds?: Set<string>;
 }
 
 const METODO_LABELS: Record<string, string> = {
-  efectivo: 'Efectivo',
-  tarjeta_debito: 'Débito',
-  tarjeta_credito: 'Crédito',
+  cash: 'Efectivo',
+  debit_card: 'Débito',
+  credit_card: 'Crédito',
   mercadopago_qr: 'QR',
-  transferencia: 'Transf.',
+  transfer: 'Transf.',
 };
 
 const ESTADO_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -77,18 +77,18 @@ import { formatCurrency } from '@/lib/formatters';
 
 function paymentSummary(pagos: PosOrder['order_payments']) {
   if (!pagos || pagos.length === 0) return '-';
-  if (pagos.length === 1) return METODO_LABELS[pagos[0].metodo] || pagos[0].metodo;
+  if (pagos.length === 1) return METODO_LABELS[pagos[0].method] || pagos[0].method;
   return 'Dividido';
 }
 
 type SortKey =
-  | 'numero_pedido'
+  | 'order_number'
   | 'created_at'
   | 'canal_venta'
-  | 'tipo_servicio'
-  | 'cliente_nombre'
+  | 'service_type'
+  | 'customer_name'
   | 'total'
-  | 'estado';
+  | 'status';
 type SortDir = 'asc' | 'desc';
 
 export function OrderHistoryTable({
@@ -112,7 +112,7 @@ export function OrderHistoryTable({
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
-      setSortDir(key === 'total' || key === 'numero_pedido' ? 'desc' : 'asc');
+      setSortDir(key === 'total' || key === 'order_number' ? 'desc' : 'asc');
     }
   };
 
@@ -191,17 +191,17 @@ export function OrderHistoryTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" />
-              <SortableHead col="numero_pedido">#</SortableHead>
+              <SortableHead col="order_number">#</SortableHead>
               <SortableHead col="created_at">Fecha</SortableHead>
               {!isMobile && <SortableHead col="canal_venta">Canal</SortableHead>}
-              {!isMobile && <SortableHead col="tipo_servicio">Servicio</SortableHead>}
-              {!isMobile && <SortableHead col="cliente_nombre">Cliente</SortableHead>}
+              {!isMobile && <SortableHead col="service_type">Servicio</SortableHead>}
+              {!isMobile && <SortableHead col="customer_name">Cliente</SortableHead>}
               {!isMobile && <TableHead className="text-center">Items</TableHead>}
               <SortableHead col="total" className="text-right">
                 Total
               </SortableHead>
               {!isMobile && <TableHead>Pago</TableHead>}
-              <SortableHead col="estado" className="text-center">
+              <SortableHead col="status" className="text-center">
                 Estado
               </SortableHead>
             </TableRow>
@@ -226,7 +226,7 @@ export function OrderHistoryTable({
                     </TableCell>
                     <TableCell className="font-medium tabular-nums">
                       <span className="flex items-center gap-1">
-                        {order.numero_pedido}
+                        {order.order_number}
                         {hasActiveInvoice && <FileText className="w-3.5 h-3.5 text-primary" />}
                       </span>
                     </TableCell>
@@ -246,12 +246,12 @@ export function OrderHistoryTable({
                     )}
                     {!isMobile && (
                       <TableCell className="text-sm">
-                        {SERVICIO_LABELS[order.tipo_servicio || ''] || '-'}
+                        {SERVICIO_LABELS[order.service_type || ''] || '-'}
                       </TableCell>
                     )}
                     {!isMobile && (
                       <TableCell className="text-sm truncate max-w-[120px]">
-                        {order.cliente_nombre || '-'}
+                        {order.customer_name || '-'}
                       </TableCell>
                     )}
                     {!isMobile && (
@@ -269,10 +269,10 @@ export function OrderHistoryTable({
                     )}
                     <TableCell className="text-center">
                       <Badge
-                        variant={ESTADO_VARIANT[order.estado] || 'outline'}
+                        variant={ESTADO_VARIANT[order.status] || 'outline'}
                         className="text-xs capitalize"
                       >
-                        {order.estado}
+                        {order.status}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -381,18 +381,18 @@ function OrderDetail({
 }) {
   const activeInvoice = order.issued_invoices?.find((f) => !f.anulada);
   const activeFactura = order.issued_invoices?.find(
-    (f) => !f.anulada && !f.tipo_comprobante.startsWith('NC_'),
+    (f) => !f.anulada && !f.receipt_type.startsWith('NC_'),
   );
   const cancelledInvoices = order.issued_invoices?.filter((f) => f.anulada) || [];
   const creditNotes =
-    order.issued_invoices?.filter((f) => f.tipo_comprobante.startsWith('NC_')) || [];
+    order.issued_invoices?.filter((f) => f.receipt_type.startsWith('NC_')) || [];
   const lastCreditNote = creditNotes.length > 0 ? creditNotes[creditNotes.length - 1] : null;
 
   const hasActiveInvoice = !!activeInvoice;
   const hasActiveFactura = !!activeFactura;
   const hasCreditNote = !!lastCreditNote;
-  const isDelivery = order.tipo_servicio === 'delivery';
-  const isCancelled = order.estado === 'cancelado';
+  const isDelivery = order.service_type === 'delivery';
+  const isCancelled = order.status === 'cancelado';
 
   // Check if order has vale items
   const hasValeItems =
@@ -412,7 +412,7 @@ function OrderDetail({
             {order.order_items?.map((item) => (
               <li key={item.id} className="flex justify-between">
                 <span>
-                  {item.nombre} x{item.cantidad}
+                  {item.name} x{item.quantity}
                 </span>
                 <span className="tabular-nums">{formatCurrency(item.subtotal)}</span>
               </li>
@@ -444,8 +444,8 @@ function OrderDetail({
           <ul className="space-y-0.5">
             {order.order_payments?.map((pago) => (
               <li key={pago.id} className="flex justify-between">
-                <span>{METODO_LABELS[pago.metodo] || pago.metodo}</span>
-                <span className="tabular-nums">{formatCurrency(pago.monto)}</span>
+                <span>{METODO_LABELS[pago.method] || pago.method}</span>
+                <span className="tabular-nums">{formatCurrency(pago.amount)}</span>
               </li>
             ))}
           </ul>
@@ -455,12 +455,12 @@ function OrderDetail({
             <div className="mt-3 pt-2 border-t space-y-1">
               <p className="font-medium flex items-center gap-1">
                 <FileText className="h-3.5 w-3.5 text-primary" />
-                {activeInvoice.tipo_comprobante.startsWith('NC_')
+                {activeInvoice.receipt_type.startsWith('NC_')
                   ? 'Nota de Crédito'
                   : 'Factura'}{' '}
-                {activeInvoice.tipo_comprobante} — N°{' '}
-                {String(activeInvoice.punto_venta).padStart(5, '0')}-
-                {String(activeInvoice.numero_comprobante).padStart(8, '0')}
+                {activeInvoice.receipt_type} — N°{' '}
+                {String(activeInvoice.point_of_sale).padStart(5, '0')}-
+                {String(activeInvoice.receipt_number).padStart(8, '0')}
               </p>
               {activeInvoice.cae && (
                 <p className="text-muted-foreground text-xs">CAE: {activeInvoice.cae}</p>
@@ -474,8 +474,8 @@ function OrderDetail({
             <div className="mt-2 space-y-1">
               {cancelledInvoices.map((f) => (
                 <div key={f.id} className="text-xs text-muted-foreground line-through">
-                  Factura {f.tipo_comprobante} {String(f.punto_venta).padStart(5, '0')}-
-                  {String(f.numero_comprobante).padStart(8, '0')} (anulada)
+                  Factura {f.receipt_type} {String(f.point_of_sale).padStart(5, '0')}-
+                  {String(f.receipt_number).padStart(8, '0')} (anulada)
                 </div>
               ))}
             </div>
@@ -484,8 +484,8 @@ function OrderDetail({
             <div className="mt-1 space-y-1">
               {creditNotes.map((nc) => (
                 <div key={nc.id} className="text-xs text-orange-600 dark:text-orange-400">
-                  {nc.tipo_comprobante.replace('_', ' ')} {String(nc.punto_venta).padStart(5, '0')}-
-                  {String(nc.numero_comprobante).padStart(8, '0')}
+                  {nc.receipt_type.replace('_', ' ')} {String(nc.point_of_sale).padStart(5, '0')}-
+                  {String(nc.receipt_number).padStart(8, '0')}
                   {nc.cae && ` — CAE: ${nc.cae}`}
                 </div>
               ))}
@@ -497,10 +497,10 @@ function OrderDetail({
               {order.canal_venta && (
                 <p>Canal: {CANAL_LABELS[order.canal_venta] || order.canal_venta}</p>
               )}
-              {order.tipo_servicio && (
-                <p>Servicio: {SERVICIO_LABELS[order.tipo_servicio] || order.tipo_servicio}</p>
+              {order.service_type && (
+                <p>Servicio: {SERVICIO_LABELS[order.service_type] || order.service_type}</p>
               )}
-              {order.cliente_nombre && <p>Cliente: {order.cliente_nombre}</p>}
+              {order.customer_name && <p>Cliente: {order.customer_name}</p>}
             </div>
           )}
         </div>

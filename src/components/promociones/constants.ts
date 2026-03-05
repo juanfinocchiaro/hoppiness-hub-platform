@@ -15,20 +15,20 @@ export const PAGO_LABELS: Record<string, string> = {
 };
 
 export const CANAL_LABELS: Record<string, string> = {
-  salon: 'Salón',
+  dine_in: 'Salón',
   webapp: 'WebApp',
   rappi: 'Rappi',
   pedidos_ya: 'PedidosYa',
 };
 
-export const ALL_CANALES = ['salon', 'webapp', 'rappi', 'pedidos_ya'];
+export const ALL_CANALES = ['dine_in', 'webapp', 'rappi', 'pedidos_ya'];
 export const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 export const DIAS_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 export const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export const EMPTY_FORM: PromocionFormData = {
-  nombre: '',
-  descripcion: '',
+  name: '',
+  description: '',
   tipo: 'descuento_porcentaje',
   valor: 0,
   restriccion_pago: 'cualquiera',
@@ -43,5 +43,5 @@ export const EMPTY_FORM: PromocionFormData = {
   tipo_usuario: 'todos',
   activa: true,
   branch_ids: [],
-  canales: ['webapp', 'salon', 'rappi', 'pedidos_ya'],
+  canales: ['webapp', 'dine_in', 'rappi', 'pedidos_ya'],
 };

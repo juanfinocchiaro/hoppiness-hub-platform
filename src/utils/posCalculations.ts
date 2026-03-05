@@ -37,13 +37,13 @@ export function calculatePOSTotals(
       : descRestauranteRaw;
 
   const voucherDesc = orderConfig.voucherDescuento ?? 0;
-  const promoDescTotal = cart.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.cantidad, 0);
+  const promoDescTotal = cart.reduce((s, i) => s + (i.promo_descuento ?? 0) * i.quantity, 0);
   const descuentos = (orderConfig.descuentoPlataforma ?? 0) + descRestauranteCalc + promoDescTotal;
   const totalToPay = subtotal + costoEnvio - descuentos - voucherDesc;
 
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const paidCash = payments
-    .filter((p) => p.method === 'efectivo')
+    .filter((p) => p.method === 'cash')
     .reduce((s, p) => s + p.amount, 0);
   const paidDigital = totalPaid - paidCash;
 

@@ -28,7 +28,7 @@ export async function generateOrderNumber(branchId: string): Promise<number> {
 export async function insertPedido(payload: Record<string, unknown>) {
   const { data, error } = await fromUntyped('orders')
     .insert(payload as never)
-    .select('id, numero_pedido')
+    .select('id, order_number')
     .single();
   if (error) throw error;
   if (!data) throw new Error('No se creó el pedido');
@@ -97,7 +97,7 @@ export async function fetchStockData(branchId: string) {
   const [insumosResult, stockResult, movimientosResult] = await Promise.all([
     fromUntyped('supplies')
        .select(
-        'id, name, unidad_base, categoria_id, costo_por_unidad_base, categorias_insumo:categorias_insumo!insumos_categoria_id_fkey(name)',
+        'id, name, base_unit, categoria_id, base_unit_cost, supply_categories:supply_categories!supplies_categoria_id_fkey(name)',
       )
       .is('deleted_at', null)
       .neq('is_active', false)
@@ -122,10 +122,10 @@ export async function fetchStockData(branchId: string) {
 
 export async function fetchInsumoUnit(insumoId: string) {
   const { data } = await fromUntyped('supplies')
-    .select('unidad_base')
+    .select('base_unit')
     .eq('id', insumoId)
     .single();
-  return data?.unidad_base ?? 'un';
+  return data?.base_unit ?? 'un';
 }
 
 export async function upsertStockActual(
@@ -219,7 +219,7 @@ export async function fetchDeliveredOrders(branchId: string, fromDate: string) {
   const { data, error } = await fromUntyped('orders')
     .select('created_at, total')
     .eq('branch_id', branchId)
-    .eq('estado', 'entregado')
+    .eq('status', 'entregado')
     .gte('created_at', fromDate);
   if (error) throw error;
   return data ?? [];
@@ -235,7 +235,7 @@ export async function fetchClosureOrders(
   let query = fromUntyped('orders')
     .select('*, order_items(*), order_payments(*)')
     .eq('branch_id', branchId)
-    .in('estado', ['entregado', 'completado', 'listo'])
+    .in('status', ['entregado', 'completado', 'listo'])
     .gte('created_at', `${fecha}T00:00:00`)
     .lt('created_at', `${fecha}T23:59:59`);
 
@@ -257,7 +257,7 @@ export async function fetchReconciliationPayments(
   hasta: string | null,
 ) {
   let query = fromUntyped('order_payments')
-    .select('metodo, monto, conciliado, mp_payment_id, orders!inner(branch_id)')
+    .select('method, amount, conciliado, mp_payment_id, orders!inner(branch_id)')
     .eq('orders.branch_id', branchId);
 
   if (desde) query = query.gte('created_at', desde);
@@ -273,10 +273,10 @@ export async function fetchReconciliationPayments(
 export async function fetchKitchenOrders(branchId: string) {
   const { data, error } = await fromUntyped('orders')
      .select(
-      'id, numero_pedido, tipo_servicio, numero_llamador, canal_venta, cliente_nombre, cliente_user_id, created_at, estado, tiempo_listo, tiempo_inicio_prep, origen, order_items(id, name, cantidad, notas, estacion, estado, order_item_modifiers(id, descripcion, tipo, precio_extra))',
+      'id, order_number, service_type, caller_number, canal_venta, customer_name, cliente_user_id, created_at, status, ready_at_time, prep_started_at_time, source, order_items(id, name, quantity, notes, estacion, status, order_item_modifiers(id, description, type, extra_price))',
     )
     .eq('branch_id', branchId)
-    .in('estado', ['pendiente', 'confirmado', 'en_preparacion', 'listo'])
+    .in('status', ['pendiente', 'confirmado', 'en_preparacion', 'listo'])
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data ?? [];
@@ -302,7 +302,7 @@ export function removeSupabaseChannel(channel: ReturnType<typeof supabase.channe
 export async function fetchOrderHistory(branchId: string, fromDate: string) {
   const { data, error } = await fromUntyped('orders')
      .select(
-      'id, numero_pedido, numero_llamador, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, order_items(id, name, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), order_payments(id, metodo, monto), issued_invoices(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)',
+      'id, order_number, caller_number, created_at, canal_venta, service_type, canal_app, customer_name, customer_phone, customer_address, status, subtotal, descuento, total, order_items(id, name, quantity, unit_price, subtotal, notes, categoria_carta_id), order_payments(id, method, amount), issued_invoices(id, receipt_type, point_of_sale, receipt_number, cae, cae_vencimiento, neto, iva, total, issue_date, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, linked_invoice_id)',
     )
     .eq('branch_id', branchId)
     .gte('created_at', fromDate)
@@ -317,7 +317,7 @@ export async function fetchOpenRegister(branchId: string) {
   const { data } = await fromUntyped('cash_register_shifts')
     .select('*')
     .eq('branch_id', branchId)
-    .eq('estado', 'abierto')
+    .eq('status', 'abierto')
     .maybeSingle();
   return data;
 }
@@ -329,7 +329,7 @@ export async function fetchFrequentItemSales(branchId: string, since: string) {
     .select(
       `
       item_carta_id,
-      cantidad,
+      quantity,
       orders!inner(branch_id, created_at)
     `,
     )
@@ -370,7 +370,7 @@ export async function fetchCierreAnterior(branchId: string, periodo: string) {
   const { data } = await fromUntyped('stock_cierre_mensual')
     .select('insumo_id, stock_cierre_fisico')
     .eq('branch_id', branchId)
-    .eq('periodo', periodo);
+    .eq('period', periodo);
   return data ?? [];
 }
 
@@ -384,7 +384,7 @@ export async function fetchStockActualWithNames(branchId: string) {
 
 export async function fetchInsumosById(ids: string[]) {
   const { data } = await fromUntyped('supplies')
-    .select('id, name, unidad_base')
+    .select('id, name, base_unit')
     .in('id', ids);
   return data ?? [];
 }
@@ -398,7 +398,7 @@ export async function fetchPrevCierreForInsumo(
     .select('stock_cierre_fisico')
     .eq('branch_id', branchId)
     .eq('insumo_id', insumoId)
-    .eq('periodo', periodo)
+    .eq('period', periodo)
     .maybeSingle();
   return data;
 }
@@ -438,7 +438,7 @@ export async function fetchStockActualRow(branchId: string, insumoId: string) {
 
 export async function fetchInsumoCostInfo(insumoId: string) {
   const { data } = await fromUntyped('supplies')
-    .select('categoria_pl, costo_por_unidad_base, name')
+    .select('pl_category, base_unit_cost, name')
     .eq('id', insumoId)
     .single();
   return data;
@@ -551,7 +551,7 @@ export async function fetchShiftPedidoIds(branchId: string, since: string) {
     .select('id')
     .eq('branch_id', branchId)
     .gte('created_at', since)
-    .not('estado', 'eq', 'cancelado');
+    .not('status', 'eq', 'cancelado');
   return (data ?? []).map((p) => p.id);
 }
 
@@ -560,7 +560,7 @@ export async function fetchItemQuantitiesByCategories(
   pedidoIds: string[],
 ) {
   const { data } = await fromUntyped('order_items')
-    .select('cantidad')
+    .select('quantity')
     .in('categoria_carta_id', categoryIds)
     .in('pedido_id', pedidoIds);
   return data ?? [];
@@ -573,10 +573,10 @@ export async function updatePedidoEstado(
   estado: string,
   extra?: Record<string, unknown>,
 ) {
-  const updateData: Record<string, unknown> = { estado, ...extra };
-  if (estado === 'en_preparacion') updateData.tiempo_inicio_prep = new Date().toISOString();
-  if (estado === 'listo') updateData.tiempo_listo = new Date().toISOString();
-  if (estado === 'en_camino') updateData.tiempo_en_camino = new Date().toISOString();
+  const updateData: Record<string, unknown> = { status: estado, ...extra };
+  if (estado === 'en_preparacion') updateData.prep_started_at_time = new Date().toISOString();
+  if (estado === 'listo') updateData.ready_at_time = new Date().toISOString();
+  if (estado === 'en_camino') updateData.on_route_at_time = new Date().toISOString();
   const { error } = await fromUntyped('orders').update(updateData).eq('id', pedidoId);
   if (error) throw error;
 }
@@ -609,18 +609,18 @@ export async function updateExpenseApproval(
 // ─── Webapp Orders ───
 
 const WEBAPP_SELECT = `
-  id, numero_pedido, tipo_servicio, cliente_nombre,
-  cliente_telefono, cliente_direccion, cliente_user_id, canal_venta, total, estado,
+  id, order_number, service_type, customer_name,
+  customer_phone, customer_address, cliente_user_id, canal_venta, total, status,
   created_at, webapp_tracking_code,
-  order_items(id, name, cantidad, precio_unitario, subtotal)
+  order_items(id, name, quantity, unit_price, subtotal)
 `;
 
 export async function fetchWebappPendingOrders(branchId: string) {
   const { data, error } = await fromUntyped('orders')
     .select(WEBAPP_SELECT)
     .eq('branch_id', branchId)
-    .eq('origen', 'webapp')
-    .in('estado', ['pendiente'])
+    .eq('source', 'webapp')
+    .in('status', ['pendiente'])
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data ?? [];
@@ -633,8 +633,8 @@ export async function fetchWebappActiveOrders(
   const { data, error } = await fromUntyped('orders')
     .select(WEBAPP_SELECT)
     .eq('branch_id', branchId)
-    .eq('origen', 'webapp')
-    .in('estado', activeStates)
+    .eq('source', 'webapp')
+    .in('status', activeStates)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data ?? [];
@@ -642,10 +642,10 @@ export async function fetchWebappActiveOrders(
 
 export async function fetchWebappRecentOrders(branchId: string, since: string) {
   const { data, error } = await fromUntyped('orders')
-    .select('id, numero_pedido, tipo_servicio, total, estado, created_at, cliente_nombre')
+    .select('id, order_number, service_type, total, status, created_at, customer_name')
     .eq('branch_id', branchId)
-    .eq('origen', 'webapp')
-    .in('estado', ['entregado', 'cancelado'])
+    .eq('source', 'webapp')
+    .in('status', ['entregado', 'cancelado'])
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -661,7 +661,7 @@ export function subscribeToWebappOrders(branchId: string, callback: () => void) 
       {
         event: '*',
         schema: 'public',
-        table: 'pedidos',
+        table: 'orders',
         filter: `branch_id=eq.${branchId}`,
       },
       callback,
@@ -671,14 +671,14 @@ export function subscribeToWebappOrders(branchId: string, callback: () => void) 
 
 export async function acceptWebappOrder(orderId: string) {
   const { error } = await fromUntyped('orders')
-    .update({ estado: 'confirmado', tiempo_confirmado: new Date().toISOString() })
+    .update({ status: 'confirmado', confirmed_at_time: new Date().toISOString() })
     .eq('id', orderId);
   if (error) throw error;
 }
 
 export async function rejectWebappOrder(orderId: string) {
   const { error } = await fromUntyped('orders')
-    .update({ estado: 'cancelado' })
+    .update({ status: 'cancelado' })
     .eq('id', orderId);
   if (error) throw error;
 }
@@ -692,7 +692,7 @@ export async function fetchItemExtraAssignments(itemId: string) {
   if (asignaciones && (asignaciones as any[]).length > 0) {
     const extraIds = (asignaciones as any[]).map((a: any) => a.extra_id);
      const { data: extras } = await fromUntyped('menu_items')
-      .select('id, name, precio_base, is_active')
+      .select('id, name, base_price, is_active')
       .in('id', extraIds)
       .eq('is_active', true)
       .is('deleted_at', null);
@@ -706,7 +706,7 @@ export async function fetchItemExtraAssignments(itemId: string) {
         id: e.id,
         nombre: e.name,
         costo_calculado: 0,
-        precio_extra: e.precio_base,
+        precio_extra: e.base_price,
         puede_ser_extra: true,
       },
       insumos: null,
@@ -714,10 +714,10 @@ export async function fetchItemExtraAssignments(itemId: string) {
   }
    const { data } = await fromUntyped('menu_item_extras')
     .select(
-      '*, recipes:recipes(id, name, costo_calculado, precio_extra, puede_ser_extra), supplies:supplies(id, name, costo_por_unidad_base, precio_extra, puede_ser_extra)',
+      '*, recipes:recipes(id, name, calculated_cost, extra_price, can_be_extra), supplies:supplies(id, name, base_unit_cost, extra_price, can_be_extra)',
     )
     .eq('item_carta_id', itemId)
-    .order('orden');
+    .order('sort_order');
   return (data as any[]) ?? [];
 }
 
@@ -754,7 +754,7 @@ export async function deletePedidoPagos(pedidoId: string) {
 
 export async function insertPaymentEditAudit(record: Record<string, unknown>) {
   const from = supabase.from as unknown as (name: string) => ReturnType<typeof supabase.from>;
-  const { error } = await from('pedido_payment_edits').insert(record);
+  const { error } = await from('order_payment_edits').insert(record);
   if (error) throw error;
 }
 
@@ -809,10 +809,10 @@ export async function fetchBranchShifts(branchId: string) {
 
 export async function fetchShiftAnalysisOrders(branchId: string, since: string) {
   const { data, error } = await fromUntyped('orders')
-    .select('id, total, created_at, estado')
+    .select('id, total, created_at, status')
     .eq('branch_id', branchId)
     .gte('created_at', since)
-    .neq('estado', 'cancelado');
+    .neq('status', 'cancelado');
   if (error) throw error;
   return data ?? [];
 }
@@ -821,7 +821,7 @@ export async function fetchShiftAnalysisOrders(branchId: string, since: string) 
 
 export async function fetchOrderChatMessages(pedidoId: string) {
   const { data, error } = await fromUntyped('webapp_order_messages')
-    .select('id, sender_type, sender_nombre, mensaje, leido, created_at')
+    .select('id, sender_type, sender_name, message, leido, created_at')
     .eq('pedido_id', pedidoId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -862,36 +862,36 @@ export function subscribeToChatMessages(pedidoId: string, callback: () => void) 
 
 export async function fetchMenuCategoriasPrint() {
    const { data } = await fromUntyped('menu_categories')
-    .select('id, name, tipo_impresion')
+    .select('id, name, print_type')
     .eq('is_active', true);
-  return (data ?? []) as { id: string; name: string; tipo_impresion: string }[];
+  return (data ?? []) as { id: string; name: string; print_type: string }[];
 }
 
 // ─── Cancel Pedido ───
 
 export async function cancelPedido(pedidoId: string) {
-  await fromUntyped('orders').update({ estado: 'cancelado' }).eq('id', pedidoId);
+  await fromUntyped('orders').update({ status: 'cancelado' }).eq('id', pedidoId);
 }
 
 // ─── Delivery Page ───
 
 export async function fetchDeliveryPedidos(branchId: string) {
   const { data } = await fromUntyped('orders')
-    .select('*, order_items(name, cantidad)')
+    .select('*, order_items(name, quantity)')
     .eq('branch_id', branchId)
-    .eq('tipo', 'delivery')
-    .in('estado', ['listo', 'en_camino'])
+    .eq('type', 'delivery')
+    .in('status', ['listo', 'en_camino'])
     .order('created_at', { ascending: true });
   return data ?? [];
 }
 
 export async function fetchValeCategoryIds(): Promise<Set<string>> {
   const { data } = await fromUntyped('menu_categories')
-    .select('id, tipo_impresion')
+    .select('id, print_type')
     .eq('is_active', true);
   return new Set(
-    ((data ?? []) as { id: string; tipo_impresion: string }[])
-      .filter((c) => c.tipo_impresion === 'vale')
+    ((data ?? []) as { id: string; print_type: string }[])
+      .filter((c) => c.print_type === 'vale')
       .map((c) => c.id),
   );
 }
@@ -900,8 +900,8 @@ export async function assignCadeteToPedido(pedidoId: string, cadeteId: string) {
   const { error } = await fromUntyped('orders')
     .update({
       cadete_id: cadeteId,
-      estado: 'en_camino',
-      tiempo_en_camino: new Date().toISOString(),
+      status: 'en_camino',
+      on_route_at_time: new Date().toISOString(),
     })
     .eq('id', pedidoId);
   if (error) throw error;

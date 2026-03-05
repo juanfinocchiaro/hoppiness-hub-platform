@@ -102,7 +102,7 @@ export function ActualizarTab({ items, pending, setPending, mutations, userId }:
           <TableBody>
             {changes.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium text-sm">{c.nombre}</TableCell>
+                <TableCell className="font-medium text-sm">{c.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.cat}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{fmt(c.precio)}</TableCell>
                 <TableCell className="text-center"><ArrowRight className="w-4 h-4 mx-auto text-muted-foreground" /></TableCell>

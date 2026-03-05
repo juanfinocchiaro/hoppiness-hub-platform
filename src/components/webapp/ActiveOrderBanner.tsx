@@ -62,7 +62,7 @@ export function ActiveOrderBanner({ onShowTracking }: Props) {
 
   // Single order
   const order = activeOrders[0];
-  const config = ESTADO_CONFIG[order.estado] || ESTADO_CONFIG.pendiente;
+  const config = ESTADO_CONFIG[order.status] || ESTADO_CONFIG.pendiente;
   const Icon = config.icon;
 
   return (
@@ -72,7 +72,7 @@ export function ActiveOrderBanner({ onShowTracking }: Props) {
     >
       <Icon className="w-4 h-4 text-primary shrink-0" />
       <p className="text-xs font-medium text-foreground flex-1">
-        Tu pedido <span className="font-bold">#{order.numero_pedido}</span> {config.label}
+        Tu pedido <span className="font-bold">#{order.order_number}</span> {config.label}
       </p>
       <span className="text-[10px] font-semibold text-primary shrink-0">Ver estado →</span>
     </button>

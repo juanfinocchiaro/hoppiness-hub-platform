@@ -30,13 +30,13 @@ export function PrepRow({
         onClick={onToggle}
       >
         <div className="flex-1 min-w-0">
-          <p className="font-medium">{prep.nombre}</p>
-          {prep.descripcion && (
-            <p className="text-xs text-muted-foreground truncate">{prep.descripcion}</p>
+          <p className="font-medium">{prep.name}</p>
+          {prep.description && (
+            <p className="text-xs text-muted-foreground truncate">{prep.description}</p>
           )}
         </div>
-        <Badge variant={prep.tipo === 'elaborado' ? 'default' : 'secondary'} className="shrink-0">
-          {prep.tipo === 'elaborado' ? '🍳 Elaborado' : '📦 Componente'}
+        <Badge variant={prep.type === 'elaborado' ? 'default' : 'secondary'} className="shrink-0">
+          {prep.type === 'elaborado' ? '🍳 Elaborado' : '📦 Componente'}
         </Badge>
         {prep.is_interchangeable && (
           <Badge variant="outline" className="text-xs shrink-0">
@@ -44,7 +44,7 @@ export function PrepRow({
           </Badge>
         )}
         <span className="font-mono text-sm shrink-0 w-24 text-right">
-          {prep.costo_calculado > 0 ? formatCurrency(prep.costo_calculado) : '—'}
+          {prep.calculated_cost > 0 ? formatCurrency(prep.calculated_cost) : '—'}
         </span>
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onDelete}>
@@ -61,7 +61,7 @@ export function PrepRow({
           <InlineCategoria prep={prep} mutations={mutations} categorias={categorias} />
           <InlineDescripcion prep={prep} mutations={mutations} />
 
-          {prep.tipo === 'elaborado' ? (
+          {prep.type === 'elaborado' ? (
             <FichaTecnicaTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />
           ) : (
             <OpcionesTab preparacionId={prep.id} mutations={mutations} onClose={onToggle} />

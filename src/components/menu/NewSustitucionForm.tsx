@@ -26,13 +26,13 @@ export function NewSustitucionForm({ itemId, insumos, onCreate, onClose }: NewSu
 
   const diferenciaCosto =
     original && nuevo
-      ? (nuevo.costo_por_unidad_base || 0) * cantidad -
-        (original.costo_por_unidad_base || 0) * cantidad
+      ? (nuevo.base_unit_cost || 0) * cantidad -
+        (original.base_unit_cost || 0) * cantidad
       : 0;
 
   const handleSave = async () => {
     if (!originalId || !nuevoId) return;
-    const displayName = nombre.trim() || `Cambiar ${original?.nombre} por ${nuevo?.nombre}`;
+    const displayName = nombre.trim() || `Cambiar ${original?.name} por ${nuevo?.name}`;
     await onCreate.mutateAsync({
       item_carta_id: itemId,
       tipo: 'sustitucion',
@@ -65,7 +65,7 @@ export function NewSustitucionForm({ itemId, insumos, onCreate, onClose }: NewSu
             onValueChange={(v) => {
               setOriginalId(v);
               const o = allInsumos.find((i) => i.id === v);
-              if (nuevo) setNombre(`Cambiar ${o?.nombre} por ${nuevo.nombre}`);
+              if (nuevo) setNombre(`Cambiar ${o?.name} por ${nuevo.name}`);
             }}
           >
             <SelectTrigger className="text-sm">
@@ -74,7 +74,7 @@ export function NewSustitucionForm({ itemId, insumos, onCreate, onClose }: NewSu
             <SelectContent>
               {allInsumos.map((i) => (
                 <SelectItem key={i.id} value={i.id}>
-                  {i.nombre}
+                  {i.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -87,7 +87,7 @@ export function NewSustitucionForm({ itemId, insumos, onCreate, onClose }: NewSu
             onValueChange={(v) => {
               setNuevoId(v);
               const n = allInsumos.find((i) => i.id === v);
-              if (original) setNombre(`Cambiar ${original.nombre} por ${n?.nombre}`);
+              if (original) setNombre(`Cambiar ${original.name} por ${n?.name}`);
             }}
           >
             <SelectTrigger className="text-sm">
@@ -98,7 +98,7 @@ export function NewSustitucionForm({ itemId, insumos, onCreate, onClose }: NewSu
                 .filter((i) => i.id !== originalId)
                 .map((i) => (
                   <SelectItem key={i.id} value={i.id}>
-                    {i.nombre}
+                    {i.name}
                   </SelectItem>
                 ))}
             </SelectContent>

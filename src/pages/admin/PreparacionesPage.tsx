@@ -73,7 +73,7 @@ export default function PreparacionesPage() {
     return (
       preparaciones?.filter((p) => {
         if (!search) return true;
-        return p.nombre.toLowerCase().includes(search.toLowerCase());
+        return p.name.toLowerCase().includes(search.toLowerCase());
       }) || []
     );
   }, [preparaciones, search]);
@@ -94,7 +94,7 @@ export default function PreparacionesPage() {
   const handleCreateCat = async () => {
     if (!newCatNombre.trim()) return;
     await catMutations.create.mutateAsync({
-      nombre: newCatNombre.trim(),
+      name: newCatNombre.trim(),
       orden: (categorias?.length || 0) + 1,
     });
     setNewCatNombre('');
@@ -105,7 +105,7 @@ export default function PreparacionesPage() {
     if (!editingCatId || !editingCatNombre.trim()) return;
     await catMutations.update.mutateAsync({
       id: editingCatId,
-      data: { nombre: editingCatNombre.trim() },
+      data: { name: editingCatNombre.trim() },
     });
     setEditingCatId(null);
   };
@@ -284,7 +284,7 @@ export default function PreparacionesPage() {
         open={!!deletingPrep}
         onOpenChange={() => setDeletingPrep(null)}
         title="Eliminar preparación"
-        description={`¿Eliminar "${deletingPrep?.nombre}"? Los items de carta que la usen perderán su referencia a esta receta.`}
+        description={`¿Eliminar "${deletingPrep?.name}"? Los items de carta que la usen perderán su referencia a esta receta.`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {
@@ -297,7 +297,7 @@ export default function PreparacionesPage() {
         open={!!deletingCat}
         onOpenChange={() => setDeletingCat(null)}
         title="Eliminar categoría"
-        description={`¿Eliminar "${deletingCat?.nombre}"? Las recetas quedarán sin categoría.`}
+        description={`¿Eliminar "${deletingCat?.name}"? Las recetas quedarán sin categoría.`}
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={async () => {

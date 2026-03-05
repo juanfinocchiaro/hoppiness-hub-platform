@@ -105,7 +105,7 @@ export default function CuentaCorrienteProveedorPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={proveedor?.razon_social || 'Proveedor'}
+        title={proveedor?.business_name || 'Proveedor'}
         subtitle={proveedor?.cuit ? `CUIT: ${proveedor.cuit}` : undefined}
         actions={
           <div className="flex gap-2">
@@ -129,7 +129,7 @@ export default function CuentaCorrienteProveedorPage() {
                       importe: 'Importe',
                       saldo: 'Saldo',
                     },
-                    { filename: `cc-${proveedor?.razon_social || 'proveedor'}` },
+                    { filename: `cc-${proveedor?.business_name || 'proveedor'}` },
                   )
                 }
               >
@@ -280,13 +280,13 @@ export default function CuentaCorrienteProveedorPage() {
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-muted-foreground" />
                 <span>
-                  <strong>Razón Social:</strong> {proveedor.razon_social}
+                  <strong>Razón Social:</strong> {proveedor.business_name}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-muted-foreground" />
                 <span>
-                  <strong>Teléfono:</strong> {proveedor.telefono || '-'}
+                  <strong>Teléfono:</strong> {proveedor.phone || '-'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -362,9 +362,9 @@ export default function CuentaCorrienteProveedorPage() {
                   const isFactura = mov.tipo === 'factura';
                   const isOverdue =
                     isFactura &&
-                    mov.fecha_vencimiento &&
-                    parseLocalDate(mov.fecha_vencimiento) < new Date();
-                  const isImputacion = !isFactura && mov.medio_pago === 'imputacion_saldo';
+                    mov.due_date &&
+                    parseLocalDate(mov.due_date) < new Date();
+                  const isImputacion = !isFactura && mov.payment_method === 'imputacion_saldo';
 
                   return (
                     <TableRow key={`${mov.tipo}-${mov.id}`}>
@@ -397,12 +397,12 @@ export default function CuentaCorrienteProveedorPage() {
                       <TableCell>
                         {isFactura ? (
                           <div>
-                            <p className="text-sm font-medium">{mov.factura_numero}</p>
-                            {mov.fecha_vencimiento && (
+                            <p className="text-sm font-medium">{mov.invoice_number}</p>
+                            {mov.due_date && (
                               <p
                                 className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}
                               >
-                                Venc: {formatLocalDate(mov.fecha_vencimiento)}
+                                Venc: {formatLocalDate(mov.due_date)}
                               </p>
                             )}
                           </div>
@@ -415,7 +415,7 @@ export default function CuentaCorrienteProveedorPage() {
                           </div>
                         ) : (
                           <div>
-                            <p className="text-sm font-medium capitalize">{mov.medio_pago}</p>
+                            <p className="text-sm font-medium capitalize">{mov.payment_method}</p>
                             {mov.referencia && (
                               <p className="text-xs text-muted-foreground">{mov.referencia}</p>
                             )}
@@ -459,7 +459,7 @@ export default function CuentaCorrienteProveedorPage() {
                               Pendiente
                             </Badge>
                           ))}
-                        {!isFactura && mov.verificado === false && (
+                        {!isFactura && mov.is_verified === false && (
                           <Badge
                             variant="outline"
                             className="text-xs text-amber-600 border-amber-300 gap-1"
@@ -468,7 +468,7 @@ export default function CuentaCorrienteProveedorPage() {
                             Verificando
                           </Badge>
                         )}
-                        {!isFactura && mov.verificado === true && (
+                        {!isFactura && mov.is_verified === true && (
                           <Badge variant="default" className="text-xs gap-1">
                             <ShieldCheck className="w-3 h-3" />
                             Verificado
@@ -489,7 +489,7 @@ export default function CuentaCorrienteProveedorPage() {
                               Registrar Pago
                             </Button>
                           )}
-                          {!isFactura && !mov.verificado && (
+                          {!isFactura && !mov.is_verified && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -515,7 +515,7 @@ export default function CuentaCorrienteProveedorPage() {
         open={!!payingFacturaId}
         onOpenChange={() => setPayingFacturaId(null)}
         factura={payingFactura as any}
-        proveedorNombre={proveedor?.razon_social}
+        proveedorNombre={proveedor?.business_name}
         saldoAFavor={saldoAFavor}
       />
 
@@ -523,7 +523,7 @@ export default function CuentaCorrienteProveedorPage() {
         open={payingAccountLevel}
         onOpenChange={setPayingAccountLevel}
         factura={null}
-        proveedorNombre={proveedor?.razon_social}
+        proveedorNombre={proveedor?.business_name}
         proveedorId={proveedorId}
         branchId={branchId}
       />
