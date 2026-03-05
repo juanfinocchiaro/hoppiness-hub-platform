@@ -196,8 +196,8 @@ export async function fetchShiftClosuresByDate(branchId: string, dateStr: string
     .from('shift_closures')
     .select('*')
     .eq('branch_id', branchId)
-    .eq('fecha', dateStr)
-    .order('turno');
+    .eq('date', dateStr)
+    .order('shift');
   if (error) throw error;
   return data || [];
 }
