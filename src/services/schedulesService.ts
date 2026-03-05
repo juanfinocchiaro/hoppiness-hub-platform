@@ -220,8 +220,8 @@ export async function fetchShiftClosureSingle(branchId: string, fecha: string, t
     .from('shift_closures')
     .select('*')
     .eq('branch_id', branchId)
-    .eq('fecha', fecha)
-    .eq('turno', turno)
+    .eq('date', fecha)
+    .eq('shift', turno)
     .maybeSingle();
   if (error) throw error;
   return data;
