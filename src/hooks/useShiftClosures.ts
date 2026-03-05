@@ -37,10 +37,21 @@ import * as closureCalcs from '@/types/shiftClosure';
 function parseShiftClosure(row: any): ShiftClosure {
   return {
     ...row,
-    hamburguesas: row.hamburguesas as HamburguesasData,
-    ventas_local: row.ventas_local as VentasLocalData,
-    ventas_apps: row.ventas_apps as VentasAppsData,
-    arqueo_caja: (row.arqueo_caja as ArqueoCaja) || { diferencia_caja: 0 },
+    // Map new DB column names to existing TS interface names
+    hamburguesas: row.burgers as HamburguesasData,
+    ventas_local: row.local_sales as VentasLocalData,
+    ventas_apps: row.app_sales as VentasAppsData,
+    arqueo_caja: (row.register_reconciliation as ArqueoCaja) || { diferencia_caja: 0 },
+    total_facturado: row.total_invoiced,
+    total_hamburguesas: row.total_burgers,
+    total_vendido: row.total_sold,
+    total_efectivo: row.total_cash,
+    tiene_alerta_facturacion: row.has_invoicing_alert,
+    tiene_alerta_posnet: row.has_posnet_alert,
+    tiene_alerta_apps: row.has_apps_alert,
+    tiene_alerta_caja: row.has_register_alert,
+    diferencia_posnet: row.posnet_difference,
+    diferencia_apps: row.apps_difference,
   };
 }
 
@@ -237,34 +248,34 @@ export function useSaveShiftClosure() {
       const arqueoCajaJson = input.arqueo_caja as unknown as Json;
 
       const closureData = {
-        hamburguesas: hamburguesasJson,
-        ventas_local: ventasLocalJson,
-        ventas_apps: ventasAppsJson,
-        arqueo_caja: arqueoCajaJson,
-        total_facturado: input.total_facturado,
-        total_hamburguesas: totalHamburguesas,
-        total_vendido: totalVendido,
-        total_efectivo: totalEfectivo,
+        burgers: hamburguesasJson,
+        local_sales: ventasLocalJson,
+        app_sales: ventasAppsJson,
+        register_reconciliation: arqueoCajaJson,
+        total_invoiced: input.total_facturado,
+        total_burgers: totalHamburguesas,
+        total_sold: totalVendido,
+        total_cash: totalEfectivo,
         total_digital: totalDigital,
-        facturacion_esperada: facturacionEsperada,
-        facturacion_diferencia: facturacionDiferencia,
-        tiene_alerta_facturacion: tieneAlertaFacturacion,
-        diferencia_posnet: posnetDiff.diferencia,
-        diferencia_apps: appsDiff.diferencia,
-        tiene_alerta_posnet: posnetDiff.tieneAlerta,
-        tiene_alerta_apps: appsDiff.tieneAlerta,
-        tiene_alerta_caja: tieneAlertaCaja,
-        notas: input.notas || null,
+        expected_invoicing: facturacionEsperada,
+        invoicing_difference: facturacionDiferencia,
+        has_invoicing_alert: tieneAlertaFacturacion,
+        posnet_difference: posnetDiff.diferencia,
+        apps_difference: appsDiff.diferencia,
+        has_posnet_alert: posnetDiff.tieneAlerta,
+        has_apps_alert: appsDiff.tieneAlerta,
+        has_register_alert: tieneAlertaCaja,
+        notes: input.notas || null,
       };
 
       // Atomic upsert: avoids race condition where two users
       // could create duplicate closures for the same branch+date+shift.
       const data = await upsertShiftClosure({
         branch_id: input.branch_id,
-        fecha: input.fecha,
-        turno: input.turno,
+        date: input.fecha,
+        shift: input.turno,
         ...closureData,
-        cerrado_por: user.id,
+        closed_by: user.id,
         updated_by: user.id,
       });
 

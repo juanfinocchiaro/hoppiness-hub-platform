@@ -96,12 +96,12 @@ export function BrandDailySalesTable() {
 
         const totals = branchClosures.reduce(
           (acc, c) => {
-            const h = (c.hamburguesas as any) || {};
+            const h = (c.burgers as any) || {};
             return {
-              vendido: acc.vendido + Number(c.total_vendido || 0),
-              efectivo: acc.efectivo + Number(c.total_efectivo || 0),
+              vendido: acc.vendido + Number(c.total_sold || 0),
+              efectivo: acc.efectivo + Number(c.total_cash || 0),
               digital: acc.digital + Number(c.total_digital || 0),
-              hamburguesas: acc.hamburguesas + Number(c.total_hamburguesas || 0),
+              hamburguesas: acc.hamburguesas + Number(c.total_burgers || 0),
               clasicas: acc.clasicas + (h.clasicas || 0),
               originales: acc.originales + (h.originales || 0),
               mas_sabor: acc.mas_sabor + (h.mas_sabor || 0),
@@ -115,7 +115,7 @@ export function BrandDailySalesTable() {
                 ((h.extras?.extra_carne || 0) +
                   (h.extras?.extra_not_burger || 0) +
                   (h.extras?.extra_not_chicken || 0)),
-              hasAlert: acc.hasAlert || c.tiene_alerta_facturacion,
+              hasAlert: acc.hasAlert || c.has_invoicing_alert,
             };
           },
           {
