@@ -315,7 +315,7 @@ export async function upsertRdoMovimiento(data: RdoMovimientoFormData, userId?: 
 
   if (data.monto === 0) return null;
 
-  const { data: result, error } = await fromUntyped('rdo_movimientos')
+  const { data: result, error } = await fromUntyped('rdo_movements')
     .insert([
       {
         branch_id: data.branch_id,
