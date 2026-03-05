@@ -72,7 +72,7 @@ export function ProveedorFormModal({
         dias_pago_habitual: proveedor.dias_pago_habitual || undefined,
         descuento_pago_contado: proveedor.descuento_pago_contado || undefined,
         banco: proveedor.banco || '',
-        numero_cuenta: proveedor.numero_cuenta || '',
+        numero_cuenta: (proveedor as any).account_number || (proveedor as any).numero_cuenta || '',
         cbu: proveedor.cbu || '',
         alias_cbu: proveedor.alias_cbu || '',
         titular_cuenta: proveedor.titular_cuenta || '',

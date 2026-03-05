@@ -132,8 +132,8 @@ export type ConfigTipo = 'categoria_hamburguesa' | 'tipo_hamburguesa' | 'extra' 
 
 export interface ClosureConfigItem {
   id: string;
-  tipo: ConfigTipo;
-  clave: string;
+  type: ConfigTipo;
+  key: string;
   label: string;
   categoria_padre: string | null;
   sort_order: number;
