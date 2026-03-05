@@ -39,7 +39,7 @@ export function ProductPreviewPanel({ item }: Props) {
 
   // Active extras with name and price
   const activeExtras = (asignaciones || [])
-    .filter((a: any) => a.extra?.activo !== false)
+    .filter((a: any) => (a.extra?.is_active ?? a.extra?.activo) !== false)
     .map((a: any) => ({
       id: a.extra?.id,
       nombre: a.extra?.nombre || 'Extra',

@@ -48,7 +48,7 @@ function ClosureConfigPageContent() {
   // Toggle active status
   const toggleMutation = useMutation({
     mutationFn: ({ id, activo }: { id: string; activo: boolean }) =>
-      toggleClosureConfigItem(id, activo),
+      toggleClosureConfigItem(id, activo as boolean),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brand-closure-config'] });
       toast.success('Configuración actualizada');
@@ -83,7 +83,7 @@ function ClosureConfigPageContent() {
         etiqueta,
         categoria_padre: categoriaPadre,
         orden: maxOrden + 1,
-        activo: true,
+        is_active: true,
       });
     },
     onSuccess: (_, variables) => {

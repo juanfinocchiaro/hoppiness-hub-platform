@@ -38,7 +38,7 @@ export async function updateCategoriaInsumo(
 
 export async function softDeleteCategoriaInsumo(id: string) {
   const { error } = await fromUntyped('supply_categories')
-    .update({ deleted_at: new Date().toISOString(), activo: false })
+    .update({ deleted_at: new Date().toISOString(), is_active: false })
     .eq('id', id);
   if (error) throw error;
 }
@@ -78,7 +78,7 @@ export async function updateInsumo(id: string, payload: Partial<InsumoFormData>)
 
 export async function softDeleteInsumo(id: string) {
   const { error } = await fromUntyped('supplies')
-    .update({ deleted_at: new Date().toISOString(), activo: false })
+    .update({ deleted_at: new Date().toISOString(), is_active: false })
     .eq('id', id);
   if (error) throw error;
 }
@@ -143,7 +143,7 @@ export async function updatePreparacion(id: string, payload: any) {
 
 export async function softDeletePreparacion(id: string) {
   const { error } = await fromUntyped('recipes')
-    .update({ activo: false, deleted_at: new Date().toISOString() })
+    .update({ is_active: false, deleted_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -277,7 +277,7 @@ export async function updateItemCarta(id: string, payload: any) {
 
 export async function softDeleteItemCarta(id: string) {
   const { error } = await fromUntyped('menu_items')
-    .update({ activo: false, deleted_at: new Date().toISOString() })
+    .update({ is_active: false, deleted_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -391,7 +391,7 @@ export async function reorderMenuCategorias(items: { id: string; orden: number }
 
 export async function softDeleteMenuCategoria(id: string) {
   const { error } = await fromUntyped('menu_categories')
-    .update({ activo: false, updated_at: new Date().toISOString() })
+    .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -558,7 +558,7 @@ export async function createExtraItemCarta(params: {
 
 export async function reactivateExtraItemCarta(id: string, costo: number) {
   const { error } = await fromUntyped('menu_items')
-    .update({ activo: true, deleted_at: null, costo_total: costo })
+    .update({ is_active: true, deleted_at: null, costo_total: costo })
     .eq('id', id);
   if (error) throw error;
 }
@@ -687,7 +687,7 @@ export async function upsertRemovible(params: {
 
   if (existing) {
     const { error } = await fromUntyped('removable_items')
-      .update({ activo: true, nombre_display: params.nombre_display || null })
+      .update({ is_active: true, nombre_display: params.nombre_display || null })
       .eq('id', (existing as Record<string, unknown>).id as string);
     if (error) throw error;
   } else {
@@ -695,7 +695,7 @@ export async function upsertRemovible(params: {
       item_carta_id: params.item_carta_id,
       insumo_id: params.insumo_id || null,
       preparacion_id: params.preparacion_id || null,
-      activo: true,
+      is_active: true,
       nombre_display: params.nombre_display || null,
     });
     if (error) throw error;
@@ -855,10 +855,10 @@ export async function fetchWebappItemExtras(itemId: string) {
 export async function fetchWebappItemRemovables(itemId: string) {
   const { data, error } = await fromUntyped('removable_items')
     .select(
-      'id, nombre_display, activo, insumo_id, preparacion_id, supplies(id, name), recipes(id, name)',
+      'id, nombre_display, is_active, insumo_id, preparacion_id, supplies(id, name), recipes(id, name)',
     )
     .eq('item_carta_id', itemId)
-    .eq('activo', true);
+    .eq('is_active', true);
   if (error) throw error;
   return data ?? [];
 }
