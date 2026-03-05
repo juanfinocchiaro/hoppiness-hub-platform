@@ -74,12 +74,12 @@ function ClosureConfigPageContent() {
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
       const maxOrden =
-        configItems?.filter((i) => i.tipo === tipo).reduce((max, i) => Math.max(max, i.sort_order), 0) ||
+        configItems?.filter((i) => i.type === tipo).reduce((max, i) => Math.max(max, i.sort_order), 0) ||
         0;
 
       await addClosureConfigItem({
-        tipo,
-        clave,
+        type: tipo,
+        key: clave,
         label: etiqueta,
         categoria_padre: categoriaPadre,
         sort_order: maxOrden + 1,
