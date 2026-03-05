@@ -146,7 +146,7 @@ export async function fetchBranchClosureConfig(branchId: string) {
     .select('*')
     .eq('tipo', 'app_delivery')
     .eq('is_active', true)
-    .order('orden');
+    .order('sort_order');
 
   if (appsError) throw appsError;
 

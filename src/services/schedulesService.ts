@@ -231,8 +231,8 @@ export async function fetchAllShiftClosuresInRange(fromStr: string, toStr: strin
   const { data, error } = await supabase
     .from('shift_closures')
     .select('*')
-    .gte('fecha', fromStr)
-    .lte('fecha', toStr);
+    .gte('date', fromStr)
+    .lte('date', toStr);
   if (error) throw error;
   return data || [];
 }

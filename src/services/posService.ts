@@ -432,7 +432,7 @@ export async function upsertCierreMensual(record: Record<string, unknown>) {
 export async function fetchStockActualRow(branchId: string, insumoId: string) {
   const { data } = await supabase
     .from('stock_actual')
-    .select('quantity, unidad')
+    .select('quantity, unit')
     .eq('branch_id', branchId)
     .eq('insumo_id', insumoId)
     .maybeSingle();

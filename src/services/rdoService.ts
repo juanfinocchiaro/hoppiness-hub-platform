@@ -795,13 +795,13 @@ export async function fetchFiscalBranchData(
   return {
     name: branchRes.data.name,
     cuit: afipRes.data.cuit || '',
-    address: afipRes.data.direccion_fiscal || branchRes.data.address || '',
+    address: afipRes.data.fiscal_address || branchRes.data.address || '',
     punto_venta: afipRes.data.punto_venta || 0,
-    razon_social: afipRes.data.razon_social || branchRes.data.name || '',
+    razon_social: afipRes.data.business_name || branchRes.data.name || '',
     iibb: afipRes.data.cuit || '',
     condicion_iva: 'IVA Responsable Inscripto',
-    inicio_actividades: afipRes.data.inicio_actividades || '',
-    direccion_fiscal: afipRes.data.direccion_fiscal || branchRes.data.address || '',
+    inicio_actividades: afipRes.data.activity_start_date || '',
+    direccion_fiscal: afipRes.data.fiscal_address || branchRes.data.address || '',
   };
 }
 

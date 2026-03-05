@@ -169,7 +169,7 @@ function ClosureConfigPageContent() {
                 >
                   <div className="flex items-center gap-3">
                     <div>
-                      <span className="font-medium">{item.etiqueta}</span>
+                      <span className="font-medium">{item.label}</span>
                       {item.categoria_padre && (
                         <Badge variant="outline" className="ml-2 text-xs">
                           {item.categoria_padre}
