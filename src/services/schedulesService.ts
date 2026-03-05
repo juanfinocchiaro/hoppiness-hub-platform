@@ -207,10 +207,10 @@ export async function fetchShiftClosuresByDateRange(branchId: string, fromStr: s
     .from('shift_closures')
     .select('*')
     .eq('branch_id', branchId)
-    .gte('fecha', fromStr)
-    .lte('fecha', toStr)
-    .order('fecha', { ascending: false })
-    .order('turno');
+    .gte('date', fromStr)
+    .lte('date', toStr)
+    .order('date', { ascending: false })
+    .order('shift');
   if (error) throw error;
   return data || [];
 }
