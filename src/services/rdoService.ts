@@ -281,7 +281,7 @@ export async function fetchRdoMovimientos(branchId: string, periodo: string) {
     .from('rdo_movimientos')
     .select('*')
     .eq('branch_id', branchId)
-    .eq('periodo', periodo)
+    .eq('period', periodo)
     .is('deleted_at', null)
     .order('rdo_category_code');
   if (error) throw error;
