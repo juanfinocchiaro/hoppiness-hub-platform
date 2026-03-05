@@ -84,19 +84,24 @@ Frontend: ~200+ archivos actualizados. Servicios clave migrados: posService, fin
 Patrón usado: `fromUntyped('new_table_name')` en lugar de `supabase.from('old_name')` para bypass de tipos hasta regeneración.
 
 ## ✅ Fase 2 — Columnas: COMPLETADA (DB + service layer)
-Migración DB ejecutada el 2026-03-05. Todas las columnas en español renombradas a inglés en dos bloques:
-- Bloque 1 (2026-03-05 AM): ~80 columnas frecuentes (fecha, periodo, precio_unitario, etc.)
-- Bloque 2 (2026-03-05 PM): ~55 columnas restantes (tipo→type, estado→status, notas→notes, monto_*→*_amount, precio_*→*_price, costo_*→*_cost, clave→key, etc.)
-
-Service layer actualizado: configService.ts, adminService.ts, posService.ts, useClosureConfig.ts, ClosureConfigPage.tsx, StockHistorial.tsx, ProveedorFormModal.tsx.
-
-⚠️ Frontend UI components may still reference old column names via compatibility aliases in hooks.
+Todas las columnas en español renombradas a inglés. Últimas 5 columnas migradas el 2026-03-05:
+- `discount_codes.monto_minimo_pedido` → `min_order_amount`
+- `suppliers.contacto` → `contact`
+- `branch_closure_config.habilitado` → `enabled`
+- `orders.requiere_factura` → `requires_invoice`
+- `supplier_invoices.total_factura` → `invoice_total`
 
 ## ✅ Fase 4 — Enum values: COMPLETADA (DB)
-Los 3 enums PostgreSQL fueron migrados el 2026-03-05:
-- `order_area`: `salon`→`dine_in`, `mostrador`→`counter` (delivery ya OK)
-- `payment_method`: `efectivo`→`cash`, `tarjeta_debito`→`debit_card`, `tarjeta_credito`→`credit_card`, `transferencia`→`transfer`, `vales`→`vouchers` (mercadopago_qr/link ya OK)
-- `work_position_type`: `cajero`→`cashier`, `cocinero`→`cook`, `lavacopas`→`dishwasher` (barista/runner ya OK)
+Los 3 enums PostgreSQL migrados.
+
+## ✅ Fase 5 — Vistas renombradas: COMPLETADA
+- `balance_socios` → `partner_balance`
+- `cuenta_corriente_marca` → `brand_current_account`
+- `cuenta_corriente_proveedores` → `supplier_current_account`
+
+## ✅ Fase 6 — Funciones DB renombradas: COMPLETADA
+~29 funciones renombradas de español a inglés. Triggers actualizados.
+Funciones con dependencias RLS (`is_franquiciado_or_contador_for_branch`, `is_socio_admin`) se mantienen con alias inglés (`is_franchisee_or_accountant_for_branch`, `is_partner_admin`).
 
 ⚠️ Frontend components with hardcoded Spanish enum values need updating.
 
