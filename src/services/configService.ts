@@ -85,8 +85,8 @@ export async function updateBranchShiftConfig(
 function toClosureConfigItem(row: any): ClosureConfigItem {
   return {
     id: row.id,
-    tipo: row.tipo as ConfigTipo,
-    clave: row.clave,
+    type: (row.type ?? row.tipo) as ConfigTipo,
+    key: row.key ?? row.clave,
     label: row.label ?? row.etiqueta,
     categoria_padre: row.categoria_padre,
     sort_order: row.sort_order ?? row.orden,
@@ -99,7 +99,7 @@ export async function fetchBrandClosureConfig() {
     .from('brand_closure_config')
     .select('*')
     .eq('is_active', true)
-    .order('orden');
+    .order('sort_order');
 
   if (error) throw error;
 
@@ -114,7 +114,7 @@ export async function fetchBrandClosureConfig() {
   (data || []).forEach((row) => {
     const item = toClosureConfigItem(row);
     config.all.push(item);
-    switch (item.tipo) {
+    switch (item.type) {
       case 'categoria_hamburguesa':
         config.categorias.push(item);
         break;
@@ -144,7 +144,7 @@ export async function fetchBranchClosureConfig(branchId: string) {
   const { data: brandApps, error: appsError } = await supabase
     .from('brand_closure_config')
     .select('*')
-    .eq('tipo', 'app_delivery')
+    .eq('type', 'app_delivery')
     .eq('is_active', true)
     .order('sort_order');
 
@@ -153,13 +153,13 @@ export async function fetchBranchClosureConfig(branchId: string) {
   const enabledApps = new Map<string, boolean>();
 
   (brandApps || []).forEach((row) => {
-    enabledApps.set(row.clave, true);
+    enabledApps.set(row.key, true);
   });
 
   (branchConfig || []).forEach((bc) => {
     const raw = bc.brand_closure_config as any;
-    if (raw && raw.tipo === 'app_delivery') {
-      enabledApps.set(raw.clave, bc.habilitado);
+    if (raw && raw.type === 'app_delivery') {
+      enabledApps.set(raw.key, bc.habilitado);
     }
   });
 

@@ -31,7 +31,7 @@ export function StockHistorial({ branchId, insumoId }: StockHistorialProps) {
             {m.created_at ? format(new Date(m.created_at), 'dd/MM HH:mm') : '-'}
           </span>
           <Badge variant="outline" className="text-[10px]">
-            {TIPO_LABELS[m.tipo] ?? m.tipo}
+            {TIPO_LABELS[(m as any).type ?? (m as any).tipo] ?? (m as any).type ?? (m as any).tipo}
           </Badge>
           <span className="flex-1 truncate text-muted-foreground">{m.reason || (m as any).motivo || m.nota || '-'}</span>
           <span className="font-mono tabular-nums">

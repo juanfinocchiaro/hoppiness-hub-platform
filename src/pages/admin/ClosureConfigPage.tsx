@@ -74,12 +74,12 @@ function ClosureConfigPageContent() {
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
       const maxOrden =
-        configItems?.filter((i) => i.tipo === tipo).reduce((max, i) => Math.max(max, i.sort_order), 0) ||
+        configItems?.filter((i) => i.type === tipo).reduce((max, i) => Math.max(max, i.sort_order), 0) ||
         0;
 
       await addClosureConfigItem({
-        tipo,
-        clave,
+        type: tipo,
+        key: clave,
         label: etiqueta,
         categoria_padre: categoriaPadre,
         sort_order: maxOrden + 1,
@@ -115,26 +115,26 @@ function ClosureConfigPageContent() {
       titulo: 'Categorías de Hamburguesas',
       descripcion:
         'Categorías principales que se muestran en el formulario de cierre (Clásicas, Originales, etc.)',
-      items: configItems?.filter((i) => i.tipo === 'categoria_hamburguesa') || [],
+      items: configItems?.filter((i) => i.type === 'categoria_hamburguesa') || [],
     },
     {
       tipo: 'tipo_hamburguesa',
       titulo: 'Tipos Específicos',
       descripcion:
         'Hamburguesas individuales dentro de categorías (Veggies â†’ Not American, Ultrasmash â†’ Ultra Cheese)',
-      items: configItems?.filter((i) => i.tipo === 'tipo_hamburguesa') || [],
+      items: configItems?.filter((i) => i.type === 'tipo_hamburguesa') || [],
     },
     {
       tipo: 'extra',
       titulo: 'Extras',
       descripcion: 'Extras que se suman a la venta (Extra Carne, Extra Not Burger, etc.)',
-      items: configItems?.filter((i) => i.tipo === 'extra') || [],
+      items: configItems?.filter((i) => i.type === 'extra') || [],
     },
     {
       tipo: 'app_delivery',
       titulo: 'Apps de Delivery',
       descripcion: 'Aplicaciones de delivery disponibles para registrar ventas',
-      items: configItems?.filter((i) => i.tipo === 'app_delivery') || [],
+      items: configItems?.filter((i) => i.type === 'app_delivery') || [],
     },
   ];
 

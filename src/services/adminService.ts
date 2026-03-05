@@ -707,8 +707,8 @@ export async function toggleClosureConfigItem(id: string, is_active: boolean) {
 }
 
 export async function addClosureConfigItem(params: {
-  tipo: string;
-  clave: string;
+  type: string;
+  key: string;
   label: string;
   categoria_padre?: string;
   sort_order: number;
