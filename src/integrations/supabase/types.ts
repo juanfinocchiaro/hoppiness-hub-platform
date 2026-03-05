@@ -34,8 +34,8 @@ export type Database = {
           last_invoice_number_b: number | null
           last_invoice_number_c: number | null
           last_verification: string | null
+          point_of_sale: number | null
           private_key_enc: string | null
-          punto_venta: number | null
           updated_at: string
         }
         Insert: {
@@ -57,8 +57,8 @@ export type Database = {
           last_invoice_number_b?: number | null
           last_invoice_number_c?: number | null
           last_verification?: string | null
+          point_of_sale?: number | null
           private_key_enc?: string | null
-          punto_venta?: number | null
           updated_at?: string
         }
         Update: {
@@ -80,8 +80,8 @@ export type Database = {
           last_invoice_number_b?: number | null
           last_invoice_number_c?: number | null
           last_verification?: string | null
+          point_of_sale?: number | null
           private_key_enc?: string | null
-          punto_venta?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -808,11 +808,11 @@ export type Database = {
           canon_liquidacion_id: string
           created_at: string | null
           created_by: string | null
-          datos_pago: Json | null
           deleted_at: string | null
           id: string
           is_verified: boolean
           notes: string | null
+          payment_data: Json | null
           payment_date: string
           payment_method: string
           reference: string | null
@@ -826,11 +826,11 @@ export type Database = {
           canon_liquidacion_id: string
           created_at?: string | null
           created_by?: string | null
-          datos_pago?: Json | null
           deleted_at?: string | null
           id?: string
           is_verified?: boolean
           notes?: string | null
+          payment_data?: Json | null
           payment_date: string
           payment_method: string
           reference?: string | null
@@ -844,11 +844,11 @@ export type Database = {
           canon_liquidacion_id?: string
           created_at?: string | null
           created_by?: string | null
-          datos_pago?: Json | null
           deleted_at?: string | null
           id?: string
           is_verified?: boolean
           notes?: string | null
+          payment_data?: Json | null
           payment_date?: string
           payment_method?: string
           reference?: string | null
@@ -2074,18 +2074,18 @@ export type Database = {
           code: string
           created_at: string | null
           created_by: string | null
+          current_uses: number
           deleted_at: string | null
           end_date: string
           id: string
           is_active: boolean
+          max_uses: number | null
           min_order_amount: number | null
+          single_use_per_user: boolean
           start_date: string
           type: string
           updated_at: string | null
-          uso_unico_por_usuario: boolean
-          usos_actuales: number
-          usos_maximos: number | null
-          valor: number
+          value: number
         }
         Insert: {
           branch_ids?: string[] | null
@@ -2093,18 +2093,18 @@ export type Database = {
           code: string
           created_at?: string | null
           created_by?: string | null
+          current_uses?: number
           deleted_at?: string | null
           end_date?: string
           id?: string
           is_active?: boolean
+          max_uses?: number | null
           min_order_amount?: number | null
+          single_use_per_user?: boolean
           start_date?: string
           type: string
           updated_at?: string | null
-          uso_unico_por_usuario?: boolean
-          usos_actuales?: number
-          usos_maximos?: number | null
-          valor?: number
+          value?: number
         }
         Update: {
           branch_ids?: string[] | null
@@ -2112,18 +2112,18 @@ export type Database = {
           code?: string
           created_at?: string | null
           created_by?: string | null
+          current_uses?: number
           deleted_at?: string | null
           end_date?: string
           id?: string
           is_active?: boolean
+          max_uses?: number | null
           min_order_amount?: number | null
+          single_use_per_user?: boolean
           start_date?: string
           type?: string
           updated_at?: string | null
-          uso_unico_por_usuario?: boolean
-          usos_actuales?: number
-          usos_maximos?: number | null
-          valor?: number
+          value?: number
         }
         Relationships: []
       }
@@ -2436,11 +2436,10 @@ export type Database = {
       }
       expenses: {
         Row: {
-          adjuntos: Json | null
-          afecta_caja: boolean | null
+          affects_register: boolean | null
           amount: number
+          attachments: Json | null
           branch_id: string
-          categoria_principal: string
           concept: string
           created_at: string | null
           created_by: string | null
@@ -2448,8 +2447,8 @@ export type Database = {
           deleted_at: string | null
           details: Json | null
           due_date: string | null
-          gasto_relacionado_id: string | null
           id: string
+          main_category: string
           notes: string | null
           payment_date: string | null
           payment_method: string | null
@@ -2459,18 +2458,18 @@ export type Database = {
           proveedor_id: string | null
           rdo_category_code: string | null
           rdo_section: string | null
+          related_expense_id: string | null
           shift_id: string | null
           status: string | null
-          subcategoria: string | null
+          subcategory: string | null
           transfer_cost: number | null
           updated_at: string | null
         }
         Insert: {
-          adjuntos?: Json | null
-          afecta_caja?: boolean | null
+          affects_register?: boolean | null
           amount: number
+          attachments?: Json | null
           branch_id: string
-          categoria_principal: string
           concept: string
           created_at?: string | null
           created_by?: string | null
@@ -2478,8 +2477,8 @@ export type Database = {
           deleted_at?: string | null
           details?: Json | null
           due_date?: string | null
-          gasto_relacionado_id?: string | null
           id?: string
+          main_category: string
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -2489,18 +2488,18 @@ export type Database = {
           proveedor_id?: string | null
           rdo_category_code?: string | null
           rdo_section?: string | null
+          related_expense_id?: string | null
           shift_id?: string | null
           status?: string | null
-          subcategoria?: string | null
+          subcategory?: string | null
           transfer_cost?: number | null
           updated_at?: string | null
         }
         Update: {
-          adjuntos?: Json | null
-          afecta_caja?: boolean | null
+          affects_register?: boolean | null
           amount?: number
+          attachments?: Json | null
           branch_id?: string
-          categoria_principal?: string
           concept?: string
           created_at?: string | null
           created_by?: string | null
@@ -2508,8 +2507,8 @@ export type Database = {
           deleted_at?: string | null
           details?: Json | null
           due_date?: string | null
-          gasto_relacionado_id?: string | null
           id?: string
+          main_category?: string
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -2519,9 +2518,10 @@ export type Database = {
           proveedor_id?: string | null
           rdo_category_code?: string | null
           rdo_section?: string | null
+          related_expense_id?: string | null
           shift_id?: string | null
           status?: string | null
-          subcategoria?: string | null
+          subcategory?: string | null
           transfer_cost?: number | null
           updated_at?: string | null
         }
@@ -2542,7 +2542,7 @@ export type Database = {
           },
           {
             foreignKeyName: "gastos_gasto_relacionado_id_fkey"
-            columns: ["gasto_relacionado_id"]
+            columns: ["related_expense_id"]
             isOneToOne: false
             referencedRelation: "expenses"
             referencedColumns: ["id"]
@@ -2969,17 +2969,17 @@ export type Database = {
           branch_id: string
           created_at: string
           created_by: string | null
-          cuotas_pagadas: number | null
-          cuotas_total: number | null
           date: string
           deleted_at: string | null
           description: string
           id: string
+          installments_paid: number | null
           investment_type: string
           notes: string | null
           period: string
           status: string
           total_amount: number
+          total_installments: number | null
           updated_at: string
           vida_util_meses: number | null
         }
@@ -2987,17 +2987,17 @@ export type Database = {
           branch_id: string
           created_at?: string
           created_by?: string | null
-          cuotas_pagadas?: number | null
-          cuotas_total?: number | null
           date: string
           deleted_at?: string | null
           description: string
           id?: string
+          installments_paid?: number | null
           investment_type: string
           notes?: string | null
           period: string
           status?: string
           total_amount: number
+          total_installments?: number | null
           updated_at?: string
           vida_util_meses?: number | null
         }
@@ -3005,17 +3005,17 @@ export type Database = {
           branch_id?: string
           created_at?: string
           created_by?: string | null
-          cuotas_pagadas?: number | null
-          cuotas_total?: number | null
           date?: string
           deleted_at?: string | null
           description?: string
           id?: string
+          installments_paid?: number | null
           investment_type?: string
           notes?: string | null
           period?: string
           status?: string
           total_amount?: number
+          total_installments?: number | null
           updated_at?: string
           vida_util_meses?: number | null
         }
@@ -3204,7 +3204,7 @@ export type Database = {
           moneda: string
           neto: number
           pedido_id: string | null
-          punto_venta: number
+          point_of_sale: number
           receipt_number: number
           receipt_type: string
           receptor_condicion_iva: string | null
@@ -3228,7 +3228,7 @@ export type Database = {
           moneda?: string
           neto?: number
           pedido_id?: string | null
-          punto_venta: number
+          point_of_sale: number
           receipt_number: number
           receipt_type: string
           receptor_condicion_iva?: string | null
@@ -3252,7 +3252,7 @@ export type Database = {
           moneda?: string
           neto?: number
           pedido_id?: string | null
-          punto_venta?: number
+          point_of_sale?: number
           receipt_number?: number
           receipt_type?: string
           receptor_condicion_iva?: string | null
@@ -5782,7 +5782,7 @@ export type Database = {
           type: string
           updated_at: string | null
           user_type: string
-          valor: number
+          value: number
         }
         Insert: {
           aplica_a?: string
@@ -5807,7 +5807,7 @@ export type Database = {
           type: string
           updated_at?: string | null
           user_type?: string
-          valor?: number
+          value?: number
         }
         Update: {
           aplica_a?: string
@@ -5832,7 +5832,7 @@ export type Database = {
           type?: string
           updated_at?: string | null
           user_type?: string
-          valor?: number
+          value?: number
         }
         Relationships: []
       }
@@ -5907,7 +5907,7 @@ export type Database = {
           },
         ]
       }
-      rdo_movimientos: {
+      rdo_movements: {
         Row: {
           amount: number
           branch_id: string
@@ -6670,7 +6670,7 @@ export type Database = {
           periodicidad: string | null
           proveedor_id: string | null
           rdo_category_code: string | null
-          subcategoria: string | null
+          subcategory: string | null
           type: string
           updated_at: string | null
         }
@@ -6688,7 +6688,7 @@ export type Database = {
           periodicidad?: string | null
           proveedor_id?: string | null
           rdo_category_code?: string | null
-          subcategoria?: string | null
+          subcategory?: string | null
           type?: string
           updated_at?: string | null
         }
@@ -6706,7 +6706,7 @@ export type Database = {
           periodicidad?: string | null
           proveedor_id?: string | null
           rdo_category_code?: string | null
-          subcategoria?: string | null
+          subcategory?: string | null
           type?: string
           updated_at?: string | null
         }
@@ -7218,14 +7218,14 @@ export type Database = {
           },
         ]
       }
-      stock_movimientos: {
+      stock_movements: {
         Row: {
           branch_id: string
           created_at: string | null
           created_by: string | null
           id: string
           insumo_id: string
-          nota: string | null
+          note: string | null
           pedido_id: string | null
           quantity: number
           quantity_after: number
@@ -7240,7 +7240,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           insumo_id: string
-          nota?: string | null
+          note?: string | null
           pedido_id?: string | null
           quantity: number
           quantity_after: number
@@ -7255,7 +7255,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           insumo_id?: string
-          nota?: string | null
+          note?: string | null
           pedido_id?: string | null
           quantity?: number
           quantity_after?: number
@@ -7527,12 +7527,12 @@ export type Database = {
           branch_id: string
           created_at: string | null
           created_by: string | null
-          datos_pago: Json | null
           deleted_at: string | null
           id: string
           invoice_id: string | null
           is_verified: boolean
           notes: string | null
+          payment_data: Json | null
           payment_date: string
           payment_due_date: string | null
           payment_method: string
@@ -7547,12 +7547,12 @@ export type Database = {
           branch_id: string
           created_at?: string | null
           created_by?: string | null
-          datos_pago?: Json | null
           deleted_at?: string | null
           id?: string
           invoice_id?: string | null
           is_verified?: boolean
           notes?: string | null
+          payment_data?: Json | null
           payment_date: string
           payment_due_date?: string | null
           payment_method: string
@@ -7567,12 +7567,12 @@ export type Database = {
           branch_id?: string
           created_at?: string | null
           created_by?: string | null
-          datos_pago?: Json | null
           deleted_at?: string | null
           id?: string
           invoice_id?: string | null
           is_verified?: boolean
           notes?: string | null
+          payment_data?: Json | null
           payment_date?: string
           payment_due_date?: string | null
           payment_method?: string
