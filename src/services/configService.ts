@@ -85,8 +85,8 @@ export async function updateBranchShiftConfig(
 function toClosureConfigItem(row: any): ClosureConfigItem {
   return {
     id: row.id,
-    tipo: row.tipo as ConfigTipo,
-    clave: row.clave,
+    type: (row.type ?? row.tipo) as ConfigTipo,
+    key: row.key ?? row.clave,
     label: row.label ?? row.etiqueta,
     categoria_padre: row.categoria_padre,
     sort_order: row.sort_order ?? row.orden,
