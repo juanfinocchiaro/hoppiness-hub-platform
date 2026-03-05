@@ -303,7 +303,7 @@ export function removeSupabaseChannel(channel: ReturnType<typeof supabase.channe
 export async function fetchOrderHistory(branchId: string, fromDate: string) {
   const { data, error } = await fromUntyped('orders')
     .select(
-      'id, numero_pedido, numero_llamador, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, order_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), order_payments(id, metodo, monto), facturas_emitidas(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)',
+      'id, numero_pedido, numero_llamador, created_at, canal_venta, tipo_servicio, canal_app, cliente_nombre, cliente_telefono, cliente_direccion, estado, subtotal, descuento, total, order_items(id, nombre, cantidad, precio_unitario, subtotal, notas, categoria_carta_id), order_payments(id, metodo, monto), issued_invoices(id, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, neto, iva, total, fecha_emision, receptor_cuit, receptor_razon_social, receptor_condicion_iva, anulada, factura_asociada_id)',
     )
     .eq('branch_id', branchId)
     .gte('created_at', fromDate)
@@ -615,7 +615,7 @@ const WEBAPP_SELECT = `
   id, numero_pedido, tipo_servicio, cliente_nombre,
   cliente_telefono, cliente_direccion, cliente_user_id, canal_venta, total, estado,
   created_at, webapp_tracking_code,
-  pedido_items(id, nombre, cantidad, precio_unitario, subtotal)
+  order_items(id, nombre, cantidad, precio_unitario, subtotal)
 `;
 
 export async function fetchWebappPendingOrders(branchId: string) {
@@ -789,7 +789,7 @@ export function subscribeToPedidoPagos(
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'pedido_pagos',
+        table: 'order_payments',
         filter: `pedido_id=eq.${pedidoId}`,
       },
       (payload) => callback(payload.new as Record<string, unknown>),

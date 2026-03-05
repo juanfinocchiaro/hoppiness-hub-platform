@@ -92,7 +92,7 @@ export default function CierreTurnoPage() {
 
   const paymentBreakdown =
     shiftData?.orders
-      .flatMap((o) => o.pedido_pagos || [])
+      .flatMap((o) => o.order_payments || [])
       .reduce(
         (acc, pago) => {
           const method = pago.metodo || 'otro';
@@ -117,7 +117,7 @@ export default function CierreTurnoPage() {
 
   const productBreakdown =
     shiftData?.orders
-      .flatMap((o) => o.pedido_items || [])
+      .flatMap((o) => o.order_items || [])
       .reduce(
         (acc, item) => {
           const name = item.nombre || 'Producto';

@@ -68,9 +68,9 @@ export async function fetchPedidoForTicket(pedidoId: string) {
   const { data, error } = await fromUntyped('orders')
     .select(
       `id, numero_pedido, tipo_servicio, canal_venta, canal_app, numero_llamador, cliente_nombre, cliente_telefono, cliente_direccion, created_at, total, descuento,
-       pedido_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id),
-       pedido_pagos(metodo, monto, monto_recibido, vuelto, tarjeta_marca),
-       facturas_emitidas(anulada, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, fecha_emision, neto, iva, total, receptor_cuit, receptor_razon_social, receptor_condicion_iva)`,
+       order_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id),
+       order_payments(metodo, monto, monto_recibido, vuelto, tarjeta_marca),
+       issued_invoices(anulada, tipo_comprobante, punto_venta, numero_comprobante, cae, cae_vencimiento, fecha_emision, neto, iva, total, receptor_cuit, receptor_razon_social, receptor_condicion_iva)`,
     )
     .eq('id', pedidoId)
     .single();
@@ -84,7 +84,7 @@ export async function fetchPedidoForDeliveryTicket(pedidoId: string) {
       `id, numero_pedido, tipo_servicio, canal_venta, canal_app, numero_llamador,
        cliente_nombre, cliente_telefono, cliente_direccion,
        created_at, total, descuento,
-       pedido_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id)`,
+       order_items(nombre, cantidad, notas, precio_unitario, subtotal, categoria_carta_id)`,
     )
     .eq('id', pedidoId)
     .single();

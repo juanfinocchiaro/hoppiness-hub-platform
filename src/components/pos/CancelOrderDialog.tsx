@@ -25,8 +25,8 @@ import { formatCurrency } from '@/lib/formatters';
 
 export function CancelOrderDialog({ open, onOpenChange, order, onConfirm }: Props) {
   const [loading, setLoading] = useState(false);
-  const hasInvoice = order.facturas_emitidas?.length > 0;
-  const factura = order.facturas_emitidas?.[0];
+  const hasInvoice = order.issued_invoices?.length > 0;
+  const factura = order.issued_invoices?.[0];
 
   const handleConfirm = async () => {
     setLoading(true);

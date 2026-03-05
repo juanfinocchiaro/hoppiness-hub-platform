@@ -76,7 +76,7 @@ interface WebappOrder {
   estado: string;
   created_at: string;
   webapp_tracking_code: string | null;
-  pedido_items: Array<{
+  order_items: Array<{
     id: string;
     nombre: string;
     cantidad: number;
@@ -342,7 +342,7 @@ export function WebappOrdersPanel({ branchId }: { branchId: string }) {
         )}
 
         <div className="text-xs text-muted-foreground">
-          {order.pedido_items.map((item) => (
+          {order.order_items.map((item) => (
             <span key={item.id} className="mr-2">
               {item.cantidad}x {item.nombre}
             </span>

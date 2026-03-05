@@ -209,7 +209,7 @@ function KdsOrderCard({
 
       {/* Items (display only) */}
       <div className="p-3 space-y-2">
-        {pedido.pedido_items.map((item) => (
+        {pedido.order_items.map((item) => (
           <KdsItemRow key={item.id} item={item} isKds={isKds} />
         ))}
       </div>
