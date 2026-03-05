@@ -122,7 +122,7 @@ function ClosureConfigPageContent() {
       titulo: 'Tipos Específicos',
       descripcion:
         'Hamburguesas individuales dentro de categorías (Veggies â†’ Not American, Ultrasmash â†’ Ultra Cheese)',
-      items: configItems?.filter((i) => i.tipo === 'tipo_hamburguesa') || [],
+      items: configItems?.filter((i) => i.type === 'tipo_hamburguesa') || [],
     },
     {
       tipo: 'extra',
