@@ -292,8 +292,7 @@ export async function fetchRdoMovimientosByCategory(
   periodo: string,
   categoryCode: string,
 ) {
-  const { data, error } = await supabase
-    .from('rdo_movimientos')
+  const { data, error } = await fromUntyped('rdo_movements')
     .select('*')
     .eq('branch_id', branchId)
     .eq('period', periodo)
