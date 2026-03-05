@@ -153,7 +153,7 @@ export async function fetchBranchClosureConfig(branchId: string) {
   const enabledApps = new Map<string, boolean>();
 
   (brandApps || []).forEach((row) => {
-    enabledApps.set(row.clave, true);
+    enabledApps.set(row.key, true);
   });
 
   (branchConfig || []).forEach((bc) => {
