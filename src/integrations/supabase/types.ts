@@ -1056,7 +1056,7 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "cash_register_movements_shift_id_fkey"
@@ -3294,7 +3294,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -4500,7 +4500,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "pedido_items_promocion_id_fkey"
@@ -4559,7 +4559,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -4625,7 +4625,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -4856,7 +4856,7 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -5460,7 +5460,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "print_jobs_printer_id_fkey"
@@ -7312,7 +7312,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -8314,7 +8314,7 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -8557,47 +8557,47 @@ export type Database = {
       rdo_multivista_items_base: {
         Row: {
           branch_id: string | null
-          canal: string | null
-          categoria_id: string | null
-          categoria_nombre: string | null
+          category_id: string | null
+          category_name: string | null
+          channel: string | null
           date: string | null
           item_id: string | null
-          pedido_id: string | null
-          producto_id: string | null
-          producto_nombre: string | null
+          order_id: string | null
+          product_id: string | null
+          product_name: string | null
           quantity: number | null
+          sales: number | null
           total_cost: number | null
           unit_cost: number | null
-          ventas: number | null
         }
         Relationships: [
           {
             foreignKeyName: "pedido_items_item_carta_id_fkey"
-            columns: ["producto_id"]
+            columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "menu_items"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "pedido_items_item_carta_id_fkey"
-            columns: ["producto_id"]
+            columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "webapp_menu_items"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "pedido_items_pedido_id_fkey"
-            columns: ["pedido_id"]
+            columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "pedido_items_pedido_id_fkey"
-            columns: ["pedido_id"]
+            columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "rdo_multivista_ventas_base"
-            referencedColumns: ["pedido_id"]
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "pedidos_branch_id_fkey"
@@ -8618,26 +8618,26 @@ export type Database = {
       rdo_multivista_ventas_base: {
         Row: {
           branch_id: string | null
-          canal: string | null
+          channel: string | null
           created_at: string | null
           date: string | null
-          pedido_id: string | null
+          order_id: string | null
           total: number | null
         }
         Insert: {
           branch_id?: string | null
-          canal?: never
+          channel?: never
           created_at?: string | null
           date?: never
-          pedido_id?: string | null
+          order_id?: string | null
           total?: never
         }
         Update: {
           branch_id?: string | null
-          canal?: never
+          channel?: never
           created_at?: string | null
           date?: never
-          pedido_id?: string | null
+          order_id?: string | null
           total?: never
         }
         Relationships: [
