@@ -124,8 +124,8 @@ export async function fetchBrandClosures(from: string, to: string) {
   const { data, error } = await supabase
     .from('shift_closures')
     .select('*')
-    .gte('fecha', from)
-    .lte('fecha', to);
+    .gte('date', from)
+    .lte('date', to);
   if (error) throw error;
   return data || [];
 }

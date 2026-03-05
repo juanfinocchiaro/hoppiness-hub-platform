@@ -272,10 +272,10 @@ export function useSaveShiftClosure() {
       // could create duplicate closures for the same branch+date+shift.
       const data = await upsertShiftClosure({
         branch_id: input.branch_id,
-        fecha: input.fecha,
-        turno: input.turno,
+        date: input.fecha,
+        shift: input.turno,
         ...closureData,
-        cerrado_por: user.id,
+        closed_by: user.id,
         updated_by: user.id,
       });
 

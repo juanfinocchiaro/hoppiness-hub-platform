@@ -258,7 +258,7 @@ export async function fetchActiveBranchShifts() {
 export async function upsertShiftClosure(closureData: Record<string, unknown>) {
   const { data, error } = await supabase
     .from('shift_closures')
-    .upsert(closureData as any, { onConflict: 'branch_id,fecha,turno' })
+    .upsert(closureData as any, { onConflict: 'branch_id,date,shift' })
     .select()
     .single();
   if (error) throw error;
