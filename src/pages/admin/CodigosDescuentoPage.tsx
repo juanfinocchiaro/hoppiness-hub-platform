@@ -34,13 +34,13 @@ import {
 
 const EMPTY_FORM: CodigoDescuentoFormData = {
   code: '',
-  tipo: 'descuento_porcentaje',
-  valor: 0,
-  usos_maximos: null,
-  uso_unico_por_usuario: true,
-  monto_minimo_pedido: null,
-  fecha_inicio: new Date().toISOString().slice(0, 10),
-  fecha_fin: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+  type: 'descuento_porcentaje',
+  value: 0,
+  max_uses: null,
+  single_use_per_user: true,
+  min_order_amount: null,
+  start_date: new Date().toISOString().slice(0, 10),
+  end_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
   is_active: true,
   branch_ids: [],
 };
@@ -63,13 +63,13 @@ export default function CodigosDescuentoPage() {
     setEditing(code);
     setForm({
       code: code.code,
-      tipo: code.tipo,
-      valor: code.valor,
-      usos_maximos: code.usos_maximos,
-      uso_unico_por_usuario: code.uso_unico_por_usuario,
-      monto_minimo_pedido: code.monto_minimo_pedido,
-      fecha_inicio: code.fecha_inicio,
-      fecha_fin: code.fecha_fin,
+      type: code.type,
+      value: code.value,
+      max_uses: code.max_uses,
+      single_use_per_user: code.single_use_per_user,
+      min_order_amount: code.min_order_amount,
+      start_date: code.start_date,
+      end_date: code.end_date,
       is_active: code.is_active,
       branch_ids: code.branch_ids,
     });
@@ -81,15 +81,15 @@ export default function CodigosDescuentoPage() {
       toast.error('Ingresá un código');
       return;
     }
-    if (form.valor < 0) {
+    if (form.value < 0) {
       toast.error('El valor no puede ser negativo');
       return;
     }
-    if (form.tipo === 'descuento_porcentaje' && form.valor > 100) {
+    if (form.type === 'descuento_porcentaje' && form.value > 100) {
       toast.error('El porcentaje no puede ser mayor a 100');
       return;
     }
-    if (form.fecha_inicio > form.fecha_fin) {
+    if (form.start_date > form.end_date) {
       toast.error('La fecha de inicio no puede ser posterior a la fecha de fin');
       return;
     }
@@ -172,15 +172,15 @@ export default function CodigosDescuentoPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {code.tipo === 'descuento_porcentaje'
-                      ? `${code.valor}%`
-                      : `$${code.valor.toLocaleString('es-AR')}`}
+                    {code.type === 'descuento_porcentaje'
+                      ? `${code.value}%`
+                      : `$${(code.value ?? 0).toLocaleString('es-AR')}`}
                   </TableCell>
                   <TableCell>
-                    {code.usos_actuales}/{code.usos_maximos ?? '∞'}
+                    {code.current_uses}/{code.max_uses ?? '∞'}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {code.fecha_inicio} — {code.fecha_fin}
+                    {code.start_date} — {code.end_date}
                   </TableCell>
                   <TableCell>
                     <Badge variant={code.is_active ? 'default' : 'outline'}>
@@ -224,8 +224,8 @@ export default function CodigosDescuentoPage() {
               <div className="space-y-1.5">
                 <Label>Tipo</Label>
                 <Select
-                  value={form.tipo}
-                  onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as any }))}
+                  value={form.type}
+                  onValueChange={(v) => setForm((f) => ({ ...f, type: v as any }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -240,8 +240,8 @@ export default function CodigosDescuentoPage() {
                 <Label>Valor</Label>
                 <Input
                   type="number"
-                  value={form.valor}
-                  onChange={(e) => setForm((f) => ({ ...f, valor: Number(e.target.value) }))}
+                  value={form.value}
+                  onChange={(e) => setForm((f) => ({ ...f, value: Number(e.target.value) }))}
                 />
               </div>
             </div>
@@ -251,11 +251,11 @@ export default function CodigosDescuentoPage() {
                 <Label>Usos máximos</Label>
                 <Input
                   type="number"
-                  value={form.usos_maximos ?? ''}
+                  value={form.max_uses ?? ''}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      usos_maximos: e.target.value ? Number(e.target.value) : null,
+                      max_uses: e.target.value ? Number(e.target.value) : null,
                     }))
                   }
                   placeholder="Ilimitado"
@@ -265,11 +265,11 @@ export default function CodigosDescuentoPage() {
                 <Label>Pedido mínimo ($)</Label>
                 <Input
                   type="number"
-                  value={form.monto_minimo_pedido ?? ''}
+                  value={form.min_order_amount ?? ''}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      monto_minimo_pedido: e.target.value ? Number(e.target.value) : null,
+                      min_order_amount: e.target.value ? Number(e.target.value) : null,
                     }))
                   }
                   placeholder="Sin mínimo"
@@ -282,16 +282,16 @@ export default function CodigosDescuentoPage() {
                 <Label>Fecha inicio</Label>
                 <Input
                   type="date"
-                  value={form.fecha_inicio}
-                  onChange={(e) => setForm((f) => ({ ...f, fecha_inicio: e.target.value }))}
+                  value={form.start_date}
+                  onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>Fecha fin</Label>
                 <Input
                   type="date"
-                  value={form.fecha_fin}
-                  onChange={(e) => setForm((f) => ({ ...f, fecha_fin: e.target.value }))}
+                  value={form.end_date}
+                  onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
                 />
               </div>
             </div>
@@ -299,8 +299,8 @@ export default function CodigosDescuentoPage() {
             <div className="flex items-center justify-between">
               <Label>Uso único por usuario</Label>
               <Switch
-                checked={form.uso_unico_por_usuario}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, uso_unico_por_usuario: v }))}
+                checked={form.single_use_per_user}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, single_use_per_user: v }))}
               />
             </div>
 

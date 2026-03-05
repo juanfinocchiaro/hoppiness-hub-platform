@@ -439,7 +439,7 @@ export function AccountPanel({
                                 onSuccess: (result) => {
                                   onUpdateOrderConfig({
                                     voucherCodigoId: result.code.id,
-                                    voucherCodigo: result.code.codigo,
+                                    voucherCodigo: result.code.code,
                                     voucherDescuento: result.descuento,
                                   });
                                   setVoucherInput('');
@@ -461,7 +461,7 @@ export function AccountPanel({
                               onSuccess: (result) => {
                                 onUpdateOrderConfig({
                                   voucherCodigoId: result.code.id,
-                                  voucherCodigo: result.code.codigo,
+                                  voucherCodigo: result.code.code,
                                   voucherDescuento: result.descuento,
                                 });
                                 setVoucherInput('');

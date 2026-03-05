@@ -422,7 +422,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
               return (
                 <RemovibleRow
                   key={`prep-${sp.preparacion_id}`}
-                  nombre={sp.nombre}
+                  nombre={sp.name}
                   origen={sp.receta_nombre}
                   isActive={isActive}
                   nombreDisplay={existing?.display_name || ''}
@@ -444,7 +444,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
               return (
                 <RemovibleRow
                   key={ing.insumo_id}
-                  nombre={ing.nombre}
+                  nombre={ing.name}
                   origen={ing.receta_nombre}
                   isActive={isActive}
                   nombreDisplay={existing?.display_name || ''}

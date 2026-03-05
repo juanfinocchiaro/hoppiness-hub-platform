@@ -28,7 +28,7 @@ export function PromoCodeInput({
   useEffect(() => {
     if (!appliedCodeRef.current || !appliedCode) return;
     const c = appliedCodeRef.current;
-    if (c.monto_minimo_pedido && subtotal < c.monto_minimo_pedido) {
+    if (c.min_order_amount && subtotal < c.min_order_amount) {
       appliedCodeRef.current = null;
       onRemove();
     }
@@ -41,7 +41,7 @@ export function PromoCodeInput({
       {
         onSuccess: (result) => {
           appliedCodeRef.current = result.code;
-          onApply(result.descuento, result.code.id, result.code.codigo);
+          onApply(result.descuento, result.code.id, result.code.code);
           setCode('');
         },
       },

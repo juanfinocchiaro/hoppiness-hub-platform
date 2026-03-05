@@ -60,7 +60,7 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
     <div className="px-3 py-2 space-y-1.5">
       <div className="flex items-center gap-2">
         <span className="text-sm truncate flex-1">{item.name}</span>
-        <span className="text-xs text-muted-foreground line-through">${item.base_price.toLocaleString('es-AR')}</span>
+        <span className="text-xs text-muted-foreground line-through">${(item.base_price ?? 0).toLocaleString('es-AR')}</span>
         <span className="text-xs">→</span>
         <Input type="number" value={item.precio_promo} onChange={(e) => onUpdate({ ...item, precio_promo: Math.max(0, Number(e.target.value) || 0) })} className="h-7 w-24 text-xs" />
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove}><X className="w-3.5 h-3.5 text-destructive" /></Button>
@@ -101,13 +101,13 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
                 );
               })}
               <div className="text-[11px] text-muted-foreground space-y-0.5 pt-1 border-t">
-                <div className="flex justify-between"><span>Base</span><span>${item.base_price.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between"><span>Base</span><span>${(item.base_price ?? 0).toLocaleString('es-AR')}</span></div>
                 {extrasSubtotal > 0 && <div className="flex justify-between"><span>+ Extras</span><span>${extrasSubtotal.toLocaleString('es-AR')}</span></div>}
                 {discountPercent > 0 && (
-                  <><div className="flex justify-between"><span>= Subtotal</span><span>${(item.base_price + extrasSubtotal).toLocaleString('es-AR')}</span></div>
-                  <div className="flex justify-between text-red-500"><span>- {discountPercent}% desc</span><span>-${Math.round(((item.base_price + extrasSubtotal) * discountPercent) / 100).toLocaleString('es-AR')}</span></div></>
+                  <><div className="flex justify-between"><span>= Subtotal</span><span>${((item.base_price ?? 0) + extrasSubtotal).toLocaleString('es-AR')}</span></div>
+                  <div className="flex justify-between text-red-500"><span>- {discountPercent}% desc</span><span>-${Math.round((((item.base_price ?? 0) + extrasSubtotal) * discountPercent) / 100).toLocaleString('es-AR')}</span></div></>
                 )}
-                <div className="flex justify-between font-semibold text-green-600"><span>= Promo</span><span>${item.precio_promo.toLocaleString('es-AR')}</span></div>
+                <div className="flex justify-between font-semibold text-green-600"><span>= Promo</span><span>${(item.precio_promo ?? 0).toLocaleString('es-AR')}</span></div>
               </div>
             </div>
           )}

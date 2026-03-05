@@ -14,20 +14,20 @@ import {
 export interface CodigoDescuento {
   id: string;
   code: string;
-  tipo: 'descuento_porcentaje' | 'descuento_fijo';
-  valor: number;
-  usos_maximos: number | null;
-  usos_actuales: number;
-  uso_unico_por_usuario: boolean;
-  monto_minimo_pedido: number | null;
-  fecha_inicio: string;
-  fecha_fin: string;
+  type: 'descuento_porcentaje' | 'descuento_fijo';
+  value: number;
+  max_uses: number | null;
+  current_uses: number;
+  single_use_per_user: boolean;
+  min_order_amount: number | null;
+  start_date: string;
+  end_date: string;
   is_active: boolean;
   branch_ids: string[];
   created_at: string;
 }
 
-export type CodigoDescuentoFormData = Omit<CodigoDescuento, 'id' | 'usos_actuales' | 'created_at'>;
+export type CodigoDescuentoFormData = Omit<CodigoDescuento, 'id' | 'current_uses' | 'created_at'>;
 
 export function useCodigosDescuento() {
   return useQuery({
@@ -54,31 +54,31 @@ export function useValidateCode(
       const code = data as CodigoDescuento;
       const today = new Date().toISOString().slice(0, 10);
 
-      if (code.fecha_inicio && today < code.fecha_inicio)
+      if (code.start_date && today < code.start_date)
         throw new Error('Este código aún no está activo');
-      if (code.fecha_fin && today > code.fecha_fin) throw new Error('Este código ya expiró');
-      if (code.usos_maximos && code.usos_actuales >= code.usos_maximos)
+      if (code.end_date && today > code.end_date) throw new Error('Este código ya expiró');
+      if (code.max_uses && code.current_uses >= code.max_uses)
         throw new Error('Este código ya alcanzó el máximo de usos');
       const bids = code.branch_ids ?? [];
       if (bids.length > 0) {
         if (!branchId) throw new Error('No se puede validar el código sin un local seleccionado');
         if (!bids.includes(branchId)) throw new Error('Este código no aplica en este local');
       }
-      if (code.monto_minimo_pedido && subtotal < code.monto_minimo_pedido) {
-        throw new Error(`Pedido mínimo: $${code.monto_minimo_pedido.toLocaleString('es-AR')}`);
+      if (code.min_order_amount && subtotal < code.min_order_amount) {
+        throw new Error(`Pedido mínimo: $${code.min_order_amount.toLocaleString('es-AR')}`);
       }
 
-      if (context === 'webapp' && code.uso_unico_por_usuario) {
+      if (context === 'webapp' && code.single_use_per_user) {
         if (!user) throw new Error('Iniciá sesión para usar este código');
         const count = await countCodigoUsageByUser(code.id, user.id);
         if (count > 0) throw new Error('Ya usaste este código');
       }
 
       let descuento = 0;
-      if (code.tipo === 'descuento_porcentaje') {
-        descuento = Math.round((subtotal * code.valor) / 100);
+      if (code.type === 'descuento_porcentaje') {
+        descuento = Math.round((subtotal * code.value) / 100);
       } else {
-        descuento = Math.min(code.valor, subtotal);
+        descuento = Math.min(code.value, subtotal);
       }
 
       return { code, descuento };

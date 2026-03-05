@@ -58,13 +58,13 @@ export function AsignadosInline({ item }: { item: any }) {
 
 // ═══ EXTRA ROW (with editable nombre_carta) ═══
 export function ExtraRow({ d, itemId, toggleExtra }: { d: DiscoveredExtra; itemId: string; toggleExtra: ReturnType<typeof useToggleExtra> }) {
-  const [localNombre, setLocalNombre] = useState(d.extra_nombre || '');
+  const [localNombre, setLocalNombre] = useState(d.extra_name || '');
   useEffect(() => {
-    setLocalNombre(d.extra_nombre || '');
-  }, [d.extra_nombre]);
+    setLocalNombre(d.extra_name || '');
+  }, [d.extra_name]);
 
   const handleSaveNombre = async () => {
-    if (!d.extra_id || localNombre === d.extra_nombre) return;
+    if (!d.extra_id || localNombre === d.extra_name) return;
     await fromUntyped('menu_items')
       .update({ name: localNombre })
       .eq('id', d.extra_id!);
@@ -72,12 +72,12 @@ export function ExtraRow({ d, itemId, toggleExtra }: { d: DiscoveredExtra; itemI
 
   return (
     <div
-      className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${d.activo ? 'border-primary/40 bg-primary/5' : ''}`}
+      className={`flex items-center gap-1.5 text-sm border rounded-lg px-3 py-2 ${d.is_active ? 'border-primary/40 bg-primary/5' : ''}`}
     >
-      <span className="flex-1 text-sm font-medium truncate">{d.nombre}</span>
+      <span className="flex-1 text-sm font-medium truncate">{d.name}</span>
       <span className="w-[120px] text-xs text-muted-foreground truncate">{d.origen}</span>
       <div className="w-[140px]">
-        {d.activo && d.extra_id ? (
+        {d.is_active && d.extra_id ? (
           <Input
             value={localNombre}
             onChange={(e) => setLocalNombre(e.target.value)}
@@ -89,13 +89,13 @@ export function ExtraRow({ d, itemId, toggleExtra }: { d: DiscoveredExtra; itemI
       </div>
       <div className="w-14 flex justify-center">
         <Switch
-          checked={d.activo}
+          checked={d.is_active}
           onCheckedChange={(v) =>
             toggleExtra.mutate({
               item_carta_id: itemId,
               tipo: d.tipo,
               ref_id: d.ref_id,
-              nombre: d.nombre,
+              name: d.name,
               costo: d.costo,
               cantidad: d.cantidad,
               activo: v,
@@ -106,9 +106,9 @@ export function ExtraRow({ d, itemId, toggleExtra }: { d: DiscoveredExtra; itemI
         />
       </div>
       <span className="w-20 text-right text-xs font-mono">
-        {d.activo ? (
-          d.extra_precio > 0 ? (
-            <span className="text-foreground">{formatCurrency(d.extra_precio)}</span>
+        {d.is_active ? (
+          d.extra_price > 0 ? (
+            <span className="text-foreground">{formatCurrency(d.extra_price)}</span>
           ) : (
             <span className="text-amber-600">⚠ $0</span>
           )

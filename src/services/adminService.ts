@@ -799,10 +799,10 @@ export async function fetchPromoItemsWithExtras(promoId: string) {
     const ic = d.menu_items as { name: string; image_url?: string | null; base_price: number } | null;
     return {
       item_carta_id: d.item_carta_id as string,
-      nombre: ic?.name || '',
-      imagen_url: ic?.image_url,
-      precio_base: Number(ic?.base_price || 0),
-      precio_promo: Number(d.promo_price),
+      name: ic?.name || '',
+      image_url: ic?.image_url,
+      base_price: Number(ic?.base_price || 0),
+      precio_promo: Number(d.promo_price ?? 0),
       preconfigExtras: extrasMap.get(d.id as string) || undefined,
     };
   });
