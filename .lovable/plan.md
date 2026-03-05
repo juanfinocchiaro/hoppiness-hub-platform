@@ -83,80 +83,41 @@ Frontend: ~200+ archivos actualizados. Servicios clave migrados: posService, fin
 
 Patrón usado: `fromUntyped('new_table_name')` en lugar de `supabase.from('old_name')` para bypass de tipos hasta regeneración.
 
-## ✅ Fase 2 — Columnas: COMPLETADA (DB done, frontend pendiente)
-Migración DB ejecutada el 2026-03-05. Todas las columnas en español renombradas a inglés.
+## ✅ Fase 2 — Columnas: COMPLETADA (DB + service layer)
+Migración DB ejecutada el 2026-03-05. Todas las columnas en español renombradas a inglés en dos bloques:
+- Bloque 1 (2026-03-05 AM): ~80 columnas frecuentes (fecha, periodo, precio_unitario, etc.)
+- Bloque 2 (2026-03-05 PM): ~55 columnas restantes (tipo→type, estado→status, notas→notes, monto_*→*_amount, precio_*→*_price, costo_*→*_cost, clave→key, etc.)
 
-**Columnas frecuentes renombradas (~25 grupos, ~80+ ALTER):**
-- `telefono` → `phone` (partners, suppliers)
-- `telefono_secundario` → `secondary_phone` (suppliers)
-- `direccion` → `address` (customer_addresses, suppliers)
-- `fecha` → `date` (expenses, investments, partner_movements, shift_closures, stock_conteos)
-- `periodo` → `period` (11 tablas: branch_monthly_sales, canon_settlements, expenses, investments, manual_consumptions, partner_movements, profit_distributions, rdo_movimientos, stock_cierre_mensual, stock_conteos, supplier_invoices)
-- `concepto` → `concept` (expenses)
-- `precio_unitario` → `unit_price` (invoice_items, order_items)
-- `precio_base` → `base_price` (menu_items)
-- `imagen_url` → `image_url` (menu_items)
-- `orden` → `sort_order` (12 tablas: brand_closure_config, delivery_zones, item_modifiers, menu_categories, menu_item_compositions, menu_item_extras, menu_item_option_groups, menu_items, recipe_categories, recipe_ingredients, recipe_options, supply_categories)
-- `detalle` → `details` (expenses, manual_consumptions, partner_movements)
-- `motivo` → `reason` (menu_item_price_history, order_payment_edits, stock_movimientos, supply_cost_history)
-- `unidad` → `unit` (recipe_ingredients, stock_actual)
-- `usuario_id` → `user_id` (financial_audit_log, menu_item_price_history)
-- `referencia` → `reference` (canon_payments, customer_addresses, supplier_payments)
-- `fecha_vencimiento` → `due_date` (canon_settlements, expenses, supplier_invoices)
-- `fecha_pago` → `payment_date` (canon_payments, expenses, supplier_payments)
-- `precio_extra` → `extra_price` (item_modifiers, order_item_modifiers, recipes, supplies)
-- `fuente` → `source` (branch_monthly_sales, shift_closures)
-- `etiqueta` → `label` (brand_closure_config, customer_addresses)
-- `factura_numero` → `invoice_number` (orders, supplier_invoices)
-- `razon_social` → `business_name` (afip_config, suppliers)
-- `porcentaje_ft` → `cash_percentage` (branch_monthly_sales, canon_settlements)
-- `saldo_pendiente` → `pending_balance` (canon_settlements, supplier_invoices)
-- `estado_conexion` → `connection_status` (afip_config, mercadopago_config)
+Service layer actualizado: configService.ts, adminService.ts, posService.ts, useClosureConfig.ts, ClosureConfigPage.tsx, StockHistorial.tsx, ProveedorFormModal.tsx.
 
-**Columnas específicas por tabla:**
-- order_payments: metodo→method
-- menu_items: nombre_corto→short_name
-- removable_items: nombre_display→display_name
-- menu_item_price_history: precio_anterior→previous_price, precio_nuevo→new_price
-- item_modifiers: cantidad_ahorro→saving_quantity, unidad_ahorro→saving_unit, costo_ahorro→saving_cost, cantidad_extra→extra_quantity, unidad_extra→extra_unit, costo_extra→extra_cost
-- recipes: costo_calculado→calculated_cost, costo_manual→manual_cost
-- supplies: unidad_base→base_unit, costo_por_unidad_base→base_unit_cost
-- suppliers: contacto_secundario→secondary_contact
-- supplier_invoices: factura_tipo→invoice_type, factura_fecha→invoice_date, condicion_pago→payment_terms, motivo_extraordinaria→extraordinary_reason
-- supplier_payments: fecha_vencimiento_pago→payment_due_date
-- partners: porcentaje_participacion→ownership_percentage
-- partner_movements: saldo_acumulado→cumulative_balance
-- branch_monthly_sales: venta_total→total_sales, efectivo→cash, cargado_por→loaded_by
-- shift_closures: turno→shift, cerrado_por→closed_by
-- customer_addresses: piso→floor, ciudad→city, latitud→latitude, longitud→longitude
-- sales_channels: es_base→is_base
-- afip_config: direccion_fiscal→fiscal_address, inicio_actividades→activity_start_date, clave_privada_enc→private_key_enc, ultimo_error→last_error, ultima_verificacion→last_verification, ultimo_nro_factura_a/b/c→last_invoice_number_a/b/c, estado_certificado→certificate_status, reglas_facturacion→invoicing_rules
+⚠️ Frontend UI components may still reference old column names via compatibility aliases in hooks.
 
-Funciones actualizadas: calcular_saldo_socio, sync_expense_movement_to_gastos.
-Vistas recreadas: balance_socios, cuenta_corriente_marca, cuenta_corriente_proveedores, rdo_multivista_items_base, rdo_multivista_ventas_base, rdo_report_data, webapp_menu_items.
+## ✅ Fase 4 — Enum values: COMPLETADA (DB)
+Los 3 enums PostgreSQL fueron migrados el 2026-03-05:
+- `order_area`: `salon`→`dine_in`, `mostrador`→`counter` (delivery ya OK)
+- `payment_method`: `efectivo`→`cash`, `tarjeta_debito`→`debit_card`, `tarjeta_credito`→`credit_card`, `transferencia`→`transfer`, `vales`→`vouchers` (mercadopago_qr/link ya OK)
+- `work_position_type`: `cajero`→`cashier`, `cocinero`→`cook`, `lavacopas`→`dishwasher` (barista/runner ya OK)
 
-⚠️ PENDIENTE FRONTEND: ~30 archivos tienen errores de build por referencias a columnas antiguas. Archivos afectados: ProveedorFormModal, SocioFormModal, StockHistorial, useStock, ClosureConfigPage, ProveedoresPage, adminService, configService, posService, rdoService, schedulesService.
+⚠️ Frontend components with hardcoded Spanish enum values need updating.
 
-## ❌ Fase 4 — Enum values: PENDIENTE
-18 enum values en español a renombrar.
-Impacto: Lógica de roles, pagos, posiciones, áreas.
+## ✅ Vistas: Recreadas con nombres en inglés
+Las 6 vistas afectadas fueron recreadas el 2026-03-05:
+- `webapp_menu_items`: `tipo`→`type`, aliases en inglés
+- `balance_socios`: `m.tipo`→`m.type`, `saldo_actual`→`current_balance`, `nombre`→`name`
+- `cuenta_corriente_marca`: `monto_canon`→`canon_amount`, `local_nombre`→`branch_name`
+- `cuenta_corriente_proveedores`: aliases en inglés (total_invoiced, total_paid, overdue_amount, next_due_date)
+- `rdo_multivista_ventas_base`: `estado`→`status`, `tipo`→`type`
+- `rdo_multivista_items_base`: `estado`→`status`, `tipo`→`type`
 
-| Enum type | Valores actuales (español) | Sugerido (inglés) |
-|---|---|---|
-| `brand_role_type` | `coordinador, informes, contador_marca` | `coordinator, reports, brand_accountant` |
-| `local_role_type` | `franquiciado, encargado, contador_local, cajero, empleado` | `franchisee, manager, local_accountant, cashier, employee` |
-| `payment_method` | `efectivo, tarjeta_debito, tarjeta_credito, transferencia, vales` | `cash, debit_card, credit_card, transfer, vouchers` |
-| `work_position_type` | `cajero, cocinero, barista, runner, lavacopas` | `cashier, cook, barista, runner, dishwasher` |
-| `order_area` | `salon, mostrador` | `dine_in, counter` |
-
-⚠️ **Fase 4 es la de mayor riesgo**: requiere recrear enums (PostgreSQL no permite ALTER ENUM RENAME VALUE fácilmente), actualizar toda la lógica de permisos (usePermissionsV2), y cada referencia hardcodeada en el frontend.
-
-## ⚠️ Nota sobre Fases 2 y 4
-Cada fase requiere migración SQL coordinada con actualización masiva del frontend.
-Renombrar 1 columna puede impactar entre 5 y 30 archivos.
-Recomendación: ejecutar columna por columna o por módulo funcional.
+## ⚠️ Nota sobre columnas FK en español
+Quedan columnas FK con nombres en español que NO se renombraron por alto impacto cascading:
+- `pedido_id` (~8 tablas), `proveedor_id` (~6 tablas), `item_carta_id` (~10 tablas)
+- `socio_id` (partner_movements), `categoria_carta_id` (menu_items, order_items)
+- `categoria_padre` (brand_closure_config)
+Estas requieren una migración dedicada con actualización masiva de FK constraints y frontend.
 
 ## 📋 Deuda técnica conocida
-- El helper `fromUntyped()` se usa extensivamente como workaround de tipos. Idealmente se eliminaría tras regenerar `types.ts` con el schema actualizado, pero dado que Fases 2 y 4 siguen pendientes, seguirá siendo necesario.
+- El helper `fromUntyped()` se usa extensivamente como workaround de tipos.
 - Algunos componentes tienen casteos `as any` para resolver incompatibilidades de tipos durante la transición.
 - La tabla `user_roles_v2` mantiene el sufijo `_v2` (violación de convención) pero no se recomienda renombrar por el alto riesgo en el sistema de permisos.
+- Componentes frontend UI pueden seguir usando nombres en español vía aliases de compatibilidad en hooks.
