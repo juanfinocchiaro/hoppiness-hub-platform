@@ -114,7 +114,7 @@ export function useExtraAssignableItems(extraItem: Record<string, unknown> | und
 
   const productItems = useMemo(() => {
     return (allItems || []).filter(
-      (i: Record<string, unknown>) => i.tipo !== 'extra' && i.activo,
+      (i: Record<string, unknown>) => i.tipo !== 'extra' && (i.activo ?? i.is_active),
     );
   }, [allItems]);
 

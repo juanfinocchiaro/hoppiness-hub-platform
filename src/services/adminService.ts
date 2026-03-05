@@ -698,10 +698,10 @@ export async function fetchAllClosureConfig() {
   return data || [];
 }
 
-export async function toggleClosureConfigItem(id: string, activo: boolean) {
+export async function toggleClosureConfigItem(id: string, is_active: boolean) {
   const { error } = await supabase
     .from('brand_closure_config')
-    .update({ activo, updated_at: new Date().toISOString() })
+    .update({ is_active, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -712,7 +712,7 @@ export async function addClosureConfigItem(params: {
   etiqueta: string;
   categoria_padre?: string;
   orden: number;
-  activo: boolean;
+  is_active: boolean;
 }) {
   const { error } = await supabase.from('brand_closure_config').insert(params);
   if (error) throw error;

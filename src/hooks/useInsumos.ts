@@ -68,6 +68,7 @@ export function useInsumos() {
       const data = await fetchInsumosSvc();
       return (data || []).map((ins: any) => ({
         ...ins,
+        activo: ins.is_active ?? ins.activo,
         nombre: ins.name ?? ins.nombre,
         supply_categories: ins.supply_categories
           ? { ...ins.supply_categories, nombre: ins.supply_categories.name ?? ins.supply_categories.nombre }

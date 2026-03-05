@@ -21,6 +21,7 @@ export function useItemsCarta(branchId?: string) {
       const addCompat = (items: any[]) =>
         (items || []).map((it: any) => ({
           ...it,
+          activo: it.is_active ?? it.activo,
           nombre: it.name ?? it.nombre,
           menu_categories: it.menu_categories
             ? { ...it.menu_categories, nombre: it.menu_categories.name ?? it.menu_categories.nombre }

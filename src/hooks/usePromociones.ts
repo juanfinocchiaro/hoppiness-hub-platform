@@ -34,7 +34,7 @@ export interface Promocion {
   producto_ids: string[];
   categoria_ids: string[];
   tipo_usuario: 'todos' | 'nuevo' | 'recurrente' | 'staff' | 'custom_segment';
-  activa: boolean;
+  activa: boolean; // mapped from is_active
   branch_ids: string[];
   canales: string[];
   created_at: string;
@@ -68,10 +68,11 @@ export function usePromociones() {
     queryKey: ['promociones'],
     queryFn: async () => {
       const data = await fetchPromocionesService();
-      return (data as Promocion[]).map((p) => ({
+      return (data as any[]).map((p: any) => ({
         ...p,
+        activa: p.is_active ?? p.activa,
         canales: p.canales ?? ['webapp', 'salon', 'rappi', 'pedidos_ya'],
-      }));
+      })) as Promocion[];
     },
   });
 }
@@ -143,8 +144,9 @@ export function useActivePromos(branchId: string | undefined, canal?: string) {
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const today = now.toISOString().slice(0, 10);
 
-      return (data as unknown as Promocion[])
-        .filter((p) => {
+      return (data as any[])
+        .map((p: any) => ({ ...p, activa: p.is_active ?? p.activa }))
+        .filter((p: any) => {
           const bids = p.branch_ids ?? [];
           if (bids.length > 0 && (!branchId || !bids.includes(branchId))) return false;
           const ch = p.canales ?? [];
@@ -290,7 +292,8 @@ export function usePromocionMutations() {
         }>;
       },
     ) => {
-      const { items, ...promoData } = data;
+      const { items, activa, ...rest } = data;
+      const promoData = { ...rest, is_active: activa };
       const result = await createPromocionService(
         promoData as Record<string, unknown>,
         user?.id,
@@ -327,7 +330,9 @@ export function usePromocionMutations() {
         preconfigExtras?: Array<{ extra_item_carta_id: string; cantidad: number }>;
       }>;
     }) => {
-      await updatePromocionService(id, data as Record<string, unknown>);
+      const { activa, ...rest } = data;
+      const mapped = activa !== undefined ? { ...rest, is_active: activa } : rest;
+      await updatePromocionService(id, mapped as Record<string, unknown>);
 
       if (items !== undefined) {
         await deletePromocionItems(id);
@@ -346,7 +351,7 @@ export function usePromocionMutations() {
 
   const toggleActive = useMutation({
     mutationFn: ({ id, activa }: { id: string; activa: boolean }) =>
-      togglePromocionActive(id, activa),
+      togglePromocionActive(id, activa), // service maps to is_active
     onSuccess: () => {
       invalidateAll();
     },

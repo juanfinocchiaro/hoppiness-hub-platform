@@ -490,7 +490,7 @@ export async function updateConceptoServicio(
 
 export async function softDeleteConceptoServicio(id: string) {
   const { error } = await fromUntyped('service_concepts')
-    .update({ deleted_at: new Date().toISOString(), activo: false })
+    .update({ deleted_at: new Date().toISOString(), is_active: false })
     .eq('id', id);
   if (error) throw error;
 }

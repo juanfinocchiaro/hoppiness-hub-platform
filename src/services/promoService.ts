@@ -14,7 +14,7 @@ export async function fetchPromociones() {
 export async function fetchActivePromociones() {
   const { data, error } = await fromUntyped('promotions')
     .select('*')
-    .eq('activa', true)
+    .eq('is_active', true)
     .is('deleted_at', null);
   if (error) throw error;
   return data;
@@ -100,9 +100,9 @@ export async function insertPreconfigExtras(
   if (error) throw error;
 }
 
-export async function togglePromocionActive(id: string, activa: boolean) {
+export async function togglePromocionActive(id: string, is_active: boolean) {
   const { error } = await fromUntyped('promotions')
-    .update({ activa, updated_at: new Date().toISOString() })
+    .update({ is_active, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
 }
@@ -129,7 +129,7 @@ export async function findCodigoDescuento(codigo: string) {
   const { data, error } = await fromUntyped('discount_codes')
     .select('*')
     .ilike('codigo', codigo.trim())
-    .eq('activo', true)
+    .eq('is_active', true)
     .is('deleted_at', null)
     .maybeSingle();
   if (error) throw error;

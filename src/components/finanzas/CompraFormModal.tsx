@@ -435,7 +435,7 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                       </SelectTrigger>
                       <SelectContent>
                         {insumos
-                          ?.filter((i: any) => i.activo !== false)
+                          ?.filter((i: any) => (i.activo ?? i.is_active) !== false)
                           .map((i: any) => (
                             <SelectItem key={i.id} value={i.id}>
                               {i.nivel_control === 'obligatorio'
