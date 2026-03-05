@@ -1,136 +1,114 @@
 
-# Auditoría de Idioma y Convenciones de Nombres — Estado de Ejecución
 
-## ✅ Fase 0 — Tablas muertas: COMPLETADA
-DROP de tablas y vistas legacy (`webapp_customers`, `menu_combos`, `menu_precios_historial`, `devoluciones`, `v_menu_costos`).
+# Plan: Migración DB — Columnas frecuentes + específicas (solo SQL)
 
-## ✅ Fase 1 — Booleanos: COMPLETADA (DB + Frontend)
-Renombrados en DB y en frontend:
-- `es_produccion` → `is_production` (afip_config)
-- `es_obligatorio` → `is_required` (item_carta_grupo_opcional)
-- `es_principal` → `is_primary` (cliente_direcciones)
-- `es_removible` → `is_removable` (item_carta_composicion)
-- `es_intercambiable` → `is_interchangeable` (preparaciones)
-- `activo` → `is_active` (~15 tablas)
-- `verificado` → `is_verified` (pagos_proveedores, pagos_canon)
+Dos migraciones SQL que renombran todas las columnas pendientes de la Fase 2. No se toca ningún archivo frontend. Solo SQL + regeneración de `types.ts`.
 
-Archivos frontend actualizados: useAfipConfig.ts, fiscalService.ts, AfipConfigPage.tsx, posService.ts, checkoutService.ts, menuService.ts, usePreparaciones.ts, PreparacionFullModal.tsx, ModifiersModal.tsx, ProductCustomizeSheet.tsx, useWebappMenu.ts.
+---
 
-## ✅ Fase 3 — Tablas core: COMPLETADA (DB + Frontend) — 63/63 tablas
-Todas las tablas en español fueron renombradas en la base de datos. El `types.ts` autogenerado ya refleja los nombres en inglés.
-El frontend fue actualizado masivamente usando el helper `fromUntyped()` para mantener compatibilidad hasta que los tipos se regeneren completamente.
-Las últimas 5 tablas fueron renombradas el 2026-03-05: `cliente_direcciones` → `customer_addresses`, `socios` → `partners`, `movimientos_socio` → `partner_movements`, `distribuciones_utilidades` → `profit_distributions`, `insumos_costos_historial` → `supply_cost_history`. Vista `balance_socios` recreada con nuevos nombres.
+## Migración 1 — Columnas frecuentes (~30 ALTER)
 
-Renombramientos ejecutados (selección):
-- `pedidos` → `orders`
-- `pedido_items` → `order_items`
-- `pedido_pagos` → `order_payments`
-- `items_carta` → `menu_items`
-- `item_carta_composicion` → `menu_item_compositions`
-- `item_carta_extras` → `menu_item_extras`
-- `item_carta_grupo_opcional` → `menu_item_option_groups`
-- `item_carta_grupo_opcional_items` → `menu_item_option_group_items`
-- `item_carta_precios_historial` → `menu_item_price_history`
-- `item_extra_asignaciones` → `extra_assignments`
-- `item_modificadores` → `item_modifiers`
-- `item_removibles` → `removable_items`
-- `items_factura` → `invoice_items`
-- `preparaciones` → `recipes`
-- `preparacion_ingredientes` → `recipe_ingredients`
-- `preparacion_opciones` → `recipe_options`
-- `categorias_preparacion` → `recipe_categories`
-- `insumos` → `supplies`
-- `insumos_costos_historial` → `supply_cost_history`
-- `categorias_insumo` → `supply_categories`
-- `gastos` → `expenses`
-- `proveedores` → `suppliers`
-- `facturas_proveedores` → `supplier_invoices`
-- `pagos_proveedores` → `supplier_payments`
-- `pagos_canon` → `canon_payments`
-- `canon_liquidaciones` → `canon_settlements`
-- `ventas_mensuales_local` → `branch_monthly_sales`
-- `facturas_emitidas` → `issued_invoices`
-- `codigos_descuento` → `discount_codes`
-- `codigos_descuento_usos` → `discount_code_uses`
-- `promociones` → `promotions`
-- `promocion_items` → `promotion_items`
-- `promocion_item_extras` → `promotion_item_extras`
-- `socios` → `partners`
-- `movimientos_socio` → `partner_movements`
-- `distribuciones_utilidades` → `profit_distributions`  
-- `inversiones` → `investments`
-- `periodos` → `periods`
-- `cadetes` → `delivery_drivers`
-- `llamadores` → `pagers`
-- `canales_venta` → `sales_channels`
-- `conceptos_servicio` → `service_concepts`
-- `configuracion_impuestos` → `tax_config`
-- `consumos_manuales` → `manual_consumptions`
-- `delivery_zones` (ya inglés, sin cambio)
-- `menu_categorias` → `menu_categories`
-- `menu_fichas_tecnicas` → `menu_tech_sheets`
-- `menu_precios` → `menu_prices`
-- `menu_productos` → `menu_products`
-- `pago_factura` → `invoice_payments`
-- `pedido_item_modificadores` → `order_item_modifiers`
-- `pedido_payment_edits` → `order_payment_edits`
-- `proveedor_condiciones_local` → `supplier_branch_terms`
-- `turnos_caja` → `register_shifts_legacy`
-- `webapp_pedido_mensajes` → `webapp_order_messages`
-- `cliente_direcciones` (pendiente evaluar rename a `customer_addresses`)
+```sql
+-- telefono → phone
+ALTER TABLE profiles RENAME COLUMN telefono TO phone;
+ALTER TABLE suppliers RENAME COLUMN telefono TO phone;
+ALTER TABLE suppliers RENAME COLUMN telefono_secundario TO secondary_phone;
+ALTER TABLE delivery_drivers RENAME COLUMN telefono TO phone;
+-- (+ otras tablas que tengan telefono)
 
-Frontend: ~200+ archivos actualizados. Servicios clave migrados: posService, financialService, rdoService, fiscalService, adminService, promoService, printingService, deliveryService, webappOrderService, managerDashboardService, proveedoresService.
+-- direccion → address
+ALTER TABLE suppliers RENAME COLUMN direccion TO address;
+-- (+ otras tablas)
 
-Patrón usado: `fromUntyped('new_table_name')` en lugar de `supabase.from('old_name')` para bypass de tipos hasta regeneración.
+-- fecha → date
+ALTER TABLE expenses RENAME COLUMN fecha TO date;
+ALTER TABLE supplier_invoices RENAME COLUMN fecha TO date;
+ALTER TABLE investments RENAME COLUMN fecha TO date;
+ALTER TABLE profit_distributions RENAME COLUMN fecha TO date;
+ALTER TABLE manual_consumptions RENAME COLUMN fecha TO date;
 
-## ✅ Fase 2 — Columnas comunes: PARCIALMENTE COMPLETADA (DB done, frontend parcial)
-Migración DB ejecutada para las columnas más frecuentes:
-- `descripcion` → `description` (11 tablas: delivery_zones, investments, menu_categories, menu_items, order_item_modifiers, promotions, rdo_movimientos, recipes, service_concepts, supplies, supply_categories)
-- `cantidad` → `quantity` (8 tablas: invoice_items, menu_item_compositions, menu_item_option_group_items, order_items, promotion_item_extras, recipe_ingredients, stock_actual, stock_movimientos)
-- `cantidad_anterior` → `quantity_before`, `cantidad_nueva` → `quantity_after` (stock_movimientos)
-- `monto` → `amount` (6 tablas: canon_payments, expenses, order_payments, partner_movements, rdo_movimientos, supplier_payments)
-- `observaciones` → `notes` (16 tablas: branch_monthly_sales, canon_payments, canon_settlements, expenses, financial_audit_log, investments, invoice_items, manual_consumptions, partner_movements, profit_distributions, supplier_branch_terms, supplier_invoices, supplier_payments, suppliers, tax_config)
-- `observaciones` → `notes_extra` (cash_register_movements, para evitar conflicto con columna existente)
-- `medio_pago` → `payment_method` (3 tablas: canon_payments, expenses, supplier_payments)
+-- periodo → period
+ALTER TABLE branch_monthly_sales RENAME COLUMN periodo TO period;
+ALTER TABLE canon_settlements RENAME COLUMN periodo TO period;
+ALTER TABLE rdo_movimientos RENAME COLUMN periodo TO period;
 
-Vistas recreadas: webapp_menu_items, rdo_multivista_items_base, balance_socios, rdo_report_data, cuenta_corriente_proveedores, cuenta_corriente_marca.
-Funciones actualizadas: calcular_saldo_socio, sync_expense_movement_to_gastos.
+-- concepto → concept
+ALTER TABLE rdo_movimientos RENAME COLUMN concepto TO concept;
+ALTER TABLE service_concepts RENAME COLUMN concepto TO concept;
 
-Frontend: Servicios clave actualizados (posService, financialService, rdoService). Hooks de stock actualizados con aliases de compatibilidad.
-⚠️ PENDIENTE: ~60 archivos de componentes aún referencian las propiedades antiguas (`.monto`, `.descripcion`, `.cantidad`, `.observaciones`, `.medio_pago`). Funcionan en runtime gracias a aliases en hooks, pero los tipos TypeScript pueden generar warnings.
+-- precio_unitario → unit_price
+ALTER TABLE order_items RENAME COLUMN precio_unitario TO unit_price;
+ALTER TABLE invoice_items RENAME COLUMN precio_unitario TO unit_price;
+ALTER TABLE promotion_items RENAME COLUMN precio_unitario TO unit_price;
 
-Columnas aún pendientes de renombrar:
-| Columna actual | Sugerido | Tablas afectadas (aprox) |
-|---|---|---|
-| `telefono` | `phone` | ~5 tablas |
-| `direccion` | `address` | ~5 tablas |
-| `fecha` | `date` | ~5 tablas |
-| `periodo` | `period` | ~5 tablas |
-| `concepto` | `concept` | ~3 tablas |
-| `precio_unitario` | `unit_price` | ~3 tablas |
-| `precio_base` | `base_price` | ~2 tablas |
-| `imagen_url` | `image_url` | ~3 tablas |
+-- precio_base → base_price
+ALTER TABLE menu_items RENAME COLUMN precio_base TO base_price;
+ALTER TABLE menu_prices RENAME COLUMN precio_base TO base_price;
 
-## ❌ Fase 4 — Enum values: PENDIENTE
-18 enum values en español a renombrar.
-Impacto: Lógica de roles, pagos, posiciones, áreas.
+-- imagen_url → image_url
+ALTER TABLE menu_items RENAME COLUMN imagen_url TO image_url;
+ALTER TABLE menu_categories RENAME COLUMN imagen_url TO image_url;
+ALTER TABLE menu_products RENAME COLUMN imagen_url TO image_url;
+```
 
-| Enum type | Valores actuales (español) | Sugerido (inglés) |
-|---|---|---|
-| `brand_role_type` | `coordinador, informes, contador_marca` | `coordinator, reports, brand_accountant` |
-| `local_role_type` | `franquiciado, encargado, contador_local, cajero, empleado` | `franchisee, manager, local_accountant, cashier, employee` |
-| `payment_method` | `efectivo, tarjeta_debito, tarjeta_credito, transferencia, vales` | `cash, debit_card, credit_card, transfer, vouchers` |
-| `work_position_type` | `cajero, cocinero, barista, runner, lavacopas` | `cashier, cook, barista, runner, dishwasher` |
-| `order_area` | `salon, mostrador` | `dine_in, counter` |
+Antes de ejecutar: verificar con `read-query` qué tablas realmente tienen cada columna, para no fallar en ALTER inexistentes.
 
-⚠️ **Fase 4 es la de mayor riesgo**: requiere recrear enums (PostgreSQL no permite ALTER ENUM RENAME VALUE fácilmente), actualizar toda la lógica de permisos (usePermissionsV2), y cada referencia hardcodeada en el frontend.
+Recrear vistas afectadas (`webapp_menu_items`, `rdo_multivista_items_base`, `rdo_report_data`, `cuenta_corriente_proveedores`, `cuenta_corriente_marca`, `balance_socios`) con los nuevos nombres.
 
-## ⚠️ Nota sobre Fases 2 y 4
-Cada fase requiere migración SQL coordinada con actualización masiva del frontend.
-Renombrar 1 columna puede impactar entre 5 y 30 archivos.
-Recomendación: ejecutar columna por columna o por módulo funcional.
+Actualizar funciones/triggers que referencien estas columnas (`calcular_saldo_socio`, `sync_expense_movement_to_gastos`, etc.).
 
-## 📋 Deuda técnica conocida
-- El helper `fromUntyped()` se usa extensivamente como workaround de tipos. Idealmente se eliminaría tras regenerar `types.ts` con el schema actualizado, pero dado que Fases 2 y 4 siguen pendientes, seguirá siendo necesario.
-- Algunos componentes tienen casteos `as any` para resolver incompatibilidades de tipos durante la transición.
-- La tabla `user_roles_v2` mantiene el sufijo `_v2` (violación de convención) pero no se recomienda renombrar por el alto riesgo en el sistema de permisos.
+---
+
+## Migración 2 — Columnas específicas por tabla (~80 ALTER)
+
+**Orders/POS:**
+- `orders`: numero_dia→daily_number, nombre_cliente→customer_name, telefono_cliente→customer_phone, direccion_entrega→delivery_address, tiempo_estimado→estimated_time
+- `order_items`: nombre_item→item_name
+- `order_payments`: metodo→method
+
+**Menu:**
+- `menu_items`: nombre_corto→short_name, visible_carta→is_visible_menu, visible_pos→is_visible_pos, visible_webapp→is_visible_webapp
+- `removable_items`: nombre_display→display_name
+- `menu_item_price_history`: precio_anterior→previous_price, precio_nuevo→new_price, motivo→reason, usuario_id→user_id
+- `item_modifiers`: cantidad_ahorro→saving_quantity, unidad_ahorro→saving_unit, costo_ahorro→saving_cost, cantidad_extra→extra_quantity, unidad_extra→extra_unit, precio_extra→extra_price, costo_extra→extra_cost, orden→sort_order
+
+**Recetas/Insumos:**
+- `recipes`: rendimiento→yield, costo_calculado→calculated_cost, costo_manual→manual_cost
+- `supplies`: unidad_base→base_unit, costo_por_unidad_base→base_unit_cost
+
+**Finanzas:**
+- `suppliers`: condicion_iva→tax_status, contacto_secundario→secondary_contact
+- `supplier_invoices`: factura_tipo→invoice_type, factura_numero→invoice_number, factura_fecha→invoice_date, condicion_pago→payment_terms, saldo_pendiente→pending_balance, motivo_extraordinaria→extraordinary_reason
+- `invoice_items`: unidad→unit
+- `supplier_payments`: fecha_pago→payment_date, fecha_vencimiento_pago→payment_due_date
+- `canon_payments`: fecha_pago→payment_date
+- `canon_settlements`: porcentaje_ft→cash_percentage, saldo_pendiente→pending_balance, fecha_vencimiento→due_date
+
+**Socios:**
+- `partners`: porcentaje_participacion→ownership_percentage
+- `partner_movements`: detalle→details, saldo_acumulado→cumulative_balance
+
+**Ventas/RRHH:**
+- `branch_monthly_sales`: venta_total→total_sales, efectivo→cash, cargado_por→loaded_by
+- `shift_closures`: turno→shift, cerrado_por→closed_by, fuente→source
+- `delivery_drivers`: disponible→is_available, pedidos_hoy→orders_today
+- `sales_channels`: codigo→code, es_base→is_base, orden→sort_order
+- `customer_addresses`: etiqueta→label, piso→floor, referencia→reference, ciudad→city, latitud→latitude, longitud→longitude
+
+**AFIP:**
+- `afip_config`: razon_social→business_name, direccion_fiscal→fiscal_address, inicio_actividades→activity_start_date, clave_privada_enc→private_key_enc, estado_conexion→connection_status, ultimo_error→last_error, ultima_verificacion→last_verification, ultimo_nro_factura_a→last_invoice_number_a, ultimo_nro_factura_b→last_invoice_number_b, ultimo_nro_factura_c→last_invoice_number_c, estado_certificado→certificate_status, reglas_facturacion→invoicing_rules
+
+Recrear todas las vistas y funciones afectadas con los nombres nuevos.
+
+---
+
+## Proceso de ejecución
+
+1. Query de verificación: consultar `information_schema.columns` para confirmar que cada columna existe antes de renombrar.
+2. Ejecutar Migración 1 en un solo bloque SQL.
+3. Ejecutar Migración 2 en un solo bloque SQL.
+4. `types.ts` se regenera automáticamente tras cada migración.
+5. Actualizar `plan.md` con el estado final.
+
+No se modifica ningún archivo `.ts`/`.tsx` del frontend.
+
