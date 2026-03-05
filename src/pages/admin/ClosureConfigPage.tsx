@@ -134,7 +134,7 @@ function ClosureConfigPageContent() {
       tipo: 'app_delivery',
       titulo: 'Apps de Delivery',
       descripcion: 'Aplicaciones de delivery disponibles para registrar ventas',
-      items: configItems?.filter((i) => i.tipo === 'app_delivery') || [],
+      items: configItems?.filter((i) => i.type === 'app_delivery') || [],
     },
   ];
 
