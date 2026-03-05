@@ -186,7 +186,7 @@ export async function fetchProveedorPagos(branchId: string, proveedorId: string)
 
 export async function fetchSaldoProveedor(branchId: string, proveedorId: string) {
   const { data, error } = await supabase
-    .from('cuenta_corriente_proveedores')
+    .from('supplier_current_account')
     .select('*')
     .eq('proveedor_id', proveedorId)
     .eq('branch_id', branchId)
