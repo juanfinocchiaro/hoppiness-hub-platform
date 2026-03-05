@@ -39,7 +39,7 @@ export interface KitchenPedido {
   tiempo_listo: string | null;
   tiempo_inicio_prep: string | null;
   origen: string | null;
-  pedido_items: KitchenItem[];
+  order_items: KitchenItem[];
 }
 
 export function useKitchen(branchId: string) {

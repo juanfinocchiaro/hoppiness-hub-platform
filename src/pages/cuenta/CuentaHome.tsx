@@ -145,7 +145,7 @@ export default function CuentaHome() {
               {lastOrderBranch} · {estadoLabels[lastOrder.estado] || lastOrder.estado}
             </p>
             <p className="text-sm text-muted-foreground truncate">
-              {(lastOrder.pedido_items || [])
+              {(lastOrder.order_items || [])
                 .slice(0, 2)
                 .map((i: any) => `${i.cantidad}x ${i.nombre}`)
                 .join(' · ')}

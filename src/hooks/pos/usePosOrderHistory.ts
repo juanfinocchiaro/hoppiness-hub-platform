@@ -82,9 +82,9 @@ export interface PosOrder {
   subtotal: number;
   descuento: number | null;
   total: number;
-  pedido_items: PedidoItem[];
-  pedido_pagos: PedidoPago[];
-  facturas_emitidas: PosOrderFactura[];
+  order_items: PedidoItem[];
+  order_payments: PedidoPago[];
+  issued_invoices: PosOrderFactura[];
 }
 
 export function usePosOrderHistory(
@@ -116,7 +116,7 @@ export function usePosOrderHistory(
       if (filters.estado !== 'todos' && order.estado !== filters.estado) return false;
       // Metodo de pago (client-side: order has at least one payment with that method)
       if (filters.metodoPago !== 'todos') {
-        const hasMethod = order.pedido_pagos?.some((p) => p.metodo === filters.metodoPago);
+        const hasMethod = order.order_payments?.some((p) => p.metodo === filters.metodoPago);
         if (!hasMethod) return false;
       }
       // Search

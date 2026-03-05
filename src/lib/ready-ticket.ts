@@ -82,9 +82,9 @@ interface PedidoRow {
   created_at: string;
   total: number;
   descuento: number | null;
-  pedido_items: PedidoItemRow[];
-  pedido_pagos: PedidoPagoRow[];
-  facturas_emitidas: FacturaEmitidaRow[];
+  order_items: PedidoItemRow[];
+  order_payments: PedidoPagoRow[];
+  issued_invoices: FacturaEmitidaRow[];
 }
 
 function formatMetodoPago(method?: string): string | undefined {
@@ -123,8 +123,8 @@ export async function printReadyTicketByPedidoId(params: {
   const data = await fetchPedidoForTicket(pedidoId);
   const pedido = data as unknown as PedidoRow;
 
-  const activeInvoice = (pedido.facturas_emitidas || []).find((f) => !f.anulada);
-  const singlePayment = (pedido.pedido_pagos || []).length === 1 ? pedido.pedido_pagos[0] : null;
+  const activeInvoice = (pedido.issued_invoices || []).find((f) => !f.anulada);
+  const singlePayment = (pedido.order_payments || []).length === 1 ? pedido.order_payments[0] : null;
 
   const ticketData: TicketClienteData = {
     order: {
@@ -135,7 +135,7 @@ export async function printReadyTicketByPedidoId(params: {
       cliente_nombre: pedido.cliente_nombre,
       referencia_app: pedido.referencia_app ?? null,
       created_at: pedido.created_at,
-      items: (pedido.pedido_items || []).map((i) => ({
+      items: (pedido.order_items || []).map((i) => ({
         nombre: i.nombre,
         cantidad: i.cantidad,
         notas: i.notas,
@@ -148,8 +148,8 @@ export async function printReadyTicketByPedidoId(params: {
     },
     branchName,
     metodo_pago:
-      (pedido.pedido_pagos || []).length > 1
-        ? `Mixto: ${(pedido.pedido_pagos || []).map((p) => formatMetodoPago(p.metodo) || p.metodo).join(' + ')}`
+      (pedido.order_payments || []).length > 1
+        ? `Mixto: ${(pedido.order_payments || []).map((p) => formatMetodoPago(p.metodo) || p.metodo).join(' + ')}`
         : formatMetodoPago(singlePayment?.metodo),
     tarjeta_marca: singlePayment?.tarjeta_marca || undefined,
     monto_recibido:
@@ -254,7 +254,7 @@ export async function printDeliveryTicketByPedidoId(params: {
       cliente_nombre: pedido.cliente_nombre,
       referencia_app: pedido.referencia_app ?? null,
       created_at: pedido.created_at,
-      items: (pedido.pedido_items || []).map((i) => ({
+      items: (pedido.order_items || []).map((i) => ({
         nombre: i.nombre,
         cantidad: i.cantidad,
         notas: i.notas,

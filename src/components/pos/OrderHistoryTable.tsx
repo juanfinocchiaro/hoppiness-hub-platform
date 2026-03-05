@@ -75,7 +75,7 @@ const SERVICIO_LABELS: Record<string, string> = {
 
 import { formatCurrency } from '@/lib/formatters';
 
-function paymentSummary(pagos: PosOrder['pedido_pagos']) {
+function paymentSummary(pagos: PosOrder['order_payments']) {
   if (!pagos || pagos.length === 0) return '-';
   if (pagos.length === 1) return METODO_LABELS[pagos[0].metodo] || pagos[0].metodo;
   return 'Dividido';
@@ -209,7 +209,7 @@ export function OrderHistoryTable({
           <TableBody>
             {sortedOrders.map((order) => {
               const isExpanded = expandedId === order.id;
-              const activeInvoice = order.facturas_emitidas?.find((f) => !f.anulada);
+              const activeInvoice = order.issued_invoices?.find((f) => !f.anulada);
               const hasActiveInvoice = !!activeInvoice;
               return (
                 <Fragment key={order.id}>
@@ -256,7 +256,7 @@ export function OrderHistoryTable({
                     )}
                     {!isMobile && (
                       <TableCell className="text-center tabular-nums">
-                        {order.pedido_items?.length || 0}
+                        {order.order_items?.length || 0}
                       </TableCell>
                     )}
                     <TableCell className="text-right font-medium tabular-nums">
@@ -264,7 +264,7 @@ export function OrderHistoryTable({
                     </TableCell>
                     {!isMobile && (
                       <TableCell className="text-sm">
-                        {paymentSummary(order.pedido_pagos)}
+                        {paymentSummary(order.order_payments)}
                       </TableCell>
                     )}
                     <TableCell className="text-center">
@@ -306,7 +306,7 @@ export function OrderHistoryTable({
             pedidoId={editingOrder.id}
             pedidoTotal={editingOrder.total}
             branchId={branchId}
-            currentPayments={editingOrder.pedido_pagos}
+            currentPayments={editingOrder.order_payments}
           />
         )}
       </CardContent>
@@ -379,13 +379,13 @@ function OrderDetail({
   onChangeInvoice?: (order: PosOrder) => void;
   valeCategoryIds?: Set<string>;
 }) {
-  const activeInvoice = order.facturas_emitidas?.find((f) => !f.anulada);
-  const activeFactura = order.facturas_emitidas?.find(
+  const activeInvoice = order.issued_invoices?.find((f) => !f.anulada);
+  const activeFactura = order.issued_invoices?.find(
     (f) => !f.anulada && !f.tipo_comprobante.startsWith('NC_'),
   );
-  const cancelledInvoices = order.facturas_emitidas?.filter((f) => f.anulada) || [];
+  const cancelledInvoices = order.issued_invoices?.filter((f) => f.anulada) || [];
   const creditNotes =
-    order.facturas_emitidas?.filter((f) => f.tipo_comprobante.startsWith('NC_')) || [];
+    order.issued_invoices?.filter((f) => f.tipo_comprobante.startsWith('NC_')) || [];
   const lastCreditNote = creditNotes.length > 0 ? creditNotes[creditNotes.length - 1] : null;
 
   const hasActiveInvoice = !!activeInvoice;
@@ -397,7 +397,7 @@ function OrderDetail({
   // Check if order has vale items
   const hasValeItems =
     valeCategoryIds && valeCategoryIds.size > 0
-      ? order.pedido_items?.some(
+      ? order.order_items?.some(
           (item) => item.categoria_carta_id && valeCategoryIds.has(item.categoria_carta_id),
         )
       : true; // If no category data, show enabled by default
@@ -409,7 +409,7 @@ function OrderDetail({
         <div>
           <p className="font-medium mb-1">Items</p>
           <ul className="space-y-0.5">
-            {order.pedido_items?.map((item) => (
+            {order.order_items?.map((item) => (
               <li key={item.id} className="flex justify-between">
                 <span>
                   {item.nombre} x{item.cantidad}
@@ -442,7 +442,7 @@ function OrderDetail({
             )}
           </div>
           <ul className="space-y-0.5">
-            {order.pedido_pagos?.map((pago) => (
+            {order.order_payments?.map((pago) => (
               <li key={pago.id} className="flex justify-between">
                 <span>{METODO_LABELS[pago.metodo] || pago.metodo}</span>
                 <span className="tabular-nums">{formatCurrency(pago.monto)}</span>

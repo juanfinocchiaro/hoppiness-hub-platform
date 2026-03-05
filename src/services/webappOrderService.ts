@@ -10,7 +10,7 @@ export async function fetchUserOrders(userId: string, limit = 30) {
       `id, numero_pedido, estado, tipo_servicio,
        total, created_at, webapp_tracking_code,
        branch_id,
-       pedido_items(nombre, cantidad, precio_unitario, subtotal)`,
+       order_items(nombre, cantidad, precio_unitario, subtotal)`,
     )
     .eq('cliente_user_id', userId)
     .order('created_at', { ascending: false })
@@ -53,7 +53,7 @@ export async function fetchActiveOrdersByTrackingCode(code: string) {
 export async function fetchActiveOrderWithBranch(userId: string) {
   const { data } = await fromUntyped('orders')
     .select(
-      'id, numero_pedido, estado, webapp_tracking_code, branch:branches!orders_branch_id_fkey(name)',
+      'id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
     )
     .eq('cliente_user_id', userId)
     .eq('origen', 'webapp')
@@ -67,7 +67,7 @@ export async function fetchActiveOrderWithBranch(userId: string) {
 export async function fetchOrderByTrackingWithBranch(code: string) {
   const { data } = await fromUntyped('orders')
     .select(
-      'id, numero_pedido, estado, webapp_tracking_code, branch:branches!orders_branch_id_fkey(name)',
+      'id, numero_pedido, estado, webapp_tracking_code, branch:branches!pedidos_branch_id_fkey(name)',
     )
     .eq('webapp_tracking_code', code)
     .in('estado', ACTIVE_STATES)

@@ -95,7 +95,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
     cliente_nombre: order.cliente_nombre,
     referencia_app: (order as unknown as Record<string, unknown>).referencia_app as string | null ?? null,
     created_at: order.created_at,
-    items: order.pedido_items.map((i) => ({
+    items: order.order_items.map((i) => ({
       nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, estacion: 'armado' as const,
       precio_unitario: i.precio_unitario, subtotal: i.subtotal, categoria_carta_id: i.categoria_carta_id,
     })),
@@ -111,7 +111,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
 
       const printableOrder = buildPrintableOrder(order);
       const afipExtra = afipConfig as unknown as { iibb?: string; condicion_iva?: string } | null;
-      const payment = order.pedido_pagos?.[0];
+      const payment = order.order_payments?.[0];
       const fiscalType = mapFiscalDocType(factura.tipo_comprobante);
 
       const ticketData: TicketClienteData = {
@@ -159,7 +159,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
   const handleCancelOrder = useCallback(async () => {
     if (!cancellingOrder) return;
     const order = cancellingOrder;
-    const activeInvoice = order.facturas_emitidas?.find((f) => !f.anulada);
+    const activeInvoice = order.issued_invoices?.find((f) => !f.anulada);
     try {
       if (activeInvoice) {
         const data = await invokeEmitirNotaCredito(activeInvoice.id, branchId);
@@ -174,7 +174,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
           const ticketPrinter = printConfig?.ticket_printer_id ? allPrinters.find((p) => p.id === printConfig.ticket_printer_id && p.is_active) : null;
           if (ticketPrinter) {
             const printableOrder = buildPrintableOrder(order);
-            const payment = order.pedido_pagos?.[0];
+            const payment = order.order_payments?.[0];
             const anulacionData: AnulacionTicketData = { order: printableOrder, branchName, metodo_pago: formatMetodoPago(payment?.metodo) };
             const ticketBytes = generateTicketAnulacion(anulacionData, ticketPrinter.paper_width);
             const { printRawBase64 } = await import('@/lib/qz-print');
@@ -191,12 +191,12 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
   const handleChangeInvoice = useCallback(async (data: ChangeInvoiceData) => {
     if (!changingInvoiceOrder) return;
     const order = changingInvoiceOrder;
-    const activeInvoice = order.facturas_emitidas?.find((f) => !f.anulada);
+    const activeInvoice = order.issued_invoices?.find((f) => !f.anulada);
     if (!activeInvoice) { toast.error('No hay factura activa para cambiar'); return; }
     try {
       const ncData = await invokeEmitirNotaCredito(activeInvoice.id, branchId);
       toast.success(`NC ${ncData.tipo} emitida: N° ${ncData.numero}`);
-      const items = order.pedido_items.map((i) => ({ descripcion: i.nombre, cantidad: i.cantidad, precio_unitario: i.precio_unitario }));
+      const items = order.order_items.map((i) => ({ descripcion: i.nombre, cantidad: i.cantidad, precio_unitario: i.precio_unitario }));
       await emitirFactura.mutateAsync({ branch_id: branchId, pedido_id: order.id, tipo_factura: data.tipo_factura, receptor_cuit: data.receptor_cuit || undefined, receptor_razon_social: data.receptor_razon_social || undefined, receptor_condicion_iva: data.receptor_condicion_iva || undefined, items, total: order.total });
       invalidateOrders();
       setChangingInvoiceOrder(null);
@@ -214,8 +214,8 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
         case 'comanda': { const d = generateComandaCompleta(printableOrder, branchName, ticketPrinter.paper_width); const cp = printConfig?.comanda_printer_id ? allPrinters.find((p) => p.id === printConfig.comanda_printer_id && p.is_active) : ticketPrinter; const { printRawBase64 } = await import('@/lib/qz-print'); await printRawBase64((cp || ticketPrinter).ip_address!, (cp || ticketPrinter).port, d); toast.success('Comanda impresa'); break; }
         case 'vale': { const vp = printConfig?.vale_printer_id ? allPrinters.find((p) => p.id === printConfig.vale_printer_id && p.is_active) : ticketPrinter; const printer = vp || ticketPrinter; const { printRawBase64 } = await import('@/lib/qz-print'); const valeCatIds = valeCategoryIds || new Set<string>(); const valeItems = printableOrder.items.filter((item) => item.categoria_carta_id && valeCatIds.has(item.categoria_carta_id)); if (valeItems.length === 0) { toast.info('Este pedido no tiene items de tipo vale (bebidas)'); break; } for (const item of valeItems) { for (let i = 0; i < item.cantidad; i++) { const d = generateVale(item.nombre || 'Producto', printableOrder.numero_pedido, printableOrder.created_at, printableOrder.canal_venta || undefined, undefined, printer.paper_width); await printRawBase64(printer.ip_address!, printer.port, d); } } toast.success(`${valeItems.length} vale(s) impresos`); break; }
         case 'delivery': { const d = generateComandaDelivery(printableOrder, branchName, ticketPrinter.paper_width); const { printRawBase64 } = await import('@/lib/qz-print'); await printRawBase64(ticketPrinter.ip_address!, ticketPrinter.port, d); toast.success('Ticket delivery impreso'); break; }
-        case 'factura': { const f = order.facturas_emitidas?.filter((x) => !x.anulada && !x.tipo_comprobante.startsWith('NC_')).sort((a, b) => b.numero_comprobante - a.numero_comprobante)[0]; if (!f) { toast.error('Este pedido no tiene factura para reimprimir'); return; } await printFiscalDocument(order, f, 'Factura reimpresa'); break; }
-        case 'nota_credito': { const nc = order.facturas_emitidas?.filter((x) => x.tipo_comprobante.startsWith('NC_')).sort((a, b) => b.numero_comprobante - a.numero_comprobante)[0]; if (!nc) { toast.error('Este pedido no tiene nota de crédito para reimprimir'); return; } await printFiscalDocument(order, nc, 'Nota de Crédito reimpresa'); break; }
+        case 'factura': { const f = order.issued_invoices?.filter((x) => !x.anulada && !x.tipo_comprobante.startsWith('NC_')).sort((a, b) => b.numero_comprobante - a.numero_comprobante)[0]; if (!f) { toast.error('Este pedido no tiene factura para reimprimir'); return; } await printFiscalDocument(order, f, 'Factura reimpresa'); break; }
+        case 'nota_credito': { const nc = order.issued_invoices?.filter((x) => x.tipo_comprobante.startsWith('NC_')).sort((a, b) => b.numero_comprobante - a.numero_comprobante)[0]; if (!nc) { toast.error('Este pedido no tiene nota de crédito para reimprimir'); return; } await printFiscalDocument(order, nc, 'Nota de Crédito reimpresa'); break; }
       }
     } catch (err) { toast.error('Error al reimprimir', { description: err instanceof Error ? err.message : 'Error desconocido' }); }
   }, [printConfig, allPrinters, branchName, valeCategoryIds, printFiscalDocument, printing.bridgeStatus]);
@@ -223,7 +223,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
   const handleExport = () => {
     if (!orders.length) return;
     exportToExcel(
-      orders.map((o) => ({ numero: o.numero_pedido, fecha: o.created_at ? format(new Date(o.created_at), 'dd/MM/yy HH:mm') : '', canal: o.canal_venta || '', servicio: o.tipo_servicio || '', cliente: o.cliente_nombre || '', items: o.pedido_items?.length || 0, total: o.total, pago: o.pedido_pagos?.map((p) => p.metodo).join(', ') || '', estado: o.estado })),
+      orders.map((o) => ({ numero: o.numero_pedido, fecha: o.created_at ? format(new Date(o.created_at), 'dd/MM/yy HH:mm') : '', canal: o.canal_venta || '', servicio: o.tipo_servicio || '', cliente: o.cliente_nombre || '', items: o.order_items?.length || 0, total: o.total, pago: o.order_payments?.map((p) => p.metodo).join(', ') || '', estado: o.estado })),
       { numero: '#', fecha: 'Fecha', canal: 'Canal', servicio: 'Servicio', cliente: 'Cliente', items: 'Items', total: 'Total', pago: 'Pago', estado: 'Estado' },
       { filename: `pedidos-${branchName || 'local'}` },
     );
@@ -233,9 +233,9 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
     if (!fiscalBranch || printing.bridgeStatus !== 'connected') { toast.error('Impresión no disponible'); return; }
     const ticketPrinter = printConfig?.ticket_printer_id ? allPrinters.find((p) => p.id === printConfig.ticket_printer_id && p.is_active) : null;
     if (!ticketPrinter) { toast.error('No hay impresora de tickets configurada'); return; }
-    const invoicedOrders = orders.filter((o) => o.facturas_emitidas?.some((f) => !f.anulada && f.cae && !f.tipo_comprobante.startsWith('NC_')));
+    const invoicedOrders = orders.filter((o) => o.issued_invoices?.some((f) => !f.anulada && f.cae && !f.tipo_comprobante.startsWith('NC_')));
     if (invoicedOrders.length === 0) { toast.info('No hay ventas facturadas en el período'); return; }
-    const ventas = invoicedOrders.flatMap((o) => (o.facturas_emitidas || []).filter((f) => !f.anulada && f.cae && !f.tipo_comprobante.startsWith('NC_')).map((f) => ({ fecha: f.fecha_emision, tipo: f.tipo_comprobante, numero: `${String(f.punto_venta).padStart(5, '0')}-${String(f.numero_comprobante).padStart(8, '0')}`, total: f.total, cae: f.cae || '' }))).sort((a, b) => a.numero.localeCompare(b.numero));
+    const ventas = invoicedOrders.flatMap((o) => (o.issued_invoices || []).filter((f) => !f.anulada && f.cae && !f.tipo_comprobante.startsWith('NC_')).map((f) => ({ fecha: f.fecha_emision, tipo: f.tipo_comprobante, numero: `${String(f.punto_venta).padStart(5, '0')}-${String(f.numero_comprobante).padStart(8, '0')}`, total: f.total, cae: f.cae || '' }))).sort((a, b) => a.numero.localeCompare(b.numero));
     const summaryData: InvoicedSalesSummaryData = { fecha_desde: orders[orders.length - 1]?.created_at || '', fecha_hasta: orders[0]?.created_at || '', ventas, total: ventas.reduce((s, v) => s + v.total, 0) };
     try {
       const data = generateInvoicedSalesSummary(summaryData, fiscalBranch, ticketPrinter.paper_width);
@@ -245,7 +245,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
     } catch (e) { toast.error('Error al imprimir: ' + (e instanceof Error ? e.message : 'desconocido')); }
   };
 
-  const changingInvoiceFactura = changingInvoiceOrder?.facturas_emitidas?.find((f) => !f.anulada);
+  const changingInvoiceFactura = changingInvoiceOrder?.issued_invoices?.find((f) => !f.anulada);
 
   return (
     <>

@@ -69,7 +69,7 @@ export default function DeliveryPage() {
                     <p className="text-sm text-muted-foreground mb-2">{p.cliente_direccion}</p>
                   )}
                   <ul className="text-sm mb-3">
-                    {(p.pedido_items ?? []).map((it: any, i: number) => (
+                    {(p.order_items ?? []).map((it: any, i: number) => (
                       <li key={i}>
                         {it.cantidad}Ã— {it.nombre}
                       </li>

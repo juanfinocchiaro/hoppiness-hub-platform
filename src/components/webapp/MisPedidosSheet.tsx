@@ -64,7 +64,7 @@ export function MisPedidosSheet({ open, onOpenChange, onShowTracking, currentBra
   const handleReorder = (order: any) => {
     const branchInfo = branches?.[order.branch_id];
     if (!branchInfo?.slug) return;
-    const items = order.pedido_items || [];
+    const items = order.order_items || [];
     const reorderItems = items.map((i: any) => ({
       cartId: crypto.randomUUID(),
       itemId: '',
@@ -176,7 +176,7 @@ function InlineOrderCard({
   onReorder?: () => void;
 }) {
   const estado = estadoLabels[order.estado] || { label: order.estado, variant: 'outline' as const };
-  const items = order.pedido_items || [];
+  const items = order.order_items || [];
   const itemsSummary = items
     .slice(0, 3)
     .map((i: any) => `${i.cantidad}x ${i.nombre}`)
