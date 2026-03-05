@@ -144,7 +144,7 @@ export async function upsertStockActual(
 }
 
 export async function insertStockMovimiento(movement: Record<string, unknown>) {
-  await supabase.from('stock_movimientos').insert(movement as any);
+  await fromUntyped('stock_movements').insert(movement as any);
 }
 
 export async function fetchStockActualItem(branchId: string, insumoId: string) {
