@@ -83,33 +83,59 @@ Frontend: ~200+ archivos actualizados. Servicios clave migrados: posService, fin
 
 Patrón usado: `fromUntyped('new_table_name')` en lugar de `supabase.from('old_name')` para bypass de tipos hasta regeneración.
 
-## ✅ Fase 2 — Columnas comunes: PARCIALMENTE COMPLETADA (DB done, frontend parcial)
-Migración DB ejecutada para las columnas más frecuentes:
-- `descripcion` → `description` (11 tablas: delivery_zones, investments, menu_categories, menu_items, order_item_modifiers, promotions, rdo_movimientos, recipes, service_concepts, supplies, supply_categories)
-- `cantidad` → `quantity` (8 tablas: invoice_items, menu_item_compositions, menu_item_option_group_items, order_items, promotion_item_extras, recipe_ingredients, stock_actual, stock_movimientos)
-- `cantidad_anterior` → `quantity_before`, `cantidad_nueva` → `quantity_after` (stock_movimientos)
-- `monto` → `amount` (6 tablas: canon_payments, expenses, order_payments, partner_movements, rdo_movimientos, supplier_payments)
-- `observaciones` → `notes` (16 tablas: branch_monthly_sales, canon_payments, canon_settlements, expenses, financial_audit_log, investments, invoice_items, manual_consumptions, partner_movements, profit_distributions, supplier_branch_terms, supplier_invoices, supplier_payments, suppliers, tax_config)
-- `observaciones` → `notes_extra` (cash_register_movements, para evitar conflicto con columna existente)
-- `medio_pago` → `payment_method` (3 tablas: canon_payments, expenses, supplier_payments)
+## ✅ Fase 2 — Columnas: COMPLETADA (DB done, frontend pendiente)
+Migración DB ejecutada el 2026-03-05. Todas las columnas en español renombradas a inglés.
 
-Vistas recreadas: webapp_menu_items, rdo_multivista_items_base, balance_socios, rdo_report_data, cuenta_corriente_proveedores, cuenta_corriente_marca.
+**Columnas frecuentes renombradas (~25 grupos, ~80+ ALTER):**
+- `telefono` → `phone` (partners, suppliers)
+- `telefono_secundario` → `secondary_phone` (suppliers)
+- `direccion` → `address` (customer_addresses, suppliers)
+- `fecha` → `date` (expenses, investments, partner_movements, shift_closures, stock_conteos)
+- `periodo` → `period` (11 tablas: branch_monthly_sales, canon_settlements, expenses, investments, manual_consumptions, partner_movements, profit_distributions, rdo_movimientos, stock_cierre_mensual, stock_conteos, supplier_invoices)
+- `concepto` → `concept` (expenses)
+- `precio_unitario` → `unit_price` (invoice_items, order_items)
+- `precio_base` → `base_price` (menu_items)
+- `imagen_url` → `image_url` (menu_items)
+- `orden` → `sort_order` (12 tablas: brand_closure_config, delivery_zones, item_modifiers, menu_categories, menu_item_compositions, menu_item_extras, menu_item_option_groups, menu_items, recipe_categories, recipe_ingredients, recipe_options, supply_categories)
+- `detalle` → `details` (expenses, manual_consumptions, partner_movements)
+- `motivo` → `reason` (menu_item_price_history, order_payment_edits, stock_movimientos, supply_cost_history)
+- `unidad` → `unit` (recipe_ingredients, stock_actual)
+- `usuario_id` → `user_id` (financial_audit_log, menu_item_price_history)
+- `referencia` → `reference` (canon_payments, customer_addresses, supplier_payments)
+- `fecha_vencimiento` → `due_date` (canon_settlements, expenses, supplier_invoices)
+- `fecha_pago` → `payment_date` (canon_payments, expenses, supplier_payments)
+- `precio_extra` → `extra_price` (item_modifiers, order_item_modifiers, recipes, supplies)
+- `fuente` → `source` (branch_monthly_sales, shift_closures)
+- `etiqueta` → `label` (brand_closure_config, customer_addresses)
+- `factura_numero` → `invoice_number` (orders, supplier_invoices)
+- `razon_social` → `business_name` (afip_config, suppliers)
+- `porcentaje_ft` → `cash_percentage` (branch_monthly_sales, canon_settlements)
+- `saldo_pendiente` → `pending_balance` (canon_settlements, supplier_invoices)
+- `estado_conexion` → `connection_status` (afip_config, mercadopago_config)
+
+**Columnas específicas por tabla:**
+- order_payments: metodo→method
+- menu_items: nombre_corto→short_name
+- removable_items: nombre_display→display_name
+- menu_item_price_history: precio_anterior→previous_price, precio_nuevo→new_price
+- item_modifiers: cantidad_ahorro→saving_quantity, unidad_ahorro→saving_unit, costo_ahorro→saving_cost, cantidad_extra→extra_quantity, unidad_extra→extra_unit, costo_extra→extra_cost
+- recipes: costo_calculado→calculated_cost, costo_manual→manual_cost
+- supplies: unidad_base→base_unit, costo_por_unidad_base→base_unit_cost
+- suppliers: contacto_secundario→secondary_contact
+- supplier_invoices: factura_tipo→invoice_type, factura_fecha→invoice_date, condicion_pago→payment_terms, motivo_extraordinaria→extraordinary_reason
+- supplier_payments: fecha_vencimiento_pago→payment_due_date
+- partners: porcentaje_participacion→ownership_percentage
+- partner_movements: saldo_acumulado→cumulative_balance
+- branch_monthly_sales: venta_total→total_sales, efectivo→cash, cargado_por→loaded_by
+- shift_closures: turno→shift, cerrado_por→closed_by
+- customer_addresses: piso→floor, ciudad→city, latitud→latitude, longitud→longitude
+- sales_channels: es_base→is_base
+- afip_config: direccion_fiscal→fiscal_address, inicio_actividades→activity_start_date, clave_privada_enc→private_key_enc, ultimo_error→last_error, ultima_verificacion→last_verification, ultimo_nro_factura_a/b/c→last_invoice_number_a/b/c, estado_certificado→certificate_status, reglas_facturacion→invoicing_rules
+
 Funciones actualizadas: calcular_saldo_socio, sync_expense_movement_to_gastos.
+Vistas recreadas: balance_socios, cuenta_corriente_marca, cuenta_corriente_proveedores, rdo_multivista_items_base, rdo_multivista_ventas_base, rdo_report_data, webapp_menu_items.
 
-Frontend: Servicios clave actualizados (posService, financialService, rdoService). Hooks de stock actualizados con aliases de compatibilidad.
-⚠️ PENDIENTE: ~60 archivos de componentes aún referencian las propiedades antiguas (`.monto`, `.descripcion`, `.cantidad`, `.observaciones`, `.medio_pago`). Funcionan en runtime gracias a aliases en hooks, pero los tipos TypeScript pueden generar warnings.
-
-Columnas aún pendientes de renombrar:
-| Columna actual | Sugerido | Tablas afectadas (aprox) |
-|---|---|---|
-| `telefono` | `phone` | ~5 tablas |
-| `direccion` | `address` | ~5 tablas |
-| `fecha` | `date` | ~5 tablas |
-| `periodo` | `period` | ~5 tablas |
-| `concepto` | `concept` | ~3 tablas |
-| `precio_unitario` | `unit_price` | ~3 tablas |
-| `precio_base` | `base_price` | ~2 tablas |
-| `imagen_url` | `image_url` | ~3 tablas |
+⚠️ PENDIENTE FRONTEND: ~30 archivos tienen errores de build por referencias a columnas antiguas. Archivos afectados: ProveedorFormModal, SocioFormModal, StockHistorial, useStock, ClosureConfigPage, ProveedoresPage, adminService, configService, posService, rdoService, schedulesService.
 
 ## ❌ Fase 4 — Enum values: PENDIENTE
 18 enum values en español a renombrar.
