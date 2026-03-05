@@ -368,8 +368,7 @@ export async function fetchStockMovimientosPeriod(
 }
 
 export async function fetchCierreAnterior(branchId: string, periodo: string) {
-  const { data } = await supabase
-    .from('stock_cierre_mensual')
+  const { data } = await fromUntyped('stock_cierre_mensual')
     .select('insumo_id, stock_cierre_fisico')
     .eq('branch_id', branchId)
     .eq('periodo', periodo);

@@ -158,7 +158,7 @@ export function useSaveCierreMensual(branchId: string) {
           branchId,
           it.insumo_id,
           it.stock_cierre_fisico,
-          actualRow?.unidad ?? 'un',
+          (actualRow as any)?.unit ?? (actualRow as any)?.unidad ?? 'un',
         );
         if (merma > 0) {
           await insertStockMovimiento({
