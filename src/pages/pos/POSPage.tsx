@@ -604,6 +604,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
                   items={cart}
                   payments={payments}
                   onUpdateQty={updateQty}
+                  onSetQty={setQty}
                   onRemove={removeItem}
                   onUpdateNotes={updateNotes}
                   onCancelOrder={cancelOrder}
