@@ -34,6 +34,7 @@ interface OrderPanelProps {
 export function OrderPanel({
   items,
   onUpdateQty,
+  onSetQty,
   onRemove,
   onUpdateNotes,
   onCobrar,
