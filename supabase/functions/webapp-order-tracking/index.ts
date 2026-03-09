@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const { data: pedido, error: pedErr } = await supabase
       .from("pedidos")
       .select(
-        `id, numero_pedido, estado, tipo, tipo_servicio,
+        `id, order_number, estado, tipo, tipo_servicio,
          subtotal, costo_delivery, descuento, total,
          tiempo_prometido, tiempo_inicio_prep, tiempo_listo, tiempo_entregado,
          tiempo_confirmado, tiempo_en_camino,
