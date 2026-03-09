@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
     const { error: pedidoErr } = await supabase.from("pedidos").insert({
       id: pedidoId,
       branch_id: body.branch_id,
-      numero_pedido: numeroPedido as number,
+      order_number: numeroPedido as number,
       tipo: "webapp",
       estado: estadoInicial,
       canal_venta: "webapp",
