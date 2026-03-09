@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Minus, Plus, Trash2, MessageSquare, X } from 'lucide-react';
 import type { CartItem } from '@/types/pos';
+import { EditableQty } from './EditableQty';
 
 export function ItemRow({
   item,
@@ -11,6 +12,7 @@ export function ItemRow({
   onUpdateQty,
   onRemove,
   onUpdateNotes,
+  onSetQty,
 }: {
   item: CartItem;
   index: number;
@@ -19,6 +21,7 @@ export function ItemRow({
   onUpdateQty: (i: number, d: number) => void;
   onRemove: (i: number) => void;
   onUpdateNotes?: (i: number, n: string) => void;
+  onSetQty?: (i: number, qty: number) => void;
 }) {
   return (
     <div className="p-2 rounded-lg bg-muted/50">
@@ -65,7 +68,11 @@ export function ItemRow({
           >
             <Minus className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+          {onSetQty ? (
+            <EditableQty quantity={item.quantity} onSetQty={(qty) => onSetQty(index, qty)} />
+          ) : (
+            <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+          )}
           <Button
             variant="ghost"
             size="icon"

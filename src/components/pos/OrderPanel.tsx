@@ -18,10 +18,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Minus, Plus, Trash2, CreditCard, ShoppingBag, MessageSquare, X } from 'lucide-react';
 import type { CartItem } from '@/types/pos';
+import { EditableQty } from './EditableQty';
 
 interface OrderPanelProps {
   items: CartItem[];
   onUpdateQty: (index: number, delta: number) => void;
+  onSetQty?: (index: number, qty: number) => void;
   onRemove: (index: number) => void;
   onUpdateNotes?: (index: number, notes: string) => void;
   onCobrar: () => void;
@@ -32,6 +34,7 @@ interface OrderPanelProps {
 export function OrderPanel({
   items,
   onUpdateQty,
+  onSetQty,
   onRemove,
   onUpdateNotes,
   onCobrar,
@@ -136,7 +139,11 @@ export function OrderPanel({
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </Button>
-                    <span className="text-sm font-medium w-6 text-center">{it.quantity}</span>
+                    {onSetQty ? (
+                      <EditableQty quantity={it.quantity} onSetQty={(qty) => onSetQty(idx, qty)} />
+                    ) : (
+                      <span className="text-sm font-medium w-6 text-center">{it.quantity}</span>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

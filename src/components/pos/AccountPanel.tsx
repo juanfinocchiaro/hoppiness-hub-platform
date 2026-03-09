@@ -42,6 +42,7 @@ interface AccountPanelProps {
   items: CartItem[];
   payments: LocalPayment[];
   onUpdateQty: (index: number, delta: number) => void;
+  onSetQty?: (index: number, qty: number) => void;
   onRemove: (index: number) => void;
   onUpdateNotes?: (index: number, notes: string) => void;
   onCancelOrder?: () => void;
@@ -62,6 +63,7 @@ export function AccountPanel({
   items,
   payments,
   onUpdateQty,
+  onSetQty,
   onRemove,
   onUpdateNotes,
   onCancelOrder,
@@ -235,6 +237,7 @@ export function AccountPanel({
                     editingNoteIdx={editingNoteIdx}
                     setEditingNoteIdx={setEditingNoteIdx}
                     onUpdateQty={onUpdateQty}
+                    onSetQty={onSetQty}
                     onRemove={onRemove}
                     onUpdateNotes={onUpdateNotes}
                   />
