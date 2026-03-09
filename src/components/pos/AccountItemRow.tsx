@@ -68,7 +68,11 @@ export function ItemRow({
           >
             <Minus className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+          {onSetQty ? (
+            <EditableQty quantity={item.quantity} onSetQty={(qty) => onSetQty(index, qty)} />
+          ) : (
+            <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+          )}
           <Button
             variant="ghost"
             size="icon"
