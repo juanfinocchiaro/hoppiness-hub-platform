@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       return json(200, {
         tracking_token: tracking.tracking_token,
         pedido: {
-          numero_pedido: pedido?.numero_pedido,
+          numero_pedido: pedido?.order_number,
           cliente_nombre: pedido?.cliente_nombre,
           cliente_direccion: pedido?.cliente_direccion,
           cliente_telefono: pedido?.cliente_telefono,

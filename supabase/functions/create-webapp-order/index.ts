@@ -446,7 +446,7 @@ Deno.serve(async (req) => {
     return json(200, {
       pedido_id: pedidoId,
       tracking_code: trackingCode,
-      numero_pedido: numeroPedido,
+      order_number: numeroPedido,
       estado: estadoInicial,
       tiempo_estimado_min: tiempoEstimado,
     });

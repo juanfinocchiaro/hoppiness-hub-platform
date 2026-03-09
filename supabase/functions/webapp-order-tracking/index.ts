@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
     return json(200, {
       pedido: {
         id: pedido.id,
-        numero_pedido: pedido.numero_pedido,
+        numero_pedido: pedido.order_number,
         estado: pedido.estado,
         tipo_servicio: pedido.tipo_servicio,
         subtotal: pedido.subtotal,
