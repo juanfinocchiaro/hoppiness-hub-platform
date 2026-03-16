@@ -360,7 +360,7 @@ export default function CanonPage() {
                             {expandedRow === row.id && (
                               <TableRow key={`${row.id}-pagos`}>
                                 <TableCell colSpan={7} className="bg-muted/20 p-4">
-                                  <PagosDetalleRow branchId={row.branch_id} periodo={row.periodo} />
+                                  <PagosDetalleRow branchId={row.branch_id} periodo={row.period} />
                                 </TableCell>
                               </TableRow>
                             )}
