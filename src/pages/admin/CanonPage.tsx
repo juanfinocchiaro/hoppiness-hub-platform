@@ -193,7 +193,7 @@ export default function CanonPage() {
     return Array.from(map.values()).sort((a, b) => a.branchName.localeCompare(b.branchName));
   }, [filtered]);
 
-  const totalPendientes = liquidaciones?.filter((r: any) => r.estado !== 'pagado').length ?? 0;
+  const totalPendientes = liquidaciones?.filter((r: any) => r.status !== 'pagado').length ?? 0;
   const totalSaldoGlobal = branchGroups.reduce((s, g) => s + g.totalSaldo, 0);
 
   return (
