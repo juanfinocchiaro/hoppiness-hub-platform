@@ -336,9 +336,9 @@ export default function CanonPage() {
                                 {formatPeriodo(row.period)}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                $ {Number(row.canon_monto).toLocaleString('es-AR')}
+                                $ {Number(row.canon_amount).toLocaleString('es-AR')}
                                 <span className="text-xs text-muted-foreground ml-1">
-                                  ({row.canon_porcentaje}%)
+                                  ({row.canon_percentage}%)
                                 </span>
                               </TableCell>
                               <TableCell className="text-right font-mono">
