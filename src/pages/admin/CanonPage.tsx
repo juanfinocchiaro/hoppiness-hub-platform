@@ -350,7 +350,7 @@ export default function CanonPage() {
                               <TableCell className="text-right font-mono font-semibold">
                                 $ {Number(row.total_canon).toLocaleString('es-AR')}
                               </TableCell>
-                              <TableCell>{estadoBadge(row.estado)}</TableCell>
+                              <TableCell>{estadoBadge(row.status)}</TableCell>
                               <TableCell className="text-right font-mono text-destructive">
                                 {Number(row.pending_balance) > 0
                                   ? `$ ${Number(row.pending_balance).toLocaleString('es-AR')}`
