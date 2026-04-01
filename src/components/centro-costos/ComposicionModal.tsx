@@ -75,7 +75,7 @@ export function ComposicionModal({ open, onOpenChange, item, preparaciones, insu
       items: rows.filter((r) => r.preparacion_id || r.insumo_id).map((r) => ({
         preparacion_id: r.tipo === 'preparacion' ? r.preparacion_id : undefined,
         insumo_id: r.tipo === 'insumo' ? r.insumo_id : undefined,
-        cantidad: r.cantidad,
+        cantidad: r.quantity,
       })),
     });
     setHasChanges(false);
