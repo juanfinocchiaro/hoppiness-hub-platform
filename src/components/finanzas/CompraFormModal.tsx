@@ -482,9 +482,9 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
                       type="number"
                       step="0.01"
                       className="h-9"
-                      value={item.precio_unitario || ''}
+                      value={item.unit_price || ''}
                       onChange={(e) =>
-                        updateItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)
+                        updateItem(idx, 'unit_price', parseFloat(e.target.value) || 0)
                       }
                     />
                   </div>
