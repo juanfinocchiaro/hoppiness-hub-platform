@@ -50,7 +50,7 @@ export function CondicionesLocalModal({
         permite_cuenta_corriente: existing.permite_cuenta_corriente,
         dias_pago_habitual: existing.dias_pago_habitual,
         descuento_pago_contado: existing.descuento_pago_contado,
-        observaciones: existing.observaciones,
+        notes: existing.notes ?? (existing as any).observaciones ?? null,
       });
     } else {
       setForm({
