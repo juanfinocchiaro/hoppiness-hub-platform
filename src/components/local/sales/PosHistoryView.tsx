@@ -196,7 +196,7 @@ export function PosHistoryView({ branchId, branchName, daysBack, setDaysBack }: 
     try {
       const ncData = await invokeEmitirNotaCredito(activeInvoice.id, branchId);
       toast.success(`NC ${ncData.tipo} emitida: N° ${ncData.numero}`);
-      const items = order.order_items.map((i) => ({ description: i.name, quantity: i.quantity, unit_price: i.unit_price }));
+      const items = order.order_items.map((i) => ({ descripcion: i.name, cantidad: i.quantity, precio_unitario: i.unit_price }));
       await emitirFactura.mutateAsync({ branch_id: branchId, pedido_id: order.id, tipo_factura: data.tipo_factura, receptor_cuit: data.receptor_cuit || undefined, receptor_razon_social: data.receptor_razon_social || undefined, receptor_condicion_iva: data.receptor_condicion_iva || undefined, items, total: order.total });
       invalidateOrders();
       setChangingInvoiceOrder(null);
