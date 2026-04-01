@@ -211,7 +211,7 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
     if (!grupoNuevoNombre.trim()) return;
     await gruposMutations.createGrupo.mutateAsync({
       item_carta_id: item.id,
-      name: grupoNuevoNombre.trim(),
+      nombre: grupoNuevoNombre.trim(),
       orden: grupos?.length || 0,
     });
     setGrupoNuevoNombre('');
