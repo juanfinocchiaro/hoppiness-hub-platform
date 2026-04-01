@@ -80,7 +80,7 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
   };
   const removeItem = (i: number) => { setEditItems(editItems.filter((_, idx) => idx !== i)); setEditing(true); };
   const promedio = editItems.length > 0
-    ? editItems.reduce((s, i) => s + i.cantidad * i.costo_unitario, 0) / editItems.length
+    ? editItems.reduce((s, i) => s + i.quantity * i.unit_cost, 0) / editItems.length
     : 0;
 
   const handleSave = async () => {
