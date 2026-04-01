@@ -65,7 +65,7 @@ export function ComposicionModal({ open, onOpenChange, item, preparaciones, insu
     setHasChanges(true);
   };
 
-  const costoFijo = rows.filter((r) => r.cantidad > 0).reduce((t, r) => t + r.cantidad * r._costo, 0);
+  const costoFijo = rows.filter((r) => r.quantity > 0).reduce((t, r) => t + r.quantity * r._costo, 0);
   const costoGrupos = (grupos || []).reduce((t: number, g: any) => t + (g.average_cost || 0), 0);
   const costoTotal = costoFijo + costoGrupos;
 
