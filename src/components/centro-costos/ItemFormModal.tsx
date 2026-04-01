@@ -93,7 +93,7 @@ export function ItemFormModal({ open, onOpenChange, item, categorias, cmvCats: _
           </FormSection>
           <StickyActions>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <LoadingButton loading={mutations.create.isPending || mutations.update.isPending} onClick={submit} disabled={!form.name || !form.base_price}>
+            <LoadingButton loading={mutations.create.isPending || mutations.update.isPending} onClick={submit} disabled={!form.nombre || !form.precio_base}>
               {isEdit ? 'Guardar' : 'Crear Item'}
             </LoadingButton>
           </StickyActions>

@@ -450,8 +450,8 @@ export function ComposicionInline({ item, mutations }: { item: any; mutations: I
                   nombreDisplay={existing?.display_name || ''}
                   onToggle={(v) => handleToggleRemovibleInsumo(ing.insumo_id, ing.name, v)}
                   onUpdateNombre={(nombre) =>
-                    removiblesMutations.updateNombreDisplay.mutate({
-                      id: existing?.id,
+                    removiblesMutations.updateDisplayName.mutate({
+                      id: existing?.id!,
                       display_name: nombre,
                     })
                   }

@@ -269,8 +269,8 @@ export function CompraFormModal({ open, onOpenChange, branchId }: Props) {
   // --- Determine if can submit ---
   const validItems = items.filter((i) =>
     i.tipo_item === 'insumo'
-      ? i.insumo_id && i.cantidad > 0
-      : i.concepto_servicio_id && i.precio_unitario > 0,
+      ? i.insumo_id && i.quantity > 0
+      : i.concepto_servicio_id && i.unit_price > 0,
   );
 
   const canSubmit = (() => {

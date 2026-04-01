@@ -139,8 +139,8 @@ export function CondicionesLocalModal({
 
             <FormRow label="Observaciones">
               <Textarea
-                value={form.observaciones ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, observaciones: e.target.value || null }))}
+                value={form.notes ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value || null }))}
                 rows={2}
                 placeholder="Ej: Pago los viernes"
               />

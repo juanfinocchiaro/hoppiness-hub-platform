@@ -149,8 +149,8 @@ export function GrupoEditorInline({ grupo, itemId, insumos, preparaciones, mutat
                   );
                 })()}
           </div>
-          <Input type="number" className="h-6 w-14 text-xs" value={ei.cantidad} onChange={(e) => updateItem(i, 'cantidad', Number(e.target.value))} />
-          <span className="font-mono text-xs w-16 text-right">{formatCurrency(ei.cantidad * ei.costo_unitario)}</span>
+          <Input type="number" className="h-6 w-14 text-xs" value={ei.quantity} onChange={(e) => updateItem(i, 'quantity', Number(e.target.value))} />
+          <span className="font-mono text-xs w-16 text-right">{formatCurrency(ei.quantity * ei.unit_cost)}</span>
           <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeItem(i)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
         </div>
       ))}

@@ -69,7 +69,7 @@ export function CategoriaFormModal({ open, onOpenChange, categoria }: Props) {
         <div className="space-y-4">
           <FormLayout columns={1}>
             <FormRow label="Nombre" required>
-              <Input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
+              <Input value={form.name} onChange={(e) => set('name', e.target.value)} />
             </FormRow>
             <FormRow label="Tipo" required>
               <Select value={form.tipo} onValueChange={(v) => set('tipo', v)}>
