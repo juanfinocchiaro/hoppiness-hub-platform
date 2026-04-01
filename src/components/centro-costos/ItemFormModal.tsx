@@ -33,15 +33,15 @@ export function ItemFormModal({ open, onOpenChange, item, categorias, cmvCats: _
   useEffect(() => {
     if (item)
       setForm({
-        name: item.name, short_name: item.short_name || '', description: item.description || '',
+        nombre: item.name || item.nombre, short_name: item.short_name || '', descripcion: item.description || item.descripcion || '',
         categoria_carta_id: item.categoria_carta_id || '', rdo_category_code: item.rdo_category_code || '',
-        base_price: item.base_price, fc_objetivo: item.fc_objetivo || 32,
-        available_delivery: item.available_delivery ?? true,
+        precio_base: item.base_price || item.precio_base, fc_objetivo: item.fc_objetivo || 32,
+        disponible_delivery: item.available_delivery ?? item.disponible_delivery ?? true,
       });
     else
       setForm({
-        name: '', short_name: '', description: '', categoria_carta_id: '',
-        rdo_category_code: '', base_price: 0, fc_objetivo: 32, available_delivery: true,
+        nombre: '', short_name: '', descripcion: '', categoria_carta_id: '',
+        rdo_category_code: '', precio_base: 0, fc_objetivo: 32, disponible_delivery: true,
       });
   }, [item, open]);
 
