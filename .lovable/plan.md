@@ -1,36 +1,57 @@
 
 
-## Mostrar puesto operativo en las celdas del calendario de horarios
+## Rediseño de Liquidación: Cards individuales por empleado
 
-### Situación actual
+### Cambio principal
 
-Hoy cada celda del calendario solo muestra:
-- Rango horario (ej: `11:00-17:00`)
-- Un **ícono pequeño** del puesto (tooltip al pasar el mouse)
+Reemplazar la tabla global con 13 columnas por **una Card por empleado**. Eliminar el rol del sistema (Cajero/Empleado) que no corresponde a liquidación.
 
-El puesto asignado no se ve directamente — hay que hacer hover sobre el ícono para saber qué posición cubre.
-
-### Cambio propuesto
-
-Agregar el **nombre del puesto como texto** debajo del horario en cada celda, con el color correspondiente. Quedaría así:
+### Layout propuesto por card
 
 ```text
-┌──────────────┐
-│ 11:00-17:00  │
-│ 🔥 Sandwich. │  ← nombre abreviado + ícono, en color
-└──────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ [AG] Agustín Gómez                              📥 ▾   ▼          │
+│─────────────────────────────────────────────────────────────────────│
+│                                                                     │
+│  PUESTO        HS TRAB  HS REG  FERIADOS  FRANCO  EXT.H  EXT.I    │
+│  Sandwichero     24.0    24.0      -        -       -       -      │
+│  Cajero          16.0    16.0      -        -       -       -      │
+│  ─────────────────────────────────────────────────────────────────  │
+│  TOTAL           40.0    40.0      -        -       -       -      │
+│                                                                     │
+│  Vacaciones: -  ·  Faltas Inj: 0  ·  F. Just: -  ·  Tardanza: 0m │
+│                                              Presentismo: ✅ SI    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Cambios en archivo
+Para empleados con **un solo puesto**, se muestra una sola fila (sin sub-filas ni TOTAL).
 
-**`src/components/hr/InlineScheduleEditor.tsx`** (único archivo)
+### Cambios en `src/components/local/LaborHoursSummary.tsx`
 
-En la función `renderCellContent` (~línea 793-830), donde ya se renderiza el `PositionIcon` dentro de un tooltip:
+1. **Eliminar la tabla global** (`<Table>` con `<TableHeader>` de 13 columnas) y el componente `EmployeeRow` actual
 
-1. Agregar el **label del puesto** como texto visible junto al ícono (no solo en tooltip)
-2. Usar el color de `positionConfig.color` para el texto
-3. Truncar nombres largos con `truncate` y `max-w` para que entre en la celda de 80px
-4. Para posiciones que no están en `POSITION_ICONS` (dinámicas), mostrar el nombre capitalizado en gris
+2. **Crear un nuevo componente `EmployeeCard`** dentro del mismo archivo:
+   - **Header**: Avatar + nombre (sin rol del sistema) + botones export/expand
+   - **Mini-tabla interna**: Solo 7 columnas (Puesto, Hs Trab, Hs Reg, Feriados, Franco, Ext Hábil, Ext Inhábil) — las que varían por puesto
+   - Si hay múltiples puestos: sub-filas + fila TOTAL con separador y font-bold
+   - Si hay un solo puesto: fila única con nombre del puesto
+   - **Barra de métricas globales** debajo de la tabla: Vacaciones, Faltas Inj, Falta Just, Tardanza como chips/badges inline en una fila horizontal
+   - **Badge de Presentismo**: SI/NO con color verde/rojo, alineado a la derecha de la barra de métricas
+   - **Sección expandible**: El detalle de fichajes se mantiene igual (click en chevron)
 
-El ícono se mantiene, pero el label ahora es visible directamente sin necesidad de hover.
+3. **Eliminar `LOCAL_ROLE_LABELS`** import y la línea que muestra el rol debajo del nombre (línea 114)
+
+4. **Renderizar como lista de cards**: `summaries.map(s => <EmployeeCard ... />)` con `space-y-3`
+
+5. **Las stats cards superiores, leyenda y controles de mes no cambian**
+
+### Resultado
+- Sin scroll horizontal
+- Sin celdas vacías con "-"
+- Sin rol del sistema (irrelevante para liquidación)
+- Cada empleado es escaneable de un vistazo
+- Las métricas globales (faltas, tardanza) se leen como badges, no como columnas
+
+### Archivos a modificar
+- `src/components/local/LaborHoursSummary.tsx` — único archivo
 
