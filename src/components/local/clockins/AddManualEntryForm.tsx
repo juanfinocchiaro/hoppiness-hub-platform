@@ -65,6 +65,7 @@ export function AddManualEntryForm({
       timestamp,
       reason: reason.trim(),
       earlyLeaveAuthorized: entryType === 'clock_out' ? earlyLeaveAuthorized : undefined,
+      workDate: date,
     });
   };
 
