@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           estado: "sin_configurar",
-          mensaje: "Configuración incompleta. Cargá el certificado y la clave privada.",
+          mensaje: "Configuración incompleta. Cargá el certificado y la clave privadaa.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
