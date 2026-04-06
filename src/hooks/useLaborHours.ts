@@ -94,6 +94,9 @@ export interface EmployeeLaborSummary {
   // Horas de licencia (separadas)
   hsLicencia: number;
 
+  // Per-day lateness breakdown
+  dailyLateness: { date: string; minutes: number; scheduledStart: string }[];
+
   // Control
   entries: DayEntry[];
   hasUnpairedEntries: boolean;
