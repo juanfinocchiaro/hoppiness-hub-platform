@@ -501,7 +501,7 @@ function ChannelRulesPanel({
                 {CHANNELS.map((ch) => {
                   const list = priceLists.find((l) => l.channel === ch.value);
                   if (!list) return null;
-                  const isBase = ch.value === 'counter' || ch.value === 'webapp';
+                  const isBase = ch.value === 'mostrador' || ch.value === 'webapp';
 
                   return (
                     <TableRow key={ch.value}>
