@@ -1,96 +1,58 @@
 
 
-# Plan Unificado: Consistencia entre Horarios, Fichajes y Liquidación
+# Fix Liquidación: horas inconsistentes, tardanzas falsas, vacaciones invisibles
 
-## Problema central
-Los tres sistemas usan fuentes y lógica diferentes para los mismos conceptos. Vacaciones aparecen como "Franco" en fichajes, horas extras se calculan distinto (mensual vs diario), y la liquidación no muestra las mismas columnas que el negocio necesita.
+## Problemas encontrados
 
-## Archivos a modificar (8 archivos)
+### 1. Vacaciones nunca aparecen
+`useLaborHours` construye `userIds` solo desde `clock_entries` (línea 299). Empleados de vacaciones que no fichan **nunca se incluyen** en la lista. Se necesita incluir también los user_ids de `schedules`.
 
-### 1. `src/services/hrService.ts` — Agregar `work_position` a queries
-- `fetchDaySchedulesForClock`: agregar `work_position` al SELECT
-- Query de schedules en `useLaborHours` (línea 275): agregar `work_position` al SELECT
+### 2. Horas totales no coinciden con el diario
+El diario (Fichajes) usa `useEmployeeTimeData` → `timeEngine.pairClockEntries` que tiene lógica distinta de `useLaborHours.pairClockEntries`:
+- Distinto manejo de turnos sin cerrar (el diario incluye "in-progress", el mensual los ignora con `minutesWorked: 0`)
+- Distinto manejo de `schedule_id` grouping
+- El diario acumula todos los pares incluyendo en progreso; el mensual solo cuenta `completedEntries` (línea 339)
 
-### 2. `src/components/local/clockins/types.ts` — Nuevos tipos
-- Agregar `position?: string | null` a `ScheduleInfo`
-- Agregar `'vacation'` a `RosterRowStatus`
+### 3. Tardanzas falsas
+La lógica de tardanza (líneas 402-428) usa `clockInMin` del timestamp UTC pero lo compara con `start_time` local. Además, usa `diff < 720` que puede generar falsos positivos con turnos nocturnos. También cuenta tardanza en días de vacaciones/franco.
 
-### 3. `src/components/local/clockins/constants.ts` — Nuevo status
-- Agregar `vacation: 'Vacaciones'` a todos los records (`STATUS_LABEL`, `STATUS_COLOR`, `DOT_COLOR`, `STATUS_ORDER`)
+## Plan de corrección (1 archivo: `src/hooks/useLaborHours.ts`)
 
-### 4. `src/hooks/useClockEntries.ts` — Pasar `work_position`
-- En `useDaySchedules`, incluir `position: row.work_position` al construir `ScheduleInfo`
-
-### 5. `src/components/local/clockins/helpers.ts` — Distinguir vacaciones
-- `shiftLabel()` (línea 341): si `schedule.is_day_off && schedule.position === 'vacaciones'` → "Vacaciones"; si `position === 'cumple'` → "Cumpleaños"
-- `resolveRowStatus()` (línea 256): si `schedule.is_day_off && schedule.position === 'vacaciones'` → devolver status `'vacation'`
-
-### 6. `src/hooks/useLaborHours.ts` — Corregir lógica de cálculo
-**Cambios en la query (línea 274):** agregar `work_position` al SELECT de `employee_schedules`
-
-**Cambios en el cálculo (líneas 345-362):** reemplazar la lógica actual:
+### A. Incluir usuarios de schedules (vacaciones visibles)
 ```text
-ANTES (mal):
-  hsExtrasDiaHabil = max(0, hsHabiles - monthly_hours_limit)  // exceso mensual
-
-DESPUÉS (correcto):
-  Para cada día en hoursByDay:
-    Si work_position='vacaciones' → diasVacaciones++ (no cuenta horas)
-    Si es FERIADO → hsFeriado += horasDia
-    Si es FRANCO  → hsFranco += horasDia
-    Si es HÁBIL:
-      hsRegulares += min(horasDia, daily_hours_limit)
-      hsExtras    += max(0, horasDia - daily_hours_limit)
-  
-  hsTrabajadasMes = hsRegulares + hsExtras + hsFeriado + hsFranco
+ANTES: userIds = [...new Set(rawEntries.map(e => e.user_id))]
+DESPUÉS: userIds = [...new Set([
+  ...rawEntries.map(e => e.user_id),
+  ...schedules.map(s => s.user_id)
+])]
 ```
+Esto asegura que empleados con vacaciones programadas pero sin fichajes aparezcan en la tabla.
 
-**Cambios en `EmployeeLaborSummary`:** agregar `hsRegulares`, `diasVacaciones`. Para esto necesito:
-- Construir un mapa de `date → work_position` desde schedules para saber si cada día es vacaciones, franco normal, o hábil
-- Iterar `hoursByDay` clasificando cada día
+### B. Fix tardanza: solo contar en días hábiles, usar hora local
+- Saltar días donde `isDayOff` o `position === 'vacaciones'`
+- Convertir `clockIn` a hora local Argentina (UTC-3) antes de comparar con `start_time`
+- Mejorar la lógica de "closest schedule" para no contar tardanzas espurias
 
-**Cambios en `generateLaborCSV`:** nuevas columnas alineadas con la tabla
+### C. Asegurar consistencia de horas con el diario
+- Los pares sin `checkOut` ya se excluyen correctamente de `completedEntries` (consistente con no contar turnos en progreso)
+- Verificar que no se pierdan pares por la lógica de `schedule_id` grouping
 
-### 7. `src/components/local/LaborHoursSummary.tsx` — Reorganizar tabla
+### D. Fix build errors en este archivo
+- `fetchLaborConfig` ya no se exporta de `hrService.ts` → arreglar `useEmployeeTimeData.ts` 
+- Otros build errors son de archivos no relacionados (PromocionesPage, POSPage, etc.) — se listarán como pendientes
 
-**Columnas nuevas (en orden):**
+## Archivos a modificar
 
-| # | Columna | Campo |
-|---|---------|-------|
-| 1 | Empleado | nombre + rol |
-| 2 | Hs Trabajadas | total (regulares + extras + feriado + franco) |
-| 3 | Hs Regulares | `hsRegulares` — nuevo |
-| 4 | Hs Extras | `hsExtrasDiaHabil` — recalculado diario |
-| 5 | Hs Feriado | `feriadosHs` |
-| 6 | Hs Franco | `hsFrancoTrabajado` |
-| 7 | Licencia | `diasVacaciones` — días, no horas |
-| 8 | Faltas Inj. | `faltasInjustificadas` |
-| 9 | Presentismo | SI/NO + `(Xm)` tardanza |
+1. **`src/hooks/useLaborHours.ts`** — Fix principal:
+   - Incluir user_ids de schedules para vacaciones
+   - Fix tardanza: skip días no hábiles, usar hora local
+   
+2. **`src/hooks/useEmployeeTimeData.ts`** — Fix build error:
+   - Reemplazar `fetchLaborConfig` por la query directa (ya no existe en hrService)
 
-**Columnas eliminadas:** CUIL, Hs Licencia, Lic. Enf., Tardanza (separada), Extras Franco
+3. **`src/hooks/useMonthClosed.ts`** y **`src/hooks/usePayrollReport.ts`** — Fix build errors:
+   - Restaurar exports faltantes en `hrService.ts` o ajustar imports
 
-**Stats cards:** actualizar "Horas extras" para usar el nuevo cálculo
-
-**Tooltips/leyenda:** actualizar descripciones
-
-### 8. `src/components/local/clockins/DayOverviewBar.tsx` — Vacaciones en resumen
-- Contar empleados con status `vacation` y mostrar indicador "X de vacaciones"
-
-## Lógica unificada (los 3 sistemas)
-
-```text
-Fuente de verdad: employee_schedules.work_position
-
-  work_position = 'vacaciones' → VACACIONES (Horarios ✅, Fichajes ✅, Liquidación ✅)
-  work_position = 'cumple'     → CUMPLEAÑOS (Horarios ✅, Fichajes ✅)
-  is_day_off = true (sin position especial) → FRANCO
-  is_day_off = false + horario → DÍA HÁBIL
-
-Horas extras = exceso DIARIO sobre daily_hours_limit (9hs default)
-Vacaciones en liquidación = días con work_position='vacaciones' en schedules
-Presentismo = sin faltas injustificadas AND tardanza acumulada ≤ 15min
-```
-
-## Sin cambios de base de datos
-El campo `work_position` ya existe en `employee_schedules`.
+## Nota sobre los demás build errors
+Los ~40 errores restantes (PromocionesPage, POSPage, FichaTecnicaTab, financialService, etc.) son del migration español→inglés previo y no están relacionados con esta funcionalidad. Se pueden abordar en un paso separado.
 
