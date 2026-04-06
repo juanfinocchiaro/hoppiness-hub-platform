@@ -374,7 +374,7 @@ export async function createVentaMensual(payload: VentaMensualPayload, userId?: 
   const { data: existing } = await fromUntyped('branch_monthly_sales')
     .select('id')
     .eq('branch_id', payload.branch_id!)
-    .eq('period', payload.periodo!)
+    .eq('period', payload.period!)
     .not('deleted_at', 'is', null)
     .maybeSingle();
 
