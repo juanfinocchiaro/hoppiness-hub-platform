@@ -303,7 +303,7 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
             grupoId: group.id,
             grupoNombre: group.nombre,
             itemId: sel.id,
-            nombre: sel.nombre,
+            name: sel.nombre,
           });
         }
         notasParts.push(`${group.nombre}: ${selected.map((s) => s.nombre).join(', ')}`);
