@@ -354,6 +354,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     // Classify hours day by day (unified with daily view)
     let hsRegulares = 0;
     let hsExtrasDiaHabil = 0;
+    let hsExtrasInhabil = 0;
     let feriadosHs = 0;
     let hsFrancoTrabajado = 0;
     const alertasDiarias: { date: string; horasExtra: number }[] = [];
@@ -362,11 +363,16 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       const isHoliday = holidaySet.has(date);
       const isDayOff = userDaysOff.has(date);
       const position = positionByDate.get(date);
+      const dayOfWeek = new Date(date + 'T12:00:00').getDay(); // 0=Sun, 6=Sat
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
       if (position === 'vacaciones') {
-        // Vacation day with work — count as regular (unusual but possible)
         hsRegulares += Math.min(horasDia, config.daily_hours_limit);
-        hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        if (isWeekend) {
+          hsExtrasInhabil += Math.max(0, horasDia - config.daily_hours_limit);
+        } else {
+          hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        }
       } else if (isHoliday) {
         feriadosHs += horasDia;
       } else if (isDayOff) {
@@ -374,7 +380,11 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       } else {
         // Regular business day
         hsRegulares += Math.min(horasDia, config.daily_hours_limit);
-        hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        if (isWeekend) {
+          hsExtrasInhabil += Math.max(0, horasDia - config.daily_hours_limit);
+        } else {
+          hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        }
       }
 
       if (horasDia > config.daily_hours_limit) {
