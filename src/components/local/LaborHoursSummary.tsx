@@ -557,6 +557,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                     branchTag={branchTag}
                     monthOnly={monthOnly}
                     yearStr={yearStr}
+                    positions={positionsList}
                   />
                 ))}
               </TableBody>
