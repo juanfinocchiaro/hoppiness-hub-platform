@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 
 export const salaryAdvanceKeys = {
   all: ['salary-advances'] as const,
-  list: (branchId: string) => [...salaryAdvanceKeys.all, 'list', branchId] as const,
+  list: (branchId: string, month?: string) => [...salaryAdvanceKeys.all, 'list', branchId, month ?? 'all'] as const,
   user: (userId: string) => [...salaryAdvanceKeys.all, 'user', userId] as const,
   shift: (shiftId: string) => [...salaryAdvanceKeys.all, 'shift', shiftId] as const,
   pendingTransfers: (branchId: string) =>
