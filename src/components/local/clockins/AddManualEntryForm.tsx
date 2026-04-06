@@ -28,6 +28,7 @@ interface AddManualEntryFormProps {
     timestamp: string;
     reason: string;
     earlyLeaveAuthorized?: boolean;
+    workDate?: string;
   }) => void;
   onCancel: () => void;
 }
@@ -65,6 +66,7 @@ export function AddManualEntryForm({
       timestamp,
       reason: reason.trim(),
       earlyLeaveAuthorized: entryType === 'clock_out' ? earlyLeaveAuthorized : undefined,
+      workDate: date,
     });
   };
 
