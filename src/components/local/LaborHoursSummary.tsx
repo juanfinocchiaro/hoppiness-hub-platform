@@ -50,7 +50,6 @@ import {
   useLaborHours,
   formatHoursDecimal,
   type EmployeeLaborSummary,
-  type PositionBreakdown,
 } from '@/hooks/useLaborHours';
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import { exportLaborPDF, exportLaborExcel } from '@/utils/laborExport';
