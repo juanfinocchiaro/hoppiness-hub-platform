@@ -1,53 +1,39 @@
 
 
-## Rediseño visual del PDF individual de empleado
+## Agregar detalle de consumos y adelantos al PDF individual
 
-### Objetivo
-Aplicar el mismo diseño de marca del PDF mensual (`exportLaborPDF`) al PDF individual (`exportEmployeePDF` en `laborEmployeeExport.ts`). Actualmente usa colores genéricos (azul oscuro `[41, 65, 106]`) y un layout básico sin identidad visual.
+### Problema
+El PDF individual del empleado solo muestra los totales de consumos y adelantos como stat cards, pero el empleado necesita ver el desglose: fecha y concepto de cada consumo y adelanto para poder controlar.
 
-### Cambios en `src/utils/laborEmployeeExport.ts` — función `exportEmployeePDF`
+### Solución
+Agregar dos tablas compactas después de las stat cards (y antes del detalle diario) con el listado detallado de consumos y adelantos del mes.
 
-#### 1. Header con banda azul marca
-- Franja azul `[0, 19, 155]` en la parte superior (igual que el mensual)
-- Línea de acento naranja `[255, 82, 29]` debajo
-- Título "RESUMEN INDIVIDUAL — Marzo 2026" en blanco sobre la franja
-- Nombre del empleado, puesto y CUIL en texto claro sobre la franja (lado derecho)
+### Cambios
 
-#### 2. Stats summary como tarjetas coloreadas (mini-cards)
-Reemplazar la tabla "Concepto/Valor" por una grilla de mini-cards coloreadas (reutilizando `drawRoundedRect`/`drawStatCard`):
-- **Hs Trabajadas / Hs Regulares** → fondo azul claro
-- **Vacaciones / Faltas Inj.** → fondo naranja/rojo suave
-- **Tardanza / Falta Just.** → fondo ámbar
-- **Hs Feriados / Hs Franco** → fondo violeta claro
-- **Extras Háb / Extras Inh** → fondo verde claro
-- **Presentismo** → verde (SI) o rojo (NO)
-- **Consumos / Adelantos** → fondo violeta/indigo (si se pasan como parámetro)
+#### 1. Ampliar el tipo de `financialData` en `exportEmployeePDF`
+Pasar de `{ consumos: number; adelantos: number }` a incluir los items detallados:
+```
+financialData?: {
+  consumos: number;
+  adelantos: number;
+  consumoItems: { date: string; description: string; amount: number }[];
+  adelantoItems: { date: string; reason: string; amount: number; status: string }[];
+}
+```
 
-Disposición: 2 filas de 6 cards, o 3 filas de 4 según espacio.
+#### 2. En `laborEmployeeExport.ts` — después de las stat cards y antes del detalle diario
+- Si hay `consumoItems.length > 0`: tabla con header violeta, columnas Fecha | Descripción | Monto
+- Si hay `adelantoItems.length > 0`: tabla con header indigo, columnas Fecha | Motivo | Monto | Estado
+- Totales en fila final de cada tabla (bold)
+- Misma estética que el resto del PDF (zebra-striping, bordes suaves)
 
-Si hay desglose por puesto: tabla compacta debajo de las cards con header azul marca.
+#### 3. En `LaborHoursSummary.tsx` — al llamar `exportEmployeePDF`
+- Filtrar los datos crudos de `consumptions` y `advances` (ya disponibles en el componente) por `user_id` del empleado
+- Mapear a la estructura esperada y pasar como parte de `empFin`
 
-#### 3. Tabla de detalle diario mejorada
-- Header con azul marca `[0, 19, 155]` y texto blanco (en vez de `[41, 65, 106]`)
-- Filas alternadas con azul claro `[240, 244, 255]`
-- Bordes suaves grises claros
-- Colores condicionales ya existentes se mantienen (AUSENTE rojo, tardanza naranja, tipos coloreados)
-
-#### 4. Sección de tardanzas con acento de marca
-- Línea decorativa azul antes del texto de tardanzas (como el glossary del mensual)
-
-#### 5. Footer con marca
-- Línea separadora azul
-- "HOPPINESS CLUB" a la izquierda en azul bold
-- Fecha y página a la derecha
-- En todas las páginas
-
-#### 6. Aceptar consumos y adelantos como parámetro
-- Agregar parámetro opcional `financialData?: { consumos: number; adelantos: number }` a `exportEmployeePDF`
-- Mostrar Consumos y Adelantos en las stat cards
-- Actualizar la llamada desde `LaborHoursSummary.tsx` para pasar los datos financieros
+#### 4. También actualizar `exportEmployeeExcel` para incluir las mismas secciones detalladas
 
 ### Archivos a modificar
-- `src/utils/laborEmployeeExport.ts` — rediseño completo de `exportEmployeePDF`
-- `src/components/local/LaborHoursSummary.tsx` — pasar `financialData` al llamar `exportEmployeePDF`
+- `src/utils/laborEmployeeExport.ts` — agregar tablas de detalle financiero
+- `src/components/local/LaborHoursSummary.tsx` — pasar items detallados al exportar
 
