@@ -67,6 +67,7 @@ export function useScheduleSelection({
     onCellChange,
     getTeamMemberName,
     enabled,
+    teamDefaultPositions,
   });
 
   // ========== DRAG SELECTION ==========

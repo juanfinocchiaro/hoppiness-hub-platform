@@ -300,18 +300,21 @@ export function useScheduleActions({
         ({ breakStart, breakEnd } = calculateBreakTimes(startTime, endTime));
       }
 
-      const scheduleValue: ScheduleValue = {
-        startTime,
-        endTime,
-        isDayOff: false,
-        position,
-        breakStart: hasSplitShift ? null : breakStart,
-        breakEnd: hasSplitShift ? null : breakEnd,
-        startTime2: hasSplitShift ? startTime2 : null,
-        endTime2: hasSplitShift ? endTime2 : null,
-      };
-
       cells.forEach((cell) => {
+        // Use employee's default position if none specified
+        const effectivePosition = position || teamDefaultPositions?.get(cell.userId) || null;
+
+        const scheduleValue: ScheduleValue = {
+          startTime,
+          endTime,
+          isDayOff: false,
+          position: effectivePosition,
+          breakStart: hasSplitShift ? null : breakStart,
+          breakEnd: hasSplitShift ? null : breakEnd,
+          startTime2: hasSplitShift ? startTime2 : null,
+          endTime2: hasSplitShift ? endTime2 : null,
+        };
+
         const userName = getTeamMemberName(cell.userId);
         onCellChange(cell.userId, userName, cell.date, scheduleValue);
       });

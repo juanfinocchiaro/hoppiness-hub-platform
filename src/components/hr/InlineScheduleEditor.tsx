@@ -371,7 +371,7 @@ export default function InlineScheduleEditor({
         });
       }
     },
-    [schedulesByUser],
+    [schedulesByUser, teamDefaultPositions],
   );
 
   // Selection system
@@ -382,6 +382,7 @@ export default function InlineScheduleEditor({
     onCellChange: handleCellChange,
     getTeamMemberName,
     enabled: canManageSchedules && activeView === 'personas',
+    teamDefaultPositions,
   });
 
   // Discard changes
