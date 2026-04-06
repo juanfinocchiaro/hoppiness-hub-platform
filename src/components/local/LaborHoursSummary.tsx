@@ -8,6 +8,8 @@
  */
 import { useState } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { es } from 'date-fns/locale';
 import {
   ChevronLeft,
