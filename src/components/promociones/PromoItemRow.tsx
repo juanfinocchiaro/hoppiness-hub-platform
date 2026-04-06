@@ -49,7 +49,7 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
     onUpdate({ ...item, preconfigExtras: next, precio_promo: newPrice });
   };
 
-  const extrasSubtotal = (item.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.cantidad, 0);
+  const extrasSubtotal = (item.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.quantity, 0);
   const baseWithExtras = item.base_price + extrasSubtotal;
   const autoPrice = discountPercent > 0 ? computeAutoPrice(item.base_price, item.preconfigExtras || [], discountPercent) : null;
   const effectivePercent = baseWithExtras > 0 ? Math.max(0, Math.min(100, Math.round((1 - item.precio_promo / baseWithExtras) * 1000) / 10)) : 0;
