@@ -613,6 +613,15 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
 
       dailyLateness,
       positionBreakdown,
+      scheduledDays: userSchedules.map((s: any) => ({
+        date: s.schedule_date as string,
+        startTime: s.start_time ?? null,
+        endTime: s.end_time ?? null,
+        startTime2: s.start_time_2 ?? null,
+        endTime2: s.end_time_2 ?? null,
+        isDayOff: !!s.is_day_off,
+        position: (s as any).work_position ?? null,
+      })),
       entries: paired,
       hasUnpairedEntries: unpairedEntries.length > 0,
       unpairedCount: unpairedEntries.length,
