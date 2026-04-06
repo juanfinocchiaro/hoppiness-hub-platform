@@ -385,7 +385,7 @@ export async function createVentaMensual(payload: VentaMensualPayload, userId?: 
         efectivo: ef,
         fc_total: fc,
         ft_total: ef,
-        notes: payload.observaciones,
+        notes: payload.notes,
         loaded_by: userId,
         deleted_at: null,
       } as any)
