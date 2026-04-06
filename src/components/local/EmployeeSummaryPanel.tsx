@@ -95,7 +95,7 @@ export function EmployeeSummaryPanel({
   const { data: workingTeam } = useCurrentlyWorkingTeam(branchId);
   const workingEntry = workingTeam?.find((m) => m.user_id === userId);
   const isWorking = !!workingEntry;
-  const workingSince = workingEntry
+  const _workingSince = workingEntry
     ? format(new Date(workingEntry.check_in), 'HH:mm')
     : null;
   const workingMin = workingEntry?.minutesWorking ?? 0;
