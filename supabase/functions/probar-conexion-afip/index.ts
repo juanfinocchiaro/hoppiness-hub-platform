@@ -3,8 +3,7 @@ import { authenticateWSAA, getLastVoucher } from "../_shared/wsaa.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
@@ -21,15 +20,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await supabase.auth.getClaims(token);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -39,10 +35,10 @@ Deno.serve(async (req) => {
 
     const { branch_id } = await req.json();
     if (!branch_id) {
-      return new Response(
-        JSON.stringify({ error: "branch_id requerido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "branch_id requerido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Leer config
@@ -53,13 +49,13 @@ Deno.serve(async (req) => {
       .single();
 
     if (configError || !config) {
-      return new Response(
-        JSON.stringify({ error: "No hay configuración ARCA para esta sucursal" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "No hay configuración ARCA para esta sucursal" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (!config.certificado_crt || !config.clave_privada_enc || !config.punto_venta) {
+    if (!config.certificado_crt || !config.private_key_enc || !config.point_of_sale) {
       await supabase
         .from("afip_config")
         .update({
@@ -75,7 +71,7 @@ Deno.serve(async (req) => {
           estado: "sin_configurar",
           mensaje: "Configuración incompleta. Cargá el certificado y la clave privada.",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -105,7 +101,7 @@ Deno.serve(async (req) => {
             factura_c: config.ultimo_nro_factura_c || 0,
           },
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -123,20 +119,15 @@ Deno.serve(async (req) => {
     try {
       // 1. Autenticar contra WSAA
       console.log("Autenticando contra WSAA...");
-      const credentials = await authenticateWSAA(
-        config.certificado_crt,
-        clavePrivada,
-        "wsfe",
-        esProduccion
-      );
+      const credentials = await authenticateWSAA(config.certificado_crt, clavePrivada, "wsfe", esProduccion);
       console.log("WSAA autenticación exitosa");
 
       // 2. Consultar últimos comprobantes autorizados
       console.log("Consultando últimos comprobantes...");
       const [lastA, lastB, lastC] = await Promise.all([
-        getLastVoucher(credentials, config.cuit, config.punto_venta, 1, esProduccion),   // Factura A
-        getLastVoucher(credentials, config.cuit, config.punto_venta, 6, esProduccion),   // Factura B
-        getLastVoucher(credentials, config.cuit, config.punto_venta, 11, esProduccion),  // Factura C
+        getLastVoucher(credentials, config.cuit, config.punto_venta, 1, esProduccion), // Factura A
+        getLastVoucher(credentials, config.cuit, config.punto_venta, 6, esProduccion), // Factura B
+        getLastVoucher(credentials, config.cuit, config.punto_venta, 11, esProduccion), // Factura C
       ]);
 
       console.log(`Últimos comprobantes: A=${lastA}, B=${lastB}, C=${lastC}`);
@@ -167,7 +158,7 @@ Deno.serve(async (req) => {
             factura_c: lastC,
           },
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     } catch (arcaError) {
       const errorMsg = arcaError instanceof Error ? arcaError.message : String(arcaError);
@@ -195,14 +186,14 @@ Deno.serve(async (req) => {
           estado: "error",
           mensaje: `Error al conectar con ARCA: ${errorMsg}`,
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
   } catch (err) {
     console.error("Error interno:", err);
-    return new Response(
-      JSON.stringify({ error: "Error interno", details: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Error interno", details: String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
