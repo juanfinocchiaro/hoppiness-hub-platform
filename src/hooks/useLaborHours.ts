@@ -110,6 +110,9 @@ export interface EmployeeLaborSummary {
   // Desglose por puesto operativo
   positionBreakdown: PositionBreakdown[];
 
+  // Horarios programados del mes (para export PDF/Excel)
+  scheduledDays: { date: string; startTime: string | null; endTime: string | null; startTime2: string | null; endTime2: string | null; isDayOff: boolean; position: string | null }[];
+
   // Control
   entries: DayEntry[];
   hasUnpairedEntries: boolean;
@@ -293,7 +296,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     queryKey: ['labor-schedules-full', branchId, year, month],
     queryFn: async () => {
       const { data, error } = await fromUntyped('employee_schedules')
-        .select('user_id, schedule_date, is_day_off, start_time, end_time, work_position')
+        .select('user_id, schedule_date, is_day_off, start_time, end_time, start_time_2, end_time_2, work_position')
         .eq('branch_id', branchId)
         .gte('schedule_date', startStr)
         .lte('schedule_date', endStr);
@@ -610,6 +613,15 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
 
       dailyLateness,
       positionBreakdown,
+      scheduledDays: userSchedules.map((s: any) => ({
+        date: s.schedule_date as string,
+        startTime: s.start_time ?? null,
+        endTime: s.end_time ?? null,
+        startTime2: s.start_time_2 ?? null,
+        endTime2: s.end_time_2 ?? null,
+        isDayOff: !!s.is_day_off,
+        position: (s as any).work_position ?? null,
+      })),
       entries: paired,
       hasUnpairedEntries: unpairedEntries.length > 0,
       unpairedCount: unpairedEntries.length,
