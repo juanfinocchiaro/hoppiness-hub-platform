@@ -8,6 +8,7 @@ export const STATUS_LABEL: Record<RosterRowStatus, string> = {
   pending: 'Pendiente',
   completed: 'Completado',
   day_off: 'Franco',
+  vacation: 'Vacaciones',
   leave: 'Licencia',
   no_schedule: 'Sin turno',
 };
