@@ -64,11 +64,17 @@ function EmployeeRow({
   expanded,
   onToggle,
   monthLabel,
+  branchTag,
+  monthOnly,
+  yearStr,
 }: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
   onToggle: () => void;
   monthLabel: string;
+  branchTag: string;
+  monthOnly: string;
+  yearStr: string;
 }) {
   const initials = summary.userName
     .split(' ')
