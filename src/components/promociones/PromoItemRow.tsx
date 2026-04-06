@@ -96,7 +96,7 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
                     <Checkbox checked={!!selected} onCheckedChange={() => toggleExtra(ex.id, ex.nombre, ex.precio)} />
                     <span className="truncate flex-1">{ex.nombre}</span>
                     <span className="text-muted-foreground shrink-0">${ex.precio.toLocaleString('es-AR')}</span>
-                    {selected && (<><span className="text-muted-foreground">×</span><Input type="number" min={1} max={10} value={selected.cantidad} onChange={(e) => updateQty(ex.id, Number(e.target.value) || 1)} className="h-6 w-14 text-xs text-center" /></>)}
+                    {selected && (<><span className="text-muted-foreground">×</span><Input type="number" min={1} max={10} value={selected.quantity} onChange={(e) => updateQty(ex.id, Number(e.target.value) || 1)} className="h-6 w-14 text-xs text-center" /></>)}
                   </div>
                 );
               })}

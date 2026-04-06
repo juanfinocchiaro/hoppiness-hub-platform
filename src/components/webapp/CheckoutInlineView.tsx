@@ -583,7 +583,7 @@ export function CheckoutInlineView({
                     onValueChange={(id) => {
                       const addr = savedAddresses.find((a) => a.id === id);
                       if (addr) {
-                              setAddress(addr.direccion);
+                              setAddress(addr.address);
                                 setPiso(addr.piso || '');
                                 setReferencia(addr.referencia || '');
                       }
@@ -595,7 +595,7 @@ export function CheckoutInlineView({
                     <SelectContent>
                       {savedAddresses.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
-                          {a.etiqueta} — {a.direccion}
+                          {a.etiqueta} — {a.address}
                         </SelectItem>
                       ))}
                     </SelectContent>

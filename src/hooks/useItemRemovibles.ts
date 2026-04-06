@@ -65,7 +65,7 @@ export function useItemRemoviblesMutations() {
           item_carta_id,
           insumo_id: null,
           preparacion_id,
-          display_name: display_name || null,
+          nombre_display: display_name || null,
         });
       } else {
         await deleteRemovibleByPreparacion(item_carta_id, preparacion_id);

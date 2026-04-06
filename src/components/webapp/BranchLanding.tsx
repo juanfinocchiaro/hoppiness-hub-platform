@@ -410,8 +410,8 @@ export function BranchLanding({
           </div>
         ) : (
           <div className="w-full bg-card rounded-xl shadow-sm border p-6 text-center space-y-4">
-            {isPaused && config.pause_message && (
-              <p className="text-sm text-muted-foreground">{config.pause_message}</p>
+            {isPaused && config.mensaje_pausa && (
+              <p className="text-sm text-muted-foreground">{config.mensaje_pausa}</p>
             )}
             {!isPaused && (
               <p className="text-sm text-muted-foreground">

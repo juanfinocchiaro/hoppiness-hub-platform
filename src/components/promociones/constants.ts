@@ -28,7 +28,7 @@ export const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export const EMPTY_FORM: PromocionFormData = {
   name: '',
-  description: '',
+  descripcion: '',
   tipo: 'descuento_porcentaje',
   valor: 0,
   restriccion_pago: 'cualquiera',

@@ -38,7 +38,7 @@ export function useCategoriaPreparacionMutations() {
   });
 
   const reorder = useMutation({
-    mutationFn: (items: { id: string; sort_order: number }[]) => reorderCategoriasPreparacion(items),
+    mutationFn: (items: { id: string; orden: number }[]) => reorderCategoriasPreparacion(items),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categorias-preparacion'] }),
     onError: (e: Error) => toast.error(`Error: ${e.message}`),
   });

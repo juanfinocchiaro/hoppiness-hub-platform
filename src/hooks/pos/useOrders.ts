@@ -131,8 +131,8 @@ export function useCreatePedido(branchId: string) {
 
       const pedido = await insertPedido(insertPayload);
 
-      if (cfg?.tipoServicio === "delivery" && cfg.clienteUserId && cfg.clienteDireccion?.trim()) {
-        saveClienteAddress(cfg.clienteUserId, cfg.clienteDireccion).catch(() => {});
+      if (cfg?.tipoServicio === "delivery" && cfg.clienteUserId && cfg.customerAddress?.trim()) {
+        saveClienteAddress(cfg.clienteUserId, cfg.customerAddress).catch(() => {});
       }
 
       const itemRows = params.items.map((it) => ({
