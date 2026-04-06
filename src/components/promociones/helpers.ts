@@ -68,7 +68,7 @@ export function buildFormFromPromo(promo: {
 }): PromocionFormData {
   return {
     name: promo.name,
-    description: promo.description,
+    descripcion: promo.description,
     tipo: promo.tipo as PromocionFormData['tipo'],
     valor: promo.valor,
     restriccion_pago: promo.restriccion_pago as PromocionFormData['restriccion_pago'],
