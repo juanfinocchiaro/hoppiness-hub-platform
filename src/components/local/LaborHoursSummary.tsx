@@ -347,6 +347,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [consumptionTarget, setConsumptionTarget] = useState<{ userId: string; userName: string } | null>(null);
+  const [consumptionListTarget, setConsumptionListTarget] = useState<{ userId: string; userName: string } | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
