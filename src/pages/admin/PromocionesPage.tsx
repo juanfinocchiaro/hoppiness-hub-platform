@@ -50,7 +50,13 @@ export default function PromocionesPage() {
   };
 
   const fetchPromoItems = async (promoId: string): Promise<PromoItemDraft[]> => {
-    return fetchPromoItemsWithExtras(promoId) as Promise<PromoItemDraft[]>;
+    return fetchPromoItemsWithExtras(promoId).then(items => items.map((i: any) => ({
+      ...i,
+      name: i.name || i.nombre,
+      base_price: i.base_price ?? i.precio_base,
+      image_url: i.image_url ?? i.imagen_url,
+      preconfigExtras: i.preconfigExtras?.map((e: any) => ({ ...e, name: e.name || e.nombre })),
+    }))) as Promise<PromoItemDraft[]>;
   };
 
   const openCreate = () => { setCreateForm(EMPTY_FORM); setCreatePromoItems([]); setCreateItemSearch(''); setCreatingNew(true); };
