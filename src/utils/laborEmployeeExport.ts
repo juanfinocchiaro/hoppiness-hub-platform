@@ -436,7 +436,7 @@ export function exportEmployeePDF(
   doc.save(`${filename || `resumen-${s.userName.replace(/\s+/g, '_').toLowerCase()}`}.pdf`);
 }
 
-export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
+export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string, filename?: string, financialData?: EmployeeFinancialData) {
   const wb = XLSX.utils.book_new();
 
   const refDate = s.scheduledDays[0]?.date || s.entries[0]?.date || format(new Date(), 'yyyy-MM-dd');
@@ -445,6 +445,7 @@ export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string,
   const month = parseInt(monthStr) - 1;
 
   const rows = buildDailyRows(s, year, month);
+  const fin = financialData || { consumos: 0, adelantos: 0 };
 
   const data: (string | number)[][] = [];
   data.push([`Resumen Individual — ${monthLabel}`]);
@@ -463,6 +464,8 @@ export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string,
   data.push(['Extras Hábil', s.hsExtrasDiaHabil]);
   data.push(['Extras Inhábil', s.hsExtrasInhabil]);
   data.push(['Presentismo', s.presentismo ? 'SI' : 'NO']);
+  data.push(['Consumos', fin.consumos]);
+  data.push(['Adelantos', fin.adelantos]);
 
   if (s.positionBreakdown.length > 0) {
     data.push([]);
@@ -471,6 +474,30 @@ export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string,
       const posLabel = pb.position.charAt(0).toUpperCase() + pb.position.slice(1);
       data.push([`  ${posLabel}`, pb.hsTrabajadas]);
     }
+  }
+
+  // Detalle de consumos
+  const cItems = financialData?.consumoItems ?? [];
+  if (cItems.length > 0) {
+    data.push([]);
+    data.push(['DETALLE DE CONSUMOS']);
+    data.push(['Fecha', 'Descripción', 'Monto']);
+    for (const c of cItems) {
+      data.push([c.date, c.description || '-', c.amount]);
+    }
+    data.push(['', 'TOTAL', fin.consumos]);
+  }
+
+  // Detalle de adelantos
+  const aItems = financialData?.adelantoItems ?? [];
+  if (aItems.length > 0) {
+    data.push([]);
+    data.push(['DETALLE DE ADELANTOS']);
+    data.push(['Fecha', 'Motivo', 'Monto', 'Estado']);
+    for (const a of aItems) {
+      data.push([a.date, a.reason || '-', a.amount, a.status]);
+    }
+    data.push(['', 'TOTAL', fin.adelantos, '']);
   }
 
   data.push([]);
