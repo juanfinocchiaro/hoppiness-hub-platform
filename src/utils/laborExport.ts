@@ -6,6 +6,8 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import type { EmployeeLaborSummary, LaborStats } from '@/hooks/useLaborHours';
+
+export type FinancialDataMap = Map<string, { consumos: number; adelantos: number }>;
 import { formatHoursDecimal } from '@/hooks/useLaborHours';
 
 function formatPosition(pos: string | null | undefined): string {
@@ -29,19 +31,23 @@ const HEADERS = [
   'Hs Franco',
   'Ext. Háb.',
   'Ext. Inh.',
+  'Consumos',
+  'Adelantos',
   'Present.',
 ];
 
-function buildRows(summaries: EmployeeLaborSummary[]) {
+function buildRows(summaries: EmployeeLaborSummary[], financialData?: FinancialDataMap) {
   const rows: string[][] = [];
   let counter = 0;
 
   for (const s of summaries) {
     counter++;
     const multiPosition = s.positionBreakdown.length > 1;
+    const fin = financialData?.get(s.userId) || { consumos: 0, adelantos: 0 };
+    const consumosStr = fin.consumos > 0 ? `$${fin.consumos.toLocaleString('es-AR')}` : '-';
+    const adelantosStr = fin.adelantos > 0 ? `$${fin.adelantos.toLocaleString('es-AR')}` : '-';
 
     if (multiPosition) {
-      // Main row with totals
       rows.push([
         counter.toString(), s.userName, 'MULTI',
         s.hsTrabajadasMes.toFixed(2), s.hsRegulares.toFixed(2),
@@ -49,21 +55,21 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
         s.hsLicencia.toFixed(2), `${s.tardanzaAcumuladaMin} min`,
         s.feriadosHs.toFixed(2), s.hsFrancoTrabajado.toFixed(2),
         s.hsExtrasDiaHabil.toFixed(2), s.hsExtrasInhabil.toFixed(2),
+        consumosStr, adelantosStr,
         s.presentismo ? 'SI' : 'NO',
       ]);
 
-      // Sub-rows per position (only hours breakdown)
       for (const pb of s.positionBreakdown) {
         rows.push([
           '', `  > ${formatPosition(pb.position)}`, '',
           pb.hsTrabajadas.toFixed(2), pb.hsRegulares.toFixed(2),
           '-', '-', '-', '-',
           pb.feriadosHs.toFixed(2), pb.hsFrancoTrabajado.toFixed(2),
-          pb.hsExtrasDiaHabil.toFixed(2), pb.hsExtrasInhabil.toFixed(2), '',
+          pb.hsExtrasDiaHabil.toFixed(2), pb.hsExtrasInhabil.toFixed(2),
+          '', '', '',
         ]);
       }
     } else {
-      // Single position or no breakdown — one row
       const posLabel = s.positionBreakdown.length === 1
         ? formatPosition(s.positionBreakdown[0].position)
         : formatPosition(s.localRole);
@@ -74,6 +80,7 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
         s.hsLicencia.toFixed(2), `${s.tardanzaAcumuladaMin} min`,
         s.feriadosHs.toFixed(2), s.hsFrancoTrabajado.toFixed(2),
         s.hsExtrasDiaHabil.toFixed(2), s.hsExtrasInhabil.toFixed(2),
+        consumosStr, adelantosStr,
         s.presentismo ? 'SI' : 'NO',
       ]);
     }
@@ -88,9 +95,10 @@ export function exportLaborPDF(
   monthLabel: string,
   configInfo: { dailyLimit: number; lateTolerance: number },
   filename?: string,
+  financialData?: FinancialDataMap,
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const rows = buildRows(summaries);
+  const rows = buildRows(summaries, financialData);
 
   // Title
   doc.setFontSize(16);
@@ -143,8 +151,8 @@ export function exportLaborPDF(
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 8 },
-      1: { cellWidth: 38 },
-      2: { cellWidth: 28, halign: 'center' },
+      1: { cellWidth: 36 },
+      2: { cellWidth: 26, halign: 'center' },
       3: { halign: 'right' },
       4: { halign: 'right' },
       5: { halign: 'center' },
@@ -155,12 +163,14 @@ export function exportLaborPDF(
       10: { halign: 'right' },
       11: { halign: 'right' },
       12: { halign: 'right' },
-      13: { halign: 'center', cellWidth: 14 },
+      13: { halign: 'right' },
+      14: { halign: 'right' },
+      15: { halign: 'center', cellWidth: 14 },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     didParseCell(data) {
-      // Color presentismo
-      if (data.section === 'body' && data.column.index === 13) {
+      // Color presentismo (column 15 now)
+      if (data.section === 'body' && data.column.index === 15) {
         const val = data.cell.raw as string;
         if (val === 'SI') {
           data.cell.styles.textColor = [22, 163, 74];
@@ -193,6 +203,8 @@ export function exportLaborPDF(
     ['Hs Franco', 'Horas trabajadas en dia franco'],
     ['Ext. Hab.', 'Horas extras de lunes a viernes'],
     ['Ext. Inh.', 'Horas extras de sabado y domingo'],
+    ['Consumos', 'Monto total consumido por el empleado en el local durante el mes (ej. comidas)'],
+    ['Adelantos', 'Adelantos de sueldo otorgados durante el mes'],
     ['Present.', 'Presentismo: SI si no tiene faltas injustificadas ni tardanza mayor a 15 min acumulados'],
   ];
 
@@ -250,44 +262,31 @@ export function exportLaborExcel(
   monthLabel: string,
   configInfo: { dailyLimit: number; lateTolerance: number },
   filename?: string,
+  financialData?: FinancialDataMap,
 ) {
   const wb = XLSX.utils.book_new();
-
-  // Build data array
   const data: (string | number)[][] = [];
 
-  // Title row
   data.push([`Liquidación — ${monthLabel}`]);
   data.push([
     `Límite diario: ${configInfo.dailyLimit} hs | Tolerancia tardanza: ${configInfo.lateTolerance} min | Extras = exceso sobre ${configInfo.dailyLimit}hs/día`,
   ]);
-  data.push([]); // blank row
+  data.push([]);
 
-  // Stats row
   data.push([
-    'Empleados',
-    stats.totalEmpleados,
-    '',
-    'Total horas',
-    Number(stats.totalHsEquipo.toFixed(2)),
-    '',
-    'Horas extras',
-    Number(stats.totalExtrasMes.toFixed(1)),
-    '',
-    'Con presentismo',
-    stats.empleadosConPresentismo,
-    '',
-    'Sin presentismo',
-    stats.empleadosSinPresentismo,
+    'Empleados', stats.totalEmpleados, '',
+    'Total horas', Number(stats.totalHsEquipo.toFixed(2)), '',
+    'Horas extras', Number(stats.totalExtrasMes.toFixed(1)), '',
+    'Con presentismo', stats.empleadosConPresentismo, '',
+    'Sin presentismo', stats.empleadosSinPresentismo,
   ]);
-  data.push([]); // blank row
+  data.push([]);
 
-  // Headers
   data.push(HEADERS);
 
-  // Data rows
   for (let i = 0; i < summaries.length; i++) {
     const s = summaries[i];
+    const fin = financialData?.get(s.userId) || { consumos: 0, adelantos: 0 };
     data.push([
       i + 1,
       s.userName,
@@ -302,13 +301,14 @@ export function exportLaborExcel(
       s.hsFrancoTrabajado,
       s.hsExtrasDiaHabil,
       s.hsExtrasInhabil,
+      fin.consumos,
+      fin.adelantos,
       s.presentismo ? 'SI' : 'NO',
     ]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(data);
 
-  // Set column widths
   ws['!cols'] = [
     { wch: 4 },  // #
     { wch: 25 }, // Empleado
@@ -323,13 +323,14 @@ export function exportLaborExcel(
     { wch: 10 }, // Hs Franco
     { wch: 10 }, // Ext Háb
     { wch: 10 }, // Ext Inh
+    { wch: 12 }, // Consumos
+    { wch: 12 }, // Adelantos
     { wch: 10 }, // Presentismo
   ];
 
-  // Merge title
   ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Liquidación');

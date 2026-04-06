@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  UtensilsCrossed,
   FileSpreadsheet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,12 @@ import {
 import { useWorkPositions } from '@/hooks/useWorkPositions';
 import { exportLaborPDF, exportLaborExcel } from '@/utils/laborExport';
 import { exportEmployeePDF, exportEmployeeExcel } from '@/utils/laborEmployeeExport';
+import {
+  useEmployeeConsumptionsByMonth,
+  useSalaryAdvancesByMonth,
+  aggregateByUser,
+} from '@/hooks/useEmployeeConsumptions';
+import { EmployeeConsumptionModal } from '@/components/local/EmployeeConsumptionModal';
 
 interface LaborHoursSummaryProps {
   branchId: string;
@@ -75,6 +82,9 @@ function EmployeeCard({
   monthOnly,
   yearStr,
   positions,
+  consumos,
+  adelantos,
+  onAddConsumo,
 }: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
@@ -84,6 +94,9 @@ function EmployeeCard({
   monthOnly: string;
   yearStr: string;
   positions: { key: string; label: string }[];
+  consumos: number;
+  adelantos: number;
+  onAddConsumo: () => void;
 }) {
   const initials = summary.userName
     .split(' ')
@@ -234,6 +247,15 @@ function EmployeeCard({
           <span className="text-muted-foreground">
             Tardanza: {summary.tardanzaAcumuladaMin > 0 ? <span className="text-amber-600 font-medium">{summary.tardanzaAcumuladaMin}m</span> : '0m'}
           </span>
+          <span className="text-muted-foreground flex items-center gap-1">
+            Consumos: {consumos > 0 ? <span className="text-violet-600 font-medium">${consumos.toLocaleString('es-AR')}</span> : '-'}
+            <Button variant="ghost" size="icon" className="h-5 w-5 ml-0.5" onClick={onAddConsumo} title="Registrar consumo">
+              <UtensilsCrossed className="h-3 w-3" />
+            </Button>
+          </span>
+          <span className="text-muted-foreground">
+            Adelantos: {adelantos > 0 ? <span className="text-indigo-600 font-medium">${adelantos.toLocaleString('es-AR')}</span> : '-'}
+          </span>
           <span className="ml-auto">
             {summary.presentismo ? (
               <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">Presentismo: SI</Badge>
@@ -315,12 +337,17 @@ function EmployeeCard({
 export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [consumptionTarget, setConsumptionTarget] = useState<{ userId: string; userName: string } | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const { summaries, stats, config, loading } = useLaborHours({ branchId, year, month });
   const { data: workPositions = [] } = useWorkPositions();
   const positionsList = workPositions.map((p) => ({ key: p.key, label: p.label }));
+
+  const { data: consumptions = [] } = useEmployeeConsumptionsByMonth(branchId, year, month);
+  const { data: advances = [] } = useSalaryAdvancesByMonth(branchId, year, month);
+  const financialMap = aggregateByUser(consumptions, advances);
 
   const { data: branchName = '' } = useQuery({
     queryKey: ['branch-name', branchId],
@@ -345,12 +372,12 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
 
   const handleExportPDF = () => {
     const filename = `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_FULL`;
-    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo, filename);
+    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo, filename, financialMap);
   };
 
   const handleExportExcel = () => {
     const filename = `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_FULL`;
-    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo, filename);
+    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo, filename, financialMap);
   };
 
   if (loading) {
@@ -548,9 +575,22 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
               monthOnly={monthOnly}
               yearStr={yearStr}
               positions={positionsList}
+              consumos={financialMap.get(summary.userId)?.consumos ?? 0}
+              adelantos={financialMap.get(summary.userId)?.adelantos ?? 0}
+              onAddConsumo={() => setConsumptionTarget({ userId: summary.userId, userName: summary.userName })}
             />
           ))}
         </div>
+      )}
+
+      {consumptionTarget && (
+        <EmployeeConsumptionModal
+          open={!!consumptionTarget}
+          onOpenChange={(open) => { if (!open) setConsumptionTarget(null); }}
+          branchId={branchId}
+          userId={consumptionTarget.userId}
+          userName={consumptionTarget.userName}
+        />
       )}
     </div>
   );
