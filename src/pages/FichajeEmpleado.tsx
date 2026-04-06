@@ -200,6 +200,7 @@ export default function FichajeEmpleado() {
           pin: pin,
           user_agent: navigator.userAgent,
           photo_base64: capturedPhoto || undefined,
+          override_manager_name: managerOverride?.name || undefined,
         }),
       });
 
