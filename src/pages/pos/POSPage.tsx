@@ -405,7 +405,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
                 inicio_actividades: afipConfig.inicio_actividades || '',
               },
               receptor: {
-                nombre: orderConfig.receptorRazonSocial || orderConfig.clienteNombre || undefined,
+                nombre: orderConfig.receptorRazonSocial || orderConfig.customerName || undefined,
                 documento_tipo: orderConfig.receptorCuit ? 'CUIT' : 'DNI',
                 documento_numero: orderConfig.receptorCuit || undefined,
                 condicion_iva: condicionIvaReceptor,
