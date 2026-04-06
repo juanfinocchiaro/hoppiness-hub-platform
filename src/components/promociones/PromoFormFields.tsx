@@ -48,8 +48,8 @@ export function PromoFormFields({
   const itemsLabel = promoItems.length === 1 ? '1 producto' : `${promoItems.length} productos`;
   const hasOverrides = form.tipo === 'descuento_porcentaje' && form.valor > 0
     ? promoItems.some((it) => {
-        const extrasTotal = (it.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.cantidad, 0);
-        const auto = Math.round((Number(it.precio_base) + extrasTotal) * (1 - form.valor / 100));
+         const extrasTotal = (it.preconfigExtras || []).reduce((s, e) => s + e.precio_extra * e.quantity, 0);
+        const auto = Math.round((Number(it.base_price) + extrasTotal) * (1 - form.valor / 100));
         return Number(it.precio_promo) !== auto;
       })
     : false;
