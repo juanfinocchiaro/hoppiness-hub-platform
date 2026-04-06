@@ -98,7 +98,7 @@ export function NewRemovibleForm({
         tipo: 'removible',
         nombre: displayName,
         ingrediente_id: selectedId,
-        cantidad_ahorro: selectedInsumo?.cantidad || 0,
+        cantidad_ahorro: selectedInsumo?.quantity || 0,
         unidad_ahorro: selectedInsumo?.unidad || selectedInsumo?.base_unit || 'un',
         costo_ahorro: costoAhorro,
       });
