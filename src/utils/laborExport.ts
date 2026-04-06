@@ -36,16 +36,18 @@ const HEADERS = [
   'Present.',
 ];
 
-function buildRows(summaries: EmployeeLaborSummary[]) {
+function buildRows(summaries: EmployeeLaborSummary[], financialData?: FinancialDataMap) {
   const rows: string[][] = [];
   let counter = 0;
 
   for (const s of summaries) {
     counter++;
     const multiPosition = s.positionBreakdown.length > 1;
+    const fin = financialData?.get(s.userId) || { consumos: 0, adelantos: 0 };
+    const consumosStr = fin.consumos > 0 ? `$${fin.consumos.toLocaleString('es-AR')}` : '-';
+    const adelantosStr = fin.adelantos > 0 ? `$${fin.adelantos.toLocaleString('es-AR')}` : '-';
 
     if (multiPosition) {
-      // Main row with totals
       rows.push([
         counter.toString(), s.userName, 'MULTI',
         s.hsTrabajadasMes.toFixed(2), s.hsRegulares.toFixed(2),
@@ -53,21 +55,21 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
         s.hsLicencia.toFixed(2), `${s.tardanzaAcumuladaMin} min`,
         s.feriadosHs.toFixed(2), s.hsFrancoTrabajado.toFixed(2),
         s.hsExtrasDiaHabil.toFixed(2), s.hsExtrasInhabil.toFixed(2),
+        consumosStr, adelantosStr,
         s.presentismo ? 'SI' : 'NO',
       ]);
 
-      // Sub-rows per position (only hours breakdown)
       for (const pb of s.positionBreakdown) {
         rows.push([
           '', `  > ${formatPosition(pb.position)}`, '',
           pb.hsTrabajadas.toFixed(2), pb.hsRegulares.toFixed(2),
           '-', '-', '-', '-',
           pb.feriadosHs.toFixed(2), pb.hsFrancoTrabajado.toFixed(2),
-          pb.hsExtrasDiaHabil.toFixed(2), pb.hsExtrasInhabil.toFixed(2), '',
+          pb.hsExtrasDiaHabil.toFixed(2), pb.hsExtrasInhabil.toFixed(2),
+          '', '', '',
         ]);
       }
     } else {
-      // Single position or no breakdown — one row
       const posLabel = s.positionBreakdown.length === 1
         ? formatPosition(s.positionBreakdown[0].position)
         : formatPosition(s.localRole);
@@ -78,6 +80,7 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
         s.hsLicencia.toFixed(2), `${s.tardanzaAcumuladaMin} min`,
         s.feriadosHs.toFixed(2), s.hsFrancoTrabajado.toFixed(2),
         s.hsExtrasDiaHabil.toFixed(2), s.hsExtrasInhabil.toFixed(2),
+        consumosStr, adelantosStr,
         s.presentismo ? 'SI' : 'NO',
       ]);
     }
