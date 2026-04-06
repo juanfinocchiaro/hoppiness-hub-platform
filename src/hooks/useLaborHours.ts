@@ -470,6 +470,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       hsTrabajadasMes: Number(hsTrabajadasMes.toFixed(2)),
       diasTrabajados: uniqueDays,
 
+      hsRegulares: Number(hsRegulares.toFixed(2)),
       feriadosHs: Number(feriadosHs.toFixed(2)),
       hsFrancoTrabajado: Number(hsFrancoTrabajado.toFixed(2)),
       hsFrancoFeriado: Number(hsFrancoFeriado.toFixed(2)),
@@ -487,6 +488,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       tardanzaAcumuladaMin,
       presentismo,
 
+      diasVacaciones,
       hsLicencia: Number(hsLicencia.toFixed(2)),
 
       entries: paired,
