@@ -39,11 +39,17 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   useLaborHours,
   formatHoursDecimal,
-  generateLaborCSV,
   type EmployeeLaborSummary,
 } from '@/hooks/useLaborHours';
+import { exportLaborPDF, exportLaborExcel } from '@/utils/laborExport';
 import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissions';
 
 interface LaborHoursSummaryProps {
