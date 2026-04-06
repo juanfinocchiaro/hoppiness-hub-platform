@@ -136,7 +136,7 @@ export default function RdoMultivistaPage() {
     if (!data?.por_medio_pago.length) return;
     exportToExcel(
       data.por_medio_pago.map((r) => ({
-        medio_pago: r.medio_pago,
+        medio_pago: r.payment_method,
         pedidos: r.pedidos,
         ventas: r.ventas,
         porcentaje: Number(r.porcentaje.toFixed(2)),
