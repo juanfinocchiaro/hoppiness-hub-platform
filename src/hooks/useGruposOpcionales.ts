@@ -69,7 +69,7 @@ export function useGruposOpcionalesMutations() {
     }: {
       id: string;
       item_carta_id: string;
-      data: { name?: string };
+      data: { nombre?: string };
     }) => updateGrupoOpcional(id, data),
     onSuccess: (_, vars) => invalidate(vars.item_carta_id),
     onError: (e) => toast.error(`Error: ${e.message}`),
