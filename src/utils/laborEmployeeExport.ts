@@ -57,7 +57,7 @@ function buildDailyRows(s: EmployeeLaborSummary): DailyRow[] {
 
 const DAILY_HEADERS = ['Día', 'Entrada', 'Salida', 'Horas', 'Tipo', 'Tardanza'];
 
-export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string) {
+export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const rows = buildDailyRows(s);
 
