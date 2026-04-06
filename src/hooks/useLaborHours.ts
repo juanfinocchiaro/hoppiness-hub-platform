@@ -360,8 +360,9 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     // Map date -> work_position for vacation detection
     const positionByDate = new Map<string, string>();
     for (const s of userSchedules) {
-      if ((s as any).work_position) {
-        positionByDate.set((s as any).schedule_date, (s as any).work_position);
+      const pos = (s as any).work_position || userData?.default_position || null;
+      if (pos) {
+        positionByDate.set((s as any).schedule_date, pos);
       }
     }
 

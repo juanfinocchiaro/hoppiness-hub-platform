@@ -21,6 +21,7 @@ export function useScheduleSelection({
   onCellChange,
   getTeamMemberName,
   enabled = true,
+  teamDefaultPositions,
 }: UseScheduleSelectionOptions) {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [lastClickedCell, setLastClickedCell] = useState<{ userId: string; date: string } | null>(
@@ -66,6 +67,7 @@ export function useScheduleSelection({
     onCellChange,
     getTeamMemberName,
     enabled,
+    teamDefaultPositions,
   });
 
   // ========== DRAG SELECTION ==========

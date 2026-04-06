@@ -240,6 +240,15 @@ export default function InlineScheduleEditor({
   // Team member IDs array for selection
   const teamMemberIds = useMemo(() => team.map((m) => m.id), [team]);
 
+  // Map of userId -> default_position for auto-filling
+  const teamDefaultPositions = useMemo(() => {
+    const map = new Map<string, string>();
+    team.forEach((m) => {
+      if (m.default_position) map.set(m.id, m.default_position);
+    });
+    return map;
+  }, [team]);
+
   // Team member name lookup
   const getTeamMemberName = useCallback(
     (userId: string) => {
@@ -316,6 +325,14 @@ export default function InlineScheduleEditor({
   // Handle cell change
   const handleCellChange = useCallback(
     (userId: string, userName: string, dateStr: string, value: ScheduleValue) => {
+      // Auto-fill position from employee's default if not specified
+      if (!value.position && !value.isDayOff && value.startTime) {
+        const defaultPos = teamDefaultPositions.get(userId);
+        if (defaultPos) {
+          value = { ...value, position: defaultPos };
+        }
+      }
+
       const key = changeKey(userId, dateStr);
       const originalSchedule = schedulesByUser.get(userId)?.get(dateStr) || null;
 
@@ -354,7 +371,7 @@ export default function InlineScheduleEditor({
         });
       }
     },
-    [schedulesByUser],
+    [schedulesByUser, teamDefaultPositions],
   );
 
   // Selection system
@@ -365,6 +382,7 @@ export default function InlineScheduleEditor({
     onCellChange: handleCellChange,
     getTeamMemberName,
     enabled: canManageSchedules && activeView === 'personas',
+    teamDefaultPositions,
   });
 
   // Discard changes

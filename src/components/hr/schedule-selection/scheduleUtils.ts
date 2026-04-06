@@ -25,6 +25,7 @@ export interface UseScheduleSelectionOptions {
   onCellChange: (userId: string, userName: string, dateStr: string, value: ScheduleValue) => void;
   getTeamMemberName: (userId: string) => string;
   enabled?: boolean;
+  teamDefaultPositions?: Map<string, string>;
 }
 
 /**

@@ -60,7 +60,7 @@ export async function fetchLaborUsersData(branchId: string, userIds: string[]) {
 
   const { data: roles, error: rolesError } = await supabase
     .from('user_role_assignments')
-    .select('user_id, roles!inner(key)')
+    .select('user_id, roles!inner(key), default_position')
     .eq('branch_id', branchId)
     .in('user_id', userIds)
     .eq('is_active', true);
@@ -80,6 +80,7 @@ export async function fetchLaborUsersData(branchId: string, userIds: string[]) {
       full_name: p.full_name,
       avatar_url: p.avatar_url,
       local_role: role ? (role.roles as any).key : null,
+      default_position: (role as any)?.default_position || null,
       cuil: empData?.cuil || null,
       hire_date: empData?.hire_date || null,
       registered_hours: empData?.registered_hours ?? null,
