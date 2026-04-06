@@ -1,60 +1,74 @@
 
 
-## Informe PDF individual: mostrar el mes completo con horarios programados y faltas
+## Bug: `useLaborHours.ts` tiene la misma lógica vieja de `group.find()` que ya corregimos en `timeEngine.ts`
 
-### Problema actual
-El PDF individual solo muestra días donde hubo fichajes (`entries`). Si un empleado tenía horario programado pero no fichó (falta), ese día no aparece. Tampoco se muestra el horario programado original para comparar.
+### Causa raíz confirmada
+
+Leonardo tiene 4 fichajes el 29/03, todos con el mismo `schedule_id` (turno cortado):
+- clock_in 14:53 → clock_out 19:03 (turno 12:00-15:00)
+- clock_in 23:56 → clock_out 03:55 (turno 21:00-02:00)
+
+En **`src/hooks/useLaborHours.ts` líneas 161-163**, la función `pairClockEntries` local usa:
+```typescript
+const clockIn = group.find(e => e.entry_type === 'clock_in');   // solo el primero
+const clockOut = group.find(e => e.entry_type === 'clock_out'); // solo el primero
+```
+
+Esto genera **1 par** en vez de **2 pares**. Es exactamente el mismo bug que corregimos en `timeEngine.ts` pero en una copia diferente de la función de emparejamiento.
+
+La vista de **Fichajes** usa `timeEngine.ts` (ya corregido) → muestra los 2 turnos.
+La vista de **Liquidación** usa `useLaborHours.ts` (sin corregir) → muestra solo 1 turno.
 
 ### Solución
 
-**1. Enriquecer `EmployeeLaborSummary` con datos de horarios (`useLaborHours.ts`)**
+**Archivo: `src/hooks/useLaborHours.ts`** — Reemplazar el bloque `for (const [, group] of bySchedule)` (líneas 161-183) con emparejamiento secuencial:
 
-Agregar un nuevo campo al tipo `EmployeeLaborSummary`:
 ```typescript
-scheduledDays: { date: string; startTime: string | null; endTime: string | null; isDayOff: boolean; position: string | null }[];
+for (const [, group] of bySchedule) {
+  let pendingIn: ClockEntryRaw | null = null;
+  for (const e of group) {
+    if (e.entry_type === 'clock_in') {
+      if (pendingIn) {
+        // clock_in huérfano
+        const date = pendingIn.work_date ?? format(new Date(pendingIn.created_at), 'yyyy-MM-dd');
+        paired.push({
+          date, checkIn: pendingIn.created_at, checkOut: null,
+          minutesWorked: 0, hoursDecimal: 0,
+          isHoliday: holidays.has(date), isDayOff: scheduledDaysOff.has(date),
+          earlyLeaveAuthorized: false,
+        });
+      }
+      pendingIn = e;
+    } else if (e.entry_type === 'clock_out' && pendingIn) {
+      const checkInTime = new Date(pendingIn.created_at);
+      const date = pendingIn.work_date ?? format(checkInTime, 'yyyy-MM-dd');
+      const minutes = differenceInMinutes(new Date(e.created_at), checkInTime);
+      paired.push({
+        date, checkIn: pendingIn.created_at, checkOut: e.created_at,
+        minutesWorked: Math.max(0, minutes), hoursDecimal: Math.max(0, minutes) / 60,
+        isHoliday: holidays.has(date), isDayOff: scheduledDaysOff.has(date),
+        earlyLeaveAuthorized: e.early_leave_authorized || false,
+      });
+      pendingIn = null;
+    }
+  }
+  if (pendingIn) {
+    const date = pendingIn.work_date ?? format(new Date(pendingIn.created_at), 'yyyy-MM-dd');
+    paired.push({
+      date, checkIn: pendingIn.created_at, checkOut: null,
+      minutesWorked: 0, hoursDecimal: 0,
+      isHoliday: holidays.has(date), isDayOff: scheduledDaysOff.has(date),
+      earlyLeaveAuthorized: false,
+    });
+  }
+}
 ```
 
-Popularlo desde `userSchedules` que ya se consulta en el hook (línea 293-305). Simplemente mapear y devolver esos registros como parte del summary.
-
-**2. Reescribir `buildDailyRows` en `laborEmployeeExport.ts`**
-
-En vez de iterar solo `s.entries` (fichajes), generar una fila por cada día del mes (1..N):
-
-- Para cada día del mes:
-  - Buscar el horario programado → columna "Horario" (ej: "12:00-15:00 / 21:00-02:00")
-  - Buscar fichajes de ese día en `s.entries` → columnas "Entrada" y "Salida"
-  - Si hay múltiples fichajes en el mismo día (turno cortado), generar sub-filas
-  - Determinar el tipo: Feriado, Franco, Vacaciones, Cumpleaños, **Ausente** (tenía horario, no fichó), Regular
-  - Calcular tardanza si corresponde
-
-Agregar la columna **"Horario"** a la tabla del PDF:
-
-```text
-DAILY_HEADERS = ['Día', 'Horario', 'Entrada', 'Salida', 'Horas', 'Tipo', 'Tardanza']
-```
-
-**3. Lógica de detección de estado por día**
-
-```
-Si es feriado → "Feriado"
-Si es franco (is_day_off sin position especial) → "Franco"  
-Si position = vacaciones → "Vacaciones"
-Si position = cumple → "Cumpleaños"
-Si tiene horario pero no fichó → "AUSENTE" (resaltado en rojo)
-Si fichó normalmente → "Regular"
-Si no tiene horario ni fichaje → no mostrar fila
-```
-
-**4. Formato visual en el PDF**
-
-- Filas de "AUSENTE": texto rojo, fondo rosado suave
-- Columna "Horario": muestra el turno programado (ej: "12:00-15:00")
-- Días de Franco/Vacaciones: sin columnas de fichaje, solo el tipo
-- Para turnos cortados con 2 fichajes el mismo día: mostrar 2 sub-filas con el mismo día
-
-**5. Aplicar los mismos cambios al Excel** (`exportEmployeeExcel`)
+### Impacto
+- Corrige Leonardo y cualquier otro empleado con turno cortado en liquidación
+- No afecta turnos simples (siguen generando 1 par)
+- Un solo archivo a modificar
 
 ### Archivos a modificar
-- `src/hooks/useLaborHours.ts` — agregar `scheduledDays` al tipo y al return
-- `src/utils/laborEmployeeExport.ts` — reescribir `buildDailyRows`, agregar columna "Horario", marcar ausentes
+- `src/hooks/useLaborHours.ts` — líneas 161-183
 
