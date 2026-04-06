@@ -40,6 +40,15 @@ import { cn } from '@/lib/utils';
 import type { ClipboardDataV2 } from './types';
 import type { WorkPosition } from '@/hooks/useWorkPositions';
 
+interface InitialToolbarValues {
+  startTime: string;
+  endTime: string;
+  position: string | null;
+  isSplitShift: boolean;
+  startTime2?: string;
+  endTime2?: string;
+}
+
 interface SelectionToolbarProps {
   selectionCount: number;
   clipboard: ClipboardDataV2 | null;
@@ -60,6 +69,7 @@ interface SelectionToolbarProps {
   onDeselect: () => void;
   positions?: WorkPosition[];
   showBirthday?: boolean;
+  initialValues?: InitialToolbarValues;
   className?: string;
 }
 
