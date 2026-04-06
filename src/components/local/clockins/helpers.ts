@@ -342,7 +342,11 @@ function shiftLabel(schedule: ScheduleInfo | null, request: DayRequest | null): 
     return labels[request.requestType] || request.requestType;
   }
   if (!schedule) return '—';
-  if (schedule.is_day_off) return 'Franco';
+  if (schedule.is_day_off) {
+    if (schedule.position === 'vacaciones') return '🏖️ Vacaciones';
+    if (schedule.position === 'cumple') return '🎂 Cumpleaños';
+    return 'Franco';
+  }
   if (schedule.start_time && schedule.end_time) {
     const t1 = `${schedule.start_time.slice(0, 5)} - ${schedule.end_time.slice(0, 5)}`;
     if (schedule.start_time_2 && schedule.end_time_2) {
