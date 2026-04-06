@@ -122,7 +122,7 @@ export function ReimprimirCard({
           descuento_porcentaje: (pedido as unknown as Record<string, unknown>)
             .descuento_porcentaje as number | undefined,
         },
-        branchName: branchData?.name || branchData?.business_name || '',
+        branchName: branchData?.name || branchData?.razon_social || '',
         metodo_pago: pago?.method || undefined,
         factura: facturaData as unknown as TicketClienteData['factura'],
       };

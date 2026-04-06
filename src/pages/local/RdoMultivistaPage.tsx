@@ -490,8 +490,8 @@ export default function RdoMultivistaPage() {
                     </TableRow>
                   ) : (
                     data.por_medio_pago.map((row) => (
-                      <TableRow key={row.medio_pago}>
-                        <TableCell>{row.medio_pago}</TableCell>
+                      <TableRow key={row.payment_method}>
+                        <TableCell>{row.payment_method}</TableCell>
                         <TableCell className="text-right">{row.pedidos}</TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(row.ventas)}

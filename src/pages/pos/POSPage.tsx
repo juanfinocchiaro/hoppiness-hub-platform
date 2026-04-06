@@ -460,8 +460,8 @@ function POSPageContent({ branchId }: { branchId: string }) {
         voucher_codigo: orderConfig.voucherCodigo,
         voucher_descuento: orderConfig.voucherDescuento,
         costo_delivery: costoEnvio > 0 ? costoEnvio : undefined,
-        customer_phone: orderConfig.clienteTelefono ?? null,
-        customer_address: orderConfig.clienteDireccion ?? null,
+         customer_phone: orderConfig.customerPhone ?? null,
+         customer_address: orderConfig.customerAddress ?? null,
       };
 
       const singlePayment = payments.length === 1 ? payments[0] : null;

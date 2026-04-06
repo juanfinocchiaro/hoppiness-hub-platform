@@ -116,7 +116,7 @@ export default function PromocionesPage() {
   };
 
   const buildItemsPayload = (promoItems: PromoItemDraft[]) =>
-    promoItems.map((i) => ({ item_carta_id: i.item_carta_id, precio_promo: i.precio_promo, preconfigExtras: i.preconfigExtras?.map((e) => ({ extra_item_carta_id: e.extra_item_carta_id, cantidad: e.cantidad })) }));
+    promoItems.map((i) => ({ item_carta_id: i.item_carta_id, precio_promo: i.precio_promo, preconfigExtras: i.preconfigExtras?.map((e) => ({ extra_item_carta_id: e.extra_item_carta_id, cantidad: e.quantity })) }));
 
   const handleCreateSubmit = async () => {
     if (!validateForm(createForm)) return;

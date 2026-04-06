@@ -434,12 +434,12 @@ export default function CuentaCorrienteProveedorPage() {
 
                       {/* Saldo running */}
                       <TableCell className="text-right font-mono text-sm font-semibold">
-                        {mov.saldo_acumulado < 0 ? (
+                        {mov.cumulative_balance < 0 ? (
                           <span className="text-green-600">
-                            -{formatCurrency(Math.abs(mov.saldo_acumulado))}
+                            -{formatCurrency(Math.abs(mov.cumulative_balance))}
                           </span>
                         ) : (
-                          <span>{formatCurrency(mov.saldo_acumulado)}</span>
+                          <span>{formatCurrency(mov.cumulative_balance)}</span>
                         )}
                       </TableCell>
 
