@@ -68,6 +68,7 @@ export interface EmployeeLaborSummary {
   // Desglose por tipo de día
   hsRegulares: number;
   hsExtrasDiaHabil: number;
+  hsExtrasInhabil: number;
   feriadosHs: number;
   hsFrancoTrabajado: number;
 
@@ -353,6 +354,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     // Classify hours day by day (unified with daily view)
     let hsRegulares = 0;
     let hsExtrasDiaHabil = 0;
+    let hsExtrasInhabil = 0;
     let feriadosHs = 0;
     let hsFrancoTrabajado = 0;
     const alertasDiarias: { date: string; horasExtra: number }[] = [];
@@ -361,11 +363,16 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       const isHoliday = holidaySet.has(date);
       const isDayOff = userDaysOff.has(date);
       const position = positionByDate.get(date);
+      const dayOfWeek = new Date(date + 'T12:00:00').getDay(); // 0=Sun, 6=Sat
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
       if (position === 'vacaciones') {
-        // Vacation day with work — count as regular (unusual but possible)
         hsRegulares += Math.min(horasDia, config.daily_hours_limit);
-        hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        if (isWeekend) {
+          hsExtrasInhabil += Math.max(0, horasDia - config.daily_hours_limit);
+        } else {
+          hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        }
       } else if (isHoliday) {
         feriadosHs += horasDia;
       } else if (isDayOff) {
@@ -373,7 +380,11 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       } else {
         // Regular business day
         hsRegulares += Math.min(horasDia, config.daily_hours_limit);
-        hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        if (isWeekend) {
+          hsExtrasInhabil += Math.max(0, horasDia - config.daily_hours_limit);
+        } else {
+          hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+        }
       }
 
       if (horasDia > config.daily_hours_limit) {
@@ -381,11 +392,11 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       }
     }
 
-    const hsTrabajadasMes = hsRegulares + hsExtrasDiaHabil + feriadosHs + hsFrancoTrabajado;
+    const hsTrabajadasMes = hsRegulares + hsExtrasDiaHabil + hsExtrasInhabil + feriadosHs + hsFrancoTrabajado;
     const hsFrancoFeriado = feriadosHs + hsFrancoTrabajado;
     const hsExtrasFrancoFeriado = hsFrancoFeriado;
-    const hsHabiles = hsRegulares + hsExtrasDiaHabil;
-    const totalExtras = hsExtrasDiaHabil + hsExtrasFrancoFeriado;
+    const hsHabiles = hsRegulares + hsExtrasDiaHabil + hsExtrasInhabil;
+    const totalExtras = hsExtrasDiaHabil + hsExtrasInhabil + hsExtrasFrancoFeriado;
 
     // Presentismo: faltas injustificadas + tardanza acumulativa
     const userAbsences = absences.filter((a: any) => a.user_id === userId);
@@ -489,6 +500,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
 
       hsHabiles: Number(hsHabiles.toFixed(2)),
       hsExtrasDiaHabil: Number(hsExtrasDiaHabil.toFixed(2)),
+      hsExtrasInhabil: Number(hsExtrasInhabil.toFixed(2)),
       hsExtrasFrancoFeriado: Number(hsExtrasFrancoFeriado.toFixed(2)),
       totalExtras: Number(totalExtras.toFixed(2)),
 
@@ -552,12 +564,14 @@ export function generateLaborCSV(summaries: EmployeeLaborSummary[], _monthLabel:
     'PUESTO',
     'HS TRABAJADAS',
     'HS REGULARES',
-    'HS EXTRAS',
-    'HS FERIADO',
+    'VACACIONES (días)',
+    'FALTAS INJ.',
+    'FALTA JUSTIFICADA (hs)',
+    'TARDANZA (min)',
+    'HS FERIADOS',
     'HS FRANCO',
-    'LICENCIA (días)',
-    'FALTAS INJUSTIFICADAS',
-    'TARDANZA ACUM (min)',
+    'EXTRAS HÁBIL',
+    'EXTRAS INHÁBIL',
     'PRESENTISMO',
   ];
 
@@ -567,12 +581,14 @@ export function generateLaborCSV(summaries: EmployeeLaborSummary[], _monthLabel:
     s.localRole?.toUpperCase() || '-',
     s.hsTrabajadasMes.toFixed(2),
     s.hsRegulares.toFixed(2),
-    s.hsExtrasDiaHabil.toFixed(2),
-    s.feriadosHs.toFixed(2),
-    s.hsFrancoTrabajado.toFixed(2),
     s.diasVacaciones.toString(),
     s.faltasInjustificadas.toString(),
+    s.hsLicencia.toFixed(2),
     s.tardanzaAcumuladaMin.toString(),
+    s.feriadosHs.toFixed(2),
+    s.hsFrancoTrabajado.toFixed(2),
+    s.hsExtrasDiaHabil.toFixed(2),
+    s.hsExtrasInhabil.toFixed(2),
     s.presentismo ? 'SI' : 'NO',
   ]);
 
