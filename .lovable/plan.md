@@ -1,45 +1,28 @@
 
 
-## Puesto por defecto en Horarios y Liquidación
+## Mejoras al PDF de Liquidación
 
-### Problema
-Cuando se asigna un horario sin elegir puesto, queda como "Sin puesto" tanto en el calendario como en Liquidación. El encargado tiene que elegir manualmente el puesto cada vez, aunque el empleado ya tiene uno asignado en Equipo.
+### Problemas detectados
+
+1. **Caracteres rotos**: El `└` y otros caracteres UTF-8 no son soportados por la fuente Helvetica de jsPDF, causando que el nombre del puesto se muestre como `% S a n d w i c h e r o` con espacios entre letras
+2. **3 filas por empleado innecesarias**: Cuando un empleado tiene un solo puesto (la mayoría), se generan 3 filas (nombre, puesto, TOTAL) — con una sola fila bastaría
+3. **Demasiado espacio vertical desperdiciado**: La fila de nombre queda vacía en las columnas numéricas
 
 ### Solución
-Hacer que el `default_position` del empleado (configurado en Equipo) se use automáticamente en dos lugares:
 
-### Cambios
+Modificar `buildRows()` en `src/utils/laborExport.ts`:
 
-#### 1. Horarios — usar `default_position` al guardar celdas sin puesto
-**`src/components/hr/InlineScheduleEditor.tsx`**
-- En `handleCellChange` (línea ~317): si `value.position` es null/vacío, buscar el `default_position` del team member y usarlo
-- Crear un mapa `teamDefaultPositions` (Map<userId, position>) a partir de `team`
+1. **Un puesto → una sola fila**: Si el empleado tiene 0 o 1 puesto en el breakdown, generar una única fila con nombre + puesto + todos los valores (como la rama `else` actual pero incluyendo el puesto del breakdown)
+2. **Múltiples puestos → nombre+total en una fila, sub-filas debajo**: Solo usar sub-filas cuando realmente hay más de un puesto
+3. **Reemplazar `└` por texto simple**: Usar `"  > "` o simplemente indentar con espacios para evitar caracteres no soportados
+4. **Incluir el puesto operativo** (del breakdown) en la columna Puesto en vez del rol del sistema (CAJERO/EMPLEADO), que ya se muestra en la UI de cards
 
-#### 2. Horarios — pre-seleccionar posición en SelectionToolbar
-**`src/components/hr/schedule-selection/useScheduleActions.ts`**
-- En `handleApplyWithOptions`: cuando `position` es null, buscar el `default_position` de cada empleado seleccionado en lugar de dejarlo vacío
-- Requiere pasar un mapa de `defaultPositions` al hook
+### Resultado esperado
+- Empleados con un solo puesto: **1 fila** en vez de 3
+- PDF más compacto (probablemente todo en 1 página en vez de 2)
+- Sin caracteres rotos/ilegibles
+- Puesto operativo visible (Sandwichero, Cajero, etc.)
 
-**`src/components/hr/schedule-selection/useScheduleSelection.ts`**
-- Aceptar `teamDefaultPositions` como parámetro y pasarlo a `useScheduleActions`
-
-#### 3. Liquidación — fallback a `default_position` cuando `work_position` es null
-**`src/services/hrService.ts`**
-- En `fetchLaborUsersData`: incluir `default_position` del `user_role_assignments` en la respuesta
-
-**`src/hooks/useLaborHours.ts`**
-- En línea ~411: cambiar `const posKey = position || 'Sin puesto'` por `const posKey = position || userData?.default_position || 'Sin puesto'`
-- En `positionByDate` (línea ~363): si `work_position` es null, usar `default_position` del usuario
-
-### Resultado
-- Al cargar horarios, el puesto se llena automáticamente con el del empleado
-- En Liquidación, las horas se clasifican por el puesto real en vez de "Sin puesto"
-- Si el encargado elige otro puesto manualmente, ese tiene prioridad
-
-### Archivos a modificar
-- `src/components/hr/InlineScheduleEditor.tsx`
-- `src/components/hr/schedule-selection/useScheduleActions.ts`
-- `src/components/hr/schedule-selection/useScheduleSelection.ts`
-- `src/services/hrService.ts`
-- `src/hooks/useLaborHours.ts`
+### Archivo a modificar
+- `src/utils/laborExport.ts` — función `buildRows()` y estilos en `didParseCell`
 
