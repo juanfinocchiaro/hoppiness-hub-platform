@@ -82,6 +82,9 @@ function EmployeeCard({
   monthOnly,
   yearStr,
   positions,
+  consumos,
+  adelantos,
+  onAddConsumo,
 }: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
@@ -91,6 +94,9 @@ function EmployeeCard({
   monthOnly: string;
   yearStr: string;
   positions: { key: string; label: string }[];
+  consumos: number;
+  adelantos: number;
+  onAddConsumo: () => void;
 }) {
   const initials = summary.userName
     .split(' ')
