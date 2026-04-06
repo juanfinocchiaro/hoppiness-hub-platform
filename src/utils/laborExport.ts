@@ -8,6 +8,13 @@ import { format } from 'date-fns';
 import type { EmployeeLaborSummary, LaborStats } from '@/hooks/useLaborHours';
 import { formatHoursDecimal } from '@/hooks/useLaborHours';
 
+function formatPosition(pos: string | null | undefined): string {
+  if (!pos) return '-';
+  return pos
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 const HEADERS = [
   '#',
   'Empleado',
@@ -47,9 +54,8 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
 
       // Sub-rows per position (only hours breakdown)
       for (const pb of s.positionBreakdown) {
-        const posLabel = pb.position.charAt(0).toUpperCase() + pb.position.slice(1);
         rows.push([
-          '', `  > ${posLabel}`, '',
+          '', `  > ${formatPosition(pb.position)}`, '',
           pb.hsTrabajadas.toFixed(2), pb.hsRegulares.toFixed(2),
           '-', '-', '-', '-',
           pb.feriadosHs.toFixed(2), pb.hsFrancoTrabajado.toFixed(2),
@@ -59,8 +65,8 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
     } else {
       // Single position or no breakdown — one row
       const posLabel = s.positionBreakdown.length === 1
-        ? s.positionBreakdown[0].position.charAt(0).toUpperCase() + s.positionBreakdown[0].position.slice(1)
-        : (s.localRole?.toUpperCase() || '-');
+        ? formatPosition(s.positionBreakdown[0].position)
+        : formatPosition(s.localRole);
       rows.push([
         counter.toString(), s.userName, posLabel,
         s.hsTrabajadasMes.toFixed(2), s.hsRegulares.toFixed(2),
@@ -123,7 +129,7 @@ export function exportLaborPDF(
     body: rows,
     theme: 'grid',
     styles: {
-      fontSize: 8,
+      fontSize: 7.5,
       cellPadding: 2,
       lineWidth: 0.1,
       lineColor: [200, 200, 200],
@@ -132,13 +138,13 @@ export function exportLaborPDF(
       fillColor: [41, 65, 106],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 7.5,
+      fontSize: 7,
       halign: 'center',
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 8 },
-      1: { cellWidth: 35 },
-      2: { cellWidth: 22, halign: 'center' },
+      1: { cellWidth: 38 },
+      2: { cellWidth: 28, halign: 'center' },
       3: { halign: 'right' },
       4: { halign: 'right' },
       5: { halign: 'center' },
@@ -285,7 +291,7 @@ export function exportLaborExcel(
     data.push([
       i + 1,
       s.userName,
-      s.localRole?.toUpperCase() || '-',
+      formatPosition(s.localRole),
       s.hsTrabajadasMes,
       s.hsRegulares,
       s.diasVacaciones,
