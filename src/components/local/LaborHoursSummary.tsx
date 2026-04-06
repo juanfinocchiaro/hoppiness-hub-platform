@@ -61,10 +61,12 @@ function EmployeeRow({
   summary,
   expanded,
   onToggle,
+  monthLabel,
 }: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
   onToggle: () => void;
+  monthLabel: string;
 }) {
   const initials = summary.userName
     .split(' ')
