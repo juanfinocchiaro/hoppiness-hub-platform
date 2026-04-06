@@ -59,9 +59,9 @@ Deno.serve(async (req) => {
       await supabase
         .from("afip_config")
         .update({
-          estado_conexion: "sin_configurar",
-          ultimo_error: "Falta certificado o punto de venta",
-          ultima_verificacion: new Date().toISOString(),
+          connection_status: "sin_configurar",
+          last_error: "Falta certificado o punto de venta",
+          last_verification: new Date().toISOString(),
         })
         .eq("branch_id", branch_id);
 
@@ -75,17 +75,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const esProduccion = !!config.es_produccion;
+    const esProduccion = !!config.is_production;
 
     if (!esProduccion) {
       // Simulación en homologación: siempre "conectado"
       await supabase
         .from("afip_config")
         .update({
-          estado_conexion: "conectado",
-          estado_certificado: "conectado",
-          ultimo_error: null,
-          ultima_verificacion: new Date().toISOString(),
+          connection_status: "conectado",
+          certificate_status: "conectado",
+          last_error: null,
+          last_verification: new Date().toISOString(),
         })
         .eq("branch_id", branch_id);
 
@@ -96,9 +96,9 @@ Deno.serve(async (req) => {
           modo: "homologacion",
           mensaje: "Conexión simulada OK (modo homologación). Cuando cambies a producción, se verificará contra ARCA.",
           ultimos_numeros: {
-            factura_a: config.ultimo_nro_factura_a || 0,
-            factura_b: config.ultimo_nro_factura_b || 0,
-            factura_c: config.ultimo_nro_factura_c || 0,
+            factura_a: config.last_invoice_number_a || 0,
+            factura_b: config.last_invoice_number_b || 0,
+            factura_c: config.last_invoice_number_c || 0,
           },
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -111,9 +111,9 @@ Deno.serve(async (req) => {
     // Decodificar clave privada (almacenada en base64)
     let clavePrivada: string;
     try {
-      clavePrivada = atob(config.clave_privada_enc);
+      clavePrivada = atob(config.private_key_enc);
     } catch {
-      clavePrivada = config.clave_privada_enc;
+      clavePrivada = config.private_key_enc;
     }
 
     try {
@@ -136,13 +136,13 @@ Deno.serve(async (req) => {
       await supabase
         .from("afip_config")
         .update({
-          estado_conexion: "conectado",
-          estado_certificado: "conectado",
-          ultimo_error: null,
-          ultima_verificacion: new Date().toISOString(),
-          ultimo_nro_factura_a: lastA,
-          ultimo_nro_factura_b: lastB,
-          ultimo_nro_factura_c: lastC,
+          connection_status: "conectado",
+          certificate_status: "conectado",
+          last_error: null,
+          last_verification: new Date().toISOString(),
+          last_invoice_number_a: lastA,
+          last_invoice_number_b: lastB,
+          last_invoice_number_c: lastC,
         })
         .eq("branch_id", branch_id);
 
@@ -167,17 +167,17 @@ Deno.serve(async (req) => {
       await supabase
         .from("afip_config")
         .update({
-          estado_conexion: "error",
-          ultimo_error: errorMsg.substring(0, 500),
-          ultima_verificacion: new Date().toISOString(),
+          connection_status: "error",
+          last_error: errorMsg.substring(0, 500),
+          last_verification: new Date().toISOString(),
         })
         .eq("branch_id", branch_id);
 
       // Loguear error
       await supabase.from("afip_errores_log").insert({
         branch_id,
-        tipo_error: "conexion_produccion",
-        mensaje: errorMsg.substring(0, 500),
+        error_type: "conexion_produccion",
+        message: errorMsg.substring(0, 500),
       });
 
       return new Response(
