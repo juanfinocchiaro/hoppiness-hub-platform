@@ -1,30 +1,50 @@
 
 
-## Agregar gestión de consumos de empleados (ver, editar, eliminar)
+## Rediseño visual del PDF de Liquidación
 
-### Problema
-Hoy solo se puede cargar un consumo desde la card del empleado en Liquidación, pero no hay forma de:
-- Ver el listado de consumos cargados
-- Eliminar un consumo cargado por error
+### Objetivo
+Transformar el PDF actual (genérico, gris, sin identidad) en un reporte profesional y visualmente atractivo, alineado con la estética de Hoppiness Club (Azul #00139b, Naranja #ff521d, Amarillo #ffd41f).
 
-### Solución
-Agregar un **modal de detalle** accesible desde cada card de empleado (clickeando el badge "Consumos: $X") que muestre la lista de consumos del mes con opción de eliminar cada uno.
+### Cambios en `src/utils/laborExport.ts` — función `exportLaborPDF`
 
-### Implementación
+#### 1. Header con banda de color de marca
+- Franja horizontal azul (#00139b) en la parte superior de la primera página (rect de 297mm x 18mm)
+- Título "LIQUIDACIÓN — Marzo 2026" en blanco sobre la franja azul, font 18pt bold
+- Subtítulo con config laboral en texto claro debajo
 
-**Nuevo componente: `EmployeeConsumptionListModal.tsx`**
-- Modal que recibe `branchId`, `userId`, `userName`, `year`, `month`
-- Muestra tabla con: Fecha, Monto, Descripción, Origen (manual/automático), botón Eliminar
-- Usa `useEmployeeConsumptionsByMonth` filtrando por `user_id`
-- Usa `softDelete` del hook existente para eliminar con confirmación
-- Incluye el botón "Nuevo consumo" dentro del mismo modal para agregar sin cerrar
+#### 2. Stats summary como tarjetas coloreadas
+- En vez de texto plano, dibujar 6 rectángulos redondeados (mini-cards) en fila debajo del header, similar a como se ven en la UI:
+  - Hs Trabajadas, Hs Regulares (fondo azul claro)
+  - Vacaciones, Faltas Inj. (fondo naranja/rojo suave)
+  - Extras Háb, Extras Inh (fondo verde claro)
+  - Con/Sin Presentismo (fondo amarillo/rojo)
+- Cada mini-card con el valor grande y la etiqueta chica abajo
 
-**Modificar `LaborHoursSummary.tsx`**
-- Hacer clickeable el badge de "Consumos: $X" en cada card
-- Al hacer click, abrir el nuevo modal de listado de consumos de ese empleado
-- Agregar estado para controlar qué empleado tiene abierto el listado
+#### 3. Tabla principal mejorada
+- Header de tabla con gradiente azul marca (#00139b) y texto blanco
+- Filas alternadas con azul muy claro (#f0f4ff) vs blanco
+- Bordes suaves grises claros (no grid pesado)
+- Presentismo SI: badge verde con fondo verde claro
+- Presentismo NO: badge rojo con fondo rojo claro
+- Faltas injustificadas > 0: texto rojo bold
+- Extras > 0: texto naranja (#ff521d) para destacar
+- Consumos/Adelantos con formato moneda destacado
 
-### Archivos
-- **Nuevo**: `src/components/local/EmployeeConsumptionListModal.tsx`
-- **Modificar**: `src/components/local/LaborHoursSummary.tsx` — hacer badge clickeable y conectar modal
+#### 4. Glossario con estilo
+- Encabezado "Referencias" con acento azul (linea decorativa)
+- Tabla compacta con columna izquierda en azul bold
+- Fondo alternado suave
+
+#### 5. Footer mejorado
+- Linea separadora azul fina
+- "HOPPINESS CLUB" en azul + fecha de generación + página
+- Alineado a ambos lados (marca izquierda, página derecha)
+
+#### 6. Colores condicionales adicionales en didParseCell
+- Tardanza > 0: texto naranja
+- Hs Franco > 0: texto azul (trabajó en franco)
+- Hs Feriados > 0: texto violeta
+
+### Archivo a modificar
+- `src/utils/laborExport.ts` — solo la función `exportLaborPDF`
 
