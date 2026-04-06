@@ -137,6 +137,12 @@ export function EmployeeSummaryPanel({
   });
   const payrollRow = payrollRows.find((r) => r.userId === userId);
 
+  // ── Data: consumptions & advances ──
+  const { data: consumptions = [] } = useEmployeeConsumptionsByMonth(branchId, todayDate.getFullYear(), todayDate.getMonth());
+  const { data: advances = [] } = useSalaryAdvancesByMonth(branchId, todayDate.getFullYear(), todayDate.getMonth());
+  const financialMap = aggregateByUser(consumptions, advances);
+  const financialData = financialMap.get(userId) ?? { consumos: 0, adelantos: 0 };
+
   // ── Computed: month hours ──
   const completedHours = laborSummary?.hsTrabajadasMes ?? 0;
   const inProgressHours = isWorking ? workingMin / 60 : 0;
