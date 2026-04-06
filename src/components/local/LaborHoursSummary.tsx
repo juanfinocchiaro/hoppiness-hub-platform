@@ -249,7 +249,15 @@ function EmployeeCard({
             Tardanza: {summary.tardanzaAcumuladaMin > 0 ? <span className="text-amber-600 font-medium">{summary.tardanzaAcumuladaMin}m</span> : '0m'}
           </span>
           <span className="text-muted-foreground flex items-center gap-1">
-            Consumos: {consumos > 0 ? <span className="text-violet-600 font-medium">${consumos.toLocaleString('es-AR')}</span> : '-'}
+            Consumos:{' '}
+            {consumos > 0 ? (
+              <button
+                className="text-violet-600 font-medium underline underline-offset-2 hover:text-violet-800 cursor-pointer bg-transparent border-none p-0"
+                onClick={onViewConsumos}
+              >
+                ${consumos.toLocaleString('es-AR')}
+              </button>
+            ) : '-'}
             <Button variant="ghost" size="icon" className="h-5 w-5 ml-0.5" onClick={onAddConsumo} title="Registrar consumo">
               <UtensilsCrossed className="h-3 w-3" />
             </Button>
