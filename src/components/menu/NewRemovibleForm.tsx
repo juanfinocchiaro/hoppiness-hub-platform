@@ -72,7 +72,7 @@ export function NewRemovibleForm({
     selectedType === 'receta' && selectedReceta
       ? selectedReceta.costo_calculado * (selectedReceta.cantidad || 1)
       : selectedInsumo
-        ? (selectedInsumo.base_unit_cost || 0) * (selectedInsumo.cantidad || 1)
+        ? (selectedInsumo.base_unit_cost || 0) * (selectedInsumo.quantity || 1)
         : 0;
 
   const handleSave = async () => {
