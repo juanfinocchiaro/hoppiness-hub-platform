@@ -50,6 +50,7 @@ import {
   type EmployeeLaborSummary,
 } from '@/hooks/useLaborHours';
 import { exportLaborPDF, exportLaborExcel } from '@/utils/laborExport';
+import { exportEmployeePDF, exportEmployeeExcel } from '@/utils/laborEmployeeExport';
 import { LOCAL_ROLE_LABELS } from '@/hooks/usePermissions';
 
 interface LaborHoursSummaryProps {
