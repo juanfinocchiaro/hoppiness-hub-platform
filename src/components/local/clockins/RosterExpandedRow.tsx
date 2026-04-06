@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 
 interface Props {
   row: RosterRow;
+  allRows?: RosterRow[];
   branchId: string;
   selectedDate: Date;
   canEdit?: boolean;
@@ -35,6 +36,7 @@ interface Props {
 
 export function RosterExpandedRow({
   row,
+  allRows,
   branchId,
   selectedDate,
   canEdit,
