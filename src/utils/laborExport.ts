@@ -248,5 +248,5 @@ export function exportLaborExcel(
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Liquidación');
-  XLSX.writeFile(wb, `liquidacion-${monthLabel.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+  XLSX.writeFile(wb, `${filename || 'liquidacion'}.xlsx`);
 }
