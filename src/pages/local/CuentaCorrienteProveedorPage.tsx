@@ -370,7 +370,7 @@ export default function CuentaCorrienteProveedorPage() {
                     <TableRow key={`${mov.tipo}-${mov.id}`}>
                       {/* Fecha */}
                       <TableCell className="text-sm whitespace-nowrap">
-                        {formatLocalDate(mov.fecha)}
+                        {formatLocalDate(mov.date)}
                       </TableCell>
 
                       {/* Tipo */}
