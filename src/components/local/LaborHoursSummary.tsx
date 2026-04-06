@@ -603,6 +603,18 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
           userName={consumptionTarget.userName}
         />
       )}
+
+      {consumptionListTarget && (
+        <EmployeeConsumptionListModal
+          open={!!consumptionListTarget}
+          onOpenChange={(open) => { if (!open) setConsumptionListTarget(null); }}
+          branchId={branchId}
+          userId={consumptionListTarget.userId}
+          userName={consumptionListTarget.userName}
+          year={year}
+          month={month}
+        />
+      )}
     </div>
   );
 }
