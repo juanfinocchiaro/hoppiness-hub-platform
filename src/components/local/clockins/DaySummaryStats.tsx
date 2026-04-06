@@ -17,7 +17,16 @@ function getScheduledMinutes(row: RosterRow): number | null {
   const [sh, sm] = row.schedule.start_time.split(':').map(Number);
   const [eh, em] = row.schedule.end_time.split(':').map(Number);
   let diff = (eh * 60 + em) - (sh * 60 + sm);
-  if (diff <= 0) diff += 24 * 60; // overnight
+  if (diff <= 0) diff += 24 * 60;
+
+  if (row.schedule.start_time_2 && row.schedule.end_time_2) {
+    const [sh2, sm2] = row.schedule.start_time_2.split(':').map(Number);
+    const [eh2, em2] = row.schedule.end_time_2.split(':').map(Number);
+    let diff2 = (eh2 * 60 + em2) - (sh2 * 60 + sm2);
+    if (diff2 <= 0) diff2 += 24 * 60;
+    diff += diff2;
+  }
+
   return diff;
 }
 
