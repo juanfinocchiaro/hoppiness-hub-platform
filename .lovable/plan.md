@@ -1,28 +1,30 @@
 
 
-## Mejoras al PDF de Liquidación
+## Agregar glosario/leyenda al PDF de Liquidación
 
-### Problemas detectados
+### Qué se hace
+Después de la tabla principal de datos, agregar una sección "Referencias" con la descripción de cada columna para que cualquier persona (estudio contable, franquiciado, etc.) entienda el informe sin necesidad de explicación.
 
-1. **Caracteres rotos**: El `└` y otros caracteres UTF-8 no son soportados por la fuente Helvetica de jsPDF, causando que el nombre del puesto se muestre como `% S a n d w i c h e r o` con espacios entre letras
-2. **3 filas por empleado innecesarias**: Cuando un empleado tiene un solo puesto (la mayoría), se generan 3 filas (nombre, puesto, TOTAL) — con una sola fila bastaría
-3. **Demasiado espacio vertical desperdiciado**: La fila de nombre queda vacía en las columnas numéricas
+### Contenido de la leyenda
 
-### Solución
+| Columna | Descripción |
+|---------|-------------|
+| Hs Trab. | Total de horas trabajadas en el mes (incluye feriados, francos, todo lo trabajado en el local) |
+| Hs Reg. | Horas regulares de trabajo en el local |
+| Vacac. | Dias de vacaciones tomados |
+| Faltas Inj. | Faltas injustificadas. No afecta liquidacion pero el empleado pierde el presentismo |
+| Falta Just. | Falta justificada: se computan las horas del horario programado ese dia |
+| Tardanza | Minutos de tardanza acumulados en el mes. 15 min acumulados = pierde presentismo |
+| Hs Fer. | Horas trabajadas en dias feriado |
+| Hs Franco | Horas trabajadas en dia franco |
+| Ext. Hab. | Horas extras de lunes a viernes |
+| Ext. Inh. | Horas extras de sabado y domingo |
+| Present. | Presentismo: SI si no tiene faltas injustificadas ni tardanza mayor a 15 min |
 
-Modificar `buildRows()` en `src/utils/laborExport.ts`:
+### Implementacion
 
-1. **Un puesto → una sola fila**: Si el empleado tiene 0 o 1 puesto en el breakdown, generar una única fila con nombre + puesto + todos los valores (como la rama `else` actual pero incluyendo el puesto del breakdown)
-2. **Múltiples puestos → nombre+total en una fila, sub-filas debajo**: Solo usar sub-filas cuando realmente hay más de un puesto
-3. **Reemplazar `└` por texto simple**: Usar `"  > "` o simplemente indentar con espacios para evitar caracteres no soportados
-4. **Incluir el puesto operativo** (del breakdown) en la columna Puesto en vez del rol del sistema (CAJERO/EMPLEADO), que ya se muestra en la UI de cards
-
-### Resultado esperado
-- Empleados con un solo puesto: **1 fila** en vez de 3
-- PDF más compacto (probablemente todo en 1 página en vez de 2)
-- Sin caracteres rotos/ilegibles
-- Puesto operativo visible (Sandwichero, Cajero, etc.)
+Se agrega una tabla compacta tipo `autoTable` debajo de la tabla principal (o en la ultima pagina si no entra), con dos columnas: "Columna" y "Descripcion", usando fuente pequena (7-8pt) y estilo sutil para que no compita visualmente con los datos.
 
 ### Archivo a modificar
-- `src/utils/laborExport.ts` — función `buildRows()` y estilos en `didParseCell`
+- `src/utils/laborExport.ts` — funcion `exportLaborPDF`, agregar seccion de referencias despues de la tabla principal
 
