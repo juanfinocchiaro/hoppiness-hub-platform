@@ -542,7 +542,6 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                     }
                     monthLabel={monthLabelCapitalized}
                   />
-                  />
                 ))}
               </TableBody>
             </Table>
