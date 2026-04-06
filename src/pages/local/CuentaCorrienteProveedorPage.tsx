@@ -426,9 +426,9 @@ export default function CuentaCorrienteProveedorPage() {
                       {/* Importe (signed) */}
                       <TableCell className="text-right font-mono text-sm">
                         {isFactura ? (
-                          <span className="text-destructive">+{formatCurrency(mov.monto)}</span>
+                          <span className="text-destructive">+{formatCurrency(mov.amount)}</span>
                         ) : (
-                          <span className="text-green-600">-{formatCurrency(mov.monto)}</span>
+                          <span className="text-green-600">-{formatCurrency(mov.amount)}</span>
                         )}
                       </TableCell>
 
