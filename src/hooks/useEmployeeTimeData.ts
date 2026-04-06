@@ -5,10 +5,10 @@ import {
   fetchAbsences,
   fetchBranchSchedules,
   fetchClockEntries,
-  fetchLaborConfig,
   fetchLaborUsersData,
   fetchSpecialDays,
 } from '@/services/hrService';
+import { fromUntyped } from '@/lib/supabase-helpers';
 import {
   calculateLaborSummary,
   calculateScheduledHours,
