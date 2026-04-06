@@ -151,8 +151,8 @@ export function exportLaborPDF(
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 8 },
-      1: { cellWidth: 38 },
-      2: { cellWidth: 28, halign: 'center' },
+      1: { cellWidth: 36 },
+      2: { cellWidth: 26, halign: 'center' },
       3: { halign: 'right' },
       4: { halign: 'right' },
       5: { halign: 'center' },
@@ -163,7 +163,9 @@ export function exportLaborPDF(
       10: { halign: 'right' },
       11: { halign: 'right' },
       12: { halign: 'right' },
-      13: { halign: 'center', cellWidth: 14 },
+      13: { halign: 'right' },
+      14: { halign: 'right' },
+      15: { halign: 'center', cellWidth: 14 },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     didParseCell(data) {
