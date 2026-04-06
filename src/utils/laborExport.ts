@@ -54,9 +54,8 @@ function buildRows(summaries: EmployeeLaborSummary[]) {
 
       // Sub-rows per position (only hours breakdown)
       for (const pb of s.positionBreakdown) {
-        const posLabel = pb.position.charAt(0).toUpperCase() + pb.position.slice(1);
         rows.push([
-          '', `  > ${posLabel}`, '',
+          '', `  > ${formatPosition(pb.position)}`, '',
           pb.hsTrabajadas.toFixed(2), pb.hsRegulares.toFixed(2),
           '-', '-', '-', '-',
           pb.feriadosHs.toFixed(2), pb.hsFrancoTrabajado.toFixed(2),
