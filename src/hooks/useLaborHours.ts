@@ -68,6 +68,7 @@ export interface EmployeeLaborSummary {
   // Desglose por tipo de día
   hsRegulares: number;
   hsExtrasDiaHabil: number;
+  hsExtrasInhabil: number;
   feriadosHs: number;
   hsFrancoTrabajado: number;
 
