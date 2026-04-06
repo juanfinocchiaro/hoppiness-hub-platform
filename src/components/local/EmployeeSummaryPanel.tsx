@@ -36,6 +36,11 @@ import { createManualClockEntry } from '@/services/hrService';
 import { useLaborHours } from '@/hooks/useLaborHours';
 import { calculateShiftHours } from '@/lib/timeEngine';
 import { usePayrollReport } from '@/hooks/usePayrollReport';
+import {
+  useEmployeeConsumptionsByMonth,
+  useSalaryAdvancesByMonth,
+  aggregateByUser,
+} from '@/hooks/useEmployeeConsumptions';
 import { formatDuration } from '@/components/local/clockins/helpers';
 
 type PanelSection = 'hoy' | 'mes' | 'horarios' | 'liquidacion';
