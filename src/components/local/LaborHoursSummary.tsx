@@ -58,6 +58,7 @@ import {
   aggregateByUser,
 } from '@/hooks/useEmployeeConsumptions';
 import { EmployeeConsumptionModal } from '@/components/local/EmployeeConsumptionModal';
+import { EmployeeConsumptionListModal } from '@/components/local/EmployeeConsumptionListModal';
 
 interface LaborHoursSummaryProps {
   branchId: string;
