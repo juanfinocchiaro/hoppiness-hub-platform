@@ -325,6 +325,14 @@ export default function InlineScheduleEditor({
   // Handle cell change
   const handleCellChange = useCallback(
     (userId: string, userName: string, dateStr: string, value: ScheduleValue) => {
+      // Auto-fill position from employee's default if not specified
+      if (!value.position && !value.isDayOff && value.startTime) {
+        const defaultPos = teamDefaultPositions.get(userId);
+        if (defaultPos) {
+          value = { ...value, position: defaultPos };
+        }
+      }
+
       const key = changeKey(userId, dateStr);
       const originalSchedule = schedulesByUser.get(userId)?.get(dateStr) || null;
 
