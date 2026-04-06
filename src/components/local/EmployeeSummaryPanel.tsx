@@ -172,7 +172,7 @@ export function EmployeeSummaryPanel({
 
   // ── Mutation: quick close shift ──
   const closeMutation = useMutation({
-    mutationFn: async ({ entryId, time, date }: { entryId: string; time: string; date: string }) => {
+    mutationFn: async ({ entryId: _entryId, time, date }: { entryId: string; time: string; date: string }) => {
       if (!user) throw new Error('Sin sesión');
       const [y, mo, d] = date.split('-').map(Number);
       const [h, m] = time.split(':').map(Number);

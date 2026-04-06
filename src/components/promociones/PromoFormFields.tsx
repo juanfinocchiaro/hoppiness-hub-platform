@@ -170,7 +170,7 @@ export function PromoFormFields({
         </div>
         <div className="space-y-1.5">
           <Label>Descripción (visible a clientes)</Label>
-          <Input value={form.description || ''} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Ej: 30% OFF pagando en efectivo" />
+          <Input value={form.descripcion || ''} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: 30% OFF pagando en efectivo" />
         </div>
         <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap"><Calendar className="w-3.5 h-3.5" /><span className="font-medium text-foreground/80">{summary}</span></div>
       </div>

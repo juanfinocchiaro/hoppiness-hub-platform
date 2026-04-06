@@ -96,7 +96,7 @@ export function ChangeInvoiceModal({ open, onOpenChange, facturaOriginal, onConf
           <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
             <p className="text-muted-foreground">Factura original:</p>
             <p className="font-medium">
-              {facturaOriginal.tipo_comprobante} {pvStr}-{numStr}
+              {facturaOriginal.receipt_type} {pvStr}-{numStr}
             </p>
             <p className="text-xs text-muted-foreground">
               Se emitirá una Nota de Crédito por esta factura y una nueva factura con los datos

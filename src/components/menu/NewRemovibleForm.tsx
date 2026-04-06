@@ -146,7 +146,7 @@ export function NewRemovibleForm({
                   </SelectLabel>
                   {group.ingredientes.map((ing) => (
                     <SelectItem key={`${group.receta_id}-${ing.insumo_id}`} value={ing.insumo_id}>
-                      {ing.nombre}
+                      {ing.name}
                     </SelectItem>
                   ))}
                 </SelectGroup>

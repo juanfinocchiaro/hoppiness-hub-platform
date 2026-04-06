@@ -446,8 +446,8 @@ export function SalesAnalysisTab({ branchId, daysBack, onDaysBackChange }: Sales
                 </TableHeader>
                 <TableBody>
                   {(data?.por_medio_pago || []).map((r) => (
-                    <TableRow key={r.medio_pago}>
-                      <TableCell>{r.medio_pago}</TableCell>
+                    <TableRow key={r.payment_method}>
+                      <TableCell>{r.payment_method}</TableCell>
                       <TableCell className="text-right">{r.pedidos}</TableCell>
                       <TableCell className="text-right">{formatCurrency(r.ventas)}</TableCell>
                       <TableCell className="text-right">{formatPercent(r.porcentaje)}</TableCell>

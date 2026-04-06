@@ -315,18 +315,18 @@ export function ModifiersModal({ open, onOpenChange, item, onConfirm }: Modifier
       for (const e of cartExtras) {
         const freeQty = preconfigQtyMap.get(e.id) ?? 0;
         if (freeQty > 0) {
-          const inclQty = Math.min(e.cantidad, freeQty);
-          parts.push(`+${inclQty} ${e.nombre} (incl.)`);
-          const extraQty = e.cantidad - inclQty;
-          if (extraQty > 0) parts.push(`+${extraQty} ${e.nombre}`);
+          const inclQty = Math.min(e.quantity, freeQty);
+          parts.push(`+${inclQty} ${e.name} (incl.)`);
+          const extraQty = e.quantity - inclQty;
+          if (extraQty > 0) parts.push(`+${extraQty} ${e.name}`);
         } else {
-          parts.push(`+${e.cantidad} ${e.nombre}`);
+          parts.push(`+${e.quantity} ${e.name}`);
         }
       }
       notasParts.push(parts.join(', '));
     }
     if (cartRemovibles.length > 0) {
-      notasParts.push(cartRemovibles.map((r) => r.nombre).join(', '));
+      notasParts.push(cartRemovibles.map((r) => r.name).join(', '));
     }
 
     const displayName = isPromo ? `${nombre} (PROMO)` : nombre;

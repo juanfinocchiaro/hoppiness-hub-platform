@@ -61,7 +61,7 @@ export function PromoCard({ promo, isEditing, onEdit, onDuplicate, onDelete, onT
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <Switch checked={promo.activa} onCheckedChange={onToggle} onClick={(e) => e.stopPropagation()} />
+        <Switch checked={promo.is_active} onCheckedChange={onToggle} onClick={(e) => e.stopPropagation()} />
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicar"><Copy className="w-3.5 h-3.5" /></Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Eliminar"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
       </div>

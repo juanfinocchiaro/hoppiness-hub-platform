@@ -359,8 +359,8 @@ export function ConfigForm({
                     <Label className="text-xs">Dirección *</Label>
                     <Input
                       placeholder="Dirección de entrega"
-                      value={config.clienteDireccion}
-                      onChange={(e) => set({ clienteDireccion: e.target.value })}
+                      value={config.customerAddress}
+                      onChange={(e) => set({ customerAddress: e.target.value })}
                       className="h-9 mt-1"
                     />
                   </>
