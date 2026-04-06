@@ -82,11 +82,11 @@ export async function createPagoCanon(data: PagoCanonFormData, userId?: string) 
     .insert({
       canon_liquidacion_id: data.canon_liquidacion_id,
       branch_id: data.branch_id,
-      amount: data.monto,
-      payment_date: data.fecha_pago,
-      payment_method: data.medio_pago,
+      amount: data.amount,
+      payment_date: data.payment_date,
+      payment_method: data.payment_method,
       referencia: data.referencia,
-      notes: data.observaciones,
+      notes: data.notes,
       created_by: userId,
     })
     .select()
