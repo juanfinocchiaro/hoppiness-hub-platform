@@ -262,44 +262,31 @@ export function exportLaborExcel(
   monthLabel: string,
   configInfo: { dailyLimit: number; lateTolerance: number },
   filename?: string,
+  financialData?: FinancialDataMap,
 ) {
   const wb = XLSX.utils.book_new();
-
-  // Build data array
   const data: (string | number)[][] = [];
 
-  // Title row
   data.push([`Liquidación — ${monthLabel}`]);
   data.push([
     `Límite diario: ${configInfo.dailyLimit} hs | Tolerancia tardanza: ${configInfo.lateTolerance} min | Extras = exceso sobre ${configInfo.dailyLimit}hs/día`,
   ]);
-  data.push([]); // blank row
+  data.push([]);
 
-  // Stats row
   data.push([
-    'Empleados',
-    stats.totalEmpleados,
-    '',
-    'Total horas',
-    Number(stats.totalHsEquipo.toFixed(2)),
-    '',
-    'Horas extras',
-    Number(stats.totalExtrasMes.toFixed(1)),
-    '',
-    'Con presentismo',
-    stats.empleadosConPresentismo,
-    '',
-    'Sin presentismo',
-    stats.empleadosSinPresentismo,
+    'Empleados', stats.totalEmpleados, '',
+    'Total horas', Number(stats.totalHsEquipo.toFixed(2)), '',
+    'Horas extras', Number(stats.totalExtrasMes.toFixed(1)), '',
+    'Con presentismo', stats.empleadosConPresentismo, '',
+    'Sin presentismo', stats.empleadosSinPresentismo,
   ]);
-  data.push([]); // blank row
+  data.push([]);
 
-  // Headers
   data.push(HEADERS);
 
-  // Data rows
   for (let i = 0; i < summaries.length; i++) {
     const s = summaries[i];
+    const fin = financialData?.get(s.userId) || { consumos: 0, adelantos: 0 };
     data.push([
       i + 1,
       s.userName,
@@ -314,13 +301,14 @@ export function exportLaborExcel(
       s.hsFrancoTrabajado,
       s.hsExtrasDiaHabil,
       s.hsExtrasInhabil,
+      fin.consumos,
+      fin.adelantos,
       s.presentismo ? 'SI' : 'NO',
     ]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(data);
 
-  // Set column widths
   ws['!cols'] = [
     { wch: 4 },  // #
     { wch: 25 }, // Empleado
@@ -335,13 +323,14 @@ export function exportLaborExcel(
     { wch: 10 }, // Hs Franco
     { wch: 10 }, // Ext Háb
     { wch: 10 }, // Ext Inh
+    { wch: 12 }, // Consumos
+    { wch: 12 }, // Adelantos
     { wch: 10 }, // Presentismo
   ];
 
-  // Merge title
   ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Liquidación');
