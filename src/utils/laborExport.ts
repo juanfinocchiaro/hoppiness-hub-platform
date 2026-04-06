@@ -31,6 +31,8 @@ const HEADERS = [
   'Hs Franco',
   'Ext. Háb.',
   'Ext. Inh.',
+  'Consumos',
+  'Adelantos',
   'Present.',
 ];
 
