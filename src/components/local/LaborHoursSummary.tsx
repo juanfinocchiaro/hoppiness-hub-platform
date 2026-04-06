@@ -564,6 +564,9 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                       setExpandedUserId(expandedUserId === summary.userId ? null : summary.userId)
                     }
                     monthLabel={monthLabelCapitalized}
+                    branchTag={branchTag}
+                    monthOnly={monthOnly}
+                    yearStr={yearStr}
                   />
                 ))}
               </TableBody>
