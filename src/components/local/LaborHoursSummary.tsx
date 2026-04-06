@@ -372,12 +372,12 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
 
   const handleExportPDF = () => {
     const filename = `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_FULL`;
-    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo, filename);
+    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo, filename, financialMap);
   };
 
   const handleExportExcel = () => {
     const filename = `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_FULL`;
-    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo, filename);
+    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo, filename, financialMap);
   };
 
   if (loading) {
