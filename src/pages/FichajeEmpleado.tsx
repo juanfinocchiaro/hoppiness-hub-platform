@@ -71,6 +71,10 @@ export default function FichajeEmpleado() {
   const [entryType, setEntryType] = useState<'clock_in' | 'clock_out' | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [regulationStatus, setRegulationStatus] = useState<RegulationStatus | null>(null);
+  const [showManagerPinInput, setShowManagerPinInput] = useState(false);
+  const [managerPin, setManagerPin] = useState('');
+  const [managerOverride, setManagerOverride] = useState<{ name: string } | null>(null);
+  const [managerValidating, setManagerValidating] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
