@@ -1,50 +1,61 @@
 
 
-# Fix Faltas Injustificadas en Liquidación
+## Mostrar una fila por puesto en la tabla de Liquidación
 
-## Problema raíz
+### Idea
 
-En **Fichajes**, una "falta" se detecta automáticamente: si el empleado tiene horario programado y no fichó → "Ausente".
-
-En **Liquidación**, las faltas se cuentan desde `schedule_requests` (tabla de solicitudes). Si nadie creó un registro de ausencia para Micaela el 15/03, la falta no aparece.
-
-**Son dos motores distintos para el mismo concepto.** Liquidación debe usar la misma lógica que Fichajes.
-
-## Solución
-
-Calcular faltas injustificadas directamente en `useLaborHours.ts` cruzando **schedules con clock_entries**, sin depender de `schedule_requests`.
-
-### Lógica unificada para contar faltas
+En vez de una sola fila por empleado con los puestos listados en texto, cada empleado tendrá **N filas** (una por cada puesto que ocupó en el mes) y una **fila TOTAL** que consolida todo. Visualmente quedaría así:
 
 ```text
-Para cada día del mes hasta hoy:
-  - Obtener schedules del usuario en ese día
-  - Si tiene horario programado (is_day_off=false, start_time existe):
-    - Si NO hay ningún clock_in ese día en completedEntries ni paired:
-      - Si ese día tiene un absence aprobado en schedule_requests → falta JUSTIFICADA
-      - Si no → falta INJUSTIFICADA
+┌──────────────────────┬───────┬───────┬─────┬─────┬─────┬─────┬───────┬───────┬───────┬────────┬──────┐
+│ Empleado             │Hs Trab│Hs Reg │Vac  │F.Inj│F.Jus│Tard │Ferias │Franco │Ext.Háb│Ext.Inh │Pres. │
+├──────────────────────┼───────┼───────┼─────┼─────┼─────┼─────┼───────┼───────┼───────┼────────┼──────┤
+│ Agustín Gómez        │       │       │     │     │     │     │       │       │       │        │      │
+│  └ Sandwichero       │ 24.0  │ 24.0  │  -  │  -  │  -  │  -  │   -   │   -   │   -   │   -    │      │
+│  └ Cajero            │ 16.0  │ 16.0  │  -  │  -  │  -  │  -  │   -   │   -   │   -   │   -    │      │
+│  TOTAL               │ 40.0  │ 40.0  │  0  │  0  │  -  │ 0m  │   -   │   -   │   -   │   -    │ SI   │
+├──────────────────────┼───────┼───────┼─────┼─────┼─────┼─────┼───────┼───────┼───────┼────────┼──────┤
+│ María López          │       │       │     │     │     │     │       │       │       │        │      │
+│  └ Cajero            │ 35.0  │ 35.0  │  -  │  -  │  -  │  -  │   -   │   -   │   -   │   -    │      │
+│  TOTAL               │ 35.0  │ 35.0  │  0  │  0  │  -  │ 0m  │   -   │   -   │   -   │   -    │ SI   │
+└──────────────────────┴───────┴───────┴─────┴─────┴─────┴─────┴───────┴───────┴───────┴────────┴──────┘
 ```
 
-Esto replica exactamente lo que Fichajes muestra como "Ausente".
+### Cambios
 
-## Archivo a modificar
+**1. `src/hooks/useLaborHours.ts`**
+- Agregar `hoursByPosition: Record<string, number>` al tipo `EmployeeLaborSummary`
+- En el loop diario, cruzar cada día con `positionByDate` para acumular horas por posición
+- También desglosar las sub-categorías por posición: regulares, extras hábil, extras inhábil, feriados, franco (nuevo tipo `PositionBreakdown`)
 
-### `src/hooks/useLaborHours.ts`
+**2. `src/components/local/LaborHoursSummary.tsx`**
+- Cambiar `EmployeeRow` para renderizar:
+  - Una fila "header" con avatar + nombre + rol de sistema (sin datos numéricos, o solo como agrupador)
+  - Una sub-fila por cada posición con indent visual (`pl-8`), mostrando las horas desglosadas de ese puesto
+  - Una fila "TOTAL" con fondo destacado que suma todo y muestra presentismo, faltas, tardanza, vacaciones (datos que son globales del empleado)
+- Las filas de posición y total se muestran siempre (no requieren expandir)
+- El expand/collapse sigue mostrando el detalle de fichajes día a día
 
-**Reemplazar** el cálculo actual de `faltasInjustificadas` y `faltasJustificadas` (líneas 402-414) que solo cuenta registros de `schedule_requests`, por:
+**3. `src/utils/laborExport.ts` y `laborEmployeeExport.ts`**
+- Replicar la misma estructura en PDF/Excel: sub-filas por posición + fila total por empleado
 
-1. Iterar cada fecha del mes (hasta hoy, no fechas futuras)
-2. Verificar si el usuario tiene schedule con `is_day_off=false` y `start_time`
-3. Verificar si existe al menos un clock_in en `paired` para esa fecha
-4. Si no fichó → verificar si hay absence aprobado en `schedule_requests`
-   - Sí → `faltasJustificadas++` y sumar horas a `hsLicencia`
-   - No → `faltasInjustificadas++`
-5. Excluir días con `work_position='vacaciones'` o `'cumple'` (no son faltas)
-6. Excluir feriados (no son faltas)
+### Detalle técnico del desglose por posición
 
-### Impacto en otros campos
+```typescript
+// Nuevo tipo
+interface PositionBreakdown {
+  position: string;
+  hsTrabajadas: number;
+  hsRegulares: number;
+  hsExtrasDiaHabil: number;
+  hsExtrasInhabil: number;
+  feriadosHs: number;
+  hsFrancoTrabajado: number;
+}
 
-- **Presentismo** se recalcula automáticamente (ya usa `faltasInjustificadas`)
-- **Falta Justificada** (hsLicencia) también se beneficia porque ahora detecta el día aunque no haya registro en `schedule_requests`
-- No se tocan las columnas de la tabla UI (ya están correctas del cambio anterior)
+// En EmployeeLaborSummary
+positionBreakdown: PositionBreakdown[];
+```
+
+En el loop diario existente, donde ya se clasifica cada día, se agrega la acumulación por posición usando el `work_position` del schedule de ese día. Los días sin posición asignada se agrupan bajo "Sin puesto".
 
