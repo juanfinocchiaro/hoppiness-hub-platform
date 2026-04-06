@@ -147,7 +147,21 @@ function EmployeeCard({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => {
                   const empName = summary.userName.toUpperCase().replace(/\s+/g, '_');
-                  const empFin = { consumos, adelantos };
+                  const empFin: EmployeeFinancialData = {
+                    consumos,
+                    adelantos,
+                    consumoItems: userConsumptions.map((c) => ({
+                      date: c.consumption_date,
+                      description: c.description || '-',
+                      amount: Number(c.amount),
+                    })),
+                    adelantoItems: userAdvances.map((a) => ({
+                      date: format(new Date(a.created_at), 'yyyy-MM-dd'),
+                      reason: a.reason || '-',
+                      amount: Number(a.amount),
+                      status: a.status,
+                    })),
+                  };
                   exportEmployeePDF(summary, monthLabel, `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_${empName}`, empFin);
                 }}>
                   <FileText className="h-4 w-4 mr-2" />
@@ -155,7 +169,23 @@ function EmployeeCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
                   const empName = summary.userName.toUpperCase().replace(/\s+/g, '_');
-                  exportEmployeeExcel(summary, monthLabel, `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_${empName}`);
+                  const empFin: EmployeeFinancialData = {
+                    consumos,
+                    adelantos,
+                    consumoItems: userConsumptions.map((c) => ({
+                      date: c.consumption_date,
+                      description: c.description || '-',
+                      amount: Number(c.amount),
+                    })),
+                    adelantoItems: userAdvances.map((a) => ({
+                      date: format(new Date(a.created_at), 'yyyy-MM-dd'),
+                      reason: a.reason || '-',
+                      amount: Number(a.amount),
+                      status: a.status,
+                    })),
+                  };
+                  exportEmployeeExcel(summary, monthLabel, `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_${empName}`, empFin);
+                }}>
                 }}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Excel individual
