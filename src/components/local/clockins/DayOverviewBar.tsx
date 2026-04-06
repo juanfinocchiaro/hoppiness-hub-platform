@@ -49,13 +49,15 @@ export function DayOverviewBar({ rows, isToday }: Props) {
 
     const unclosedCount = mainRows.filter((r) => r.status === 'unclosed').length;
     const absentCount = mainRows.filter((r) => r.status === 'absent').length;
-    const offCount = mainRows.filter((r) => ['day_off', 'leave'].includes(r.status)).length;
+    const offCount = mainRows.filter((r) => r.status === 'day_off').length;
+    const vacationCount = mainRows.filter((r) => r.status === 'vacation').length;
+    const leaveCount = mainRows.filter((r) => r.status === 'leave').length;
 
     return {
       workShifts, covered, allCovered,
       totalMinutes, overtimeMinutes,
       lateCount, lateTotalMin,
-      unclosedCount, absentCount, offCount,
+      unclosedCount, absentCount, offCount, vacationCount, leaveCount,
     };
   }, [rows]);
 
@@ -115,10 +117,21 @@ export function DayOverviewBar({ rows, isToday }: Props) {
         </div>
       )}
 
+      {/* Vacation */}
+      {stats.vacationCount > 0 && (
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium text-cyan-700 bg-cyan-50 border-cyan-200 dark:text-cyan-300 dark:bg-cyan-950/30 dark:border-cyan-800">
+          <span>🏖️ {stats.vacationCount} vacaciones</span>
+        </div>
+      )}
+
       {/* Off/Leave */}
-      {stats.offCount > 0 && (
+      {(stats.offCount > 0 || stats.leaveCount > 0) && (
         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium text-muted-foreground bg-muted/50 border-border">
-          <span>{stats.offCount} franco/licencia</span>
+          <span>
+            {stats.offCount > 0 && `${stats.offCount} franco${stats.offCount !== 1 ? 's' : ''}`}
+            {stats.offCount > 0 && stats.leaveCount > 0 && ' · '}
+            {stats.leaveCount > 0 && `${stats.leaveCount} licencia`}
+          </span>
         </div>
       )}
 

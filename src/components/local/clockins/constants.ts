@@ -8,6 +8,7 @@ export const STATUS_LABEL: Record<RosterRowStatus, string> = {
   pending: 'Pendiente',
   completed: 'Completado',
   day_off: 'Franco',
+  vacation: 'Vacaciones',
   leave: 'Licencia',
   no_schedule: 'Sin turno',
 };
@@ -20,6 +21,7 @@ export const STATUS_COLOR: Record<RosterRowStatus, string> = {
   pending: 'text-sky-600',
   completed: 'text-muted-foreground',
   day_off: 'text-muted-foreground',
+  vacation: 'text-cyan-600',
   leave: 'text-purple-600',
   no_schedule: 'text-orange-600',
 };
@@ -32,6 +34,7 @@ export const DOT_COLOR: Record<RosterRowStatus, string> = {
   pending: 'bg-sky-400',
   completed: 'bg-gray-400',
   day_off: 'bg-gray-300',
+  vacation: 'bg-cyan-400',
   leave: 'bg-purple-400',
   no_schedule: 'bg-orange-300',
 };
@@ -51,8 +54,9 @@ export const STATUS_ORDER: Record<RosterRowStatus, number> = {
   pending: 4,
   completed: 5,
   day_off: 6,
-  leave: 7,
-  no_schedule: 8,
+  vacation: 7,
+  leave: 8,
+  no_schedule: 9,
 };
 
 export interface WindowConfig {

@@ -65,14 +65,15 @@ export interface EmployeeLaborSummary {
   hsTrabajadasMes: number;
   diasTrabajados: number;
 
-  // Desglose francos y feriados
+  // Desglose por tipo de día
+  hsRegulares: number;
+  hsExtrasDiaHabil: number;
   feriadosHs: number;
   hsFrancoTrabajado: number;
-  hsFrancoFeriado: number; // kept for backward compat = feriadosHs + hsFrancoTrabajado
 
-  // Extras
+  // Backward compat fields
+  hsFrancoFeriado: number;
   hsHabiles: number;
-  hsExtrasDiaHabil: number;
   hsExtrasFrancoFeriado: number;
   totalExtras: number;
 
@@ -85,6 +86,9 @@ export interface EmployeeLaborSummary {
   faltasJustificadas: number;
   tardanzaAcumuladaMin: number;
   presentismo: boolean;
+
+  // Vacaciones (días)
+  diasVacaciones: number;
 
   // Horas de licencia (separadas)
   hsLicencia: number;
@@ -272,7 +276,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     queryKey: ['labor-schedules-full', branchId, year, month],
     queryFn: async () => {
       const { data, error } = await fromUntyped('employee_schedules')
-        .select('user_id, schedule_date, is_day_off, start_time, end_time')
+        .select('user_id, schedule_date, is_day_off, start_time, end_time, work_position')
         .eq('branch_id', branchId)
         .gte('schedule_date', startStr)
         .lte('schedule_date', endStr);
@@ -311,55 +315,74 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     const userData = usersData.find((u) => u.user_id === userId);
     const userEntries = rawEntries.filter((e) => e.user_id === userId);
 
-    // Francos programados del empleado
+    // Build schedule maps for this user
+    const userSchedules = schedules.filter((s: any) => s.user_id === userId);
     const userDaysOff = new Set<string>(
-      schedules.filter((s: any) => s.user_id === userId && s.is_day_off).map((s: any) => s.schedule_date as string),
+      userSchedules.filter((s: any) => s.is_day_off).map((s: any) => s.schedule_date as string),
     );
+    // Map date -> work_position for vacation detection
+    const positionByDate = new Map<string, string>();
+    for (const s of userSchedules) {
+      if ((s as any).work_position) {
+        positionByDate.set((s as any).schedule_date, (s as any).work_position);
+      }
+    }
+
+    // Count vacation days from schedules (work_position = 'vacaciones')
+    const diasVacaciones = userSchedules.filter(
+      (s: any) => s.is_day_off && (s as any).work_position === 'vacaciones',
+    ).length;
 
     const paired = pairClockEntries(userEntries, holidaySet, userDaysOff);
 
     const unpairedEntries = paired.filter((p) => p.checkOut === null);
     const completedEntries = paired.filter((p) => p.checkOut !== null);
 
-    // Horas totales del mes
-    const hsTrabajadasMes = completedEntries.reduce((sum, e) => sum + e.hoursDecimal, 0);
-
     // Días únicos trabajados
     const uniqueDays = new Set(completedEntries.map((e) => e.date)).size;
 
-    // Horas en feriados
-    const feriadosHs = completedEntries
-      .filter((e) => e.isHoliday)
-      .reduce((sum, e) => sum + e.hoursDecimal, 0);
-
-    // Horas en francos trabajados (sin feriado)
-    const hsFrancoTrabajado = completedEntries
-      .filter((e) => e.isDayOff && !e.isHoliday)
-      .reduce((sum, e) => sum + e.hoursDecimal, 0);
-
-    // Combined franco + feriado (backward compat)
-    const hsFrancoFeriado = completedEntries
-      .filter((e) => e.isHoliday || e.isDayOff)
-      .reduce((sum, e) => sum + e.hoursDecimal, 0);
-
-    // Agrupar horas por día para calcular excesos diarios
+    // Agrupar horas por día para clasificación
     const hoursByDay: Record<string, number> = {};
     for (const entry of completedEntries) {
       hoursByDay[entry.date] = (hoursByDay[entry.date] || 0) + entry.hoursDecimal;
     }
 
-    const alertasDiarias = Object.entries(hoursByDay)
-      .filter(([_, hours]) => hours > config.daily_hours_limit)
-      .map(([date, hours]) => ({
-        date,
-        horasExtra: hours - config.daily_hours_limit,
-      }));
+    // Classify hours day by day (unified with daily view)
+    let hsRegulares = 0;
+    let hsExtrasDiaHabil = 0;
+    let feriadosHs = 0;
+    let hsFrancoTrabajado = 0;
+    const alertasDiarias: { date: string; horasExtra: number }[] = [];
 
-    // Extras mensuales:
+    for (const [date, horasDia] of Object.entries(hoursByDay)) {
+      const isHoliday = holidaySet.has(date);
+      const isDayOff = userDaysOff.has(date);
+      const position = positionByDate.get(date);
+
+      if (position === 'vacaciones') {
+        // Vacation day with work — count as regular (unusual but possible)
+        hsRegulares += Math.min(horasDia, config.daily_hours_limit);
+        hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+      } else if (isHoliday) {
+        feriadosHs += horasDia;
+      } else if (isDayOff) {
+        hsFrancoTrabajado += horasDia;
+      } else {
+        // Regular business day
+        hsRegulares += Math.min(horasDia, config.daily_hours_limit);
+        hsExtrasDiaHabil += Math.max(0, horasDia - config.daily_hours_limit);
+      }
+
+      if (horasDia > config.daily_hours_limit) {
+        alertasDiarias.push({ date, horasExtra: horasDia - config.daily_hours_limit });
+      }
+    }
+
+    const hsTrabajadasMes = hsRegulares + hsExtrasDiaHabil + feriadosHs + hsFrancoTrabajado;
+    const hsFrancoFeriado = feriadosHs + hsFrancoTrabajado;
     const hsExtrasFrancoFeriado = hsFrancoFeriado;
-    const hsHabiles = Math.max(0, hsTrabajadasMes - hsFrancoFeriado);
-    const hsExtrasDiaHabil = Math.max(0, hsHabiles - config.monthly_hours_limit);
-    const totalExtras = hsExtrasFrancoFeriado + hsExtrasDiaHabil;
+    const hsHabiles = hsRegulares + hsExtrasDiaHabil;
+    const totalExtras = hsExtrasDiaHabil + hsExtrasFrancoFeriado;
 
     // Presentismo: faltas injustificadas + tardanza acumulativa
     const userAbsences = absences.filter((a: any) => a.user_id === userId);
@@ -447,6 +470,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       hsTrabajadasMes: Number(hsTrabajadasMes.toFixed(2)),
       diasTrabajados: uniqueDays,
 
+      hsRegulares: Number(hsRegulares.toFixed(2)),
       feriadosHs: Number(feriadosHs.toFixed(2)),
       hsFrancoTrabajado: Number(hsFrancoTrabajado.toFixed(2)),
       hsFrancoFeriado: Number(hsFrancoFeriado.toFixed(2)),
@@ -464,6 +488,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
       tardanzaAcumuladaMin,
       presentismo,
 
+      diasVacaciones,
       hsLicencia: Number(hsLicencia.toFixed(2)),
 
       entries: paired,
@@ -511,46 +536,32 @@ export function formatHoursDecimal(hours: number): string {
 export function generateLaborCSV(summaries: EmployeeLaborSummary[], _monthLabel: string): string {
   const headers = [
     'QTY',
-    'LEGAJO',
     'RECURSO',
-    'CUIL',
     'PUESTO',
-    'INGRESO',
-    'BAJA',
-    'CONTRATO',
-    'JORNADA',
     'HS TRABAJADAS',
-    'HS LICENCIA',
+    'HS REGULARES',
+    'HS EXTRAS',
+    'HS FERIADO',
+    'HS FRANCO',
+    'LICENCIA (días)',
     'FALTAS INJUSTIFICADAS',
-    'LICENCIA ENFERMEDAD',
     'TARDANZA ACUM (min)',
     'PRESENTISMO',
-    'FERIADOS (hs)',
-    'HS FRANCO TRABAJADO',
-    'HS EXTRAS DÍA HÁBIL',
-    'HS EXTRAS FRANCO/FERIADO',
   ];
 
   const rows = summaries.map((s, idx) => [
     (idx + 1).toString(),
-    '',
     s.userName,
-    s.cuil || '-',
     s.localRole?.toUpperCase() || '-',
-    s.hireDate || '-',
-    '-',
-    s.contractType,
-    'Por hora',
     s.hsTrabajadasMes.toFixed(2),
-    s.hsLicencia.toFixed(2),
-    s.faltasInjustificadas.toString(),
-    s.faltasJustificadas.toString(),
-    s.tardanzaAcumuladaMin.toString(),
-    s.presentismo ? 'SI' : 'NO',
+    s.hsRegulares.toFixed(2),
+    s.hsExtrasDiaHabil.toFixed(2),
     s.feriadosHs.toFixed(2),
     s.hsFrancoTrabajado.toFixed(2),
-    s.hsExtrasDiaHabil.toFixed(2),
-    s.hsExtrasFrancoFeriado.toFixed(2),
+    s.diasVacaciones.toString(),
+    s.faltasInjustificadas.toString(),
+    s.tardanzaAcumuladaMin.toString(),
+    s.presentismo ? 'SI' : 'NO',
   ]);
 
   const allRows = [headers, ...rows];
