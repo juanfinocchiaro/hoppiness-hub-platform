@@ -51,6 +51,16 @@ export interface DayEntry {
   earlyLeaveAuthorized?: boolean;
 }
 
+export interface PositionBreakdown {
+  position: string;
+  hsTrabajadas: number;
+  hsRegulares: number;
+  hsExtrasDiaHabil: number;
+  hsExtrasInhabil: number;
+  feriadosHs: number;
+  hsFrancoTrabajado: number;
+}
+
 export interface EmployeeLaborSummary {
   userId: string;
   userName: string;
@@ -96,6 +106,9 @@ export interface EmployeeLaborSummary {
 
   // Per-day lateness breakdown
   dailyLateness: { date: string; minutes: number; scheduledStart: string }[];
+
+  // Desglose por puesto operativo
+  positionBreakdown: PositionBreakdown[];
 
   // Control
   entries: DayEntry[];
