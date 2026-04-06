@@ -80,6 +80,7 @@ export async function fetchLaborUsersData(branchId: string, userIds: string[]) {
       full_name: p.full_name,
       avatar_url: p.avatar_url,
       local_role: role ? (role.roles as any).key : null,
+      default_position: (role as any)?.default_position || null,
       cuil: empData?.cuil || null,
       hire_date: empData?.hire_date || null,
       registered_hours: empData?.registered_hours ?? null,
