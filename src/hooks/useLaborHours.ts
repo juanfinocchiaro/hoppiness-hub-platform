@@ -296,7 +296,7 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     queryKey: ['labor-schedules-full', branchId, year, month],
     queryFn: async () => {
       const { data, error } = await fromUntyped('employee_schedules')
-        .select('user_id, schedule_date, is_day_off, start_time, end_time, work_position')
+        .select('user_id, schedule_date, is_day_off, start_time, end_time, start_time_2, end_time_2, work_position')
         .eq('branch_id', branchId)
         .gte('schedule_date', startStr)
         .lte('schedule_date', endStr);
