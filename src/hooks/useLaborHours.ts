@@ -398,20 +398,52 @@ export function useLaborHours({ branchId, year, month }: UseLaborHoursOptions) {
     const hsHabiles = hsRegulares + hsExtrasDiaHabil + hsExtrasInhabil;
     const totalExtras = hsExtrasDiaHabil + hsExtrasInhabil + hsExtrasFrancoFeriado;
 
-    // Presentismo: faltas injustificadas + tardanza acumulativa
+    // Presentismo: faltas calculadas cruzando schedules con clock_entries
+    // (misma lógica que Fichajes: si tiene horario y no fichó → ausente)
     const userAbsences = absences.filter((a: any) => a.user_id === userId);
-    const faltasInjustificadas = userAbsences.filter(
-      (a: any) =>
-        a.request_type === 'unjustified_absence' ||
-        (a.request_type === 'absence' && a.status !== 'approved'),
-    ).length;
-    const faltasJustificadas = userAbsences.filter(
-      (a: any) =>
-        a.request_type === 'justified_absence' ||
-        a.request_type === 'sick_leave' ||
-        a.request_type === 'vacation' ||
-        (a.request_type === 'absence' && a.status === 'approved'),
-    ).length;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const datesWithClockIn = new Set(paired.map((p) => p.date));
+
+    let faltasInjustificadas = 0;
+    let faltasJustificadas = 0;
+
+    // Iterate each day of the month up to today
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = format(new Date(year, month, d), 'yyyy-MM-dd');
+      if (dateStr > today) break; // don't count future days
+      if (dateStr > endStr) break;
+
+      // Skip holidays
+      if (holidaySet.has(dateStr)) continue;
+
+      // Find scheduled work for this user on this date
+      const dayScheds = userSchedules.filter(
+        (s: any) => s.schedule_date === dateStr && !s.is_day_off && s.start_time,
+      );
+      if (dayScheds.length === 0) continue;
+
+      // Skip vacations and birthdays
+      const pos = positionByDate.get(dateStr);
+      if (pos === 'vacaciones' || pos === 'cumple') continue;
+
+      // Check if employee clocked in
+      if (!datesWithClockIn.has(dateStr)) {
+        // No clock-in → check if there's an approved absence
+        const hasApprovedAbsence = userAbsences.some(
+          (a: any) =>
+            a.request_date === dateStr &&
+            (a.status === 'approved' ||
+              a.request_type === 'sick_leave' ||
+              a.request_type === 'justified_absence'),
+        );
+        if (hasApprovedAbsence) {
+          faltasJustificadas++;
+        } else {
+          faltasInjustificadas++;
+        }
+      }
+    }
 
     // Calculate cumulative lateness (tardanza acumulativa)
     // Only count on working days (skip francos, vacaciones, holidays)
