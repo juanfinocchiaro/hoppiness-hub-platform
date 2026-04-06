@@ -337,12 +337,17 @@ function EmployeeCard({
 export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [consumptionTarget, setConsumptionTarget] = useState<{ userId: string; userName: string } | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const { summaries, stats, config, loading } = useLaborHours({ branchId, year, month });
   const { data: workPositions = [] } = useWorkPositions();
   const positionsList = workPositions.map((p) => ({ key: p.key, label: p.label }));
+
+  const { data: consumptions = [] } = useEmployeeConsumptionsByMonth(branchId, year, month);
+  const { data: advances = [] } = useSalaryAdvancesByMonth(branchId, year, month);
+  const financialMap = aggregateByUser(consumptions, advances);
 
   const { data: branchName = '' } = useQuery({
     queryKey: ['branch-name', branchId],
