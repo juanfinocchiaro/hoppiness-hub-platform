@@ -296,7 +296,7 @@ export default function MenuCartaPage() {
 
   const handleCreate = async () => {
     if (!newNombre.trim()) return;
-    await create.mutateAsync({ name: newNombre.trim(), orden: (categorias?.length || 0) + 1 });
+    await create.mutateAsync({ name: newNombre.trim(), sort_order: (categorias?.length || 0) + 1 });
     setNewNombre('');
     setShowNew(false);
   };
