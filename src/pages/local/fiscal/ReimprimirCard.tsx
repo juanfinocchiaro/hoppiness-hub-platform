@@ -73,10 +73,10 @@ export function ReimprimirCard({
         numero: `${String(factura.point_of_sale).padStart(5, '0')}-${String(factura.receipt_number).padStart(8, '0')}`,
         fecha: format(new Date(factura.created_at), 'dd/MM/yyyy'),
         emisor: {
-          business_name: branchData?.business_name || '',
+          business_name: branchData?.razon_social || '',
           cuit: branchData?.cuit || '',
           iibb: branchData?.iibb || '',
-          tax_status: branchData?.tax_status || 'Responsable Inscripto',
+          tax_status: branchData?.condicion_iva || 'Responsable Inscripto',
           inicio_actividades: branchData?.inicio_actividades || '',
           direccion_fiscal: branchData?.direccion_fiscal || '',
           punto_venta: factura.point_of_sale,
