@@ -283,13 +283,14 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
   const monthLabel = format(currentDate, 'MMMM yyyy', { locale: es });
   const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
 
-  const handleExportCSV = () => {
-    const csv = generateLaborCSV(summaries, monthLabelCapitalized);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `liquidacion-${format(currentDate, 'yyyy-MM')}.csv`;
-    link.click();
+  const configInfo = { dailyLimit: config.daily_hours_limit, lateTolerance: config.late_tolerance_total_min };
+
+  const handleExportPDF = () => {
+    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo);
+  };
+
+  const handleExportExcel = () => {
+    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo);
   };
 
   if (loading) {
@@ -337,10 +338,25 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
           </Button>
         </div>
 
-        <Button variant="outline" onClick={handleExportCSV} disabled={summaries.length === 0}>
-          <Download className="h-4 w-4 mr-2" />
-          Exportar Liquidación
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" disabled={summaries.length === 0}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Liquidación
+              <ChevronDown className="h-3 w-3 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Exportar como PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportExcel}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Exportar como Excel
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stats Cards */}
