@@ -1,74 +1,97 @@
 
+## Bug confirmado: el fichaje manual sí se guarda, pero queda con `work_date` equivocado y por eso “no aparece”
 
-## Bug: `useLaborHours.ts` tiene la misma lógica vieja de `group.find()` que ya corregimos en `timeEngine.ts`
+### Qué está pasando
+No es un problema de guardado ni de refresco de UI. El registro se inserta, pero después las pantallas de Fichajes lo buscan por `work_date`, y ese campo se está calculando mal en algunos horarios nocturnos.
 
 ### Causa raíz confirmada
+En `src/services/hrService.ts`, `createManualClockEntry()` hace esto:
 
-Leonardo tiene 4 fichajes el 29/03, todos con el mismo `schedule_id` (turno cortado):
-- clock_in 14:53 → clock_out 19:03 (turno 12:00-15:00)
-- clock_in 23:56 → clock_out 03:55 (turno 21:00-02:00)
-
-En **`src/hooks/useLaborHours.ts` líneas 161-163**, la función `pairClockEntries` local usa:
-```typescript
-const clockIn = group.find(e => e.entry_type === 'clock_in');   // solo el primero
-const clockOut = group.find(e => e.entry_type === 'clock_out'); // solo el primero
+```ts
+const ts = new Date(params.timestamp);
+const dateStr = ts.toISOString().slice(0, 10);
 ```
 
-Esto genera **1 par** en vez de **2 pares**. Es exactamente el mismo bug que corregimos en `timeEngine.ts` pero en una copia diferente de la función de emparejamiento.
+Eso toma la fecha en UTC, no la fecha operativa/local.
 
-La vista de **Fichajes** usa `timeEngine.ts` (ya corregido) → muestra los 2 turnos.
-La vista de **Liquidación** usa `useLaborHours.ts` (sin corregir) → muestra solo 1 turno.
+Ejemplo real:
+- Encargado carga `28/03/2026 21:00`
+- En Argentina eso termina como `2026-03-29T00:00:00.000Z`
+- `toISOString().slice(0, 10)` devuelve `2026-03-29`
+- Entonces:
+  - busca horario en `employee_schedules.schedule_date = 2026-03-29`
+  - guarda `clock_entries.work_date = 2026-03-29`
 
-### Solución
+Pero la UI del día 28 consulta:
+- `fetchClockEntriesRaw(...).eq('work_date', '2026-03-28')`
+- `useFichajeDetalle()` también agrupa por `work_date`
 
-**Archivo: `src/hooks/useLaborHours.ts`** — Reemplazar el bloque `for (const [, group] of bySchedule)` (líneas 161-183) con emparejamiento secuencial:
+Resultado: el fichaje “se agregó”, pero queda colgado en el día siguiente y parece que no se tomó.
 
-```typescript
-for (const [, group] of bySchedule) {
-  let pendingIn: ClockEntryRaw | null = null;
-  for (const e of group) {
-    if (e.entry_type === 'clock_in') {
-      if (pendingIn) {
-        // clock_in huérfano
-        const date = pendingIn.work_date ?? format(new Date(pendingIn.created_at), 'yyyy-MM-dd');
-        paired.push({
-          date, checkIn: pendingIn.created_at, checkOut: null,
-          minutesWorked: 0, hoursDecimal: 0,
-          isHoliday: holidays.has(date), isDayOff: scheduledDaysOff.has(date),
-          earlyLeaveAuthorized: false,
-        });
-      }
-      pendingIn = e;
-    } else if (e.entry_type === 'clock_out' && pendingIn) {
-      const checkInTime = new Date(pendingIn.created_at);
-      const date = pendingIn.work_date ?? format(checkInTime, 'yyyy-MM-dd');
-      const minutes = differenceInMinutes(new Date(e.created_at), checkInTime);
-      paired.push({
-        date, checkIn: pendingIn.created_at, checkOut: e.created_at,
-        minutesWorked: Math.max(0, minutes), hoursDecimal: Math.max(0, minutes) / 60,
-        isHoliday: holidays.has(date), isDayOff: scheduledDaysOff.has(date),
-        earlyLeaveAuthorized: e.early_leave_authorized || false,
-      });
-      pendingIn = null;
-    }
-  }
-  if (pendingIn) {
-    const date = pendingIn.work_date ?? format(new Date(pendingIn.created_at), 'yyyy-MM-dd');
-    paired.push({
-      date, checkIn: pendingIn.created_at, checkOut: null,
-      minutesWorked: 0, hoursDecimal: 0,
-      isHoliday: holidays.has(date), isDayOff: scheduledDaysOff.has(date),
-      earlyLeaveAuthorized: false,
-    });
-  }
-}
-```
+### Por qué es grave
+Esto puede afectar a cualquier fichaje manual cargado en horarios donde la conversión a UTC cambia de día, especialmente:
+- cargas manuales nocturnas
+- turnos de cierre
+- entradas/salidas agregadas desde:
+  - `ClockInsPage`
+  - `RosterExpandedRow`
+  - `EmployeeSummaryPanel`
 
-### Impacto
-- Corrige Leonardo y cualquier otro empleado con turno cortado en liquidación
-- No afecta turnos simples (siguen generando 1 par)
-- Un solo archivo a modificar
+Además del ocultamiento visual, también puede romper:
+- vinculación con `schedule_id`
+- liquidación
+- cálculo de tardanza/ausencia
+- emparejamiento de turnos cortados
+
+### Implementación propuesta
+
+#### 1. Hacer explícito el `workDate` en la creación manual
+Modificar `createManualClockEntry()` para aceptar un `workDate?: string`.
+
+La regla será:
+- si llega `workDate`, usarlo como fuente de verdad
+- si no llega, usar un fallback local seguro (no UTC)
+
+#### 2. Dejar de usar `toISOString().slice(0, 10)` para decidir el día laboral
+En `createManualClockEntry()`:
+- usar `params.workDate` para:
+  - lookup de `employee_schedules.schedule_date`
+  - valor final de `clock_entries.work_date`
+- mantener la lógica existente de `clock_out` heredando del abierto solo como fallback cuando no venga `workDate`
+
+#### 3. Pasar `workDate` desde todos los formularios/manual actions
+Actualizar estos llamados para enviar la fecha operativa que el usuario eligió:
+
+- `src/components/local/clockins/AddManualEntryForm.tsx`
+- `src/components/local/clockins/RosterExpandedRow.tsx`
+- `src/pages/local/ClockInsPage.tsx`
+- `src/components/local/EmployeeSummaryPanel.tsx`
+
+La idea:
+- `timestamp` sigue representando el instante real
+- `workDate` representa el día operativo donde debe mostrarse y liquidarse
+
+#### 4. Mantener intacta la regla 00:00–04:59
+La lógica actual de “madrugada pertenece al día anterior” ya está en la UI y está bien encaminada.
+No hay que romper eso; solo evitar que el service vuelva a recalcular el día usando UTC.
 
 ### Archivos a modificar
-- `src/hooks/useLaborHours.ts` — líneas 161-183
+- `src/services/hrService.ts`
+- `src/components/local/clockins/AddManualEntryForm.tsx`
+- `src/components/local/clockins/RosterExpandedRow.tsx`
+- `src/pages/local/ClockInsPage.tsx`
+- `src/components/local/EmployeeSummaryPanel.tsx`
 
+### Resultado esperado
+Después del cambio:
+- si agregás un fichaje manual para el `28/03`, se verá en el `28/03`
+- tomará el horario correcto de ese día
+- se liquidará en el día correcto
+- no quedará corrido al 29 por timezone
+
+### Validaciones clave
+1. Cargar manual `28/03 21:00` y verificar que aparezca en Fichajes del 28
+2. Cargar manual `28/03 00:55` y verificar que quede en jornada operativa del 28
+3. Confirmar que el `schedule_id` se vincule con el horario correcto
+4. Confirmar que Liquidaciones refleje ese fichaje en el mismo día
+5. Revisar otro perfil con cierre nocturno para evitar que el bug siga ocurriendo en más empleados
