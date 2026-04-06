@@ -4,7 +4,7 @@
  * Resumen de horas trabajadas con cards individuales por empleado.
  * Cada card muestra mini-tabla de puestos + métricas globales como badges.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
