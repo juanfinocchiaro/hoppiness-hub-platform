@@ -280,14 +280,14 @@ export function ConfigForm({
                 <Input
                   placeholder="Nombre del cliente"
                   value={
-                    config.clienteNombre?.startsWith('Llamador #')
+                    config.customerName?.startsWith('Llamador #')
                       ? ''
-                      : (config.clienteNombre ?? '')
+                      : (config.customerName ?? '')
                   }
                   onChange={(e) => {
                     const v = e.target.value;
                     set({
-                      clienteNombre:
+                      customerName:
                         v || (config.numeroLlamador ? `Llamador #${config.numeroLlamador}` : ''),
                     });
                   }}
