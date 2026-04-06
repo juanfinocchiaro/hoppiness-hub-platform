@@ -14,7 +14,7 @@ export async function fetchCategoriasInsumo() {
 }
 
 export async function createCategoriaInsumo(payload: CategoriaInsumoFormData) {
-  const dbPayload = { ...payload, name: payload.nombre } as any;
+  const dbPayload = { ...payload } as any;
   delete dbPayload.nombre;
   if (dbPayload.orden !== undefined) { dbPayload.sort_order = dbPayload.orden; delete dbPayload.orden; }
   if (dbPayload.tipo !== undefined) { dbPayload.type = dbPayload.tipo; delete dbPayload.tipo; }
