@@ -322,7 +322,7 @@ export function ConfigForm({
                     type="button"
                     onClick={() => {
                       set({
-                        clienteNombre: profileSuggestion.full_name,
+                        customerName: profileSuggestion.full_name,
                         clienteUserId: profileSuggestion.id,
                       });
                       setProfileSuggestion(null);
