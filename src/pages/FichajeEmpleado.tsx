@@ -371,6 +371,68 @@ export default function FichajeEmpleado() {
               <Alert variant="destructive">
                 <AlertDescription>Contactá a tu encargado para poder fichar.</AlertDescription>
               </Alert>
+
+              <div className="relative flex items-center justify-center my-2">
+                <div className="border-t border-border w-full" />
+                <span className="bg-card px-3 text-xs text-muted-foreground absolute">ó</span>
+              </div>
+
+              {!showManagerPinInput ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowManagerPinInput(true)}
+                >
+                  <ShieldCheck className="w-4 h-4 mr-2" />
+                  Autorizar como encargado
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="manager-pin">PIN del encargado (4 dígitos)</Label>
+                  <Input
+                    id="manager-pin"
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    value={managerPin}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setManagerPin(value);
+                      if (value.length === 4) {
+                        setManagerValidating(true);
+                        validateManagerOverridePin(branchCode!, value)
+                          .then((result) => {
+                            if (result) {
+                              setManagerOverride({ name: result.full_name });
+                              toast.success(`Autorizado por ${result.full_name}`);
+                              setStep('camera');
+                              startCamera();
+                            } else {
+                              toast.error('PIN de encargado incorrecto');
+                              setManagerPin('');
+                            }
+                          })
+                          .catch(() => {
+                            toast.error('Error al validar PIN');
+                            setManagerPin('');
+                          })
+                          .finally(() => setManagerValidating(false));
+                      }
+                    }}
+                    placeholder="••••"
+                    className="text-center text-2xl tracking-widest"
+                    autoFocus
+                    disabled={managerValidating}
+                  />
+                  {managerValidating && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Validando...
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
