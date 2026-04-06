@@ -423,7 +423,7 @@ export async function updateVentaMensual(id: string, payload: VentaMensualPayloa
       efectivo: ef,
       fc_total: fc,
       ft_total: ef,
-      notes: payload.observaciones,
+      notes: payload.notes,
     } as any)
     .eq('id', id);
   if (error) throw error;

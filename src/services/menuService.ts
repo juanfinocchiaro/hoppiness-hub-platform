@@ -62,7 +62,7 @@ export async function fetchInsumos() {
 }
 
 export async function createInsumo(payload: InsumoFormData) {
-  const dbPayload = { ...payload, name: payload.nombre } as any;
+  const dbPayload = { ...payload } as any;
   delete dbPayload.nombre;
   if (dbPayload.descripcion !== undefined) { dbPayload.description = dbPayload.descripcion; delete dbPayload.descripcion; }
   if (dbPayload.unidad_base !== undefined) { dbPayload.base_unit = dbPayload.unidad_base; delete dbPayload.unidad_base; }

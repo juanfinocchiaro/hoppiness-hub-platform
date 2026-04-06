@@ -282,12 +282,12 @@ export async function createPagoProveedor(data: PagoProveedorFormData, userId?: 
     .insert({
       proveedor_id: data.proveedor_id,
       branch_id: data.branch_id,
-      amount: data.monto,
-      payment_date: data.fecha_pago,
-      payment_method: data.medio_pago,
+      amount: data.amount,
+      payment_date: data.payment_date,
+      payment_method: data.payment_method,
       referencia: data.referencia || null,
-      payment_due_date: data.fecha_vencimiento_pago || null,
-      notes: data.observaciones || null,
+      payment_due_date: data.payment_due_date || null,
+      notes: data.notes || null,
       created_by: userId,
     } as any)
     .select()
