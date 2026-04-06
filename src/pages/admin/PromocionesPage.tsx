@@ -44,7 +44,7 @@ export default function PromocionesPage() {
     if (!itemSearch.trim()) return [];
     const q = itemSearch.toLowerCase();
     return menuItems
-      .filter((i) => i.name.toLowerCase().includes(q))
+      .filter((i) => (i as any).name?.toLowerCase().includes(q) || (i as any).nombre?.toLowerCase().includes(q))
       .filter((i) => !promoItems.some((pi) => pi.item_carta_id === i.id))
       .slice(0, 8);
   };
