@@ -50,7 +50,7 @@ export function getDraftSignature(form: PromocionFormData, promoItems: PromoItem
         preconfigExtras: (item.preconfigExtras || [])
           .map((extra) => ({
             extra_item_carta_id: extra.extra_item_carta_id,
-            cantidad: extra.cantidad,
+            cantidad: extra.quantity,
           }))
           .sort((a, b) => a.extra_item_carta_id.localeCompare(b.extra_item_carta_id)),
       }))
