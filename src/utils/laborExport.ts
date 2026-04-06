@@ -169,8 +169,8 @@ export function exportLaborPDF(
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     didParseCell(data) {
-      // Color presentismo
-      if (data.section === 'body' && data.column.index === 13) {
+      // Color presentismo (column 15 now)
+      if (data.section === 'body' && data.column.index === 15) {
         const val = data.cell.raw as string;
         if (val === 'SI') {
           data.cell.styles.textColor = [22, 163, 74];
@@ -203,6 +203,8 @@ export function exportLaborPDF(
     ['Hs Franco', 'Horas trabajadas en dia franco'],
     ['Ext. Hab.', 'Horas extras de lunes a viernes'],
     ['Ext. Inh.', 'Horas extras de sabado y domingo'],
+    ['Consumos', 'Monto total consumido por el empleado en el local durante el mes (ej. comidas)'],
+    ['Adelantos', 'Adelantos de sueldo otorgados durante el mes'],
     ['Present.', 'Presentismo: SI si no tiene faltas injustificadas ni tardanza mayor a 15 min acumulados'],
   ];
 
