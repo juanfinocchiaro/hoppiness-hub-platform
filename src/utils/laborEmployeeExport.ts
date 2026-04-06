@@ -1,5 +1,6 @@
 /**
- * Per-employee export — PDF and Excel with daily clock-in details and lateness
+ * Per-employee export — PDF and Excel with full month view,
+ * scheduled hours, clock entries, absences and lateness.
  */
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -22,44 +23,136 @@ function dayLabel(dateStr: string): string {
   return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${format(d, 'dd/MM')}`;
 }
 
+function formatSchedule(startTime: string | null, endTime: string | null, startTime2: string | null, endTime2: string | null): string {
+  if (!startTime || !endTime) return '-';
+  const t1 = `${startTime.slice(0, 5)}-${endTime.slice(0, 5)}`;
+  if (startTime2 && endTime2) {
+    return `${t1} / ${startTime2.slice(0, 5)}-${endTime2.slice(0, 5)}`;
+  }
+  return t1;
+}
+
 interface DailyRow {
   date: string;
   label: string;
+  schedule: string;
   checkIn: string;
   checkOut: string;
   hours: string;
-  type: string; // Regular, Feriado, Franco, Ausente
+  type: string;
   tardanza: string;
+  isAbsent: boolean;
 }
 
-function buildDailyRows(s: EmployeeLaborSummary): DailyRow[] {
+function buildDailyRows(s: EmployeeLaborSummary, year: number, month: number): DailyRow[] {
   const latenessMap = new Map(s.dailyLateness.map((l) => [l.date, l]));
+  const schedMap = new Map(s.scheduledDays.map((sd) => [sd.date, sd]));
+  const entriesByDate = new Map<string, typeof s.entries>();
+  for (const e of s.entries) {
+    const list = entriesByDate.get(e.date) ?? [];
+    list.push(e);
+    entriesByDate.set(e.date, list);
+  }
 
-  const sorted = [...s.entries].sort((a, b) => a.date.localeCompare(b.date));
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const rows: DailyRow[] = [];
 
-  return sorted.map((e) => {
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = format(new Date(year, month, d), 'yyyy-MM-dd');
+    const sched = schedMap.get(dateStr);
+    const dayEntries = entriesByDate.get(dateStr) ?? [];
+    const hasEntries = dayEntries.length > 0;
+    const hasSched = !!sched;
+
+    // Skip days with no schedule AND no entries
+    if (!hasSched && !hasEntries) continue;
+
+    // Determine type
     let type = 'Regular';
-    if (e.isHoliday) type = 'Feriado';
-    else if (e.isDayOff) type = 'Franco';
+    const isHoliday = dayEntries.some((e) => e.isHoliday) || false;
+    const isDayOff = sched?.isDayOff || dayEntries.some((e) => e.isDayOff);
+    const position = sched?.position;
 
-    const lateness = latenessMap.get(e.date);
-    return {
-      date: e.date,
-      label: dayLabel(e.date),
-      checkIn: e.checkIn ? toArgentinaTime(e.checkIn) : '-',
-      checkOut: e.checkOut ? toArgentinaTime(e.checkOut) : 'Sin salida',
-      hours: e.hoursDecimal > 0 ? e.hoursDecimal.toFixed(2) : '-',
-      type,
-      tardanza: lateness ? `${lateness.minutes}m (prog: ${lateness.scheduledStart.slice(0, 5)})` : '-',
-    };
-  });
+    if (isHoliday) type = 'Feriado';
+    else if (position === 'vacaciones') type = 'Vacaciones';
+    else if (position === 'cumple') type = 'Cumpleaños';
+    else if (isDayOff) type = 'Franco';
+
+    const scheduleStr = (type === 'Franco' || type === 'Vacaciones' || type === 'Cumpleaños')
+      ? (type === 'Franco' ? 'Franco' : type)
+      : (hasSched ? formatSchedule(sched!.startTime, sched!.endTime, sched!.startTime2, sched!.endTime2) : '-');
+
+    // Absent detection: had a working schedule, no clock entries, date is in the past
+    const hadWorkSchedule = hasSched && !sched!.isDayOff && sched!.startTime && position !== 'vacaciones' && position !== 'cumple';
+    const isAbsent = !!(hadWorkSchedule && !hasEntries && dateStr <= today && !isHoliday);
+
+    if (isAbsent) {
+      rows.push({
+        date: dateStr,
+        label: dayLabel(dateStr),
+        schedule: scheduleStr,
+        checkIn: '-',
+        checkOut: '-',
+        hours: '-',
+        type: 'AUSENTE',
+        tardanza: '-',
+        isAbsent: true,
+      });
+      continue;
+    }
+
+    // Franco/Vacaciones/Cumple with no entries → single row
+    if ((type === 'Franco' || type === 'Vacaciones' || type === 'Cumpleaños') && !hasEntries) {
+      rows.push({
+        date: dateStr,
+        label: dayLabel(dateStr),
+        schedule: scheduleStr,
+        checkIn: '-',
+        checkOut: '-',
+        hours: '-',
+        type,
+        tardanza: '-',
+        isAbsent: false,
+      });
+      continue;
+    }
+
+    // Has entries → one row per entry (split shifts = multiple rows)
+    if (hasEntries) {
+      const sorted = [...dayEntries].sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+      sorted.forEach((e, idx) => {
+        const lateness = idx === 0 ? latenessMap.get(e.date) : undefined;
+        rows.push({
+          date: dateStr,
+          label: idx === 0 ? dayLabel(dateStr) : '',
+          schedule: idx === 0 ? scheduleStr : '',
+          checkIn: e.checkIn ? toArgentinaTime(e.checkIn) : '-',
+          checkOut: e.checkOut ? toArgentinaTime(e.checkOut) : 'Sin salida',
+          hours: e.hoursDecimal > 0 ? e.hoursDecimal.toFixed(2) : '-',
+          type: idx === 0 ? type : '',
+          tardanza: lateness ? `${lateness.minutes}m (prog: ${lateness.scheduledStart.slice(0, 5)})` : '-',
+          isAbsent: false,
+        });
+      });
+    }
+  }
+
+  return rows;
 }
 
-const DAILY_HEADERS = ['Día', 'Entrada', 'Salida', 'Horas', 'Tipo', 'Tardanza'];
+const DAILY_HEADERS = ['Día', 'Horario', 'Entrada', 'Salida', 'Horas', 'Tipo', 'Tardanza'];
 
 export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const rows = buildDailyRows(s);
+
+  // Parse year/month from first entry or scheduledDay
+  const refDate = s.scheduledDays[0]?.date || s.entries[0]?.date || format(new Date(), 'yyyy-MM-dd');
+  const [yearStr, monthStr] = refDate.split('-');
+  const year = parseInt(yearStr);
+  const month = parseInt(monthStr) - 1;
+
+  const rows = buildDailyRows(s, year, month);
 
   // Header
   doc.setFontSize(14);
@@ -89,7 +182,6 @@ export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, f
     ['Presentismo', s.presentismo ? 'SI' : 'NO'],
   ];
 
-  // Add position breakdown if available
   if (s.positionBreakdown.length > 0) {
     summaryData.push(['', '']);
     summaryData.push(['DESGLOSE POR PUESTO', '']);
@@ -128,37 +220,51 @@ export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, f
   autoTable(doc, {
     startY: detailY + 4,
     head: [DAILY_HEADERS],
-    body: rows.map((r) => [r.label, r.checkIn, r.checkOut, r.hours, r.type, r.tardanza]),
+    body: rows.map((r) => [r.label, r.schedule, r.checkIn, r.checkOut, r.hours, r.type, r.tardanza]),
     theme: 'grid',
-    styles: { fontSize: 7.5, cellPadding: 2, lineWidth: 0.1, lineColor: [200, 200, 200] },
-    headStyles: { fillColor: [41, 65, 106], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+    styles: { fontSize: 7, cellPadding: 1.8, lineWidth: 0.1, lineColor: [200, 200, 200] },
+    headStyles: { fillColor: [41, 65, 106], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
     columnStyles: {
-      0: { cellWidth: 28 },
-      1: { halign: 'center' },
-      2: { halign: 'center' },
-      3: { halign: 'right' },
-      4: { halign: 'center' },
-      5: { cellWidth: 42 },
+      0: { cellWidth: 24 },
+      1: { cellWidth: 32, fontSize: 6.5 },
+      2: { halign: 'center', cellWidth: 16 },
+      3: { halign: 'center', cellWidth: 16 },
+      4: { halign: 'right', cellWidth: 14 },
+      5: { halign: 'center', cellWidth: 22 },
+      6: { cellWidth: 38 },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     didParseCell(data) {
-      if (data.section === 'body') {
-        // Highlight tardanza
-        if (data.column.index === 5 && data.cell.raw !== '-') {
-          data.cell.styles.textColor = [234, 88, 12];
-          data.cell.styles.fontStyle = 'bold';
-        }
-        // Color type
-        if (data.column.index === 4) {
-          const val = data.cell.raw as string;
-          if (val === 'Feriado') data.cell.styles.textColor = [37, 99, 235];
-          if (val === 'Franco') data.cell.styles.textColor = [147, 51, 234];
-        }
+      if (data.section !== 'body') return;
+      const rowIdx = data.row.index;
+      const row = rows[rowIdx];
+      if (!row) return;
+
+      // AUSENTE row: red text, pink bg
+      if (row.isAbsent) {
+        data.cell.styles.textColor = [220, 38, 38];
+        data.cell.styles.fillColor = [254, 226, 226];
+        data.cell.styles.fontStyle = 'bold';
+        return;
+      }
+
+      // Tardanza highlight
+      if (data.column.index === 6 && data.cell.raw !== '-') {
+        data.cell.styles.textColor = [234, 88, 12];
+        data.cell.styles.fontStyle = 'bold';
+      }
+      // Type colors
+      if (data.column.index === 5) {
+        const val = data.cell.raw as string;
+        if (val === 'Feriado') data.cell.styles.textColor = [37, 99, 235];
+        if (val === 'Franco') data.cell.styles.textColor = [147, 51, 234];
+        if (val === 'Vacaciones') data.cell.styles.textColor = [22, 163, 74];
+        if (val === 'Cumpleaños') data.cell.styles.textColor = [234, 88, 12];
       }
     },
   });
 
-  // Lateness summary if any
+  // Lateness summary
   if (s.dailyLateness.length > 0) {
     const lateY = (doc as any).lastAutoTable.finalY + 6;
     doc.setFontSize(9);
@@ -186,14 +292,19 @@ export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, f
 
 export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
   const wb = XLSX.utils.book_new();
-  const rows = buildDailyRows(s);
+
+  const refDate = s.scheduledDays[0]?.date || s.entries[0]?.date || format(new Date(), 'yyyy-MM-dd');
+  const [yearStr, monthStr] = refDate.split('-');
+  const year = parseInt(yearStr);
+  const month = parseInt(monthStr) - 1;
+
+  const rows = buildDailyRows(s, year, month);
 
   const data: (string | number)[][] = [];
   data.push([`Resumen Individual — ${monthLabel}`]);
   data.push([s.userName, s.localRole?.toUpperCase() || '-', `CUIL: ${s.cuil || '-'}`]);
   data.push([]);
 
-  // Summary
   data.push(['Concepto', 'Valor']);
   data.push(['Hs Trabajadas', s.hsTrabajadasMes]);
   data.push(['Hs Regulares', s.hsRegulares]);
@@ -207,7 +318,6 @@ export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string,
   data.push(['Extras Inhábil', s.hsExtrasInhabil]);
   data.push(['Presentismo', s.presentismo ? 'SI' : 'NO']);
 
-  // Position breakdown
   if (s.positionBreakdown.length > 0) {
     data.push([]);
     data.push(['DESGLOSE POR PUESTO', '']);
@@ -218,19 +328,17 @@ export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string,
   }
 
   data.push([]);
-
-  // Daily detail
   data.push(DAILY_HEADERS);
   for (const r of rows) {
-    data.push([r.label, r.checkIn, r.checkOut, r.hours, r.type, r.tardanza]);
+    data.push([r.label, r.schedule, r.checkIn, r.checkOut, r.hours, r.type, r.tardanza]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [
-    { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 30 },
+    { wch: 16 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 30 },
   ];
   ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
