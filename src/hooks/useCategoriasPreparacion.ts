@@ -19,7 +19,7 @@ export function useCategoriaPreparacionMutations() {
   const qc = useQueryClient();
 
   const create = useMutation({
-    mutationFn: (data: { name: string; sort_order: number }) => createCategoriaPreparacion(data),
+    mutationFn: (data: { nombre: string; orden: number }) => createCategoriaPreparacion(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categorias-preparacion'] });
       toast.success('Categoría creada');
