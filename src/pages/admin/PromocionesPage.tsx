@@ -68,9 +68,9 @@ export default function PromocionesPage() {
   const openEdit = async (promo: Promocion) => {
     setOpenPromoIds((prev) => prev.includes(promo.id) ? prev : [...prev, promo.id]);
     if (promoDrafts[promo.id]) return;
-    setPromoDrafts((prev) => ({ ...prev, [promo.id]: { form: buildFormFromPromo(promo), promoItems: [], itemSearch: '', initialSignature: '', loading: true } }));
+    setPromoDrafts((prev) => ({ ...prev, [promo.id]: { form: buildFormFromPromo(promo as any), promoItems: [], itemSearch: '', initialSignature: '', loading: true } }));
     const loadedItems = await fetchPromoItems(promo.id);
-    const loadedForm = buildFormFromPromo(promo);
+    const loadedForm = buildFormFromPromo(promo as any);
     const initialSignature = getDraftSignature(loadedForm, loadedItems);
     setPromoDrafts((prev) => ({ ...prev, [promo.id]: { form: loadedForm, promoItems: loadedItems, itemSearch: '', initialSignature, loading: false } }));
     setCreatingNew(false);
