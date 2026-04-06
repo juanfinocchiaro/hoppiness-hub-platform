@@ -86,6 +86,8 @@ function EmployeeCard({
   positions,
   consumos,
   adelantos,
+  userConsumptions,
+  userAdvances,
   onAddConsumo,
   onViewConsumos,
 }: {
@@ -99,6 +101,8 @@ function EmployeeCard({
   positions: { key: string; label: string }[];
   consumos: number;
   adelantos: number;
+  userConsumptions: EmployeeConsumption[];
+  userAdvances: { user_id: string; amount: number; reason: string | null; status: string; created_at: string }[];
   onAddConsumo: () => void;
   onViewConsumos: () => void;
 }) {
