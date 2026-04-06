@@ -174,7 +174,7 @@ export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, f
   doc.save(`${filename || `resumen-${s.userName.replace(/\s+/g, '_').toLowerCase()}`}.pdf`);
 }
 
-export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string) {
+export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
   const wb = XLSX.utils.book_new();
   const rows = buildDailyRows(s);
 
