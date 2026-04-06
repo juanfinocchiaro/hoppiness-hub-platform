@@ -49,6 +49,7 @@ export function exportLaborPDF(
   stats: LaborStats,
   monthLabel: string,
   configInfo: { dailyLimit: number; lateTolerance: number },
+  filename?: string,
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const rows = buildRows(summaries);
@@ -155,7 +156,7 @@ export function exportLaborPDF(
     );
   }
 
-  doc.save(`liquidacion-${monthLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+  doc.save(`${filename || 'liquidacion'}.pdf`);
 }
 
 export function exportLaborExcel(
@@ -163,6 +164,7 @@ export function exportLaborExcel(
   stats: LaborStats,
   monthLabel: string,
   configInfo: { dailyLimit: number; lateTolerance: number },
+  filename?: string,
 ) {
   const wb = XLSX.utils.book_new();
 
@@ -246,5 +248,5 @@ export function exportLaborExcel(
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Liquidación');
-  XLSX.writeFile(wb, `liquidacion-${monthLabel.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+  XLSX.writeFile(wb, `${filename || 'liquidacion'}.xlsx`);
 }

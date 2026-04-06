@@ -8,6 +8,8 @@
  */
 import { useState } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { es } from 'date-fns/locale';
 import {
   ChevronLeft,
@@ -62,11 +64,17 @@ function EmployeeRow({
   expanded,
   onToggle,
   monthLabel,
+  branchTag,
+  monthOnly,
+  yearStr,
 }: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
   onToggle: () => void;
   monthLabel: string;
+  branchTag: string;
+  monthOnly: string;
+  yearStr: string;
 }) {
   const initials = summary.userName
     .split(' ')
@@ -198,11 +206,11 @@ function EmployeeRow({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); exportEmployeePDF(summary, monthLabel); }}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); const empName = summary.userName.toUpperCase().replace(/\s+/g, '_'); exportEmployeePDF(summary, monthLabel, `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_${empName}`); }}>
                   <FileText className="h-4 w-4 mr-2" />
                   PDF individual
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); exportEmployeeExcel(summary, monthLabel); }}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); const empName = summary.userName.toUpperCase().replace(/\s+/g, '_'); exportEmployeeExcel(summary, monthLabel, `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_${empName}`); }}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Excel individual
                 </DropdownMenuItem>
@@ -304,20 +312,35 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
 
   const { summaries, stats, config, loading } = useLaborHours({ branchId, year, month });
 
+  const { data: branchName = '' } = useQuery({
+    queryKey: ['branch-name', branchId],
+    queryFn: async () => {
+      const { data } = await supabase.from('branches').select('name').eq('id', branchId).single();
+      return data?.name || '';
+    },
+    enabled: !!branchId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const handlePrevMonth = () => setCurrentDate((prev) => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate((prev) => addMonths(prev, 1));
 
   const monthLabel = format(currentDate, 'MMMM yyyy', { locale: es });
   const monthLabelCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  const monthOnly = format(currentDate, 'MMMM', { locale: es }).toUpperCase();
+  const yearStr = format(currentDate, 'yyyy');
+  const branchTag = branchName.toUpperCase().replace(/\s+/g, '_');
 
   const configInfo = { dailyLimit: config.daily_hours_limit, lateTolerance: config.late_tolerance_total_min };
 
   const handleExportPDF = () => {
-    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo);
+    const filename = `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_FULL`;
+    exportLaborPDF(summaries, stats, monthLabelCapitalized, configInfo, filename);
   };
 
   const handleExportExcel = () => {
-    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo);
+    const filename = `${branchTag}_LIQUIDACION_${monthOnly}_${yearStr}_FULL`;
+    exportLaborExcel(summaries, stats, monthLabelCapitalized, configInfo, filename);
   };
 
   if (loading) {
@@ -541,6 +564,9 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
                       setExpandedUserId(expandedUserId === summary.userId ? null : summary.userId)
                     }
                     monthLabel={monthLabelCapitalized}
+                    branchTag={branchTag}
+                    monthOnly={monthOnly}
+                    yearStr={yearStr}
                   />
                 ))}
               </TableBody>

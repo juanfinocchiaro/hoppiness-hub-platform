@@ -57,7 +57,7 @@ function buildDailyRows(s: EmployeeLaborSummary): DailyRow[] {
 
 const DAILY_HEADERS = ['Día', 'Entrada', 'Salida', 'Horas', 'Tipo', 'Tardanza'];
 
-export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string) {
+export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const rows = buildDailyRows(s);
 
@@ -171,11 +171,10 @@ export function exportEmployeePDF(s: EmployeeLaborSummary, monthLabel: string) {
     );
   }
 
-  const safeName = s.userName.replace(/\s+/g, '_').toLowerCase();
-  doc.save(`resumen-${safeName}-${monthLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+  doc.save(`${filename || `resumen-${s.userName.replace(/\s+/g, '_').toLowerCase()}`}.pdf`);
 }
 
-export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string) {
+export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string, filename?: string) {
   const wb = XLSX.utils.book_new();
   const rows = buildDailyRows(s);
 
@@ -214,7 +213,5 @@ export function exportEmployeeExcel(s: EmployeeLaborSummary, monthLabel: string)
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
-
-  const safeName = s.userName.replace(/\s+/g, '_').toLowerCase();
-  XLSX.writeFile(wb, `resumen-${safeName}-${monthLabel.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+  XLSX.writeFile(wb, `${filename || `resumen-${s.userName.replace(/\s+/g, '_').toLowerCase()}`}.xlsx`);
 }
