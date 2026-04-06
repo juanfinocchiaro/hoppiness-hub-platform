@@ -44,7 +44,7 @@ export function PromoItemRow({ item, discountPercent, onUpdate, onRemove }: Prom
   };
 
   const updateQty = (extraId: string, qty: number) => {
-    const next = (item.preconfigExtras || []).map((e) => e.extra_item_carta_id === extraId ? { ...e, cantidad: Math.max(1, qty) } : e);
+    const next = (item.preconfigExtras || []).map((e) => e.extra_item_carta_id === extraId ? { ...e, quantity: Math.max(1, qty) } : e);
     const newPrice = computeAutoPrice(item.base_price, next, discountPercent);
     onUpdate({ ...item, preconfigExtras: next, precio_promo: newPrice });
   };
