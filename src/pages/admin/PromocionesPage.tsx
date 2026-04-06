@@ -91,8 +91,8 @@ export default function PromocionesPage() {
     setCreatingNew(true);
   };
 
-  const addItem = (item: { id: string; name: string; base_price: number; image_url?: string | null }, setItems: Dispatch<SetStateAction<PromoItemDraft[]>>, setSearch: Dispatch<SetStateAction<string>>) => {
-    setItems((prev) => [...prev, { item_carta_id: item.id, nombre: item.name, imagen_url: item.image_url, precio_base: Number(item.base_price), precio_promo: Number(item.base_price) }]);
+  const addItem = (item: { id: string; name?: string; nombre?: string; base_price?: number; precio_base?: number; image_url?: string | null; imagen_url?: string | null }, setItems: Dispatch<SetStateAction<PromoItemDraft[]>>, setSearch: Dispatch<SetStateAction<string>>) => {
+    setItems((prev) => [...prev, { item_carta_id: item.id, name: item.name || (item as any).nombre || '', image_url: item.image_url ?? (item as any).imagen_url, base_price: Number(item.base_price ?? (item as any).precio_base ?? 0), precio_promo: Number(item.base_price ?? (item as any).precio_base ?? 0) }]);
     setSearch('');
   };
 
