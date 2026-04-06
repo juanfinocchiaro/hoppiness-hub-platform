@@ -340,8 +340,8 @@ export function ConfigForm({
                 <Label className="text-xs">Nombre *</Label>
                 <Input
                   placeholder="Cliente"
-                  value={config.clienteNombre}
-                  onChange={(e) => set({ clienteNombre: e.target.value })}
+                  value={config.customerName}
+                  onChange={(e) => set({ customerName: e.target.value })}
                   className="h-9 mt-1"
                 />
               </div>
