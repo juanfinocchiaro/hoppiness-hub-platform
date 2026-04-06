@@ -175,7 +175,7 @@ export default function PromocionesPage() {
       ) : (
         <PromosByDay promos={promos} openPromoIds={openPromoIds} renderInlineForm={renderInlineForm}
           onEdit={(promo) => { if (openPromoIds.includes(promo.id)) requestClosePromo(promo); else openEdit(promo); }}
-          onDuplicate={openDuplicate} onDelete={setDeleting} onToggle={(id, activa) => toggleActive.mutate({ id, activa })} />
+          onDuplicate={openDuplicate} onDelete={setDeleting} onToggle={(id, active) => toggleActive.mutate({ id, is_active: active })} />
       )}
 
       <Dialog open={creatingNew} onOpenChange={setCreatingNew}>

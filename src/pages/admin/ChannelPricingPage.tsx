@@ -574,7 +574,7 @@ function ChannelRulesPanel({
                               {CHANNELS.filter(
                                 (c) =>
                                   c.value !== ch.value &&
-                                  c.value !== 'counter' &&
+                                  c.value !== 'mostrador' &&
                                   c.value !== 'webapp',
                               ).map((c) => (
                                 <SelectItem key={c.value} value={c.value}>

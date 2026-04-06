@@ -261,7 +261,7 @@ export function CartSheet({
       | undefined;
     const pm = schedules?.[serviceKey]?.payment_methods;
     return {
-      efectivo: pm?.efectivo ?? defaults.efectivo,
+      cash: pm?.efectivo ?? defaults.efectivo,
       mercadopago: pm?.mercadopago ?? defaults.mercadopago,
     };
   }, [webappConfig, serviceKey]);

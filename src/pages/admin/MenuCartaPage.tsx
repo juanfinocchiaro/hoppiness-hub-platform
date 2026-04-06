@@ -313,7 +313,7 @@ export default function MenuCartaPage() {
     const oldIndex = categorias.findIndex((c) => c.id === active.id);
     const newIndex = categorias.findIndex((c) => c.id === over.id);
     const reordered = arrayMove(categorias, oldIndex, newIndex);
-    await reorder.mutateAsync(reordered.map((c: any, i) => ({ id: c.id, orden: i + 1 })));
+    await reorder.mutateAsync(reordered.map((c: any, i) => ({ id: c.id, sort_order: i + 1 })));
   };
 
   if (isLoading) {

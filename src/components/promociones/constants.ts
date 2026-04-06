@@ -41,7 +41,7 @@ export const EMPTY_FORM: PromocionFormData = {
   producto_ids: [],
   categoria_ids: [],
   tipo_usuario: 'todos',
-  activa: true,
+  is_active: true,
   branch_ids: [],
   canales: ['webapp', 'dine_in', 'rappi', 'pedidos_ya'],
 };
