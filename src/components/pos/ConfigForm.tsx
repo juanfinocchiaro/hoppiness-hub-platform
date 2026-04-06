@@ -143,7 +143,7 @@ export function ConfigForm({
   }, [config.tipoServicio]);
 
   // —— Phone-based customer lookup ————————————————————————————————————————
-  const debouncedPhone = useDebounce(config.clienteTelefono, 600);
+  const debouncedPhone = useDebounce(config.customerPhone, 600);
   const [profileSuggestion, setProfileSuggestion] = useState<{
     id: string;
     full_name: string;
