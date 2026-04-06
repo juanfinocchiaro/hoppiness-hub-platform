@@ -58,6 +58,7 @@ import {
   aggregateByUser,
 } from '@/hooks/useEmployeeConsumptions';
 import { EmployeeConsumptionModal } from '@/components/local/EmployeeConsumptionModal';
+import { EmployeeConsumptionListModal } from '@/components/local/EmployeeConsumptionListModal';
 
 interface LaborHoursSummaryProps {
   branchId: string;
@@ -85,6 +86,7 @@ function EmployeeCard({
   consumos,
   adelantos,
   onAddConsumo,
+  onViewConsumos,
 }: {
   summary: EmployeeLaborSummary;
   expanded: boolean;
@@ -97,6 +99,7 @@ function EmployeeCard({
   consumos: number;
   adelantos: number;
   onAddConsumo: () => void;
+  onViewConsumos: () => void;
 }) {
   const initials = summary.userName
     .split(' ')
@@ -248,7 +251,15 @@ function EmployeeCard({
             Tardanza: {summary.tardanzaAcumuladaMin > 0 ? <span className="text-amber-600 font-medium">{summary.tardanzaAcumuladaMin}m</span> : '0m'}
           </span>
           <span className="text-muted-foreground flex items-center gap-1">
-            Consumos: {consumos > 0 ? <span className="text-violet-600 font-medium">${consumos.toLocaleString('es-AR')}</span> : '-'}
+            Consumos:{' '}
+            {consumos > 0 ? (
+              <button
+                className="text-violet-600 font-medium underline underline-offset-2 hover:text-violet-800 cursor-pointer bg-transparent border-none p-0"
+                onClick={onViewConsumos}
+              >
+                ${consumos.toLocaleString('es-AR')}
+              </button>
+            ) : '-'}
             <Button variant="ghost" size="icon" className="h-5 w-5 ml-0.5" onClick={onAddConsumo} title="Registrar consumo">
               <UtensilsCrossed className="h-3 w-3" />
             </Button>
@@ -338,6 +349,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [consumptionTarget, setConsumptionTarget] = useState<{ userId: string; userName: string } | null>(null);
+  const [consumptionListTarget, setConsumptionListTarget] = useState<{ userId: string; userName: string } | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -578,6 +590,7 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
               consumos={financialMap.get(summary.userId)?.consumos ?? 0}
               adelantos={financialMap.get(summary.userId)?.adelantos ?? 0}
               onAddConsumo={() => setConsumptionTarget({ userId: summary.userId, userName: summary.userName })}
+              onViewConsumos={() => setConsumptionListTarget({ userId: summary.userId, userName: summary.userName })}
             />
           ))}
         </div>
@@ -590,6 +603,18 @@ export default function LaborHoursSummary({ branchId }: LaborHoursSummaryProps) 
           branchId={branchId}
           userId={consumptionTarget.userId}
           userName={consumptionTarget.userName}
+        />
+      )}
+
+      {consumptionListTarget && (
+        <EmployeeConsumptionListModal
+          open={!!consumptionListTarget}
+          onOpenChange={(open) => { if (!open) setConsumptionListTarget(null); }}
+          branchId={branchId}
+          userId={consumptionListTarget.userId}
+          userName={consumptionListTarget.userName}
+          year={year}
+          month={month}
         />
       )}
     </div>
