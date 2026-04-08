@@ -87,7 +87,7 @@ export function RegisterPaymentPanel({
 }: Props) {
   const { branchId } = useParams<{ branchId: string }>();
   const { data: mpConfig } = useMercadoPagoConfig(branchId);
-  const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
+  const hasPointSmart = !!mpConfig?.device_id && mpConfig.connection_status === 'conectado';
 
   const [metodo, setMetodo] = useState<MetodoPago>('cash');
   const [monto, setMonto] = useState('');
