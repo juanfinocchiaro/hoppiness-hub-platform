@@ -291,34 +291,34 @@ Deno.serve(async (req) => {
 
     const estadoInicial = isMpPayment ? "pendiente_pago" : autoAccept ? "en_preparacion" : "pendiente";
 
-    const { error: pedidoErr } = await supabase.from("pedidos").insert({
+    const { error: pedidoErr } = await supabase.from("orders").insert({
       id: pedidoId,
       branch_id: body.branch_id,
       order_number: numeroPedido as number,
-      tipo: "webapp",
-      estado: estadoInicial,
+      type: "webapp",
+      status: estadoInicial,
       canal_venta: "webapp",
-      tipo_servicio: body.tipo_servicio === "retiro" ? "takeaway" : body.tipo_servicio,
+      service_type: body.tipo_servicio === "retiro" ? "takeaway" : body.tipo_servicio,
       subtotal,
       descuento: 0,
       total,
       propina: 0,
-      costo_delivery: costoDelivery,
+      delivery_cost: costoDelivery,
       pago_estado: pagoEstado,
-      cliente_nombre: body.cliente_nombre.trim(),
-      cliente_telefono: body.cliente_telefono.trim(),
+      customer_name: body.cliente_nombre.trim(),
+      customer_phone: body.cliente_telefono.trim(),
       cliente_email: body.cliente_email ?? null,
-      cliente_direccion: body.cliente_direccion ?? null,
-      direccion_entrega: body.cliente_direccion ?? null,
+      customer_address: body.cliente_direccion ?? null,
+      delivery_address: body.cliente_direccion ?? null,
       cliente_notas: body.cliente_notas ?? null,
       delivery_zone_id: deliveryZoneId,
       delivery_lat: body.delivery_lat ?? null,
       delivery_lng: body.delivery_lng ?? null,
       delivery_distance_km: body.delivery_distance_km ?? null,
       webapp_tracking_code: trackingCode,
-      tiempo_prometido: tiempoEstimado ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString() : null,
-      tiempo_inicio_prep: !isMpPayment && autoAccept ? now : null,
-      origen: "webapp",
+      promised_time: tiempoEstimado ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString() : null,
+      prep_started_at_time: !isMpPayment && autoAccept ? now : null,
+      source: "webapp",
       cliente_user_id: clienteUserId,
     } as any);
 
@@ -344,16 +344,16 @@ Deno.serve(async (req) => {
       const lineSubtotal = (serverPrice + extrasTotal) * item.cantidad;
 
       const { data: insertedItem, error: itemErr } = await supabase
-        .from("pedido_items")
+        .from("order_items")
         .insert({
           pedido_id: pedidoId,
           item_carta_id: item.item_carta_id,
-          nombre: item.nombre,
-          cantidad: item.cantidad,
-          precio_unitario: serverPrice,
+          name: item.nombre,
+          quantity: item.cantidad,
+          unit_price: serverPrice,
           subtotal: lineSubtotal,
           estacion: stationName,
-          notas: item.notas ?? null,
+          notes: item.notas ?? null,
           categoria_carta_id: ci.categoria_carta_id ?? null,
           articulo_id: item.articulo_id ?? item.item_carta_id,
           articulo_tipo: item.articulo_tipo ?? (item.promocion_item_id ? "promo" : "base"),
@@ -365,16 +365,16 @@ Deno.serve(async (req) => {
 
       if (itemErr) {
         console.error("Item insert error:", itemErr);
-        await supabase.from("pedidos").delete().eq("id", pedidoId);
+        await supabase.from("orders").delete().eq("id", pedidoId);
         return json(500, { error: "Error al crear los items del pedido" });
       }
 
       // Insert modifiers (extras + removidos)
       const modifiers: Array<{
         pedido_item_id: string;
-        tipo: string;
-        descripcion: string;
-        precio_extra: number | null;
+        type: string;
+        description: string;
+        extra_price: number | null;
       }> = [];
 
       for (const extra of item.extras ?? []) {
@@ -382,9 +382,9 @@ Deno.serve(async (req) => {
         for (let ei = 0; ei < qty; ei++) {
           modifiers.push({
             pedido_item_id: insertedItem!.id,
-            tipo: "extra",
-            descripcion: extra.nombre,
-            precio_extra: extra.precio,
+            type: "extra",
+            description: extra.nombre,
+            extra_price: extra.precio,
           });
         }
       }
@@ -392,25 +392,25 @@ Deno.serve(async (req) => {
         const qty = Math.max(1, Number(inc.cantidad ?? 1));
         modifiers.push({
           pedido_item_id: insertedItem!.id,
-          tipo: "incluido",
-          descripcion: qty > 1 ? `${qty}x ${inc.nombre}` : inc.nombre,
-          precio_extra: null,
+          type: "incluido",
+          description: qty > 1 ? `${qty}x ${inc.nombre}` : inc.nombre,
+          extra_price: null,
         });
       }
       for (const rem of item.removidos ?? []) {
         modifiers.push({
           pedido_item_id: insertedItem!.id,
-          tipo: "sin",
-          descripcion: rem,
-          precio_extra: null,
+          type: "sin",
+          description: rem,
+          extra_price: null,
         });
       }
 
       if (modifiers.length > 0) {
-        const { error: modErr } = await supabase.from("pedido_item_modificadores").insert(modifiers as any);
+        const { error: modErr } = await supabase.from("order_item_modifiers").insert(modifiers as any);
         if (modErr) {
           console.error("Modifier insert error:", modErr);
-          await supabase.from("pedidos").delete().eq("id", pedidoId);
+          await supabase.from("orders").delete().eq("id", pedidoId);
           return json(500, { error: "Error al guardar modificadores del pedido" });
         }
       }
