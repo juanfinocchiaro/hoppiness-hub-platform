@@ -15,11 +15,11 @@ export async function fetchMercadoPagoConfig(branchId: string) {
 
 export async function fetchMercadoPagoStatus(branchId: string) {
   const { data, error } = await mpTable()
-    .select('estado_conexion')
+    .select('connection_status')
     .eq('branch_id', branchId)
     .maybeSingle();
   if (error) return null;
-  return data as { estado_conexion: string } | null;
+  return data as { connection_status: string } | null;
 }
 
 export async function fetchPointDevices(branchId: string) {
@@ -77,7 +77,7 @@ export async function disconnectMercadoPago(branchId: string) {
     .update({
       access_token: '',
       public_key: '',
-      estado_conexion: 'desconectado',
+      connection_status: 'desconectado',
       collector_id: null,
       updated_at: new Date().toISOString(),
     })

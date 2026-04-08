@@ -18,11 +18,11 @@ export interface MercadoPagoConfig {
   branch_id: string;
   access_token: string;
   public_key: string;
-  estado_conexion: 'conectado' | 'desconectado' | 'error';
+  connection_status: 'conectado' | 'desconectado' | 'error';
   webhook_secret: string | null;
   collector_id: string | null;
-  ultimo_test: string | null;
-  ultimo_test_ok: boolean | null;
+  last_test: string | null;
+  last_test_ok: boolean | null;
   device_id: string | null;
   device_name: string | null;
   device_operating_mode: 'PDV' | 'STANDALONE' | null;
