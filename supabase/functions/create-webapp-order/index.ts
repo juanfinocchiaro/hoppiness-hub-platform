@@ -196,21 +196,22 @@ Deno.serve(async (req) => {
     let subtotal = 0;
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      let serverPrice = ci.base_price;
+      let serverPrice = Number(ci.base_price) || 0;
       if (item.promocion_item_id) {
         const promoItem = promoItemMap.get(item.promocion_item_id);
         if (!promoItem || promoItem.item_carta_id !== item.item_carta_id) {
           return json(400, { error: `Promoción inválida para "${item.nombre}"` });
         }
-        serverPrice = promoItem.promo_price;
+        serverPrice = Number(promoItem.promo_price) || 0;
       } else if (item.articulo_tipo === "promo") {
         return json(400, { error: `Falta referencia de promoción para "${item.nombre}"` });
       } else {
         // Legacy compatibility: old clients without promo metadata still get best active promo.
-        serverPrice = promoMap.get(item.item_carta_id) ?? ci.base_price;
+        const bestPromo = promoMap.get(item.item_carta_id);
+        serverPrice = bestPromo != null ? Number(bestPromo) : (Number(ci.base_price) || 0);
       }
-      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0);
-      subtotal += (serverPrice + extrasTotal) * item.cantidad;
+      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + (Number(e.precio) || 0) * (Number(e.cantidad) || 1), 0);
+      subtotal += (serverPrice + extrasTotal) * (Number(item.cantidad) || 1);
     }
 
     // ── Resolve delivery cost ──────────────────────────────────
@@ -261,7 +262,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const total = subtotal + costoDelivery;
+    const total = Number(subtotal) + Number(costoDelivery);
 
     // ── Generate order_number ──────────────────────────────────
     const { data: numeroPedido, error: numErr } = await supabase.rpc("generate_order_number", {
