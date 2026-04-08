@@ -82,7 +82,7 @@ export function PaymentEditModal({
 
   // Point Smart
   const { data: mpConfig } = useMercadoPagoConfig(branchId);
-  const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
+  const hasPointSmart = !!mpConfig?.device_id && mpConfig.connection_status === 'conectado';
   const [pointPaymentOpen, setPointPaymentOpen] = useState(false);
   const [pointAmount, setPointAmount] = useState(0);
 

@@ -74,7 +74,7 @@ function POSPageContent({ branchId }: { branchId: string }) {
   const [pointPedidoId, setPointPedidoId] = useState<string | null>(null);
   const [pointAmount, setPointAmount] = useState(0);
   const { data: mpConfig } = useMercadoPagoConfig(branchId);
-  const hasPointSmart = !!mpConfig?.device_id && mpConfig.estado_conexion === 'conectado';
+  const hasPointSmart = !!mpConfig?.device_id && mpConfig.connection_status === 'conectado';
 
   const shiftStatus = useShiftStatus(branchId);
   const createPedido = useCreatePedido(branchId);

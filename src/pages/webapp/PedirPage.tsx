@@ -69,7 +69,7 @@ export default function PedirPage() {
   }, [rawMenuItems, promoItems]);
   const cart = useWebappCart();
   const navigate = useNavigate();
-  const mpEnabled = mpStatus?.estado_conexion === 'conectado';
+  const mpEnabled = mpStatus?.connection_status === 'conectado';
   const reorderChecked = useRef(false);
 
   const { data: googleApiKey } = useQuery({

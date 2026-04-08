@@ -57,7 +57,7 @@ export default function MercadoPagoConfigPage() {
     }
   }, [config]);
 
-  const isConnected = config?.estado_conexion === 'conectado';
+  const isConnected = config?.connection_status === 'conectado';
   const hasCredentials = accessToken.trim().length > 0 && publicKey.trim().length > 0;
   const isDirty = config
     ? accessToken !== config.access_token || publicKey !== config.public_key
@@ -109,9 +109,9 @@ export default function MercadoPagoConfigPage() {
                     Desconectado
                   </Badge>
                 )}
-                {config?.ultimo_test && (
+                {config?.last_test && (
                   <span className="text-xs text-muted-foreground">
-                    Último test: {new Date(config.ultimo_test).toLocaleString('es-AR')}
+                    Último test: {new Date(config.last_test).toLocaleString('es-AR')}
                   </span>
                 )}
               </div>
