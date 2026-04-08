@@ -127,9 +127,9 @@ Deno.serve(async (req) => {
     // ── Resolve item prices & station server-side ───────────────
     const itemIds = body.items.map((i) => i.item_carta_id);
     const { data: cartaItems, error: itemsErr } = await supabase
-      .from("items_carta")
+      .from("menu_items")
       .select(
-        "id, nombre, precio_base, categoria_carta_id, kitchen_station_id, disponible_webapp, kitchen_stations(name)",
+        "id, name, base_price, categoria_carta_id, kitchen_station_id, available_webapp, kitchen_stations(name)",
       )
       .in("id", itemIds);
 
@@ -139,34 +139,34 @@ Deno.serve(async (req) => {
 
     // Fetch active promo prices for these items
     const { data: promoItems } = await supabase
-      .from("promocion_items")
+      .from("promotion_items")
       .select(
-        "id, item_carta_id, precio_promo, promocion_id, promociones!inner(activa, canales, fecha_inicio, fecha_fin)",
+        "id, item_carta_id, promo_price, promocion_id, promotions!inner(is_active, canales, start_date, end_date)",
       )
       .in("item_carta_id", itemIds);
 
     const promoMap = new Map<string, number>();
     const promoItemMap = new Map<
       string,
-      { id: string; item_carta_id: string; precio_promo: number; promocion_id: string }
+      { id: string; item_carta_id: string; promo_price: number; promocion_id: string }
     >();
     for (const pi of promoItems ?? []) {
-      const promo = (pi as any).promociones;
-      if (!promo?.activa) continue;
+      const promo = (pi as any).promotions;
+      if (!promo?.is_active) continue;
       const canales: string[] = promo.canales ?? [];
       if (canales.length > 0 && !canales.includes("webapp")) continue;
       const now = new Date().toISOString().slice(0, 10);
-      if (promo.fecha_inicio && now < promo.fecha_inicio) continue;
-      if (promo.fecha_fin && now > promo.fecha_fin) continue;
+      if (promo.start_date && now < promo.start_date) continue;
+      if (promo.end_date && now > promo.end_date) continue;
       promoItemMap.set(pi.id, {
         id: pi.id,
         item_carta_id: pi.item_carta_id,
-        precio_promo: Number(pi.precio_promo),
+        promo_price: Number(pi.promo_price),
         promocion_id: pi.promocion_id,
       });
       const existing = promoMap.get(pi.item_carta_id);
-      if (existing == null || pi.precio_promo < existing) {
-        promoMap.set(pi.item_carta_id, pi.precio_promo);
+      if (existing == null || pi.promo_price < existing) {
+        promoMap.set(pi.item_carta_id, pi.promo_price);
       }
     }
 
@@ -174,26 +174,26 @@ Deno.serve(async (req) => {
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id);
       if (!ci) return json(400, { error: `Producto no encontrado: ${item.nombre}` });
-      if (ci.disponible_webapp === false)
-        return json(400, { error: `"${ci.nombre}" no está disponible para pedidos online` });
+      if (ci.available_webapp === false)
+        return json(400, { error: `"${ci.name}" no está disponible para pedidos online` });
     }
 
     // ── Calculate totals server-side (using server prices) ─────
     let subtotal = 0;
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      let serverPrice = ci.precio_base;
+      let serverPrice = ci.base_price;
       if (item.promocion_item_id) {
         const promoItem = promoItemMap.get(item.promocion_item_id);
         if (!promoItem || promoItem.item_carta_id !== item.item_carta_id) {
           return json(400, { error: `Promoción inválida para "${item.nombre}"` });
         }
-        serverPrice = promoItem.precio_promo;
+        serverPrice = promoItem.promo_price;
       } else if (item.articulo_tipo === "promo") {
         return json(400, { error: `Falta referencia de promoción para "${item.nombre}"` });
       } else {
         // Legacy compatibility: old clients without promo metadata still get best active promo.
-        serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
+        serverPrice = promoMap.get(item.item_carta_id) ?? ci.base_price;
       }
       const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0);
       subtotal += (serverPrice + extrasTotal) * item.cantidad;
@@ -291,34 +291,34 @@ Deno.serve(async (req) => {
 
     const estadoInicial = isMpPayment ? "pendiente_pago" : autoAccept ? "en_preparacion" : "pendiente";
 
-    const { error: pedidoErr } = await supabase.from("pedidos").insert({
+    const { error: pedidoErr } = await supabase.from("orders").insert({
       id: pedidoId,
       branch_id: body.branch_id,
       order_number: numeroPedido as number,
-      tipo: "webapp",
-      estado: estadoInicial,
+      type: "webapp",
+      status: estadoInicial,
       canal_venta: "webapp",
-      tipo_servicio: body.tipo_servicio === "retiro" ? "takeaway" : body.tipo_servicio,
+      service_type: body.tipo_servicio === "retiro" ? "takeaway" : body.tipo_servicio,
       subtotal,
       descuento: 0,
       total,
       propina: 0,
-      costo_delivery: costoDelivery,
+      delivery_cost: costoDelivery,
       pago_estado: pagoEstado,
-      cliente_nombre: body.cliente_nombre.trim(),
-      cliente_telefono: body.cliente_telefono.trim(),
+      customer_name: body.cliente_nombre.trim(),
+      customer_phone: body.cliente_telefono.trim(),
       cliente_email: body.cliente_email ?? null,
-      cliente_direccion: body.cliente_direccion ?? null,
-      direccion_entrega: body.cliente_direccion ?? null,
+      customer_address: body.cliente_direccion ?? null,
+      delivery_address: body.cliente_direccion ?? null,
       cliente_notas: body.cliente_notas ?? null,
       delivery_zone_id: deliveryZoneId,
       delivery_lat: body.delivery_lat ?? null,
       delivery_lng: body.delivery_lng ?? null,
       delivery_distance_km: body.delivery_distance_km ?? null,
       webapp_tracking_code: trackingCode,
-      tiempo_prometido: tiempoEstimado ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString() : null,
-      tiempo_inicio_prep: !isMpPayment && autoAccept ? now : null,
-      origen: "webapp",
+      promised_time: tiempoEstimado ? new Date(Date.now() + tiempoEstimado * 60_000).toISOString() : null,
+      prep_started_at_time: !isMpPayment && autoAccept ? now : null,
+      source: "webapp",
       cliente_user_id: clienteUserId,
     } as any);
 
@@ -330,11 +330,11 @@ Deno.serve(async (req) => {
     // ── Insert pedido_items ─────────────────────────────────────
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      let serverPrice = ci.precio_base;
+      let serverPrice = ci.base_price;
       if (item.promocion_item_id) {
-        serverPrice = promoItemMap.get(item.promocion_item_id)?.precio_promo ?? ci.precio_base;
+        serverPrice = promoItemMap.get(item.promocion_item_id)?.promo_price ?? ci.base_price;
       } else if (item.articulo_tipo !== "promo") {
-        serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
+        serverPrice = promoMap.get(item.item_carta_id) ?? ci.base_price;
       }
       const stationName = (ci.kitchen_stations as any)?.name ?? "armado";
       const extrasTotal = (item.extras ?? []).reduce(
@@ -344,16 +344,16 @@ Deno.serve(async (req) => {
       const lineSubtotal = (serverPrice + extrasTotal) * item.cantidad;
 
       const { data: insertedItem, error: itemErr } = await supabase
-        .from("pedido_items")
+        .from("order_items")
         .insert({
           pedido_id: pedidoId,
           item_carta_id: item.item_carta_id,
-          nombre: item.nombre,
-          cantidad: item.cantidad,
-          precio_unitario: serverPrice,
+          name: item.nombre,
+          quantity: item.cantidad,
+          unit_price: serverPrice,
           subtotal: lineSubtotal,
           estacion: stationName,
-          notas: item.notas ?? null,
+          notes: item.notas ?? null,
           categoria_carta_id: ci.categoria_carta_id ?? null,
           articulo_id: item.articulo_id ?? item.item_carta_id,
           articulo_tipo: item.articulo_tipo ?? (item.promocion_item_id ? "promo" : "base"),
@@ -365,16 +365,16 @@ Deno.serve(async (req) => {
 
       if (itemErr) {
         console.error("Item insert error:", itemErr);
-        await supabase.from("pedidos").delete().eq("id", pedidoId);
+        await supabase.from("orders").delete().eq("id", pedidoId);
         return json(500, { error: "Error al crear los items del pedido" });
       }
 
       // Insert modifiers (extras + removidos)
       const modifiers: Array<{
         pedido_item_id: string;
-        tipo: string;
-        descripcion: string;
-        precio_extra: number | null;
+        type: string;
+        description: string;
+        extra_price: number | null;
       }> = [];
 
       for (const extra of item.extras ?? []) {
@@ -382,9 +382,9 @@ Deno.serve(async (req) => {
         for (let ei = 0; ei < qty; ei++) {
           modifiers.push({
             pedido_item_id: insertedItem!.id,
-            tipo: "extra",
-            descripcion: extra.nombre,
-            precio_extra: extra.precio,
+            type: "extra",
+            description: extra.nombre,
+            extra_price: extra.precio,
           });
         }
       }
@@ -392,25 +392,25 @@ Deno.serve(async (req) => {
         const qty = Math.max(1, Number(inc.cantidad ?? 1));
         modifiers.push({
           pedido_item_id: insertedItem!.id,
-          tipo: "incluido",
-          descripcion: qty > 1 ? `${qty}x ${inc.nombre}` : inc.nombre,
-          precio_extra: null,
+          type: "incluido",
+          description: qty > 1 ? `${qty}x ${inc.nombre}` : inc.nombre,
+          extra_price: null,
         });
       }
       for (const rem of item.removidos ?? []) {
         modifiers.push({
           pedido_item_id: insertedItem!.id,
-          tipo: "sin",
-          descripcion: rem,
-          precio_extra: null,
+          type: "sin",
+          description: rem,
+          extra_price: null,
         });
       }
 
       if (modifiers.length > 0) {
-        const { error: modErr } = await supabase.from("pedido_item_modificadores").insert(modifiers as any);
+        const { error: modErr } = await supabase.from("order_item_modifiers").insert(modifiers as any);
         if (modErr) {
           console.error("Modifier insert error:", modErr);
-          await supabase.from("pedidos").delete().eq("id", pedidoId);
+          await supabase.from("orders").delete().eq("id", pedidoId);
           return json(500, { error: "Error al guardar modificadores del pedido" });
         }
       }
