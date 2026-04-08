@@ -843,7 +843,14 @@ export async function fetchWebappConfig(branchSlug: string) {
     .single();
   if (configErr) throw configErr;
 
-  return { branch, config };
+  // Map English DB columns to Spanish aliases used by WebappConfig type
+  const mapped = {
+    ...config,
+    tiempo_estimado_retiro_min: config.estimated_pickup_time_min ?? config.tiempo_estimado_retiro_min,
+    tiempo_estimado_delivery_min: config.estimated_delivery_time_min ?? config.tiempo_estimado_delivery_min,
+  };
+
+  return { branch, config: mapped };
 }
 
 export async function fetchWebappMenuItems(branchId: string) {
