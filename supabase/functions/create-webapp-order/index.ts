@@ -127,9 +127,9 @@ Deno.serve(async (req) => {
     // ── Resolve item prices & station server-side ───────────────
     const itemIds = body.items.map((i) => i.item_carta_id);
     const { data: cartaItems, error: itemsErr } = await supabase
-      .from("items_carta")
+      .from("menu_items")
       .select(
-        "id, nombre, precio_base, categoria_carta_id, kitchen_station_id, disponible_webapp, kitchen_stations(name)",
+        "id, name, base_price, categoria_carta_id, kitchen_station_id, available_webapp, kitchen_stations(name)",
       )
       .in("id", itemIds);
 
@@ -139,34 +139,34 @@ Deno.serve(async (req) => {
 
     // Fetch active promo prices for these items
     const { data: promoItems } = await supabase
-      .from("promocion_items")
+      .from("promotion_items")
       .select(
-        "id, item_carta_id, precio_promo, promocion_id, promociones!inner(activa, canales, fecha_inicio, fecha_fin)",
+        "id, item_carta_id, promo_price, promocion_id, promotions!inner(is_active, canales, start_date, end_date)",
       )
       .in("item_carta_id", itemIds);
 
     const promoMap = new Map<string, number>();
     const promoItemMap = new Map<
       string,
-      { id: string; item_carta_id: string; precio_promo: number; promocion_id: string }
+      { id: string; item_carta_id: string; promo_price: number; promocion_id: string }
     >();
     for (const pi of promoItems ?? []) {
-      const promo = (pi as any).promociones;
-      if (!promo?.activa) continue;
+      const promo = (pi as any).promotions;
+      if (!promo?.is_active) continue;
       const canales: string[] = promo.canales ?? [];
       if (canales.length > 0 && !canales.includes("webapp")) continue;
       const now = new Date().toISOString().slice(0, 10);
-      if (promo.fecha_inicio && now < promo.fecha_inicio) continue;
-      if (promo.fecha_fin && now > promo.fecha_fin) continue;
+      if (promo.start_date && now < promo.start_date) continue;
+      if (promo.end_date && now > promo.end_date) continue;
       promoItemMap.set(pi.id, {
         id: pi.id,
         item_carta_id: pi.item_carta_id,
-        precio_promo: Number(pi.precio_promo),
+        promo_price: Number(pi.promo_price),
         promocion_id: pi.promocion_id,
       });
       const existing = promoMap.get(pi.item_carta_id);
-      if (existing == null || pi.precio_promo < existing) {
-        promoMap.set(pi.item_carta_id, pi.precio_promo);
+      if (existing == null || pi.promo_price < existing) {
+        promoMap.set(pi.item_carta_id, pi.promo_price);
       }
     }
 
@@ -174,26 +174,26 @@ Deno.serve(async (req) => {
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id);
       if (!ci) return json(400, { error: `Producto no encontrado: ${item.nombre}` });
-      if (ci.disponible_webapp === false)
-        return json(400, { error: `"${ci.nombre}" no está disponible para pedidos online` });
+      if (ci.available_webapp === false)
+        return json(400, { error: `"${ci.name}" no está disponible para pedidos online` });
     }
 
     // ── Calculate totals server-side (using server prices) ─────
     let subtotal = 0;
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      let serverPrice = ci.precio_base;
+      let serverPrice = ci.base_price;
       if (item.promocion_item_id) {
         const promoItem = promoItemMap.get(item.promocion_item_id);
         if (!promoItem || promoItem.item_carta_id !== item.item_carta_id) {
           return json(400, { error: `Promoción inválida para "${item.nombre}"` });
         }
-        serverPrice = promoItem.precio_promo;
+        serverPrice = promoItem.promo_price;
       } else if (item.articulo_tipo === "promo") {
         return json(400, { error: `Falta referencia de promoción para "${item.nombre}"` });
       } else {
         // Legacy compatibility: old clients without promo metadata still get best active promo.
-        serverPrice = promoMap.get(item.item_carta_id) ?? ci.precio_base;
+        serverPrice = promoMap.get(item.item_carta_id) ?? ci.base_price;
       }
       const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0);
       subtotal += (serverPrice + extrasTotal) * item.cantidad;
