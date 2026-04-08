@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
     let subtotal = 0;
     for (const item of body.items) {
       const ci = cartaMap.get(item.item_carta_id)!;
-      let serverPrice = ci.base_price;
+      let serverPrice = Number(ci.base_price) || 0;
       if (item.promocion_item_id) {
         const promoItem = promoItemMap.get(item.promocion_item_id);
         if (!promoItem || promoItem.item_carta_id !== item.item_carta_id) {
