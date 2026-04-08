@@ -202,15 +202,16 @@ Deno.serve(async (req) => {
         if (!promoItem || promoItem.item_carta_id !== item.item_carta_id) {
           return json(400, { error: `Promoción inválida para "${item.nombre}"` });
         }
-        serverPrice = promoItem.promo_price;
+        serverPrice = Number(promoItem.promo_price) || 0;
       } else if (item.articulo_tipo === "promo") {
         return json(400, { error: `Falta referencia de promoción para "${item.nombre}"` });
       } else {
         // Legacy compatibility: old clients without promo metadata still get best active promo.
-        serverPrice = promoMap.get(item.item_carta_id) ?? ci.base_price;
+        const bestPromo = promoMap.get(item.item_carta_id);
+        serverPrice = bestPromo != null ? Number(bestPromo) : (Number(ci.base_price) || 0);
       }
-      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + e.precio * (e.cantidad ?? 1), 0);
-      subtotal += (serverPrice + extrasTotal) * item.cantidad;
+      const extrasTotal = (item.extras ?? []).reduce((s, e) => s + (Number(e.precio) || 0) * (Number(e.cantidad) || 1), 0);
+      subtotal += (serverPrice + extrasTotal) * (Number(item.cantidad) || 1);
     }
 
     // ── Resolve delivery cost ──────────────────────────────────
