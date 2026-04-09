@@ -19,6 +19,7 @@ interface PointPaymentRequest {
   amount: number;
   ticket_number?: string;
   cancel_order_id?: string;
+  check_order_id?: string;
   /** If true, cancel any pending order on the device before creating a new one */
   force_cancel_pending?: boolean;
 }
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     if (authError || !user) return json(401, { error: "Unauthorized" });
 
     const body: PointPaymentRequest = await req.json();
-    const { branch_id, pedido_id, amount, ticket_number, force_cancel_pending, cancel_order_id } = body;
+    const { branch_id, pedido_id, amount, ticket_number, force_cancel_pending, cancel_order_id, check_order_id } = body;
 
     // Access check via normalized model
     const [{ data: hasAccessV2 }, { data: localRole }] = await Promise.all([
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
     ]);
     if (!hasAccessV2 && !localRole) return json(403, { error: "No tenés acceso a este local" });
 
-    if (!branch_id || !pedido_id || (!amount && !cancel_order_id)) {
+    if (!branch_id || !pedido_id || (!amount && !cancel_order_id && !check_order_id)) {
       return json(400, { error: "branch_id, pedido_id y amount son requeridos" });
     }
 
@@ -91,11 +92,67 @@ Deno.serve(async (req) => {
     const accessToken = config.access_token;
     const deviceId = config.device_id;
 
+    if (check_order_id) {
+      const orderStatus = await getOrderStatus(accessToken, check_order_id);
+      if (!orderStatus.ok) {
+        return json(orderStatus.status || 502, {
+          error: orderStatus.data?.message || "No se pudo consultar el estado del cobro",
+          detail: orderStatus.data,
+        });
+      }
+
+      const status = orderStatus.data?.status ?? null;
+      const paymentId = orderStatus.data?.transactions?.payments?.[0]?.id
+        ? String(orderStatus.data.transactions.payments[0].id)
+        : null;
+
+      if (status === "processed" && paymentId) {
+        await reconcileApprovedPayment({
+          supabase,
+          accessToken,
+          branchId: branch_id,
+          pedidoId: pedido_id,
+          paymentId,
+        });
+      }
+
+      const { data: existingPayment } = await supabase
+        .from("order_payments")
+        .select("method, amount, mp_payment_id, conciliado")
+        .eq("pedido_id", pedido_id)
+        .not("mp_payment_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      return json(200, {
+        ok: true,
+        order_id: check_order_id,
+        status,
+        reconciled: !!existingPayment?.mp_payment_id,
+        payment: existingPayment
+          ? {
+              method: existingPayment.method,
+              amount: existingPayment.amount,
+              mp_payment_id: existingPayment.mp_payment_id,
+            }
+          : null,
+      });
+    }
+
     if (cancel_order_id) {
       const cancelResult = await cancelOrder(accessToken, cancel_order_id);
-      return json(cancelResult.ok ? 200 : 502, {
+      const manualCancelRequired =
+        !cancelResult.ok &&
+        cancelResult.data?.errors?.some((err: { code?: string }) => err.code === "cannot_cancel_order");
+
+      return json(manualCancelRequired || cancelResult.ok ? 200 : 502, {
         ok: cancelResult.ok,
         cancelled_order_id: cancel_order_id,
+        manual_cancel_required: manualCancelRequired,
+        error: manualCancelRequired
+          ? "El cobro sigue activo en el Point Smart. Cancelalo manualmente desde el dispositivo."
+          : undefined,
         detail: cancelResult.data,
       });
     }
@@ -257,4 +314,116 @@ async function cancelOrder(
   } catch {
     return { ok: false };
   }
+}
+
+async function getOrderStatus(
+  accessToken: string,
+  orderId: string,
+): Promise<{ ok: boolean; status: number; data?: any }> {
+  try {
+    const res = await fetch(`https://api.mercadopago.com/v1/orders/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return { ok: false, status: 500 };
+  }
+}
+
+async function getPaymentStatus(
+  accessToken: string,
+  paymentId: string,
+): Promise<{ ok: boolean; status: number; data?: any }> {
+  try {
+    const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return { ok: false, status: 500 };
+  }
+}
+
+function mapPaymentMethod(paymentData: Record<string, unknown>): string {
+  const typeId = paymentData.payment_type_id as string | undefined;
+  const methodId = paymentData.payment_method_id as string | undefined;
+
+  if (typeId === "debit_card" || methodId === "debit_card") return "tarjeta_debito";
+  if (typeId === "credit_card" || methodId === "credit_card") return "tarjeta_credito";
+  if (typeId === "account_money" || methodId === "account_money") return "mercadopago_qr";
+  if (typeId === "bank_transfer" || methodId === "bank_transfer") return "transferencia";
+
+  return "mercadopago_qr";
+}
+
+async function reconcileApprovedPayment({
+  supabase,
+  accessToken,
+  branchId,
+  pedidoId,
+  paymentId,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  accessToken: string;
+  branchId: string;
+  pedidoId: string;
+  paymentId: string;
+}) {
+  const { data: existing } = await supabase
+    .from("order_payments")
+    .select("id")
+    .eq("mp_payment_id", paymentId)
+    .limit(1)
+    .maybeSingle();
+
+  if (!existing) {
+    const paymentStatus = await getPaymentStatus(accessToken, paymentId);
+    if (!paymentStatus.ok || paymentStatus.data?.status !== "approved") return;
+
+    const paymentData = paymentStatus.data as Record<string, unknown>;
+    const transactionAmount = Number(paymentData.transaction_amount ?? 0);
+
+    await supabase.from("order_payments").insert({
+      pedido_id: pedidoId,
+      method: mapPaymentMethod(paymentData),
+      amount: transactionAmount,
+      received_amount: transactionAmount,
+      vuelto: 0,
+      mp_payment_id: paymentId,
+      conciliado: true,
+      conciliado_at: new Date().toISOString(),
+    });
+  }
+
+  const { data: pedido } = await supabase
+    .from("orders")
+    .select("id, status, source")
+    .eq("id", pedidoId)
+    .eq("branch_id", branchId)
+    .maybeSingle();
+
+  if (!pedido) return;
+
+  const updates: Record<string, unknown> = {
+    pago_online_id: paymentId,
+    pago_estado: "confirmado",
+  };
+
+  if (pedido.status === "pendiente_pago") {
+    updates.status = pedido.source === "webapp" ? "pendiente" : "pendiente";
+  }
+
+  await supabase
+    .from("orders")
+    .update(updates)
+    .eq("id", pedidoId)
+    .eq("branch_id", branchId);
 }
